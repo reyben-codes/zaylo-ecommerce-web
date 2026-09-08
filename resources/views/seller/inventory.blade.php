@@ -1,37 +1,4 @@
-﻿@extends('layouts.app')
-
-@section('title', 'ZAYLO · Inventory')
-
-@section('nav-links')
-<div class="nav-links">
-    <a href="{{ route('seller.dashboard') }}" class="{{ request()->routeIs('seller.dashboard') ? 'active-link' : '' }}">Dashboard</a>
-    <a href="{{ route('seller.products') }}" class="{{ request()->routeIs('seller.products') ? 'active-link' : '' }}">Products</a>
-    <a href="{{ route('seller.orders') }}" class="{{ request()->routeIs('seller.orders') ? 'active-link' : '' }}">Orders</a>
-    <a href="{{ route('seller.inventory') }}" class="{{ request()->routeIs('seller.inventory') ? 'active-link' : '' }}">Inventory</a>
-    <a href="{{ route('seller.reports') }}" class="{{ request()->routeIs('seller.reports') ? 'active-link' : '' }}">Reports</a>
-</div>
-@endsection
-@section('nav-icons')
-<a href="{{ route('seller.chat') }}"><i class="fas fa-comment-dots"></i></a>
-<a href="{{ route('seller.account') }}"><i class="far fa-user"></i></a>
-@endsection
-
-
-@section('content')
-<div class="page-hero">
-    <div class="page-hero-inner">
-        <i class="fas fa-warehouse"></i>
-        <div>
-            <h1></h1>
-            <p></p>
-        </div>
-    </div>
-</div>
-<div class="page-content">
-    <div class="placeholder-card">
-        <i class="fas fa-warehouse"></i>
-        <h2>Inventory</h2>
-        <p>Track and manage your stock levels.</p>
-    </div>
-</div>
-@endsection
+@extends('layouts.app')
+@section('title', 'Inventory · ZAYLO')
+@section('nav-links')<nav class="nav-links"><a href="{{ route('seller.dashboard') }}">Dashboard</a><a href="{{ route('seller.products') }}">Products</a><a href="{{ route('seller.orders') }}">Orders</a><a class="active-link" href="{{ route('seller.inventory') }}">Inventory</a></nav>@endsection
+@section('content')<div class="page-hero"><div class="page-hero-inner"><i class="fas fa-warehouse"></i><div><h1>Inventory</h1><p>Low-stock items are shown first.</p></div></div></div><div class="page-content"><div class="table-wrap"><table><thead><tr><th>Product</th><th>SKU</th><th>Stock</th><th>Alert at</th><th>Status</th></tr></thead><tbody>@foreach($products as $product)<tr><td>{{ $product->name }}</td><td>{{ $product->sku }}</td><td>{{ $product->stock }}</td><td>{{ $product->low_stock_threshold }}</td><td><span class="status-pill">{{ $product->stock <= $product->low_stock_threshold ? 'Low stock' : 'Healthy' }}</span></td></tr>@endforeach</tbody></table></div>{{ $products->links() }}</div>@endsection

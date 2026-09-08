@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'ZAYLO · Quiet Luxury')</title>
+    <title>@yield('title', 'ZAYLO · Everything in One Place')</title>
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -29,13 +29,14 @@
         </a>
 
         <div class="nav-actions">
-            <div class="search-wrapper">
+            <form class="search-wrapper" method="GET" action="{{ route('products.index') }}" role="search">
                 <span class="search-icon">⌕</span>
-                <input type="text" placeholder="Search" />
-            </div>
+                <input type="search" name="search" value="{{ request('search') }}" placeholder="Search products" aria-label="Search products" />
+            </form>
             <div class="icon-group">
                 @yield('nav-icons')
 
+                @auth
                 <form method="POST" action="{{ route('logout') }}" style="display:inline;margin-left:4px;">
                     @csrf
                     <span style="font-size:0.8rem;font-weight:500;color:#6b5f54;border-left:1px solid #d8d0c8;padding-left:20px;margin-right:10px;">
@@ -45,11 +46,21 @@
                         Logout
                     </button>
                 </form>
+                @else
+                    <a href="{{ route('login') }}" class="login-text">Log in</a>
+                    <a href="{{ route('register') }}">Register</a>
+                @endauth
             </div>
         </div>
     </header>
 
     <div class="container">
+        @if(session('status'))
+            <div class="flash-message success" role="status">{{ session('status') }}</div>
+        @endif
+        @if($errors->any())
+            <div class="flash-message error" role="alert">{{ $errors->first() }}</div>
+        @endif
         <!-- Page Content -->
         @yield('content')
     </div>

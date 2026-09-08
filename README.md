@@ -1,59 +1,64 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# ZAYLO Marketplace
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+ZAYLO is a Laravel 12 ecommerce marketplace with buyer, seller, courier, and administrator workflows.
 
-## About Laravel
+## Implemented workflows
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- Public product catalog, filtering, search, product details, and stock visibility
+- Persistent buyer cart and wishlist
+- Cash-on-delivery checkout with address snapshots, price snapshots, idempotency, and transactional stock reduction
+- Buyer order tracking and safe cancellation with stock restoration
+- Seller product management, inventory alerts, and controlled fulfilment states
+- Courier parcel claiming and delivery-state tracking
+- Administrator account approval and suspension
+- Email verification, password resets, login throttling, role middleware, and ownership policies
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Local setup
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Requirements: PHP 8.2+, Composer, Node.js, and MySQL (the local `.env` currently targets port `3307`).
 
-## Learning Laravel
+```bash
+composer install
+npm install
+php artisan key:generate
+php artisan migrate --seed
+npm run build
+php artisan serve
+```
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+For local development, file-backed sessions/cache and synchronous queues are recommended. These are the defaults in `.env.example`, so public pages still render when queue or cache infrastructure is unavailable.
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+After changing `.env`, clear stale cached values:
 
-## Laravel Sponsors
+```bash
+php artisan config:clear
+```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+## Registration and email codes
 
-### Premium Partners
+Registration follows Personal details → Address → Sign-in details → Email verification. The first three steps save an unverified account; the last step accepts the six-digit code sent to its email. Seller and courier accounts still require administrator approval after verification.
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+Run `php artisan migrate` to apply the pending marketplace migrations and the email verification code table (do not use `migrate:fresh` on an existing database). Codes expire after 10 minutes, allow five incorrect attempts, and can be resent after one minute. Only a hash is stored in the challenge table; successful verification removes it. Resending replaces the previous challenge. Existing unverified users can sign in and choose **Resend code**; old verification links are no longer used.
 
-## Contributing
+With `MAIL_MAILER=log`, messages are written to the configured application log, usually `storage/logs/laravel.log`, instead of delivered to an inbox. For delivery, configure `MAIL_MAILER=smtp`, your provider's `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, and an authorized `MAIL_FROM_ADDRESS`, then run `php artisan config:clear`. Do not commit real mail credentials. Code emails are sent synchronously; a failed send keeps the unverified account and allows retrying from step 4.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Test accounts
 
-## Code of Conduct
+`php artisan migrate --seed` creates development-only accounts for each role. Their password is `password`. Never run `DatabaseSeeder` against production data.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## Verification
 
-## Security Vulnerabilities
+```bash
+composer test
+npm run build
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+The feature suite covers public browsing, marketplace account approval, seller ownership isolation, checkout and stock deduction, seller fulfilment, courier delivery, COD completion, commissions, and administrator approval.
 
-## License
+## Production notes
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+- Set `APP_ENV=production`, `APP_DEBUG=false`, and HTTPS-only secure session cookies.
+- Configure a real mail provider before enabling registrations.
+- COD is the only payment method in this MVP. Add a gateway through signed, idempotent webhooks rather than trusting browser callbacks.
+- Run queue workers for email and other asynchronous work after changing `QUEUE_CONNECTION` from `sync`.
+- Do not deploy seeded credentials or the legacy root-level `zaylo` SQLite development database.

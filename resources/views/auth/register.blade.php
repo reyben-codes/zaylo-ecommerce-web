@@ -2,553 +2,1063 @@
 
 @section('title', 'ZAYLO · Create Account')
 
-@push('styles')
-<style>
-    :root {
-        --color-primary: #1a1714;
-        --color-secondary: #b28b6f;
-        --color-cream: #faf7f2;
-        --color-off-white: #f5f0ea;
-        --color-dark: #0a0a0a;
-        --color-gray: #6b5f54;
-        --color-light-gray: #e5dfd8;
-        --color-border: #ece4db;
-        --color-error: #c0392b;
-        --color-success: #2d7d46;
-        --color-warning: #e67e22;
-        --font-serif: 'Playfair Display', 'Times New Roman', serif;
-        --font-sans: 'Inter', 'Helvetica Neue', sans-serif;
-        --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: var(--font-sans); background: var(--color-cream); color: var(--color-primary); overflow: hidden; height: 100vh; }
-    .auth-container { display: flex; height: 100vh; width: 100%; background: white; }
-    .auth-image { flex: 0 0 50%; height: 100vh; position: relative; overflow: hidden; background: url('https://images.unsplash.com/photo-1539008835657-9e8e9680c956?w=800&q=80&auto=format&fit=crop&crop=center') center/cover no-repeat; border-radius: 0 24px 24px 0; }
-    .auth-image-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, transparent 60%, rgba(26,23,20,0.7)); }
-    .auth-image-content { position: absolute; top: 0; left: 0; width: 100%; height: 100%; padding: 40px; display: flex; flex-direction: column; justify-content: space-between; z-index: 2; }
-    .auth-brand { display: flex; align-items: center; gap: 16px; }
-    .auth-brand-line { width: 40px; height: 2px; background: white; opacity: 0.6; }
-    .auth-image-text { color: white; margin-bottom: 40px; }
-    .auth-image-text p { font-family: var(--font-serif); font-size: 1.6rem; font-weight: 300; line-height: 1.4; opacity: 0.9; }
-    .auth-image-text p:last-child { font-style: italic; opacity: 0.7; }
-    .auth-form { flex: 1; padding: 40px 64px; overflow-y: auto; display: flex; align-items: flex-start; padding-top: 64px; background: white; position: relative; }
-    .auth-close { position: absolute; top: 28px; right: 28px; background: none; border: none; font-size: 1.4rem; color: var(--color-gray); cursor: pointer; transition: var(--transition); padding: 10px; border-radius: 50%; text-decoration: none; }
-    .auth-close:hover { color: var(--color-primary); background: var(--color-cream); }
-    .auth-form-content { width: 100%; max-width: 520px; margin: 0 auto; }
-    .auth-header { margin-bottom: 28px; }
-    .auth-label { font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--color-gray); font-weight: 400; display: block; margin-bottom: 10px; }
-    .auth-header h1 { font-family: var(--font-serif); font-size: 2.6rem; font-weight: 600; color: var(--color-primary); margin-bottom: 6px; }
-    .auth-subtitle { font-size: 0.95rem; color: var(--color-gray); }
-    /* Step indicator */
-    .step-indicator { display: flex; align-items: center; margin-bottom: 32px; }
-    .step-item { display: flex; align-items: center; gap: 8px; }
-    .step-number { width: 32px; height: 32px; border-radius: 50%; border: 1.5px solid var(--color-border); font-size: 0.65rem; font-weight: 600; display: flex; align-items: center; justify-content: center; color: var(--color-gray); transition: var(--transition); }
-    .step-item.active .step-number { border-color: var(--color-primary); background: var(--color-primary); color: white; }
-    .step-item.completed .step-number { display: none; }
-    .step-check { display: none; width: 32px; height: 32px; border-radius: 50%; background: var(--color-success); color: white; font-size: 0.75rem; align-items: center; justify-content: center; }
-    .step-item.completed .step-check { display: flex; }
-    .step-label { font-size: 0.7rem; color: var(--color-gray); font-weight: 500; }
-    .step-item.active .step-label { color: var(--color-primary); }
-    .step-line { flex: 1; height: 1.5px; background: var(--color-border); margin: 0 12px; min-width: 30px; }
-    /* Form */
-    .step-content { display: none; }
-    .step-content.active { display: block; }
-    .form-group { margin-bottom: 20px; }
-    .form-group label { display: block; font-size: 0.75rem; font-weight: 500; color: var(--color-primary); margin-bottom: 8px; }
-    .form-group label .required { color: var(--color-error); margin-left: 2px; }
-    .form-group input, .form-group select { width: 100%; padding: 14px 18px; border: 1px solid var(--color-border); border-radius: 4px; font-size: 0.95rem; font-family: var(--font-sans); transition: var(--transition); outline: none; background: white; color: var(--color-primary); appearance: none; -webkit-appearance: none; }
-    .form-group input:focus, .form-group select:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(26,23,20,0.05); }
-    .form-group input::placeholder { color: #c5c0b8; }
-    .form-group select:disabled { background: var(--color-off-white); color: var(--color-light-gray); cursor: not-allowed; }
-    .select-wrapper { position: relative; }
-    .select-wrapper::after { content: ''; position: absolute; right: 18px; top: 50%; transform: translateY(-50%); width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid var(--color-gray); pointer-events: none; transition: var(--transition); }
-    .select-wrapper.loading::after { display: none; }
-    .select-spinner { display: none; position: absolute; right: 16px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; border: 2px solid var(--color-border); border-top-color: var(--color-primary); border-radius: 50%; animation: spin 0.6s linear infinite; }
-    .select-wrapper.loading .select-spinner { display: block; }
-    @keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
-    .address-error { font-size: 0.75rem; color: var(--color-error); margin-top: 6px; display: none; }
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .password-input-wrapper { position: relative; }
-    .password-input-wrapper input { padding-right: 48px; }
-    .toggle-password { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--color-gray); cursor: pointer; font-size: 1rem; }
-    .btn-auth-primary { width: 100%; padding: 16px; background: var(--color-primary); color: white; border: none; border-radius: 4px; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; transition: var(--transition); font-family: var(--font-sans); }
-    .btn-auth-primary:hover { background: var(--color-secondary); transform: translateY(-1px); }
-    .step-actions { display: flex; gap: 12px; margin-top: 28px; }
-    .btn-step-back { padding: 16px 28px; background: transparent; border: 1px solid var(--color-border); border-radius: 4px; font-size: 0.75rem; font-weight: 500; font-family: var(--font-sans); cursor: pointer; transition: var(--transition); color: var(--color-gray); flex: 1; }
-    .btn-step-back:hover { border-color: var(--color-primary); color: var(--color-primary); }
-    .btn-step-continue { flex: 2; }
-    /* Role selector */
-    .register-role-selector { margin-bottom: 24px; }
-    .register-role-selector .role-option { display: flex; align-items: center; gap: 16px; padding: 16px 20px; border: 1px solid var(--color-border); cursor: pointer; transition: var(--transition); background: white; border-radius: 4px; margin-bottom: 10px; }
-    .register-role-selector .role-option:hover { border-color: var(--color-gray); }
-    .register-role-selector .role-option.active { border-color: var(--color-primary); background: var(--color-cream); }
-    .register-role-selector .role-option .role-icon { width: 46px; height: 46px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; background: var(--color-cream); border-radius: 50%; color: var(--color-gray); flex-shrink: 0; }
-    .register-role-selector .role-option.active .role-icon { background: var(--color-primary); color: white; }
-    .register-role-selector .role-option .role-name { font-size: 0.85rem; font-weight: 600; display: block; color: var(--color-primary); }
-    .register-role-selector .role-option .role-desc { font-size: 0.7rem; color: var(--color-gray); display: block; }
-    .register-role-selector .role-option .role-check { display: none; color: var(--color-secondary); font-size: 1.1rem; }
-    .register-role-selector .role-option.active .role-check { display: block; }
-    /* Success */
-    .success-content { text-align: center; padding: 48px 0; }
-    .success-icon { font-size: 4.5rem; color: var(--color-success); margin-bottom: 20px; }
-    .success-title { font-family: var(--font-serif); font-size: 2.4rem; font-weight: 600; color: var(--color-primary); margin-bottom: 10px; }
-    .success-message, .success-submessage { color: var(--color-gray); margin-bottom: 10px; }
-    .success-submessage { font-size: 0.9rem; margin-bottom: 36px; }
-    .auth-footer { text-align: center; font-size: 0.82rem; color: var(--color-gray); margin-top: 20px; }
-    .auth-footer a { color: var(--color-primary); text-decoration: none; font-weight: 500; }
-    .alert-error { background: #fdf2f2; border: 1px solid #f5c6c6; color: var(--color-error); padding: 12px 16px; border-radius: 4px; font-size: 0.85rem; margin-bottom: 20px; }
-    @media (max-width: 820px) { .auth-container { flex-direction: column; } .auth-image { flex: 0 0 220px; height: 220px; border-radius: 0 0 24px 24px; } .auth-form { padding: 36px 28px; padding-top: 56px; } .form-row { grid-template-columns: 1fr; } }
-    @media (max-width: 480px) { .auth-image { flex: 0 0 160px; height: 160px; } .auth-form { padding: 28px 18px; padding-top: 44px; } }
-</style>
-@endpush
+@php
+    $requestedRole = old('role', request('role', 'buyer'));
+
+    $selectedRole = in_array(
+        $requestedRole,
+        ['buyer', 'seller', 'courier'],
+        true
+    ) ? $requestedRole : 'buyer';
+
+    $isPartner = $selectedRole !== 'buyer';
+
+    $firstErrorStep = $errors->hasAny([
+        'first_name',
+        'last_name',
+        'phone',
+        'role'
+    ]) ? 1
+        : (
+            $errors->hasAny([
+                'email',
+                'password',
+                'password_confirmation'
+            ]) ? 2 : 1
+        );
+@endphp
+
+@include('auth.partials.registration-styles')
 
 @section('content')
-<div class="auth-container">
-    <!-- Left Side - Image -->
-    <div class="auth-image">
-        <div class="auth-image-content">
-            <div class="auth-brand">
-                <span class="auth-brand-line"></span>
-                <span class="auth-brand-name">
-                    <img src="{{ asset('images/ZAYLO_LOGO_LIGHT.png') }}" alt="ZAYLO" style="height:36px;width:auto;display:block;">
-                </span>
-            </div>
-            <div class="auth-image-text">
-                <p>Discover pieces that</p>
-                <p>define your style.</p>
-            </div>
-        </div>
-        <div class="auth-image-overlay"></div>
-    </div>
 
-    <!-- Right Side - Form -->
-    <div class="auth-form">
-        <a href="{{ route('home') }}" class="auth-close">
-            <i class="fas fa-times"></i>
+<main class="auth-container">
+
+    {{-- LEFT SIDE IMAGE --}}
+    <aside class="auth-image" aria-label="ZAYLO marketplace">
+
+        <div class="auth-image-content">
+
+            <a class="auth-brand" href="{{ route('home') }}">
+                <img
+                    src="{{ asset('images/ZAYLO_LOGO_LIGHT.png') }}"
+                    alt="ZAYLO home"
+                >
+            </a>
+
+            <div class="auth-image-text">
+                <p>Everything you need,</p>
+                <p>all in one place.</p>
+            </div>
+
+        </div>
+
+    </aside>
+
+
+    {{-- REGISTRATION FORM --}}
+    <section class="auth-form" aria-labelledby="register-title">
+
+        <a
+            href="{{ route('products.index') }}"
+            class="continue-shopping"
+        >
+            <span aria-hidden="true">&larr;</span>
+            Continue shopping
         </a>
 
-        <div class="auth-form-content">
-            <div class="auth-header">
-                <span class="auth-label">ZAYLO ACCOUNT</span>
-                <h1>Create Your Account</h1>
-                <p class="auth-subtitle">Join ZAYLO and experience fashion made simple.</p>
-            </div>
 
-            @if ($errors->any())
-                <div class="alert-error">{{ $errors->first() }}</div>
+        <div class="auth-form-content">
+
+            {{-- HEADER --}}
+            <header class="auth-header">
+
+                <span
+                    class="auth-label"
+                    id="register-label"
+                >
+                    {{ $isPartner ? 'ZAYLO PARTNERS' : 'JOIN ZAYLO' }}
+                </span>
+
+
+                <h1 id="register-title">
+                    {{
+                        $selectedRole === 'seller'
+                            ? 'Sell on ZAYLO'
+                            : (
+                                $selectedRole === 'courier'
+                                    ? 'Become a courier'
+                                    : 'Create your account'
+                            )
+                    }}
+                </h1>
+
+
+                <p
+                    class="auth-subtitle"
+                    id="register-subtitle"
+                >
+                    {{
+                        $isPartner
+                            ? 'Create your account to apply as a '
+                                . ($selectedRole === 'seller'
+                                    ? 'seller'
+                                    : 'courier')
+                                . ' on ZAYLO.'
+                            : 'Save your favorites, track your orders, and discover everyday finds in one place.'
+                    }}
+                </p>
+
+            </header>
+
+
+            {{-- VALIDATION ERRORS --}}
+            @if($errors->any())
+
+                <div
+                    class="alert-error"
+                    role="alert"
+                >
+
+                    <ul>
+
+                        @foreach($errors->all() as $error)
+
+                            <li>{{ $error }}</li>
+
+                        @endforeach
+
+                    </ul>
+
+                </div>
+
             @endif
 
-            <!-- Step Indicator -->
-            <div class="step-indicator" id="stepIndicator">
-                <div class="step-item active" data-step="1">
-                    <span class="step-number">01</span>
-                    <span class="step-label">Account</span>
-                    <span class="step-check"><i class="fas fa-check"></i></span>
-                </div>
-                <div class="step-line"></div>
-                <div class="step-item" data-step="2">
-                    <span class="step-number">02</span>
-                    <span class="step-label">Personal</span>
-                    <span class="step-check"><i class="fas fa-check"></i></span>
-                </div>
-                <div class="step-line"></div>
-                <div class="step-item" data-step="3">
-                    <span class="step-number">03</span>
-                    <span class="step-label">Details</span>
-                    <span class="step-check"><i class="fas fa-check"></i></span>
-                </div>
-                <div class="step-line"></div>
-                <div class="step-item" data-step="4">
-                    <span class="step-number">04</span>
-                    <span class="step-label">Complete</span>
-                    <span class="step-check"><i class="fas fa-check"></i></span>
-                </div>
-            </div>
 
-            <!-- Multi-step Form -->
-            <form method="POST" action="{{ route('register') }}" id="registerForm">
+            {{-- PARTNER NOTICE --}}
+            <p
+                class="partner-note"
+                id="partner-note"
+                @if(!$isPartner) hidden @endif
+            >
+                Seller and courier accounts require email verification
+                and administrator approval before you can start selling
+                or accept deliveries.
+            </p>
+
+
+            {{-- REGISTRATION PROGRESS --}}
+            @include(
+                'auth.partials.registration-progress',
+                ['activeStep' => 1]
+            )
+
+
+            {{-- MANUAL REGISTRATION --}}
+            <form
+                method="POST"
+                action="{{ route('register') }}"
+                id="registerForm"
+            >
+
                 @csrf
-                <input type="hidden" name="role" id="selectedRole" value="buyer" />
 
-                <!-- Step 1: Choose Role -->
-                <div class="step-content active" id="step1">
-                    <div class="register-role-selector">
-                        <div class="role-option active" data-role="buyer" onclick="selectRegisterRole(this)">
-                            <div class="role-icon"><i class="fas fa-user"></i></div>
-                            <div class="role-info">
-                                <span class="role-name">Buyer</span>
-                                <span class="role-desc">Shop for luxury fashion items</span>
-                            </div>
-                            <i class="fas fa-check-circle role-check"></i>
-                        </div>
-                        <div class="role-option" data-role="seller" onclick="selectRegisterRole(this)">
-                            <div class="role-icon"><i class="fas fa-store"></i></div>
-                            <div class="role-info">
-                                <span class="role-name">Seller</span>
-                                <span class="role-desc">List and sell your fashion products</span>
-                            </div>
-                            <i class="fas fa-check-circle role-check"></i>
-                        </div>
-                        <div class="role-option" data-role="courier" onclick="selectRegisterRole(this)">
-                            <div class="role-icon"><i class="fas fa-motorcycle"></i></div>
-                            <div class="role-info">
-                                <span class="role-name">Courier / Rider</span>
-                                <span class="role-desc">Deliver orders and earn commissions</span>
-                            </div>
-                            <i class="fas fa-check-circle role-check"></i>
-                        </div>
-                    </div>
-                    <div class="step-actions">
-                        <button type="button" class="btn-auth-primary btn-step-continue" onclick="nextStep(1)">Continue</button>
-                    </div>
-                </div>
 
-                <!-- Step 2: Account Details -->
-                <div class="step-content" id="step2">
-                    <div class="form-group">
-                        <label for="email">Email Address <span class="required">*</span></label>
-                        <input type="email" id="email" name="email" value="{{ old('email') }}" placeholder="your@email.com" required />
-                    </div>
-                    <div class="form-group">
-                        <label for="password">Password <span class="required">*</span></label>
-                        <div class="password-input-wrapper">
-                            <input type="password" id="password" name="password" placeholder="Create a strong password" required minlength="8" />
-                            <button type="button" class="toggle-password" onclick="togglePassword('password', this)">
-                                <i class="far fa-eye"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="password_confirmation">Confirm Password <span class="required">*</span></label>
-                        <div class="password-input-wrapper">
-                            <input type="password" id="password_confirmation" name="password_confirmation" placeholder="Repeat your password" required />
-                            <button type="button" class="toggle-password" onclick="togglePassword('password_confirmation', this)">
-                                <i class="far fa-eye"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="step-actions">
-                        <button type="button" class="btn-step-back" onclick="prevStep(2)">Back</button>
-                        <button type="button" class="btn-auth-primary btn-step-continue" onclick="nextStep(2)">Continue</button>
-                    </div>
-                </div>
+                {{-- ========================================= --}}
+                {{-- STEP 1 - PERSONAL DETAILS --}}
+                {{-- ========================================= --}}
+                <section
+                    class="step-content"
+                    id="step1"
+                    aria-labelledby="step1-title"
+                >
 
-                <!-- Step 3: Personal Info -->
-                <div class="step-content" id="step3">
+                    <h2
+                        class="step-title"
+                        id="step1-title"
+                        tabindex="-1"
+                    >
+                        Your personal details
+                    </h2>
+
+
                     <div class="form-row">
+
                         <div class="form-group">
-                            <label for="first_name">First Name <span class="required">*</span></label>
-                            <input type="text" id="first_name" name="first_name" value="{{ old('first_name') }}" placeholder="First name" required />
+
+                            <label for="first_name">
+                                First name
+                            </label>
+
+                            <input
+                                id="first_name"
+                                name="first_name"
+                                value="{{ old('first_name') }}"
+                                autocomplete="given-name"
+                                maxlength="100"
+                                required
+                            >
+
                         </div>
+
+
                         <div class="form-group">
-                            <label for="last_name">Last Name <span class="required">*</span></label>
-                            <input type="text" id="last_name" name="last_name" value="{{ old('last_name') }}" placeholder="Last name" required />
+
+                            <label for="last_name">
+                                Last name
+                            </label>
+
+                            <input
+                                id="last_name"
+                                name="last_name"
+                                value="{{ old('last_name') }}"
+                                autocomplete="family-name"
+                                maxlength="100"
+                                required
+                            >
+
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="phone">Phone Number</label>
-                        <input type="tel" id="phone" name="phone" value="{{ old('phone') }}" placeholder="+63 900 000 0000" />
+
                     </div>
 
-                    {{-- Hidden field that holds the full combined address for submission --}}
-                    <input type="hidden" name="address" id="address" value="{{ old('address') }}" />
 
                     <div class="form-group">
-                        <label for="addr_region">Region <span class="required">*</span></label>
-                        <div class="select-wrapper" id="wrap_region">
-                            <select id="addr_region" required>
-                                <option value="">Select Region</option>
-                            </select>
-                            <span class="select-spinner"></span>
+
+                        <label for="phone">
+                            Phone number
+                            <span>(optional)</span>
+                        </label>
+
+                        <input
+                            type="tel"
+                            id="phone"
+                            name="phone"
+                            value="{{ old('phone') }}"
+                            placeholder="09XX XXX XXXX"
+                            autocomplete="tel"
+                            maxlength="20"
+                        >
+
+                    </div>
+
+
+                    <input type="hidden" name="role" id="selectedRole" value="{{ $selectedRole }}">
+
+
+                    <div
+                        class="step-actions"
+                        data-navigation
+                        hidden
+                    >
+
+                        <button
+                            type="button"
+                            class="btn-primary"
+                            data-next
+                        >
+                            Continue to sign-in details
+                        </button>
+
+                    </div>
+
+                </section>
+
+
+
+
+                {{-- ========================================= --}}
+                {{-- STEP 2 - SIGN-IN DETAILS --}}
+                {{-- ========================================= --}}
+                <section
+                    class="step-content"
+                    id="step2"
+                    aria-labelledby="step2-title"
+                >
+
+                    <h2
+                        class="step-title"
+                        id="step2-title"
+                        tabindex="-1"
+                    >
+                        Your sign-in details
+                    </h2>
+
+
+                    <div class="form-group">
+
+                        <label for="email">
+                            Email address
+                        </label>
+
+
+                        <input
+                            type="email"
+                            id="email"
+                            name="email"
+                            value="{{ old('email') }}"
+                            placeholder="you@example.com"
+                            autocomplete="email"
+                            required
+                        >
+
+                    </div>
+
+
+                    {{-- PASSWORD --}}
+                    <div class="form-group">
+
+                        <label for="password">
+                            Password
+                        </label>
+
+
+                        <div class="password-input-wrapper">
+
+                            <input
+                                type="password"
+                                id="password"
+                                name="password"
+                                placeholder="Create a password"
+                                autocomplete="new-password"
+                                minlength="8"
+                                aria-describedby="password-note"
+                                required
+                            >
+
+
+                            <button
+                                type="button"
+                                class="toggle-password"
+                                data-password="password"
+                                aria-controls="password"
+                                aria-label="Show password"
+                                aria-pressed="false"
+                            >
+                                Show
+                            </button>
+
                         </div>
-                        <p class="address-error" id="err_region">Please select a region.</p>
+
+
+                        <p
+                            id="password-note"
+                            class="field-note"
+                        >
+                            Use at least 8 characters.
+                        </p>
+
                     </div>
 
+
+                    {{-- CONFIRM PASSWORD --}}
                     <div class="form-group">
-                        <label for="addr_province">Province <span class="required">*</span></label>
-                        <div class="select-wrapper" id="wrap_province">
-                            <select id="addr_province" disabled required>
-                                <option value="">Select Province</option>
-                            </select>
-                            <span class="select-spinner"></span>
+
+                        <label for="password_confirmation">
+                            Confirm password
+                        </label>
+
+
+                        <div class="password-input-wrapper">
+
+                            <input
+                                type="password"
+                                id="password_confirmation"
+                                name="password_confirmation"
+                                placeholder="Repeat your password"
+                                autocomplete="new-password"
+                                required
+                            >
+
+
+                            <button
+                                type="button"
+                                class="toggle-password"
+                                data-password="password_confirmation"
+                                aria-controls="password_confirmation"
+                                aria-label="Show confirmation password"
+                                aria-pressed="false"
+                            >
+                                Show
+                            </button>
+
                         </div>
-                        <p class="address-error" id="err_province">Please select a province.</p>
+
                     </div>
 
-                    <div class="form-group">
-                        <label for="addr_city">City / Municipality <span class="required">*</span></label>
-                        <div class="select-wrapper" id="wrap_city">
-                            <select id="addr_city" disabled required>
-                                <option value="">Select City / Municipality</option>
-                            </select>
-                            <span class="select-spinner"></span>
-                        </div>
-                        <p class="address-error" id="err_city">Please select a city or municipality.</p>
-                    </div>
 
-                    <div class="form-group">
-                        <label for="addr_barangay">Barangay <span class="required">*</span></label>
-                        <div class="select-wrapper" id="wrap_barangay">
-                            <select id="addr_barangay" disabled required>
-                                <option value="">Select Barangay</option>
-                            </select>
-                            <span class="select-spinner"></span>
-                        </div>
-                        <p class="address-error" id="err_barangay">Please select a barangay.</p>
-                    </div>
+                    {{-- EMAIL OTP NOTICE --}}
+                    <p class="verification-note">
+                        We'll send a six-digit verification code to this
+                        email address. You'll need the code to finish
+                        creating your ZAYLO account.
+                    </p>
 
-                    <div class="form-group">
-                        <label for="addr_street">Street / House No. / Unit</label>
-                        <input type="text" id="addr_street" placeholder="e.g. 123 Rizal St., Unit 4B" />
-                    </div>
+
                     <div class="step-actions">
-                        <button type="button" class="btn-step-back" onclick="prevStep(3)">Back</button>
-                        <button type="button" class="btn-auth-primary btn-step-continue" onclick="submitWithAddress()">Create Account</button>
+
+                        <button
+                            type="button"
+                            class="btn-back"
+                            data-back
+                            hidden
+                        >
+                            Back
+                        </button>
+
+
+                        <button
+                            type="submit"
+                            class="btn-primary"
+                            id="create-button"
+                        >
+                            Send verification code
+                        </button>
+
                     </div>
-                </div>
+
+                </section>
+
             </form>
 
-            <div class="auth-footer">
-                <p>Already have an account? <a href="{{ route('login') }}">Sign in</a></p>
+
+            {{-- ========================================= --}}
+            {{-- GOOGLE REGISTRATION --}}
+            {{-- ========================================= --}}
+
+            <div class="auth-divider">
+                <span>OR</span>
             </div>
+
+
+            @if(Route::has('google.redirect'))
+
+                <a
+                    href="{{ route('google.redirect', ['role' => $selectedRole]) }}"
+                    class="btn-google"
+                    id="google-register-button"
+                >
+
+                    <svg
+                        class="google-icon"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                    >
+                        <path
+                            fill="#4285F4"
+                            d="M21.35 12.27c0-.79-.07-1.55-.2-2.27H12v4.3h5.23a4.47 4.47 0 0 1-1.94 2.93v2.79h3.14c1.84-1.69 2.92-4.18 2.92-7.75z"
+                        />
+
+                        <path
+                            fill="#34A853"
+                            d="M12 21.75c2.63 0 4.84-.87 6.45-2.36l-3.14-2.43c-.87.58-1.98.93-3.31.93-2.54 0-4.69-1.72-5.46-4.02H3.3v2.51A9.75 9.75 0 0 0 12 21.75z"
+                        />
+
+                        <path
+                            fill="#FBBC05"
+                            d="M6.54 13.87A5.86 5.86 0 0 1 6.23 12c0-.65.11-1.28.31-1.87V7.62H3.3A9.75 9.75 0 0 0 2.25 12c0 1.57.38 3.05 1.05 4.38l3.24-2.51z"
+                        />
+
+                        <path
+                            fill="#EA4335"
+                            d="M12 6.11c1.43 0 2.72.49 3.73 1.46l2.79-2.79C16.83 3.21 14.63 2.25 12 2.25a9.75 9.75 0 0 0-8.7 5.37l3.24 2.51c.77-2.3 2.92-4.02 5.46-4.02z"
+                        />
+
+                    </svg>
+
+                    <span>
+                        Continue with Google
+                    </span>
+
+                </a>
+
+            @else
+
+                {{-- Temporary button until Google route is created --}}
+                <button
+                    type="button"
+                    class="btn-google"
+                    disabled
+                    title="Google Sign-In is not configured yet."
+                >
+
+                    <svg
+                        class="google-icon"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                    >
+                        <path
+                            fill="#4285F4"
+                            d="M21.35 12.27c0-.79-.07-1.55-.2-2.27H12v4.3h5.23a4.47 4.47 0 0 1-1.94 2.93v2.79h3.14c1.84-1.69 2.92-4.18 2.92-7.75z"
+                        />
+
+                        <path
+                            fill="#34A853"
+                            d="M12 21.75c2.63 0 4.84-.87 6.45-2.36l-3.14-2.43c-.87.58-1.98.93-3.31.93-2.54 0-4.69-1.72-5.46-4.02H3.3v2.51A9.75 9.75 0 0 0 12 21.75z"
+                        />
+
+                        <path
+                            fill="#FBBC05"
+                            d="M6.54 13.87A5.86 5.86 0 0 1 6.23 12c0-.65.11-1.28.31-1.87V7.62H3.3A9.75 9.75 0 0 0 2.25 12c0 1.57.38 3.05 1.05 4.38l3.24-2.51z"
+                        />
+
+                        <path
+                            fill="#EA4335"
+                            d="M12 6.11c1.43 0 2.72.49 3.73 1.46l2.79-2.79C16.83 3.21 14.63 2.25 12 2.25a9.75 9.75 0 0 0-8.7 5.37l3.24 2.51c.77-2.3 2.92-4.02 5.46-4.02z"
+                        />
+
+                    </svg>
+
+                    <span>
+                        Continue with Google
+                    </span>
+
+                </button>
+
+            @endif
+
+
+            {{-- FOOTER --}}
+            <footer class="auth-footer">
+
+                <p>
+                    Already have an account?
+
+                    <a href="{{ route('login') }}">
+                        Sign in
+                    </a>
+                </p>
+
+
+                <div class="partner-links">
+
+                    @if($isPartner)
+
+                        <a href="{{ route('register') }}">
+                            Create a shopping account
+                        </a>
+
+                    @endif
+
+
+                    @if($selectedRole !== 'seller')
+
+                        <a
+                            href="{{ route(
+                                'register',
+                                ['role' => 'seller']
+                            ) }}"
+                        >
+                            Sell on ZAYLO
+                        </a>
+
+                    @endif
+
+
+                    @if($selectedRole !== 'courier')
+
+                        <a
+                            href="{{ route(
+                                'register',
+                                ['role' => 'courier']
+                            ) }}"
+                        >
+                            Become a courier
+                        </a>
+
+                    @endif
+
+                </div>
+
+            </footer>
+
         </div>
-    </div>
-</div>
+
+    </section>
+
+</main>
+
 @endsection
 
+
 @push('scripts')
+
 <script>
-    // ─── Step navigation ────────────────────────────────────────────────────
+
+(() => {
+
+    const form =
+        document.getElementById('registerForm');
+
+    const sections =
+        [...form.querySelectorAll('.step-content')];
+
+    const password =
+        document.getElementById('password');
+
+    const confirmation =
+        document.getElementById('password_confirmation');
+
+    const role =
+        document.getElementById('selectedRole');
+
+    const createButton =
+        document.getElementById('create-button');
+
+    const googleButton =
+        document.getElementById('google-register-button');
+
     let currentStep = 1;
 
-    function selectRegisterRole(element) {
-        document.querySelectorAll('.register-role-selector .role-option').forEach(opt => opt.classList.remove('active'));
-        element.classList.add('active');
-        document.getElementById('selectedRole').value = element.dataset.role;
-    }
 
-    function nextStep(from) {
-        document.getElementById('step' + from).classList.remove('active');
-        document.getElementById('step' + (from + 1)).classList.add('active');
-        updateStepIndicator(from, from + 1);
-        currentStep = from + 1;
-    }
+    /*
+    |--------------------------------------------------------------------------
+    | UPDATE ROLE UI
+    |--------------------------------------------------------------------------
+    */
 
-    function prevStep(from) {
-        document.getElementById('step' + from).classList.remove('active');
-        document.getElementById('step' + (from - 1)).classList.add('active');
-        updateStepIndicator(from, from - 1);
-        currentStep = from - 1;
-    }
+    function updateRole()
+    {
+        const partner =
+            role.value !== 'buyer';
 
-    function updateStepIndicator(fromStep, toStep) {
-        document.querySelectorAll('.step-item').forEach((item, index) => {
-            item.classList.remove('active', 'completed');
-            const stepNum = index + 1;
-            if (stepNum < toStep) item.classList.add('completed');
-            if (stepNum === toStep) item.classList.add('active');
-        });
-    }
 
-    function togglePassword(inputId, button) {
-        const input = document.getElementById(inputId);
-        const icon = button.querySelector('i');
-        if (input.type === 'password') {
-            input.type = 'text';
-            icon.classList.replace('fa-eye', 'fa-eye-slash');
-        } else {
-            input.type = 'password';
-            icon.classList.replace('fa-eye-slash', 'fa-eye');
+        document
+            .getElementById('register-label')
+            .textContent =
+                partner
+                    ? 'ZAYLO PARTNERS'
+                    : 'JOIN ZAYLO';
+
+
+        document
+            .getElementById('register-title')
+            .textContent =
+                role.value === 'seller'
+                    ? 'Sell on ZAYLO'
+                    : (
+                        role.value === 'courier'
+                            ? 'Become a courier'
+                            : 'Create your account'
+                    );
+
+
+        document
+            .getElementById('register-subtitle')
+            .textContent =
+                partner
+                    ? 'Create your account to apply as a '
+                        + role.value
+                        + ' on ZAYLO.'
+                    : 'Save your favorites, track your orders, and discover everyday finds in one place.';
+
+
+        document
+            .getElementById('partner-note')
+            .hidden =
+                !partner;
+
+
+        createButton.textContent =
+            'Send verification code';
+
+
+        /*
+         * Keep the selected role when using Google.
+         */
+        if (googleButton)
+        {
+            const url =
+                new URL(
+                    googleButton.href,
+                    window.location.origin
+                );
+
+            url.searchParams.set(
+                'role',
+                role.value
+            );
+
+            googleButton.href =
+                url.toString();
         }
     }
 
-    // ─── PSGC API address dropdowns ─────────────────────────────────────────
-    const PSGC = 'https://psgc.gitlab.io/api';
 
-    // Cache responses to avoid repeat network calls
-    const cache = {};
+    /*
+    |--------------------------------------------------------------------------
+    | SHOW STEP
+    |--------------------------------------------------------------------------
+    */
 
-    async function psgcFetch(url) {
-        if (cache[url]) return cache[url];
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`PSGC API error: ${res.status}`);
-        const data = await res.json();
-        cache[url] = data;
-        return data;
-    }
-
-    function setLoading(wrapperId, isLoading) {
-        document.getElementById(wrapperId).classList.toggle('loading', isLoading);
-    }
-
-    function showError(errorId, show) {
-        document.getElementById(errorId).style.display = show ? 'block' : 'none';
-    }
-
-    function populateSelect(selectEl, items, placeholder) {
-        selectEl.innerHTML = `<option value="">${placeholder}</option>`;
-        // Sort alphabetically by name
-        items.slice().sort((a, b) => a.name.localeCompare(b.name)).forEach(item => {
-            const opt = document.createElement('option');
-            opt.value = item.code;
-            opt.textContent = item.name;
-            selectEl.appendChild(opt);
-        });
-        selectEl.disabled = false;
-    }
-
-    function resetSelect(selectEl, placeholder) {
-        selectEl.innerHTML = `<option value="">${placeholder}</option>`;
-        selectEl.disabled = true;
-    }
-
-    // Load regions on page ready
-    document.addEventListener('DOMContentLoaded', async () => {
-        const regionSel = document.getElementById('addr_region');
-        setLoading('wrap_region', true);
-        try {
-            const regions = await psgcFetch(`${PSGC}/regions/`);
-            populateSelect(regionSel, regions, 'Select Region');
-        } catch (e) {
-            regionSel.innerHTML = '<option value="">Failed to load regions</option>';
-            console.error(e);
-        } finally {
-            setLoading('wrap_region', false);
+    function showStep(step, focus = true)
+    {
+        if (
+            step < 1 ||
+            step > sections.length
+        )
+        {
+            return;
         }
-    });
 
-    // Region → Province
-    document.getElementById('addr_region').addEventListener('change', async function () {
-        const regionCode = this.value;
-        const regionName = this.options[this.selectedIndex].text;
-        showError('err_region', false);
 
-        const provinceSel  = document.getElementById('addr_province');
-        const citySel      = document.getElementById('addr_city');
-        const barangaySel  = document.getElementById('addr_barangay');
+        currentStep = step;
 
-        resetSelect(provinceSel,  'Select Province');
-        resetSelect(citySel,      'Select City / Municipality');
-        resetSelect(barangaySel,  'Select Barangay');
 
-        if (!regionCode) return;
-
-        setLoading('wrap_province', true);
-        try {
-            // NCR (code 130000000) has cities/municipalities directly, no provinces
-            if (regionCode === '130000000') {
-                const cities = await psgcFetch(`${PSGC}/regions/${regionCode}/cities-municipalities/`);
-                populateSelect(provinceSel, [{ code: '__ncr__', name: 'Metro Manila (NCR)' }], 'Select Province');
-                provinceSel.value = '__ncr__';
-                provinceSel.disabled = true;
-
-                resetSelect(citySel, 'Select City / Municipality');
-                populateSelect(citySel, cities, 'Select City / Municipality');
-            } else {
-                const provinces = await psgcFetch(`${PSGC}/regions/${regionCode}/provinces/`);
-                populateSelect(provinceSel, provinces, 'Select Province');
+        sections.forEach(
+            (section, index) =>
+            {
+                section.hidden =
+                    index + 1 !== step;
             }
-        } catch (e) {
-            provinceSel.innerHTML = '<option value="">Failed to load provinces</option>';
-            console.error(e);
-        } finally {
-            setLoading('wrap_province', false);
+        );
+
+
+        document
+            .querySelectorAll('.step-item')
+            .forEach(
+                item =>
+                {
+                    const itemStep =
+                        Number(item.dataset.step);
+
+
+                    if (itemStep === step)
+                    {
+                        item.setAttribute(
+                            'aria-current',
+                            'step'
+                        );
+                    }
+                    else
+                    {
+                        item.removeAttribute(
+                            'aria-current'
+                        );
+                    }
+
+
+                    item.classList.toggle(
+                        'completed',
+                        itemStep < step
+                    );
+                }
+            );
+
+
+        if (focus)
+        {
+            document
+                .getElementById(
+                    'step' + step + '-title'
+                )
+                .focus();
         }
-    });
-
-    // Province → City / Municipality
-    document.getElementById('addr_province').addEventListener('change', async function () {
-        const provinceCode = this.value;
-        showError('err_province', false);
-
-        const citySel     = document.getElementById('addr_city');
-        const barangaySel = document.getElementById('addr_barangay');
-
-        resetSelect(citySel,      'Select City / Municipality');
-        resetSelect(barangaySel,  'Select Barangay');
-
-        if (!provinceCode || provinceCode === '__ncr__') return;
-
-        setLoading('wrap_city', true);
-        try {
-            const cities = await psgcFetch(`${PSGC}/provinces/${provinceCode}/cities-municipalities/`);
-            populateSelect(citySel, cities, 'Select City / Municipality');
-        } catch (e) {
-            citySel.innerHTML = '<option value="">Failed to load cities</option>';
-            console.error(e);
-        } finally {
-            setLoading('wrap_city', false);
-        }
-    });
-
-    // City / Municipality → Barangay
-    document.getElementById('addr_city').addEventListener('change', async function () {
-        const cityCode = this.value;
-        showError('err_city', false);
-
-        const barangaySel = document.getElementById('addr_barangay');
-        resetSelect(barangaySel, 'Select Barangay');
-
-        if (!cityCode) return;
-
-        setLoading('wrap_barangay', true);
-        try {
-            const barangays = await psgcFetch(`${PSGC}/cities-municipalities/${cityCode}/barangays/`);
-            populateSelect(barangaySel, barangays, 'Select Barangay');
-        } catch (e) {
-            barangaySel.innerHTML = '<option value="">Failed to load barangays</option>';
-            console.error(e);
-        } finally {
-            setLoading('wrap_barangay', false);
-        }
-    });
-
-    document.getElementById('addr_barangay').addEventListener('change', function () {
-        showError('err_barangay', false);
-    });
-
-    // ─── Combine address parts and submit ───────────────────────────────────
-    function submitWithAddress() {
-        const regionSel   = document.getElementById('addr_region');
-        const provinceSel = document.getElementById('addr_province');
-        const citySel     = document.getElementById('addr_city');
-        const barangaySel = document.getElementById('addr_barangay');
-        const street      = document.getElementById('addr_street').value.trim();
-
-        let valid = true;
-
-        if (!regionSel.value) {
-            showError('err_region', true);
-            valid = false;
-        }
-        if (!provinceSel.value) {
-            showError('err_province', true);
-            valid = false;
-        }
-        if (!citySel.value) {
-            showError('err_city', true);
-            valid = false;
-        }
-        if (!barangaySel.value) {
-            showError('err_barangay', true);
-            valid = false;
-        }
-
-        if (!valid) return;
-
-        // Build a readable address string
-        const parts = [
-            street,
-            barangaySel.options[barangaySel.selectedIndex].text,
-            citySel.options[citySel.selectedIndex].text,
-            provinceSel.options[provinceSel.selectedIndex].text !== 'Metro Manila (NCR)'
-                ? provinceSel.options[provinceSel.selectedIndex].text
-                : null,
-            regionSel.options[regionSel.selectedIndex].text,
-        ].filter(Boolean);
-
-        document.getElementById('address').value = parts.join(', ');
-        document.getElementById('registerForm').submit();
     }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | VALIDATE STEP
+    |--------------------------------------------------------------------------
+    */
+
+    function validateStep(step)
+    {
+        confirmation.setCustomValidity(
+            confirmation.value !== password.value
+                ? 'Your passwords must match.'
+                : ''
+        );
+
+
+        const invalid =
+            [
+                ...sections[
+                    step - 1
+                ].querySelectorAll(
+                    'input, textarea, select'
+                )
+            ].find(
+                field =>
+                    !field.checkValidity()
+            );
+
+
+        if (!invalid)
+        {
+            return true;
+        }
+
+
+        showStep(step, false);
+
+        invalid.reportValidity();
+
+        return false;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | INITIAL SETUP
+    |--------------------------------------------------------------------------
+    */
+
+    form.noValidate = true;
+
+
+    const indicator =
+        document.querySelector(
+            '.step-indicator'
+        );
+
+
+    if (indicator)
+    {
+        indicator.hidden = false;
+    }
+
+
+    document
+        .querySelectorAll(
+            '[data-navigation], [data-back]'
+        )
+        .forEach(
+            element =>
+            {
+                element.hidden = false;
+            }
+        );
+
+
+    updateRole();
+
+
+    const firstErrorStep =
+        @json($firstErrorStep);
+
+
+    showStep(
+        firstErrorStep,
+        false
+    );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | NEXT BUTTONS
+    |--------------------------------------------------------------------------
+    */
+
+    document
+        .querySelectorAll('[data-next]')
+        .forEach(
+            button =>
+                button.addEventListener(
+                    'click',
+                    () =>
+                    {
+                        if (
+                            validateStep(
+                                currentStep
+                            )
+                        )
+                        {
+                            showStep(
+                                currentStep + 1
+                            );
+                        }
+                    }
+                )
+        );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | BACK BUTTONS
+    |--------------------------------------------------------------------------
+    */
+
+    document
+        .querySelectorAll('[data-back]')
+        .forEach(
+            button =>
+                button.addEventListener(
+                    'click',
+                    () =>
+                    {
+                        showStep(
+                            currentStep - 1
+                        );
+                    }
+                )
+        );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | PASSWORD MATCHING
+    |--------------------------------------------------------------------------
+    */
+
+    [
+        password,
+        confirmation
+    ].forEach(
+        field =>
+            field.addEventListener(
+                'input',
+                () =>
+                {
+                    confirmation
+                        .setCustomValidity('');
+                }
+            )
+    );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | SHOW / HIDE PASSWORD
+    |--------------------------------------------------------------------------
+    */
+
+    document
+        .querySelectorAll('[data-password]')
+        .forEach(
+            button =>
+            {
+                button.addEventListener(
+                    'click',
+                    () =>
+                    {
+                        const input =
+                            document.getElementById(
+                                button.dataset.password
+                            );
+
+
+                        const visible =
+                            input.type === 'password';
+
+
+                        input.type =
+                            visible
+                                ? 'text'
+                                : 'password';
+
+
+                        button.textContent =
+                            visible
+                                ? 'Hide'
+                                : 'Show';
+
+
+                        button.setAttribute(
+                            'aria-pressed',
+                            String(visible)
+                        );
+
+
+                        button.setAttribute(
+                            'aria-label',
+                            (
+                                visible
+                                    ? 'Hide '
+                                    : 'Show '
+                            )
+                            +
+                            (
+                                input === confirmation
+                                    ? 'confirmation password'
+                                    : 'password'
+                            )
+                        );
+                    }
+                );
+            }
+        );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | FORM SUBMISSION
+    |--------------------------------------------------------------------------
+    */
+
+    form.addEventListener(
+        'submit',
+        event =>
+        {
+            if (
+                currentStep <
+                sections.length
+            )
+            {
+                event.preventDefault();
+
+
+                if (
+                    validateStep(
+                        currentStep
+                    )
+                )
+                {
+                    showStep(
+                        currentStep + 1
+                    );
+                }
+
+
+                return;
+            }
+
+
+            for (
+                let step = 1;
+                step <= sections.length;
+                step++
+            )
+            {
+                if (!validateStep(step))
+                {
+                    event.preventDefault();
+
+                    return;
+                }
+            }
+
+
+            createButton.disabled = true;
+
+            createButton.textContent =
+                'Sending verification code…';
+        }
+    );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | BROWSER BACK CACHE FIX
+    |--------------------------------------------------------------------------
+    */
+
+    window.addEventListener(
+        'pageshow',
+        () =>
+        {
+            createButton.disabled = false;
+
+            updateRole();
+        }
+    );
+
+})();
+
 </script>
+
 @endpush
