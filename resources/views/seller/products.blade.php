@@ -1,37 +1,25 @@
-﻿@extends('layouts.app')
-
-@section('title', 'ZAYLO · My Products')
-
-@section('nav-links')
-<div class="nav-links">
-    <a href="{{ route('seller.dashboard') }}" class="{{ request()->routeIs('seller.dashboard') ? 'active-link' : '' }}">Dashboard</a>
-    <a href="{{ route('seller.products') }}" class="{{ request()->routeIs('seller.products') ? 'active-link' : '' }}">Products</a>
-    <a href="{{ route('seller.orders') }}" class="{{ request()->routeIs('seller.orders') ? 'active-link' : '' }}">Orders</a>
-    <a href="{{ route('seller.inventory') }}" class="{{ request()->routeIs('seller.inventory') ? 'active-link' : '' }}">Inventory</a>
-    <a href="{{ route('seller.reports') }}" class="{{ request()->routeIs('seller.reports') ? 'active-link' : '' }}">Reports</a>
-</div>
-@endsection
-@section('nav-icons')
-<a href="{{ route('seller.chat') }}"><i class="fas fa-comment-dots"></i></a>
-<a href="{{ route('seller.account') }}"><i class="far fa-user"></i></a>
-@endsection
-
-
+@extends('layouts.app')
+@section('title', 'My Products · ZAYLO')
+@section('nav-links')<nav class="nav-links"><a href="{{ route('seller.dashboard') }}">Dashboard</a><a class="active-link" href="{{ route('seller.products') }}">Products</a><a href="{{ route('seller.orders') }}">Orders</a><a href="{{ route('seller.inventory') }}">Inventory</a></nav>@endsection
+@section('nav-icons')<a href="{{ route('seller.account') }}" aria-label="Account"><i class="far fa-user"></i></a>@endsection
 @section('content')
-<div class="page-hero">
-    <div class="page-hero-inner">
-        <i class="fas fa-tags"></i>
-        <div>
-            <h1></h1>
-            <p></p>
-        </div>
-    </div>
-</div>
-<div class="page-content">
-    <div class="placeholder-card">
-        <i class="fas fa-tags"></i>
-        <h2>My Products</h2>
-        <p>Manage your product listings.</p>
-    </div>
-</div>
+<div class="page-hero"><div class="page-hero-inner"><i class="fas fa-tags"></i><div><h1>My Products</h1><p>Create listings and keep prices and stock current.</p></div></div></div>
+<div class="page-content management-grid">
+<aside class="form-card"><h2>Add product</h2><form method="POST" action="{{ route('seller.products.store') }}" class="market-form stacked-form">@csrf
+    <label>Name<input name="name" value="{{ old('name') }}" required></label><label>SKU<input name="sku" value="{{ old('sku') }}" placeholder="Generated if blank"></label>
+    <div class="form-row"><label>Category<select name="category" required>@foreach(config('marketplace.categories') as $value => $label)<option value="{{ $value }}" @selected(old('category') === $value)>{{ $label }}</option>@endforeach</select></label><label>Target audience (optional)<select name="gender"><option value="">Not specified</option>@foreach(['men','women','unisex'] as $value)<option value="{{ $value }}">{{ ucfirst($value) }}</option>@endforeach</select></label></div>
+    <label>Description<textarea name="description">{{ old('description') }}</textarea></label><div class="form-row"><label>Price<input type="number" step="0.01" min="0" name="price" required></label><label>Original price<input type="number" step="0.01" min="0" name="original_price"></label></div>
+    <div class="form-row"><label>Stock<input type="number" min="0" name="stock" value="0" required></label><label>Low-stock alert<input type="number" min="0" name="low_stock_threshold" value="5" required></label></div>
+    <label>Image URL<input type="url" name="image_url"></label><label>Badge<select name="badge"><option value="">None</option><option>New</option><option>Sale</option><option>Best Seller</option></select></label><label class="check-label"><input type="checkbox" name="is_active" value="1" checked> Active listing</label><button class="market-button">Create product</button>
+</form></aside>
+<section class="management-list"><h2>{{ $products->total() }} listings</h2>
+@forelse($products as $product)<details class="management-item"><summary><img src="{{ $product->image_url ?: asset('images/ZAYLO_ICON_DARK.png') }}" alt=""><span><strong>{{ $product->name }}</strong><small>{{ $product->sku }} · {{ $product->stock }} in stock</small></span><span>₱{{ number_format($product->price, 2) }}</span><span class="status-pill">{{ $product->is_active ? 'Active' : 'Hidden' }}</span></summary>
+<form method="POST" action="{{ route('seller.products.update', $product) }}" class="market-form stacked-form compact-form">@csrf @method('PUT')
+    <div class="form-row"><label>Name<input name="name" value="{{ $product->name }}" required></label><label>SKU<input name="sku" value="{{ $product->sku }}"></label></div>
+    <div class="form-row"><label>Category<select name="category">@foreach(config('marketplace.categories') as $value => $label)<option value="{{ $value }}" @selected($product->category===$value)>{{ $label }}</option>@endforeach</select></label><label>Target audience (optional)<select name="gender"><option value="" @selected(!$product->gender)>Not specified</option>@foreach(['men','women','unisex'] as $value)<option value="{{ $value }}" @selected($product->gender===$value)>{{ ucfirst($value) }}</option>@endforeach</select></label></div>
+    <label>Description<textarea name="description">{{ $product->description }}</textarea></label><div class="form-row"><label>Price<input type="number" step="0.01" name="price" value="{{ $product->price }}" required></label><label>Original price<input type="number" step="0.01" name="original_price" value="{{ $product->original_price }}"></label></div>
+    <div class="form-row"><label>Stock<input type="number" min="0" name="stock" value="{{ $product->stock }}" required></label><label>Low-stock alert<input type="number" min="0" name="low_stock_threshold" value="{{ $product->low_stock_threshold }}" required></label></div><label>Image URL<input type="url" name="image_url" value="{{ $product->image_url }}"></label><label>Badge<select name="badge"><option value="">None</option>@foreach(['New','Sale','Best Seller'] as $value)<option @selected($product->badge===$value)>{{ $value }}</option>@endforeach</select></label><label class="check-label"><input type="checkbox" name="is_active" value="1" @checked($product->is_active)> Active listing</label><button class="market-button">Save changes</button>
+</form><form method="POST" action="{{ route('seller.products.destroy', $product) }}" onsubmit="return confirm('Remove this product?')">@csrf @method('DELETE')<button class="text-button danger">Delete product</button></form></details>
+@empty<div class="placeholder-card"><i class="fas fa-tags"></i><h2>No products yet</h2><p>Create your first listing using the form.</p></div>@endforelse
+{{ $products->links() }}</section></div>
 @endsection

@@ -16,6 +16,8 @@ class DatabaseSeeder extends Seeder
             'email'    => 'buyer@zaylo.com',
             'password' => Hash::make('password'),
             'role'     => 'buyer',
+            'email_verified_at' => now(),
+            'status' => 'active',
         ]);
 
         User::create([
@@ -23,6 +25,8 @@ class DatabaseSeeder extends Seeder
             'email'    => 'seller@zaylo.com',
             'password' => Hash::make('password'),
             'role'     => 'seller',
+            'email_verified_at' => now(),
+            'status' => 'active',
         ]);
 
         User::create([
@@ -30,6 +34,8 @@ class DatabaseSeeder extends Seeder
             'email'    => 'courier@zaylo.com',
             'password' => Hash::make('password'),
             'role'     => 'courier',
+            'email_verified_at' => now(),
+            'status' => 'active',
         ]);
 
         User::create([
@@ -37,6 +43,8 @@ class DatabaseSeeder extends Seeder
             'email'    => 'admin@zaylo.com',
             'password' => Hash::make('password'),
             'role'     => 'admin',
+            'email_verified_at' => now(),
+            'status' => 'active',
         ]);
 
         // Sample products

@@ -1,37 +1,8 @@
-﻿@extends('layouts.app')
-
-@section('title', 'ZAYLO · Seller Orders')
-
-@section('nav-links')
-<div class="nav-links">
-    <a href="{{ route('seller.dashboard') }}" class="{{ request()->routeIs('seller.dashboard') ? 'active-link' : '' }}">Dashboard</a>
-    <a href="{{ route('seller.products') }}" class="{{ request()->routeIs('seller.products') ? 'active-link' : '' }}">Products</a>
-    <a href="{{ route('seller.orders') }}" class="{{ request()->routeIs('seller.orders') ? 'active-link' : '' }}">Orders</a>
-    <a href="{{ route('seller.inventory') }}" class="{{ request()->routeIs('seller.inventory') ? 'active-link' : '' }}">Inventory</a>
-    <a href="{{ route('seller.reports') }}" class="{{ request()->routeIs('seller.reports') ? 'active-link' : '' }}">Reports</a>
-</div>
-@endsection
-@section('nav-icons')
-<a href="{{ route('seller.chat') }}"><i class="fas fa-comment-dots"></i></a>
-<a href="{{ route('seller.account') }}"><i class="far fa-user"></i></a>
-@endsection
-
-
+@extends('layouts.app')
+@section('title', 'Seller Orders · ZAYLO')
+@section('nav-links')<nav class="nav-links"><a href="{{ route('seller.dashboard') }}">Dashboard</a><a href="{{ route('seller.products') }}">Products</a><a class="active-link" href="{{ route('seller.orders') }}">Orders</a><a href="{{ route('seller.inventory') }}">Inventory</a></nav>@endsection
+@section('nav-icons')<a href="{{ route('seller.account') }}" aria-label="Account"><i class="far fa-user"></i></a>@endsection
 @section('content')
-<div class="page-hero">
-    <div class="page-hero-inner">
-        <i class="fas fa-box"></i>
-        <div>
-            <h1></h1>
-            <p></p>
-        </div>
-    </div>
-</div>
-<div class="page-content">
-    <div class="placeholder-card">
-        <i class="fas fa-box"></i>
-        <h2>Orders</h2>
-        <p>View and manage incoming orders.</p>
-    </div>
-</div>
+<div class="page-hero"><div class="page-hero-inner"><i class="fas fa-box"></i><div><h1>Incoming Orders</h1><p>Confirm, prepare, and hand orders to a courier.</p></div></div></div>
+<div class="page-content">@forelse($orders as $order)<article class="order-card"><header><div><strong>{{ $order->order_number }}</strong><p>{{ $order->buyer->name }} · {{ $order->shipping_address }}</p></div><span class="status-pill">{{ str($order->status)->replace('_',' ')->title() }}</span></header>@foreach($order->items as $item)<p class="summary-row"><span>{{ $item->quantity }} × {{ $item->product_name }}</span><span>₱{{ number_format($item->line_total,2) }}</span></p>@endforeach<footer><strong>₱{{ number_format($order->total,2) }}</strong>@php($next = match($order->status){'placed'=>['confirmed'=>'Confirm','cancelled'=>'Cancel'],'confirmed'=>['processing'=>'Start processing','cancelled'=>'Cancel'],'processing'=>['ready_for_pickup'=>'Ready for pickup'],default=>[]})@foreach($next as $value=>$label)<form method="POST" action="{{ route('seller.orders.status',$order) }}">@csrf @method('PATCH')<input type="hidden" name="status" value="{{ $value }}"><button class="{{ $value==='cancelled' ? 'text-button danger' : 'market-button small-button' }}">{{ $label }}</button></form>@endforeach</footer></article>@empty<div class="placeholder-card"><i class="fas fa-box"></i><h2>No incoming orders</h2><p>New buyer orders will appear here.</p></div>@endforelse{{ $orders->links() }}</div>
 @endsection

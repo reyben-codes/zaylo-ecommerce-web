@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('seller_id')->nullable()->constrained('users')->nullOnDelete();
             $table->string('name');
-            $table->string('category'); // clothing, bags, shoes, watches, accessories
+            $table->string('category'); // Marketplace category key (electronics, home_living, fashion, etc.)
             $table->string('gender')->nullable(); // men, women, unisex
             $table->text('description')->nullable();
             $table->decimal('price', 10, 2);

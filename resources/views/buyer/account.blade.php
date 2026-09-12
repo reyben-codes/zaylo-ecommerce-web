@@ -3,13 +3,7 @@
 @section('title', 'ZAYLO · My Account')
 
 @section('nav-links')
-<div class="nav-links">
-    <a href="{{ route('home') }}" class="{{ request()->routeIs('home') ? 'active-link' : '' }}">Home</a>
-    <a href="{{ route('buyer.products') }}" class="{{ request()->routeIs('buyer.products') ? 'active-link' : '' }}">Clothing</a>
-    <a href="{{ route('buyer.products') }}" class="{{ request()->routeIs('buyer.products') ? 'active-link' : '' }}">Bags</a>
-    <a href="{{ route('buyer.products') }}" class="{{ request()->routeIs('buyer.products') ? 'active-link' : '' }}">Shoes</a>
-    <a href="{{ route('buyer.products') }}" class="{{ request()->routeIs('buyer.products') ? 'active-link' : '' }}">Accessories</a>
-</div>
+@include('partials.store-nav')
 @endsection
 @section('nav-icons')
 <a href="{{ route('buyer.wishlist') }}" style="position:relative;"><i class="far fa-heart"></i></a>
@@ -33,6 +27,7 @@
         <i class="fas fa-user"></i>
         <h2>My Account</h2>
         <p>Manage your profile and preferences.</p>
+        <a class="market-button inline-button" href="{{ route('addresses.index') }}">Manage saved addresses</a>
     </div>
 </div>
 @endsection

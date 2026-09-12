@@ -1,38 +1,11 @@
-﻿@extends('layouts.app')
-
-@section('title', 'ZAYLO · Wishlist')
-
-@section('nav-links')
-<div class="nav-links">
-    <a href="{{ route('home') }}" class="{{ request()->routeIs('home') ? 'active-link' : '' }}">Home</a>
-    <a href="{{ route('buyer.products') }}" class="{{ request()->routeIs('buyer.products') ? 'active-link' : '' }}">Clothing</a>
-    <a href="{{ route('buyer.products') }}" class="{{ request()->routeIs('buyer.products') ? 'active-link' : '' }}">Bags</a>
-    <a href="{{ route('buyer.products') }}" class="{{ request()->routeIs('buyer.products') ? 'active-link' : '' }}">Shoes</a>
-    <a href="{{ route('buyer.products') }}" class="{{ request()->routeIs('buyer.products') ? 'active-link' : '' }}">Accessories</a>
-</div>
-@endsection
-@section('nav-icons')
-<a href="{{ route('buyer.wishlist') }}" style="position:relative;"><i class="far fa-heart"></i></a>
-<a href="{{ route('buyer.cart') }}" style="position:relative;"><i class="fas fa-shopping-bag"></i></a>
-<a href="{{ route('buyer.account') }}"><i class="far fa-user"></i></a>
-@endsection
-
-
+@extends('layouts.app')
+@section('title', 'Wishlist · ZAYLO')
+@section('nav-links')<nav class="nav-links"><a href="{{ route('home') }}">Home</a><a href="{{ route('products.index') }}">Shop</a><a class="active-link" href="{{ route('buyer.wishlist') }}">Wishlist</a></nav>@endsection
+@section('nav-icons')<a href="{{ route('buyer.cart') }}" aria-label="Shopping cart"><i class="fas fa-shopping-bag"></i></a>@endsection
 @section('content')
-<div class="page-hero">
-    <div class="page-hero-inner">
-        <i class="fas fa-heart"></i>
-        <div>
-            <h1></h1>
-            <p></p>
-        </div>
-    </div>
-</div>
-<div class="page-content">
-    <div class="placeholder-card">
-        <i class="fas fa-heart"></i>
-        <h2>My Wishlist</h2>
-        <p>Products you've saved for later.</p>
-    </div>
-</div>
+<div class="page-hero"><div class="page-hero-inner"><i class="fas fa-heart"></i><div><h1>Wishlist</h1><p>Your saved pieces, persisted to your account.</p></div></div></div>
+<div class="page-content"><div class="product-grid">
+@forelse($items as $item)<article class="product-card"><a class="product-image" href="{{ route('products.show', $item->product) }}"><img src="{{ $item->product->image_url }}" alt="{{ $item->product->name }}"></a><div class="product-info"><h2 class="product-name">{{ $item->product->name }}</h2><p>₱{{ number_format($item->product->price, 2) }}</p><form method="POST" action="{{ route('buyer.wishlist.toggle', $item->product) }}">@csrf<button class="text-button danger">Remove</button></form></div></article>
+@empty<div class="placeholder-card"><i class="fas fa-heart"></i><h2>No saved products</h2><p>Use the heart button while browsing.</p></div>@endforelse
+</div></div>
 @endsection

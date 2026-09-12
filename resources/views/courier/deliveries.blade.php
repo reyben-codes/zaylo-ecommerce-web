@@ -1,36 +1,4 @@
-﻿@extends('layouts.app')
-
-@section('title', 'ZAYLO · Deliveries')
-
-@section('nav-links')
-<div class="nav-links">
-    <a href="{{ route('courier.dashboard') }}" class="{{ request()->routeIs('courier.dashboard') ? 'active-link' : '' }}">Dashboard</a>
-    <a href="{{ route('courier.deliveries') }}" class="{{ request()->routeIs('courier.deliveries') ? 'active-link' : '' }}">Deliveries</a>
-    <a href="{{ route('courier.earnings') }}" class="{{ request()->routeIs('courier.earnings') ? 'active-link' : '' }}">Earnings</a>
-    <a href="{{ route('courier.history') }}" class="{{ request()->routeIs('courier.history') ? 'active-link' : '' }}">History</a>
-</div>
-@endsection
-@section('nav-icons')
-<a href="{{ route('courier.chat') }}"><i class="fas fa-comment-dots"></i></a>
-<a href="{{ route('courier.account') }}"><i class="far fa-user"></i></a>
-@endsection
-
-
-@section('content')
-<div class="page-hero">
-    <div class="page-hero-inner">
-        <i class="fas fa-map-marker-alt"></i>
-        <div>
-            <h1></h1>
-            <p></p>
-        </div>
-    </div>
-</div>
-<div class="page-content">
-    <div class="placeholder-card">
-        <i class="fas fa-map-marker-alt"></i>
-        <h2>My Deliveries</h2>
-        <p>View and manage your assigned deliveries.</p>
-    </div>
-</div>
-@endsection
+@extends('layouts.app')
+@section('title', 'Deliveries · ZAYLO')
+@section('nav-links')<nav class="nav-links"><a href="{{ route('courier.dashboard') }}">Dashboard</a><a class="active-link" href="{{ route('courier.deliveries') }}">Deliveries</a><a href="{{ route('courier.earnings') }}">Earnings</a></nav>@endsection
+@section('content')<div class="page-hero"><div class="page-hero-inner"><i class="fas fa-map-marker-alt"></i><div><h1>Deliveries</h1><p>Only accept a parcel when you can complete its route.</p></div></div></div><div class="page-content"><h2>Available for pickup</h2><div class="delivery-grid">@forelse($available as $shipment)<article class="delivery-card"><span class="status-pill">Ready</span><h3>{{ $shipment->tracking_number }}</h3><p>{{ $shipment->order->shipping_address }}</p><strong>Collect ₱{{ number_format($shipment->order->total,2) }}</strong><form method="POST" action="{{ route('courier.deliveries.claim',$shipment) }}">@csrf<button class="market-button">Accept delivery</button></form></article>@empty<p class="empty-note">No parcels are waiting right now.</p>@endforelse</div><h2 class="section-heading">My deliveries</h2><div class="delivery-grid">@forelse($assigned as $shipment)<article class="delivery-card"><span class="status-pill">{{ str($shipment->status)->replace('_',' ')->title() }}</span><h3>{{ $shipment->tracking_number }}</h3><p>{{ $shipment->order->recipient_name }} · {{ $shipment->order->phone }}</p><p>{{ $shipment->order->shipping_address }}</p>@php($next=match($shipment->status){'assigned'=>'picked_up','picked_up'=>'in_transit','in_transit'=>'delivered',default=>null})@if($next)<form method="POST" action="{{ route('courier.deliveries.update',$shipment) }}">@csrf @method('PATCH')<input type="hidden" name="status" value="{{ $next }}"><button class="market-button">Mark {{ str($next)->replace('_',' ') }}</button></form>@endif</article>@empty<p class="empty-note">You have no assigned deliveries.</p>@endforelse</div></div>@endsection

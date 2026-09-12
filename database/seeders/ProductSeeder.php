@@ -3,12 +3,14 @@
 namespace Database\Seeders;
 
 use App\Models\Product;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 
 class ProductSeeder extends Seeder
 {
     public function run(): void
     {
+        $sellerId = User::where('role', 'seller')->value('id');
         $products = [
             // Clothing
             ['name' => 'Wool Blend Blazer',      'category' => 'clothing',    'gender' => 'women', 'price' => 4250, 'original_price' => 5500,  'badge' => 'New',         'image_url' => 'https://images.unsplash.com/photo-1539008835657-9e8e9680c956?w=400&h=533&fit=crop&auto=format', 'stock' => 20, 'description' => 'A luxurious wool blend blazer perfect for any occasion.'],
@@ -39,10 +41,36 @@ class ProductSeeder extends Seeder
             ['name' => 'Leather Belt',            'category' => 'accessories', 'gender' => 'men',   'price' => 980,  'original_price' => null,   'badge' => null,          'image_url' => 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&h=533&fit=crop&auto=format', 'stock' => 40, 'description' => 'Full-grain leather belt with silver buckle.'],
             ['name' => 'Gold Hoop Earrings',      'category' => 'accessories', 'gender' => 'women', 'price' => 1200, 'original_price' => 1500,  'badge' => 'Sale',        'image_url' => 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=400&h=533&fit=crop&auto=format', 'stock' => 25, 'description' => 'Classic 18k gold-plated hoop earrings.'],
             ['name' => 'Wool Flat Cap',           'category' => 'accessories', 'gender' => 'men',   'price' => 850,  'original_price' => null,   'badge' => null,          'image_url' => 'https://images.unsplash.com/photo-1521369909029-2afed882baaa?w=400&h=533&fit=crop&auto=format', 'stock' => 18, 'description' => 'Heritage wool flat cap in herringbone tweed.'],
+
+            // Electronics
+            ['name' => 'Wireless Noise-Cancelling Headphones', 'category' => 'electronics', 'gender' => null, 'price' => 3490, 'original_price' => 4290, 'badge' => 'Best Seller', 'image_url' => 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=533&fit=crop&auto=format', 'stock' => 35, 'description' => 'Comfortable wireless headphones with rich sound and active noise cancellation.'],
+            ['name' => 'Compact Mechanical Keyboard', 'category' => 'electronics', 'gender' => null, 'price' => 2290, 'original_price' => null, 'badge' => 'New', 'image_url' => 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=400&h=533&fit=crop&auto=format', 'stock' => 28, 'description' => 'A space-saving mechanical keyboard with responsive switches and customizable lighting.'],
+
+            // Home & Living
+            ['name' => 'Digital Air Fryer', 'category' => 'home_living', 'gender' => null, 'price' => 2890, 'original_price' => 3490, 'badge' => 'Sale', 'image_url' => 'https://images.unsplash.com/photo-1585515320310-259814833e62?w=400&h=533&fit=crop&auto=format', 'stock' => 20, 'description' => 'Prepare crisp family meals with easy digital controls and less oil.'],
+            ['name' => 'Woven Storage Basket Set', 'category' => 'home_living', 'gender' => null, 'price' => 790, 'original_price' => null, 'badge' => null, 'image_url' => 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=400&h=533&fit=crop&auto=format', 'stock' => 42, 'description' => 'Versatile woven baskets for organizing shelves, wardrobes, and living spaces.'],
+
+            // Beauty & Health
+            ['name' => 'Daily Skincare Essentials Set', 'category' => 'beauty_health', 'gender' => null, 'price' => 1190, 'original_price' => 1490, 'badge' => 'New', 'image_url' => 'https://images.unsplash.com/photo-1556228578-8c89e6adf883?w=400&h=533&fit=crop&auto=format', 'stock' => 50, 'description' => 'A gentle cleanser, hydrating serum, and moisturizer for a simple daily routine.'],
+
+            // Groceries
+            ['name' => 'Everyday Pantry Bundle', 'category' => 'groceries', 'gender' => null, 'price' => 899, 'original_price' => null, 'badge' => 'Best Seller', 'image_url' => 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=533&fit=crop&auto=format', 'stock' => 60, 'description' => 'A convenient selection of pantry staples for everyday home cooking.'],
+
+            // Sports & Outdoors
+            ['name' => 'Non-Slip Exercise Mat', 'category' => 'sports_outdoors', 'gender' => null, 'price' => 650, 'original_price' => 850, 'badge' => 'Sale', 'image_url' => 'https://images.unsplash.com/photo-1601925260368-ae2f83cf8b7f?w=400&h=533&fit=crop&auto=format', 'stock' => 38, 'description' => 'A cushioned, non-slip mat for yoga, stretching, and home workouts.'],
+
+            // Toys & Hobbies
+            ['name' => 'Creative Building Block Set', 'category' => 'toys_hobbies', 'gender' => null, 'price' => 1090, 'original_price' => null, 'badge' => 'New', 'image_url' => 'https://images.unsplash.com/photo-1594787318286-3d835c1d207f?w=400&h=533&fit=crop&auto=format', 'stock' => 26, 'description' => 'A colorful building set designed for imaginative play and creative projects.'],
+
+            // Automotive
+            ['name' => 'Adjustable Car Phone Mount', 'category' => 'automotive', 'gender' => null, 'price' => 449, 'original_price' => 599, 'badge' => 'Sale', 'image_url' => 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=400&h=533&fit=crop&auto=format', 'stock' => 75, 'description' => 'A secure, adjustable dashboard mount for safer navigation on the road.'],
         ];
 
         foreach ($products as $product) {
-            Product::create($product);
+            Product::updateOrCreate(
+                ['seller_id' => $sellerId, 'name' => $product['name']],
+                $product + ['seller_id' => $sellerId],
+            );
         }
     }
 }

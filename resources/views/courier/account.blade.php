@@ -31,6 +31,7 @@
         <i class="fas fa-user"></i>
         <h2>My Account</h2>
         <p>Manage your courier profile.</p>
+        <a class="market-button inline-button" href="{{ route('addresses.index') }}">Manage saved addresses</a>
     </div>
 </div>
 @endsection

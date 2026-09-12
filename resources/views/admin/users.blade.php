@@ -1,37 +1,4 @@
-﻿@extends('layouts.app')
-
-@section('title', 'ZAYLO · Users')
-
-@section('nav-links')
-<div class="nav-links">
-    <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'active-link' : '' }}">Dashboard</a>
-    <a href="{{ route('admin.users') }}" class="{{ request()->routeIs('admin.users') ? 'active-link' : '' }}">Users</a>
-    <a href="{{ route('admin.registrations') }}" class="{{ request()->routeIs('admin.registrations') ? 'active-link' : '' }}">Registrations</a>
-    <a href="{{ route('admin.disputes') }}" class="{{ request()->routeIs('admin.disputes') ? 'active-link' : '' }}">Disputes</a>
-    <a href="{{ route('admin.reports') }}" class="{{ request()->routeIs('admin.reports') ? 'active-link' : '' }}">Reports</a>
-</div>
-@endsection
-@section('nav-icons')
-<a href="{{ route('admin.chat') }}"><i class="fas fa-comment-dots"></i></a>
-<a href="{{ route('admin.account') }}"><i class="far fa-user"></i></a>
-@endsection
-
-
-@section('content')
-<div class="page-hero">
-    <div class="page-hero-inner">
-        <i class="fas fa-users"></i>
-        <div>
-            <h1></h1>
-            <p></p>
-        </div>
-    </div>
-</div>
-<div class="page-content">
-    <div class="placeholder-card">
-        <i class="fas fa-users"></i>
-        <h2>User Management</h2>
-        <p>View and manage all platform users.</p>
-    </div>
-</div>
-@endsection
+@extends('layouts.app')
+@section('title', 'User Management · ZAYLO')
+@section('nav-links')<nav class="nav-links"><a href="{{ route('admin.dashboard') }}">Dashboard</a><a class="active-link" href="{{ route('admin.users') }}">Users</a><a href="{{ route('admin.registrations') }}">Approvals</a><a href="{{ route('admin.disputes') }}">Disputes</a></nav>@endsection
+@section('content')<div class="page-hero"><div class="page-hero-inner"><i class="fas fa-users"></i><div><h1>User Management</h1><p>Approve marketplace roles and suspend unsafe accounts.</p></div></div></div><div class="page-content"><form method="GET" class="market-form filter-bar"><input type="search" name="search" value="{{ request('search') }}" placeholder="Name or email"><select name="role"><option value="">All roles</option>@foreach(['buyer','seller','courier','admin'] as $value)<option value="{{ $value }}" @selected(request('role')===$value)>{{ ucfirst($value) }}</option>@endforeach</select><select name="status"><option value="">All statuses</option>@foreach(['pending','active','suspended'] as $value)<option value="{{ $value }}" @selected(request('status')===$value)>{{ ucfirst($value) }}</option>@endforeach</select><button class="market-button">Filter</button></form><div class="table-wrap"><table><thead><tr><th>User</th><th>Role</th><th>Verified</th><th>Status</th><th>Action</th></tr></thead><tbody>@foreach($users as $user)<tr><td><strong>{{ $user->name }}</strong><br><small>{{ $user->email }}</small></td><td>{{ ucfirst($user->role) }}</td><td>{{ $user->hasVerifiedEmail() ? 'Yes' : 'No' }}</td><td><span class="status-pill">{{ ucfirst($user->status) }}</span></td><td>@if(!$user->is(auth()->user()))<form method="POST" action="{{ route('admin.users.status',$user) }}" class="inline-form">@csrf @method('PATCH')<select name="status">@foreach(['pending','active','suspended'] as $value)<option value="{{ $value }}" @selected($user->status===$value)>{{ ucfirst($value) }}</option>@endforeach</select><button>Save</button></form>@else Current admin @endif</td></tr>@endforeach</tbody></table></div>{{ $users->links() }}</div>@endsection

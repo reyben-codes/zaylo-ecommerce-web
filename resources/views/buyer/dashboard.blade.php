@@ -3,13 +3,7 @@
 @section('title', 'ZAYLO · Buyer Dashboard')
 
 @section('nav-links')
-<div class="nav-links">
-    <a href="{{ route('home') }}" class="{{ request()->routeIs('home') ? 'active-link' : '' }}">Home</a>
-    <a href="{{ route('buyer.products') }}" class="{{ request()->routeIs('buyer.products') ? 'active-link' : '' }}">Clothing</a>
-    <a href="{{ route('buyer.products') }}" class="{{ request()->routeIs('buyer.products') ? 'active-link' : '' }}">Bags</a>
-    <a href="{{ route('buyer.products') }}" class="{{ request()->routeIs('buyer.products') ? 'active-link' : '' }}">Shoes</a>
-    <a href="{{ route('buyer.products') }}" class="{{ request()->routeIs('buyer.products') ? 'active-link' : '' }}">Accessories</a>
-</div>
+@include('partials.store-nav')
 @endsection
 
 @section('nav-icons')
@@ -33,9 +27,9 @@
     .icon-group a:hover { color: #8a7a6b; }
     .hero { position: relative; width: 100%; height: 580px; max-height: 620px; margin: 2px auto 0; overflow: hidden; background: #e8dfd6; }
     .hero-image { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .hero-text { position: absolute; top: 50%; left: 6%; transform: translateY(-50%); max-width: 600px; color: #1e1e1e; pointer-events: none; }
+    .hero-text { position: absolute; top: 50%; left: 6%; transform: translateY(-50%); max-width: 700px; color: #1e1e1e; pointer-events: none; }
     .hero-label { font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; color: #4a4037; margin-bottom: 16px; font-weight: 400; opacity: 0.8; }
-    .hero-headline { font-family: 'Playfair Display', serif; font-size: 5rem; font-weight: 600; line-height: 1.1; margin-bottom: 20px; letter-spacing: -0.02em; }
+    .hero-headline { font-family: 'Playfair Display', serif; font-size: 4.25rem; font-weight: 600; line-height: 1.1; margin-bottom: 20px; letter-spacing: -0.02em; }
     .hero-headline .line1 { color: #1a1714; display: block; }
     .hero-headline .line2 { color: #b28b6f; display: block; font-style: italic; }
     .hero-desc { font-size: 1rem; font-weight: 350; color: #2a241f; max-width: 420px; line-height: 1.6; margin-bottom: 32px; letter-spacing: 0.01em; opacity: 0.85; }
@@ -122,47 +116,29 @@
 @section('content')
     <!-- Hero -->
     <div class="hero">
-        <img class="hero-image" src="https://images.unsplash.com/photo-1583394838336-acd977736f90?w=1400&q=80&auto=format&fit=crop&crop=center" alt="ZAYLO luxury editorial" />
+        <img class="hero-image" src="https://images.unsplash.com/photo-1583394838336-acd977736f90?w=1400&q=80&auto=format&fit=crop&crop=center" alt="Featured products available on ZAYLO" onerror="this.style.display='none'" />
         <div class="hero-text">
             <div class="hero-label">Welcome back, {{ $user->name }}</div>
             <div class="hero-headline">
-                <span class="line1">Quiet luxury,</span>
-                <span class="line2">loudly considered.</span>
+                <span class="line1">Everything you need,</span>
+                <span class="line2">all in one place.</span>
             </div>
-            <p class="hero-desc">Explore premium clothing and statement accessories curated for every season, every style, and every occasion.</p>
+            <p class="hero-desc">Shop tech, home essentials, fashion, beauty, groceries, and more from trusted marketplace sellers.</p>
             <div class="hero-actions">
-                <a href="{{ route('buyer.products') }}" class="btn-primary">Shop the edit</a>
-                <a href="{{ route('buyer.products') }}" class="link-lookbook">View Lookbook →</a>
+                <a href="{{ route('products.index') }}" class="btn-primary">Shop the marketplace</a>
+                <a href="{{ route('products.index', ['sort' => 'newest']) }}" class="link-lookbook">See what's new →</a>
             </div>
         </div>
     </div>
 
     <!-- Categories -->
     <div class="categories">
-        <a href="{{ route('buyer.products') }}?category=men" class="category-item">
-            <img class="circle-img" src="https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=120&h=120&fit=crop&crop=face&auto=format" alt="Men" />
-            <div class="category-name">Men</div><div class="item-count">120+ Items</div>
-        </a>
-        <a href="{{ route('buyer.products') }}?category=women" class="category-item">
-            <img class="circle-img" src="https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=120&h=120&fit=crop&crop=face&auto=format" alt="Women" />
-            <div class="category-name">Women</div><div class="item-count">160+ Items</div>
-        </a>
-        <a href="{{ route('buyer.products') }}?category=bags" class="category-item">
-            <img class="circle-img" src="https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=120&h=120&fit=crop&crop=center&auto=format" alt="Bags" />
-            <div class="category-name">Bags</div><div class="item-count">220+ Items</div>
-        </a>
-        <a href="{{ route('buyer.products') }}?category=shoes" class="category-item">
-            <img class="circle-img" src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=120&h=120&fit=crop&crop=center&auto=format" alt="Shoes" />
-            <div class="category-name">Shoes</div><div class="item-count">140+ Items</div>
-        </a>
-        <a href="{{ route('buyer.products') }}?category=watches" class="category-item">
-            <img class="circle-img" src="https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=120&h=120&fit=crop&crop=center&auto=format" alt="Watches" />
-            <div class="category-name">Watches</div><div class="item-count">250+ Items</div>
-        </a>
-        <a href="{{ route('buyer.products') }}?category=accessories" class="category-item">
-            <img class="circle-img" src="https://images.unsplash.com/photo-1585123334904-845d60e6b056?w=120&h=120&fit=crop&crop=center&auto=format" alt="Accessories" />
-            <div class="category-name">Accessories</div><div class="item-count">320+ Items</div>
-        </a>
+        @foreach(config('marketplace.browse_categories') as $category => $details)
+            <a href="{{ route('products.index', ['category' => $category]) }}" class="category-item">
+                <img class="circle-img" src="{{ $details['image'] }}" alt="" onerror="this.onerror=null;this.src='{{ asset('images/ZAYLO_ICON_DARK.png') }}'" />
+                <div class="category-name">{{ $details['label'] }}</div><div class="item-count">Explore products</div>
+            </a>
+        @endforeach
     </div>
 
     <!-- Flash Sales -->
@@ -188,16 +164,16 @@
                 <div class="product-image">
                     <img src="{{ $product->image_url }}" alt="{{ $product->name }}" loading="lazy" />
                     <span class="flash-discount">{{ $discount }}</span>
-                    <button class="product-wishlist" onclick="toggleWishlist(this)"><i class="far fa-heart"></i></button>
+                    <form method="POST" action="{{ route('buyer.wishlist.toggle', $product) }}">@csrf<button class="product-wishlist" aria-label="Save {{ $product->name }}"><i class="far fa-heart"></i></button></form>
                 </div>
                 <div class="product-info">
                     <h3 class="product-name">{{ $product->name }}</h3>
-                    <p class="product-category">{{ ucfirst($product->category) }}</p>
+                    <p class="product-category">{{ config('marketplace.categories.'.$product->category, str($product->category)->replace('_', ' ')->title()) }}</p>
                     <div class="product-price">
                         <span class="current-price">₱{{ number_format($product->price, 2) }}</span>
                         <span class="original-price">₱{{ number_format($product->original_price, 2) }}</span>
                     </div>
-                    <button class="btn-flash" onclick="addToCart(this, {{ $product->id }})"><i class="fas fa-bolt"></i> Grab Now</button>
+                    <form method="POST" action="{{ route('buyer.cart.add', $product) }}">@csrf<input type="hidden" name="quantity" value="1"><button class="btn-flash"><i class="fas fa-bolt"></i> Grab Now</button></form>
                 </div>
             </div>
             @endforeach
@@ -211,28 +187,28 @@
                 <span class="section-label">Recommended For You</span>
                 <h2>Suggested Products</h2>
             </div>
-            <a href="{{ route('buyer.products') }}">View All →</a>
+            <a href="{{ route('products.index') }}">View All →</a>
         </div>
         <div class="product-grid" id="productGrid">
             @foreach($suggestedProducts as $product)
             <div class="product-card">
                 <div class="product-image">
                     <img src="{{ $product->image_url }}" alt="{{ $product->name }}" loading="lazy" />
-                    <button class="product-wishlist" onclick="toggleWishlist(this)"><i class="far fa-heart"></i></button>
+                    <form method="POST" action="{{ route('buyer.wishlist.toggle', $product) }}">@csrf<button class="product-wishlist" aria-label="Save {{ $product->name }}"><i class="far fa-heart"></i></button></form>
                     @if($product->badge)
                         <span class="product-badge {{ $product->badge === 'Sale' ? 'sale' : ($product->badge === 'Best Seller' ? 'best' : '') }}">{{ $product->badge }}</span>
                     @endif
                 </div>
                 <div class="product-info">
                     <h3 class="product-name">{{ $product->name }}</h3>
-                    <p class="product-category">{{ ucfirst($product->category) }}</p>
+                    <p class="product-category">{{ config('marketplace.categories.'.$product->category, str($product->category)->replace('_', ' ')->title()) }}</p>
                     <div class="product-price">
                         <span class="current-price">₱{{ number_format($product->price, 2) }}</span>
                         @if($product->original_price)
                             <span class="original-price">₱{{ number_format($product->original_price, 2) }}</span>
                         @endif
                     </div>
-                    <button class="btn-add-cart" onclick="addToCart(this, {{ $product->id }})"><i class="fas fa-shopping-bag"></i> Add to Cart</button>
+                    <form method="POST" action="{{ route('buyer.cart.add', $product) }}">@csrf<input type="hidden" name="quantity" value="1"><button class="btn-add-cart"><i class="fas fa-shopping-bag"></i> Add to Cart</button></form>
                 </div>
             </div>
             @endforeach

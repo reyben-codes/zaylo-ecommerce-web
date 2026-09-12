@@ -14,11 +14,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role'     => \App\Http\Middleware\RoleMiddleware::class,
             'nocache'  => \App\Http\Middleware\NoCacheHeaders::class,
+            'active'   => \App\Http\Middleware\EnsureAccountIsActive::class,
         ]);
-
-        // Append no-cache headers to every authenticated response
-        $middleware->appendToGroup('web', \App\Http\Middleware\NoCacheHeaders::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->dontFlash(['otp']);
     })->create();
