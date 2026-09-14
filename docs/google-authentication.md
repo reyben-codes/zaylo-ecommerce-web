@@ -35,9 +35,12 @@ Blank variable entries were added to the ignored local .env and to .env.example:
 
 Put real credentials only in the ignored .env or deployment secret store. Do not paste them into Blade, JavaScript, source control, or support messages.
 
-When GOOGLE_REDIRECT_URI is blank, configuration derives it from APP_URL plus /auth/google/callback. Current local APP_URL is http://localhost, making the exact callback:
+When GOOGLE_REDIRECT_URI is blank, configuration derives it from APP_URL plus /auth/google/callback. For the public ZAYLO domain, use:
 
-    http://localhost/auth/google/callback
+    APP_URL=https://zaylo-zyl.shop
+    GOOGLE_REDIRECT_URI=https://zaylo-zyl.shop/auth/google/callback
+
+Register https://zaylo-zyl.shop/auth/google/callback as an Authorized redirect URI on the Google OAuth client. Start sign-in at https://zaylo-zyl.shop/login so the callback receives the same session cookie. A localhost callback sends users to localhost, where subsequent page links also use localhost.
 
 If running Laravel on its usual development server instead, choose one origin consistently, for example:
 

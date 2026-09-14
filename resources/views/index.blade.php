@@ -3,16 +3,32 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ZAYLO · Everything in One Place</title>
+    <title>ZAYLO · Driven by passion. Defined by your origin</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-    <link rel="stylesheet" href="{{ asset('css/style.css') }}" />
+    <link rel="stylesheet" href="{{ asset('css/style.css') }}?v={{ filemtime(public_path('css/style.css')) }}" />
 </head>
 <body>
     <header class="navbar">
-        @include('partials.store-nav')
+        <button
+            class="nav-menu-toggle"
+            type="button"
+            aria-expanded="false"
+            aria-controls="primary-navigation"
+            aria-label="Open navigation menu"
+            data-nav-toggle
+        >
+            <span aria-hidden="true"></span>
+            <span aria-hidden="true"></span>
+            <span aria-hidden="true"></span>
+        </button>
+        <div class="nav-menu" id="primary-navigation" data-nav-menu>
+            <div class="nav-menu-inner">
+                @include('partials.store-nav')
+            </div>
+        </div>
         <a href="{{ route('home') }}" class="logo">
             <img src="{{ asset('images/ZAYLO_LOGO_DARK.png') }}" alt="ZAYLO" style="height:72px;width:auto;display:block;">
         </a>
@@ -22,17 +38,24 @@
                 <input type="search" name="search" placeholder="Search products" aria-label="Search products" />
             </form>
             <div class="icon-group">
+                @if(auth()->user()?->role === 'buyer')
+                    @include('partials.buyer-nav-icons')
+                @else
                 <a href="{{ auth()->check() && auth()->user()->role === 'buyer' ? route('buyer.wishlist') : route('login') }}" aria-label="Wishlist"><i class="far fa-heart"></i></a>
                 <a href="{{ auth()->check() && auth()->user()->role === 'buyer' ? route('buyer.cart') : route('login') }}" aria-label="Shopping cart"><i class="fas fa-shopping-bag"></i></a>
+                @endif
             </div>
             @auth
                 @php($dashboardRoute = auth()->user()->role.'.dashboard')
                 <a href="{{ Route::has($dashboardRoute) ? route($dashboardRoute) : route('home') }}" class="login-text">Dashboard</a>
             @else
                 <a href="{{ route('login') }}" class="login-text">Log in</a>
+                <a href="{{ route('register') }}" class="login-text">Register</a>
             @endauth
         </div>
     </header>
+
+    @include('partials.notifications')
 <div class="container">
 
     <div class="hero">
@@ -43,8 +66,8 @@
         <div class="hero-text">
             <div class="hero-label">One marketplace. Endless finds.</div>
             <div class="hero-headline">
-                <span class="line1">Everything you need,</span>
-                <span class="line2">all in one place.</span>
+                <span class="line1">Driven by passion.</span>
+                <span class="line2">Defined by your origin</span>
             </div>
             <p class="hero-desc">
                 Discover the latest tech, home essentials, fashion, beauty, groceries, and more from sellers across the marketplace.
@@ -95,11 +118,15 @@
                                 @endif
                             </div>
                             @if(auth()->check() && auth()->user()->role === 'buyer')
-                                <form method="POST" action="{{ route('buyer.cart.add', $product) }}">
-                                    @csrf
-                                    <input type="hidden" name="quantity" value="1" />
-                                    <button type="submit" class="home-add-button"><i class="fas fa-shopping-bag" aria-hidden="true"></i> Add to bag</button>
-                                </form>
+                                @if($product->active_variants_count)
+                                    <a href="{{ route('products.show', $product) }}" class="home-add-button">Choose options</a>
+                                @else
+                                    <form method="POST" action="{{ route('buyer.cart.add', $product) }}">
+                                        @csrf
+                                        <input type="hidden" name="quantity" value="1" />
+                                        <button type="submit" class="home-add-button"><i class="fas fa-shopping-bag" aria-hidden="true"></i> Add to bag</button>
+                                    </form>
+                                @endif
                             @else
                                 <a href="{{ route('products.show', $product) }}" class="home-add-button">View product</a>
                             @endif
@@ -136,7 +163,9 @@
             <div><h2>Partners</h2><a href="{{ route('register', ['role' => 'seller']) }}">Sell on ZAYLO</a><a href="{{ route('register', ['role' => 'courier']) }}">Become a courier</a></div>
         </div>
     </div>
-    <div class="footer-bottom"><span>© {{ date('Y') }} ZAYLO</span><span>Everything you need, all in one place.</span></div>
+    <div class="footer-bottom"><span>© {{ date('Y') }} ZAYLO</span><span>Driven by passion. Defined by your origin</span></div>
 </footer>
+<script src="{{ asset('js/navigation.js') }}?v={{ filemtime(public_path('js/navigation.js')) }}" defer></script>
+<script src="{{ asset('js/notifications.js') }}?v={{ filemtime(public_path('js/notifications.js')) }}" defer></script>
 </body>
 </html>

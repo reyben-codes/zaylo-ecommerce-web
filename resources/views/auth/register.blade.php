@@ -47,8 +47,8 @@
             </a>
 
             <div class="auth-image-text">
-                <p>Everything you need,</p>
-                <p>all in one place.</p>
+                <p>Driven by passion.</p>
+                <p>Defined by your origin</p>
             </div>
 
         </div>

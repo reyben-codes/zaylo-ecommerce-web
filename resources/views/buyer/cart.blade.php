@@ -1,10 +1,8 @@
 @extends('layouts.app')
 @section('title', 'Shopping Cart · ZAYLO')
-@section('nav-links')<nav class="nav-links"><a href="{{ route('home') }}">Home</a><a href="{{ route('products.index') }}">Continue shopping</a><a href="{{ route('buyer.orders') }}">Orders</a></nav>@endsection
-@section('nav-icons')<a href="{{ route('buyer.wishlist') }}" aria-label="Wishlist"><i class="far fa-heart"></i></a><a href="{{ route('buyer.cart') }}" aria-label="Shopping cart"><i class="fas fa-shopping-bag"></i></a>@endsection
 @section('content')
 <div class="page-hero"><div class="page-hero-inner"><i class="fas fa-shopping-bag"></i><div><h1>Your Cart</h1><p>Review stock and delivery details before placing your order.</p></div></div></div>
-<div class="page-content checkout-grid">
+<div @class(['page-content', 'checkout-grid', 'cart-empty-layout' => $cart->items->isEmpty()])>
     <section>
         @forelse($cart->items as $item)
         <article class="line-item">
@@ -14,7 +12,14 @@
             <form method="POST" action="{{ route('buyer.cart.remove', $item) }}">@csrf @method('DELETE')<button class="text-button">Remove</button></form>
         </article>
         @empty
-        <div class="placeholder-card"><i class="fas fa-shopping-bag"></i><h2>Your cart is empty</h2><p><a href="{{ route('products.index') }}">Browse the collection</a></p></div>
+        <div class="cart-empty-state" aria-labelledby="empty-cart-title">
+            <div class="cart-empty-icon" aria-hidden="true"><i class="fas fa-shopping-bag"></i></div>
+            <h2 id="empty-cart-title">Your cart is empty</h2>
+            <p>Discover your next everyday favorite. Add something you love and find it here when you're ready.</p>
+            <a href="{{ route('products.index') }}" class="btn-primary cart-empty-button">
+                Browse the collection <i class="fas fa-arrow-right" aria-hidden="true"></i>
+            </a>
+        </div>
         @endforelse
     </section>
     @if($cart->items->count())
@@ -27,16 +32,25 @@
             @php
                 $usableAddresses = $addresses->filter(fn ($address) => $address->isStructured());
                 $selectedAddress = old('address_id', session('selected_address_id', $usableAddresses->first()?->id));
+                $addressTypes = ['Home' => 'fa-house', 'Work' => 'fa-briefcase', 'School' => 'fa-graduation-cap', 'Other' => 'fa-location-dot'];
             @endphp
             <h3>Delivery address</h3>
-            @foreach($addresses as $address)
-                @if($address->isStructured())
-                    <label class="check-label">
-                        <input type="radio" name="address_id" value="{{ $address->id }}" @checked((string) $selectedAddress === (string) $address->id) required>
-                        <span><strong>{{ $address->label }}{{ $address->is_default ? ' · Default' : '' }}</strong><br>{{ $address->recipient_name }} · {{ $address->phone }}<br>{{ $address->formatted() }}</span>
-                    </label>
-                @else
-                    <p>{{ $address->label }}: {{ $address->formatted() }}<br><a href="{{ route('addresses.edit', ['address' => $address, 'return_to' => 'checkout']) }}">Complete this address before checkout</a></p>
+            @foreach($addressTypes as $type => $icon)
+                @php($typedAddresses = $addresses->where('label', $type))
+                @if($typedAddresses->isNotEmpty())
+                    <fieldset class="checkout-address-group">
+                        <legend><i class="fas {{ $icon }}"></i> {{ $type }}</legend>
+                        @foreach($typedAddresses as $address)
+                            @if($address->isStructured())
+                                <label class="checkout-address-option">
+                                    <input type="radio" name="address_id" value="{{ $address->id }}" @checked((string) $selectedAddress === (string) $address->id) required>
+                                    <span><strong>{{ $address->recipient_name }} @if($address->is_default)<small>Default</small>@endif</strong><em>{{ $address->phone }}</em>{{ $address->formatted() }}</span>
+                                </label>
+                            @else
+                                <div class="incomplete-address"><p>{{ $address->formatted() }}</p><a href="{{ route('addresses.edit', ['address' => $address, 'return_to' => 'checkout']) }}">Complete this address</a></div>
+                            @endif
+                        @endforeach
+                    </fieldset>
                 @endif
             @endforeach
             @if($usableAddresses->isEmpty())<p>Add a complete delivery address to place your order.</p>@endif

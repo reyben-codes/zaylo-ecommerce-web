@@ -1,12 +1,12 @@
 <?php
 
-use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AddressController;
-use App\Http\Controllers\LocationController;
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\BuyerController;
 use App\Http\Controllers\CourierController;
+use App\Http\Controllers\GoogleAuthController;
+use App\Http\Controllers\LocationController;
 use App\Http\Controllers\SellerController;
 use App\Models\Product;
 use Illuminate\Support\Facades\Route;
@@ -17,6 +17,7 @@ Route::get('/', function () {
         ? Product::query()
             ->where('is_active', true)
             ->where('stock', '>', 0)
+            ->withCount(['variants as active_variants_count' => fn ($query) => $query->where('is_active', true)])
             ->latest()
             ->limit(8)
             ->get()
@@ -80,6 +81,8 @@ Route::middleware(['auth', 'active', 'verified', 'role:buyer', 'nocache'])->pref
     Route::get('/wishlist', [BuyerController::class, 'wishlist'])->name('wishlist');
     Route::post('/wishlist/{product}', [BuyerController::class, 'toggleWishlist'])->name('wishlist.toggle');
     Route::get('/account', [BuyerController::class, 'account'])->name('account');
+    Route::patch('/account/profile', [BuyerController::class, 'updateProfile'])->name('account.profile');
+    Route::put('/account/password', [BuyerController::class, 'updatePassword'])->name('account.password');
     Route::get('/chat', [BuyerController::class, 'chat'])->name('chat');
 });
 

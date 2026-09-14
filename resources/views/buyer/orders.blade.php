@@ -1,7 +1,5 @@
 @extends('layouts.app')
 @section('title', 'My Orders · ZAYLO')
-@section('nav-links')<nav class="nav-links"><a href="{{ route('home') }}">Home</a><a href="{{ route('products.index') }}">Shop</a><a class="active-link" href="{{ route('buyer.orders') }}">Orders</a></nav>@endsection
-@section('nav-icons')<a href="{{ route('buyer.cart') }}" aria-label="Shopping cart"><i class="fas fa-shopping-bag"></i></a>@endsection
 @section('content')
 <div class="page-hero"><div class="page-hero-inner"><i class="fas fa-box"></i><div><h1>My Orders</h1><p>Track purchases from placement through delivery.</p></div></div></div>
 <div class="page-content">

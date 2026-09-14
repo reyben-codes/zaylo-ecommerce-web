@@ -21,7 +21,7 @@
 @section('content')
 <div class="page-hero"><div class="page-hero-inner"><i class="fas fa-map-marker-alt" aria-hidden="true"></i><div><h1>{{ $address->exists ? 'Edit address' : 'Add address' }}</h1><p>Philippine delivery details</p></div></div></div>
 <div class="page-content address-page">
-    <form method="POST" action="{{ $address->exists ? route('addresses.update', $address) : route('addresses.store') }}" class="market-form stacked-form form-card address-form" data-address-form data-locations-url="{{ url('/api/locations') }}">
+    <form method="POST" action="{{ $address->exists ? route('addresses.update', $address) : route('addresses.store') }}" class="market-form stacked-form form-card address-form" data-address-form data-locations-url="/api/locations">
         @csrf
         @if($address->exists) @method('PUT') @endif
         @if($returnTo)<input type="hidden" name="return_to" value="{{ $returnTo }}">@endif
@@ -39,11 +39,20 @@
         <p role="status" aria-live="polite" data-location-status>Loading locations…</p>
         <button class="text-button" type="button" data-location-retry hidden>Retry loading locations</button>
         <label>House / Unit / Street<input name="line1" autocomplete="address-line1" maxlength="255" value="{{ old('line1', $address->line1) }}" required></label>
-        @if($address->line2)
-            <label>Additional address details<input name="line2" autocomplete="address-line2" maxlength="255" value="{{ old('line2', $address->line2) }}"></label>
-        @endif
+        <label>Additional address details <span>(optional)</span><input name="line2" autocomplete="address-line2" maxlength="255" value="{{ old('line2', $address->line2) }}" placeholder="Building, floor, landmark, etc."></label>
         <label>Postal code<input name="postal_code" inputmode="numeric" autocomplete="postal-code" pattern="[0-9]{4}" maxlength="4" value="{{ old('postal_code', $address->postal_code) }}" required><span>Enter the four-digit postal code. PSGC does not supply postal codes.</span></label>
-        <label>Label<select name="label" required>@foreach(['Home', 'Work', 'School', 'Other'] as $label)<option value="{{ $label }}" @selected(old('label', $address->label) === $label)>{{ $label }}</option>@endforeach</select></label>
+        @php($typeIcons = ['Home' => 'fa-house', 'Work' => 'fa-briefcase', 'School' => 'fa-graduation-cap', 'Other' => 'fa-location-dot'])
+        <fieldset class="address-type-picker">
+            <legend>Address type</legend>
+            <div>
+                @foreach($typeIcons as $label => $icon)
+                    <label>
+                        <input type="radio" name="label" value="{{ $label }}" @checked(old('label', $address->label) === $label) required>
+                        <span><i class="fas {{ $icon }}" aria-hidden="true"></i>{{ $label }}</span>
+                    </label>
+                @endforeach
+            </div>
+        </fieldset>
         <input type="hidden" name="is_default" value="0">
         <label class="check-label"><input type="checkbox" name="is_default" value="1" @checked(old('is_default', $address->is_default))>Use as my default address</label>
         <p class="empty-note">Your first address becomes the default. To change an existing default, choose another saved address.</p>
