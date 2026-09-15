@@ -124,7 +124,16 @@ class SellerController extends Controller
             'original_price' => 'nullable|numeric|gte:price|max:99999999.99',
             'stock' => 'required|integer|min:0|max:1000000',
             'low_stock_threshold' => 'required|integer|min:0|max:100000',
-            'image_url' => 'nullable|url|max:2048',
+            'image_url' => [
+                'nullable',
+                'string',
+                'max:2048',
+                function (string $attribute, mixed $value, \Closure $fail) {
+                    if (! filter_var($value, FILTER_VALIDATE_URL) && ! Str::startsWith($value, '/images/')) {
+                        $fail('The image must be a valid URL or a local path inside /images.');
+                    }
+                },
+            ],
             'badge' => 'nullable|in:New,Sale,Best Seller',
         ]);
     }

@@ -7,7 +7,7 @@
     <aside class="auth-image" aria-label="ZAYLO marketplace">
         <div class="auth-image-content">
             <a class="auth-brand" href="{{ route('home') }}"><img src="{{ asset('images/ZAYLO_LOGO_LIGHT.png') }}" alt="ZAYLO home"></a>
-            <div class="auth-image-text"><p>Everything you need,</p><p>all in one place.</p></div>
+            <div class="auth-image-text"><p>Driven by passion.</p><p>Defined by your origin</p></div>
         </div>
     </aside>
     <section class="auth-form" aria-labelledby="verification-title">

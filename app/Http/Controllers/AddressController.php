@@ -21,8 +21,12 @@ class AddressController extends Controller
 
     public function create(Request $request)
     {
+        $label = in_array($request->query('type'), ['Home', 'Work', 'School', 'Other'], true)
+            ? $request->query('type')
+            : 'Home';
+
         return view('addresses.form', [
-            'address' => new Address(['recipient_name' => $request->user()->name, 'phone' => $request->user()->phone, 'label' => 'Home']),
+            'address' => new Address(['recipient_name' => $request->user()->name, 'phone' => $request->user()->phone, 'label' => $label]),
             'returnTo' => $request->query('return_to') === 'checkout' && $request->user()->role === 'buyer' ? 'checkout' : null,
         ]);
     }

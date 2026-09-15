@@ -1,15 +1,6 @@
 @extends('layouts.app')
 
 @section('title', 'Shop · ZAYLO')
-@section('nav-links')
-@include('partials.store-nav')
-@endsection
-@section('nav-icons')
-    @if(auth()->check() && auth()->user()->role === 'buyer')
-        <a href="{{ route('buyer.wishlist') }}" aria-label="Wishlist"><i class="far fa-heart"></i></a>
-        <a href="{{ route('buyer.cart') }}" aria-label="Shopping cart"><i class="fas fa-shopping-bag"></i></a>
-    @endif
-@endsection
 
 @section('content')
 <div class="page-hero"><div class="page-hero-inner"><i class="fas fa-tags"></i><div>
@@ -53,7 +44,11 @@
                     <div class="product-price"><span class="current-price">₱{{ number_format($product->price, 2) }}</span></div>
                     <div class="card-actions">
                         @if(auth()->check() && auth()->user()->role === 'buyer')
-                            <form method="POST" action="{{ route('buyer.cart.add', $product) }}">@csrf<input type="hidden" name="quantity" value="1"><button class="btn-add-cart">Add to cart</button></form>
+                            @if($product->active_variants_count)
+                                <a class="btn-add-cart" href="{{ route('products.show', $product) }}">Choose options</a>
+                            @else
+                                <form method="POST" action="{{ route('buyer.cart.add', $product) }}">@csrf<input type="hidden" name="quantity" value="1"><button class="btn-add-cart">Add to cart</button></form>
+                            @endif
                             <form method="POST" action="{{ route('buyer.wishlist.toggle', $product) }}">@csrf<button class="icon-button" aria-label="Save {{ $product->name }} to wishlist"><i class="far fa-heart"></i></button></form>
                         @else
                             <a class="btn-add-cart" href="{{ route('login') }}">Sign in to buy</a>

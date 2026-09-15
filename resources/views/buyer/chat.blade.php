@@ -2,14 +2,6 @@
 
 @section('title', 'ZAYLO · Chat')
 
-@section('nav-links')
-@include('partials.store-nav')
-@endsection
-@section('nav-icons')
-<a href="{{ route('buyer.wishlist') }}" style="position:relative;"><i class="far fa-heart"></i></a>
-<a href="{{ route('buyer.cart') }}" style="position:relative;"><i class="fas fa-shopping-bag"></i></a>
-<a href="{{ route('buyer.account') }}"><i class="far fa-user"></i></a>
-@endsection
 
 
 @section('content')

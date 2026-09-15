@@ -10,6 +10,18 @@ class LocationApiTest extends TestCase
 {
     use PsgcFixtures;
 
+    public function test_forwarded_https_is_used_for_urls_behind_the_production_proxy(): void
+    {
+        $this->withServerVariables(['REMOTE_ADDR' => '10.0.0.10'])
+            ->withHeaders([
+                'Host' => 'zaylo-zyl.shop',
+                'X-Forwarded-Host' => 'zaylo-zyl.shop',
+                'X-Forwarded-Proto' => 'https',
+            ])
+            ->get('/account/addresses/create')
+            ->assertRedirect('https://zaylo-zyl.shop/login');
+    }
+
     public function test_location_endpoints_proxy_and_cache_the_selected_parents(): void
     {
         $this->fakeLocations();

@@ -9,18 +9,22 @@ use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\User;
 use App\Models\Wishlist;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 
 class BuyerController extends Controller
 {
     public function dashboard()
     {
-        $base = Product::where('is_active', true)->where('stock', '>', 0);
+        $base = Product::where('is_active', true)
+            ->where('stock', '>', 0)
+            ->withCount(['variants as active_variants_count' => fn ($query) => $query->where('is_active', true)]);
         $flashProducts = (clone $base)->whereNotNull('original_price')->inRandomOrder()->limit(4)->get();
         $suggestedProducts = (clone $base)->inRandomOrder()->limit(8)->get();
 
@@ -35,7 +39,10 @@ class BuyerController extends Controller
             'search' => 'nullable|string|max:100',
             'sort' => 'nullable|in:newest,price_low,price_high',
         ]);
-        $query = Product::with('seller')->where('is_active', true)->where('stock', '>', 0);
+        $query = Product::with('seller')
+            ->withCount(['variants as active_variants_count' => fn ($builder) => $builder->where('is_active', true)])
+            ->where('is_active', true)
+            ->where('stock', '>', 0);
 
         if (! empty($validated['category'])) {
             $validated['category'] === 'fashion'
@@ -68,7 +75,16 @@ class BuyerController extends Controller
         abort_unless($product->is_active && $product->stock > 0, 404);
         $product->load(['seller', 'variants' => fn ($query) => $query->where('is_active', true), 'images']);
 
-        return view('buyer.product-show', compact('product'));
+        $galleryImages = collect([
+            ['path' => $product->image_url, 'alt_text' => $product->name],
+        ])->concat($product->images->map(fn ($image) => [
+            'path' => $image->path,
+            'alt_text' => $image->alt_text ?: $product->name,
+        ]))->filter(fn ($image) => filled($image['path']))
+            ->unique('path')
+            ->values();
+
+        return view('buyer.product-show', compact('product', 'galleryImages'));
     }
 
     public function orders()
@@ -128,6 +144,11 @@ class BuyerController extends Controller
         $variant = ! empty($validated['product_variant_id'])
             ? $product->variants()->whereKey($validated['product_variant_id'])->where('is_active', true)->firstOrFail()
             : null;
+        if (! $variant && $product->variants()->where('is_active', true)->exists()) {
+            throw ValidationException::withMessages([
+                'product_variant_id' => 'Please choose an available option before adding this product to your cart.',
+            ]);
+        }
         $available = (int) ($variant?->stock ?? $product->stock);
         $cart = Cart::firstOrCreate(['user_id' => auth()->id()]);
         $itemQuery = $cart->items()->where('product_id', $product->id);
@@ -186,7 +207,7 @@ class BuyerController extends Controller
         }
 
         DB::transaction(function () use ($cart, $validated) {
-            \App\Models\User::whereKey(auth()->id())->lockForUpdate()->firstOrFail();
+            User::whereKey(auth()->id())->lockForUpdate()->firstOrFail();
             $address = Address::where('user_id', auth()->id())->whereKey($validated['address_id'])->firstOrFail();
             if (! $address->isStructured()) {
                 throw ValidationException::withMessages(['address_id' => 'Please edit this saved address and select its Philippine locations before checkout.']);
@@ -263,8 +284,73 @@ class BuyerController extends Controller
         return back()->with('status', $item ? 'Removed from wishlist.' : 'Saved to wishlist.');
     }
 
-    public function account() { return view('buyer.account'); }
-    public function chat() { return view('buyer.chat'); }
+    public function account(Request $request)
+    {
+        return view('buyer.account', [
+            'user' => $request->user(),
+            'addresses' => $request->user()->addresses()->orderByDesc('is_default')->orderBy('label')->orderBy('id')->get(),
+        ]);
+    }
+
+    public function updateProfile(Request $request)
+    {
+        $user = $request->user();
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email:rfc', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'phone' => ['nullable', 'string', 'max:20', 'regex:/^\+?[0-9 ()-]{7,20}$/D'],
+        ]);
+
+        if ($user->google_id && $validated['email'] !== $user->email) {
+            throw ValidationException::withMessages([
+                'email' => 'The email address linked to Google cannot be changed here.',
+            ]);
+        }
+
+        $emailChanged = $validated['email'] !== $user->email;
+        $user->fill($validated);
+        if ($emailChanged) {
+            $user->email_verified_at = null;
+        }
+        $user->save();
+
+        if (! $emailChanged) {
+            return back()->with('status', 'Profile settings updated.');
+        }
+
+        try {
+            $user->sendEmailVerificationNotification();
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return redirect()->route('verification.notice')
+                ->withErrors(['otp' => 'Your email was updated, but we could not send a verification code. Please use Resend code.']);
+        }
+
+        return redirect()->route('verification.notice')->with('status', 'Profile updated. Verify your new email address to continue.');
+    }
+
+    public function updatePassword(Request $request)
+    {
+        $user = $request->user();
+        $hasPassword = filled($user->getAuthPassword());
+        $validated = $request->validate([
+            'current_password' => $hasPassword ? ['required', 'current_password'] : ['nullable'],
+            'password' => ['required', 'confirmed', Password::min(8)],
+        ]);
+
+        $user->forceFill([
+            'password' => $validated['password'],
+            'remember_token' => Str::random(60),
+        ])->save();
+
+        return back()->with('status', $hasPassword ? 'Password updated.' : 'Password created. You can now also sign in with email.');
+    }
+
+    public function chat()
+    {
+        return view('buyer.chat');
+    }
 
     private function cartSubtotal(Cart $cart): float
     {
