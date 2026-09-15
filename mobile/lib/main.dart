@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 // Ginagamit ang Inter para sa normal na text at Playfair Display para sa headings.
 import 'package:google_fonts/google_fonts.dart';
 import 'pages/login_page.dart';
-import 'pages/register_page.dart';
 
 void main() {
   // Ito ang starting point ng Flutter application.
@@ -599,7 +598,7 @@ class HomePage extends StatelessWidget {
 
           itemCount: categories.length,
 
-          separatorBuilder: (_, __) =>
+          separatorBuilder: (_, _) =>
               const SizedBox(width: 28),
 
           itemBuilder: (context, index) {
@@ -751,7 +750,7 @@ Widget _buildRoles(BuildContext context) {
           mainAxisSpacing: 16,
 
           // Dahil isang column lang, mas malawak ang card.
-          childAspectRatio: 2.0,
+          childAspectRatio: 1.6,
         ),
 
           itemBuilder: (context, index) {

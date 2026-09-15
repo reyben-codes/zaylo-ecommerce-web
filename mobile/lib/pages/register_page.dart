@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'buyer_registration_page.dart';
+import 'seller_registration_page.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -37,24 +38,31 @@ class _RegisterPageState extends State<RegisterPage> {
   ];
 
         void _continue() {
-          if (selectedRole == 'Buyer') {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const BuyerRegistrationPage(),
-              ),
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  '$selectedRole registration is next.',
-                  style: GoogleFonts.inter(),
-                ),
-              ),
-            );
-          }
-        }
+  if (selectedRole == 'Buyer') {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const BuyerRegistrationPage(),
+      ),
+    );
+  } else if (selectedRole == 'Seller') {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const SellerRegistrationPage(),
+      ),
+    );
+  } else if (selectedRole == 'Courier / Rider') {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Courier / Rider registration is next.',
+          style: GoogleFonts.inter(),
+        ),
+      ),
+    );
+  }
+}
 
   @override
   Widget build(BuildContext context) {

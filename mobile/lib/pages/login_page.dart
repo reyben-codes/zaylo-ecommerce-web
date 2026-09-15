@@ -13,7 +13,7 @@ class _LoginPageState extends State<LoginPage> {
   bool _obscurePassword = true;
   bool _rememberMe = true;
 
-  static const background = Color(0xFFFAF7F2);
+  
   static const dark = Color(0xFF1A1714);
   static const secondaryText = Color(0xFF6B5F54);
   static const borderColor = Color(0xFFE5DFD8);
