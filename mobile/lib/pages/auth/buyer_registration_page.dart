@@ -1,31 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'buyer_details_page.dart';
 
-class SellerDetailsPage extends StatefulWidget {
-  const SellerDetailsPage({super.key});
+class BuyerRegistrationPage extends StatefulWidget {
+  final String role;
+
+  const BuyerRegistrationPage({
+    super.key,
+    this.role = 'Buyer',
+  });
 
   @override
-  State<SellerDetailsPage> createState() => _SellerDetailsPageState();
+  State<BuyerRegistrationPage> createState() =>
+      _BuyerRegistrationPageState();
 }
 
-class _SellerDetailsPageState extends State<SellerDetailsPage> {
+class _BuyerRegistrationPageState
+    extends State<BuyerRegistrationPage> {
   final Color background = const Color(0xFFFAF7F2);
   final Color dark = const Color(0xFF1A1714);
   final Color secondaryText = const Color(0xFF6B5F54);
   final Color border = const Color(0xFFE5DFD8);
   final Color brown = const Color(0xFFB28B6F);
 
-  final storeNameController = TextEditingController();
-  final fullNameController = TextEditingController();
+  final firstNameController = TextEditingController();
+  final lastNameController = TextEditingController();
   final phoneController = TextEditingController();
-  final addressController = TextEditingController();
 
   @override
   void dispose() {
-    storeNameController.dispose();
-    fullNameController.dispose();
+    firstNameController.dispose();
+    lastNameController.dispose();
     phoneController.dispose();
-    addressController.dispose();
     super.dispose();
   }
 
@@ -86,6 +92,42 @@ class _SellerDetailsPageState extends State<SellerDetailsPage> {
     );
   }
 
+  void _continueToSignIn() {
+  final firstName = firstNameController.text.trim();
+  final lastName = lastNameController.text.trim();
+  final phone = phoneController.text.trim();
+
+  if (firstName.isEmpty ||
+      lastName.isEmpty ||
+      phone.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Please complete all required fields.',
+        ),
+      ),
+    );
+    return;
+  }
+
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => const BuyerDetailsPage(),
+    ),
+  );
+}
+
+  void _continueWithGoogle() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Google sign-in will be available soon.',
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -107,9 +149,7 @@ class _SellerDetailsPageState extends State<SellerDetailsPage> {
                     'assets/images/ZAYLO_LOGO_DARK.png',
                     height: 42,
                   ),
-
                   const Spacer(),
-
                   IconButton(
                     onPressed: () {
                       Navigator.pop(context);
@@ -136,10 +176,14 @@ class _SellerDetailsPageState extends State<SellerDetailsPage> {
                   40,
                 ),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
                   children: [
+                    // =========================
+                    // LABEL
+                    // =========================
                     Text(
-                      'SELLER ACCOUNT',
+                      'ZAYLO ACCOUNT',
                       style: GoogleFonts.inter(
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
@@ -150,9 +194,13 @@ class _SellerDetailsPageState extends State<SellerDetailsPage> {
 
                     const SizedBox(height: 10),
 
+                    // =========================
+                    // TITLE
+                    // =========================
                     Text(
-                      'Seller Details',
-                      style: GoogleFonts.playfairDisplay(
+                      'Tell Us About You',
+                      style:
+                          GoogleFonts.playfairDisplay(
                         fontSize: 34,
                         fontWeight: FontWeight.w500,
                         color: dark,
@@ -162,7 +210,7 @@ class _SellerDetailsPageState extends State<SellerDetailsPage> {
                     const SizedBox(height: 8),
 
                     Text(
-                      'Tell us more about you and your store.',
+                      'Enter your details to create your ZAYLO account.',
                       style: GoogleFonts.inter(
                         fontSize: 13,
                         color: secondaryText,
@@ -180,41 +228,47 @@ class _SellerDetailsPageState extends State<SellerDetailsPage> {
                     const SizedBox(height: 32),
 
                     // =========================
-                    // STORE NAME
+                    // FIRST NAME
                     // =========================
-                    _label('Store Name'),
+                    _label('First Name'),
 
                     const SizedBox(height: 8),
 
                     TextField(
-                      controller: storeNameController,
-                      textInputAction: TextInputAction.next,
+                      controller: firstNameController,
+                      textInputAction:
+                          TextInputAction.next,
+                      textCapitalization:
+                          TextCapitalization.words,
                       decoration: _inputDecoration(
-                        hint: 'Enter your store name',
+                        hint: 'Enter your first name',
                       ),
                     ),
 
                     const SizedBox(height: 20),
 
                     // =========================
-                    // FULL NAME
+                    // LAST NAME
                     // =========================
-                    _label('Full Name'),
+                    _label('Last Name'),
 
                     const SizedBox(height: 8),
 
                     TextField(
-                      controller: fullNameController,
-                      textInputAction: TextInputAction.next,
+                      controller: lastNameController,
+                      textInputAction:
+                          TextInputAction.next,
+                      textCapitalization:
+                          TextCapitalization.words,
                       decoration: _inputDecoration(
-                        hint: 'Enter your full name',
+                        hint: 'Enter your last name',
                       ),
                     ),
 
                     const SizedBox(height: 20),
 
                     // =========================
-                    // PHONE
+                    // PHONE NUMBER
                     // =========================
                     _label('Phone Number'),
 
@@ -222,108 +276,76 @@ class _SellerDetailsPageState extends State<SellerDetailsPage> {
 
                     TextField(
                       controller: phoneController,
-                      keyboardType: TextInputType.phone,
-                      textInputAction: TextInputAction.next,
+                      keyboardType:
+                          TextInputType.phone,
+                      textInputAction:
+                          TextInputAction.done,
                       decoration: _inputDecoration(
-                        hint: '+63 9XX XXX XXXX',
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // =========================
-                    // ADDRESS
-                    // =========================
-                    _label('Business Address'),
-
-                    const SizedBox(height: 8),
-
-                    TextField(
-                      controller: addressController,
-                      maxLines: 3,
-                      textInputAction: TextInputAction.done,
-                      decoration: _inputDecoration(
-                        hint: 'Enter your business address',
+                        hint: 'Enter your phone number',
                       ),
                     ),
 
                     const SizedBox(height: 30),
 
                     // =========================
-                    // BUTTONS
+                    // CONTINUE
+                    // =========================
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton(
+                        onPressed: _continueToSignIn,
+                        style:
+                            ElevatedButton.styleFrom(
+                          backgroundColor: dark,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape:
+                              RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.circular(4),
+                          ),
+                        ),
+                        child: Text(
+                          'CONTINUE TO SIGN-IN DETAILS',
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 22),
+
+                    // =========================
+                    // OR
                     // =========================
                     Row(
                       children: [
                         Expanded(
-                          child: SizedBox(
-                            height: 52,
-                            child: OutlinedButton(
-                              onPressed: () {
-                                Navigator.pop(context);
-                              },
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: secondaryText,
-                                side: BorderSide(
-                                  color: border,
-                                ),
-                                shape:
-                                    RoundedRectangleBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(4),
-                                ),
-                              ),
-                              child: Text(
-                                'Back',
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  fontWeight:
-                                      FontWeight.w500,
-                                ),
-                              ),
+                          child: Divider(
+                            color: border,
+                          ),
+                        ),
+                        Padding(
+                          padding:
+                              const EdgeInsets.symmetric(
+                            horizontal: 14,
+                          ),
+                          child: Text(
+                            'OR',
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              color: secondaryText,
+                              letterSpacing: 1,
                             ),
                           ),
                         ),
-
-                        const SizedBox(width: 12),
-
                         Expanded(
-                          flex: 2,
-                          child: SizedBox(
-                            height: 52,
-                            child: ElevatedButton(
-                              onPressed: () {
-                                // Next step will be Seller Complete Page
-                                ScaffoldMessenger.of(context)
-                                    .showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Seller details saved.',
-                                    ),
-                                  ),
-                                );
-                              },
-                              style:
-                                  ElevatedButton.styleFrom(
-                                backgroundColor: dark,
-                                foregroundColor:
-                                    Colors.white,
-                                elevation: 0,
-                                shape:
-                                    RoundedRectangleBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(4),
-                                ),
-                              ),
-                              child: Text(
-                                'CONTINUE',
-                                style: GoogleFonts.inter(
-                                  fontSize: 11,
-                                  fontWeight:
-                                      FontWeight.w600,
-                                  letterSpacing: 1.5,
-                                ),
-                              ),
-                            ),
+                          child: Divider(
+                            color: border,
                           ),
                         ),
                       ],
@@ -332,11 +354,62 @@ class _SellerDetailsPageState extends State<SellerDetailsPage> {
                     const SizedBox(height: 22),
 
                     // =========================
+                    // GOOGLE
+                    // =========================
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: OutlinedButton(
+                        onPressed: _continueWithGoogle,
+                        style:
+                            OutlinedButton.styleFrom(
+                          foregroundColor: dark,
+                          side: BorderSide(
+                            color: border,
+                          ),
+                          shape:
+                              RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.circular(4),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment:
+                              MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'G',
+                              style: GoogleFonts.inter(
+                                fontSize: 19,
+                                fontWeight:
+                                    FontWeight.w700,
+                                color:
+                                    Colors.red.shade600,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Continue with Google',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight:
+                                    FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // =========================
                     // SIGN IN
                     // =========================
                     Center(
                       child: Wrap(
-                        alignment: WrapAlignment.center,
+                        alignment:
+                            WrapAlignment.center,
                         children: [
                           Text(
                             'Already have an account? ',
@@ -347,9 +420,8 @@ class _SellerDetailsPageState extends State<SellerDetailsPage> {
                           ),
                           GestureDetector(
                             onTap: () {
-                              Navigator.popUntil(
+                              Navigator.pop(
                                 context,
-                                (route) => route.isFirst,
                               );
                             },
                             child: Text(
@@ -382,9 +454,10 @@ class _SellerDetailsPageState extends State<SellerDetailsPage> {
   Widget _buildProgress() {
     return Row(
       children: [
+        // DETAILS - COMPLETED / CURRENT
         _buildProgressItem(
           number: '✓',
-          title: 'Account',
+          title: 'Details',
           completed: true,
           active: false,
         ),
@@ -396,10 +469,11 @@ class _SellerDetailsPageState extends State<SellerDetailsPage> {
           ),
         ),
 
+        // SIGN IN
         _buildProgressItem(
-          number: '✓',
-          title: 'Personal',
-          completed: true,
+          number: '02',
+          title: 'Sign in',
+          completed: false,
           active: false,
         ),
 
@@ -410,23 +484,10 @@ class _SellerDetailsPageState extends State<SellerDetailsPage> {
           ),
         ),
 
+        // VERIFY
         _buildProgressItem(
           number: '03',
-          title: 'Details',
-          completed: false,
-          active: true,
-        ),
-
-        Expanded(
-          child: Container(
-            height: 1,
-            color: border,
-          ),
-        ),
-
-        _buildProgressItem(
-          number: '04',
-          title: 'Complete',
+          title: 'Verify',
           completed: false,
           active: false,
         ),
@@ -473,17 +534,15 @@ class _SellerDetailsPageState extends State<SellerDetailsPage> {
             ),
           ),
         ),
-
         const SizedBox(height: 5),
-
         Text(
           title,
           style: GoogleFonts.inter(
             fontSize: 7,
-            fontWeight: active || completed
+            fontWeight: completed || active
                 ? FontWeight.w600
                 : FontWeight.w400,
-            color: active || completed
+            color: completed || active
                 ? dark
                 : secondaryText,
           ),

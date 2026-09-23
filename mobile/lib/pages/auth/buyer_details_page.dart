@@ -1,34 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'seller_details_page.dart';
+import 'buyer_verification_page.dart';
 
-class SellerRegistrationPage extends StatefulWidget {
-  final String role;
 
-  const SellerRegistrationPage({
-    super.key,
-    this.role = 'Seller',
-  });
+class BuyerDetailsPage extends StatefulWidget {
+  const BuyerDetailsPage({super.key});
 
   @override
-  State<SellerRegistrationPage> createState() =>
-      _SellerRegistrationPageState();
+  State<BuyerDetailsPage> createState() => _BuyerDetailsPageState();
 }
 
-class _SellerRegistrationPageState
-    extends State<SellerRegistrationPage> {
-  final Color background = const Color(0xFFFAF7F2);
-  final Color dark = const Color(0xFF1A1714);
-  final Color secondaryText = const Color(0xFF6B5F54);
-  final Color border = const Color(0xFFE5DFD8);
-  final Color brown = const Color(0xFFB28B6F);
+class _BuyerDetailsPageState extends State<BuyerDetailsPage> {
+  static const background = Color(0xFFFAF7F2);
+  static const dark = Color(0xFF1A1714);
+  static const secondaryText = Color(0xFF6B5F54);
+  static const border = Color(0xFFE5DFD8);
+  static const brown = Color(0xFFB28B6F);
+
+  final TextEditingController emailController =
+      TextEditingController();
+
+  final TextEditingController passwordController =
+      TextEditingController();
+
+  final TextEditingController confirmPasswordController =
+      TextEditingController();
 
   bool obscurePassword = true;
   bool obscureConfirmPassword = true;
-
-  final emailController = TextEditingController();
-  final passwordController = TextEditingController();
-  final confirmPasswordController = TextEditingController();
 
   @override
   void dispose() {
@@ -56,15 +55,19 @@ class _SellerRegistrationPageState
       ),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(4),
-        borderSide: BorderSide(color: border),
+        borderSide: const BorderSide(
+          color: border,
+        ),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(4),
-        borderSide: BorderSide(color: border),
+        borderSide: const BorderSide(
+          color: border,
+        ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(4),
-        borderSide: BorderSide(
+        borderSide: const BorderSide(
           color: dark,
           width: 1.2,
         ),
@@ -97,6 +100,76 @@ class _SellerRegistrationPageState
     );
   }
 
+  void _sendVerificationCode() {
+  final email = emailController.text.trim();
+  final password = passwordController.text;
+  final confirmPassword =
+      confirmPasswordController.text;
+
+  if (email.isEmpty ||
+      password.isEmpty ||
+      confirmPassword.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Please complete all required fields.',
+        ),
+      ),
+    );
+    return;
+  }
+
+  if (!email.contains('@')) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Please enter a valid email address.',
+        ),
+      ),
+    );
+    return;
+  }
+
+  if (password.length < 8) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Password must be at least 8 characters.',
+        ),
+      ),
+    );
+    return;
+  }
+
+  if (password != confirmPassword) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Passwords do not match.',
+        ),
+      ),
+    );
+    return;
+  }
+
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => const BuyerVerificationPage(),
+    ),
+  );
+}
+
+  void _continueWithGoogle() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Google sign-in will be available soon.',
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -104,9 +177,7 @@ class _SellerRegistrationPageState
       body: SafeArea(
         child: Column(
           children: [
-            // =========================
             // HEADER
-            // =========================
             Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: 20,
@@ -118,14 +189,12 @@ class _SellerRegistrationPageState
                     'assets/images/ZAYLO_LOGO_DARK.png',
                     height: 42,
                   ),
-
                   const Spacer(),
-
                   IconButton(
                     onPressed: () {
                       Navigator.pop(context);
                     },
-                    icon: Icon(
+                    icon: const Icon(
                       Icons.close,
                       color: dark,
                       size: 22,
@@ -135,9 +204,7 @@ class _SellerRegistrationPageState
               ),
             ),
 
-            // =========================
             // CONTENT
-            // =========================
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(
@@ -147,13 +214,11 @@ class _SellerRegistrationPageState
                   40,
                 ),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
                   children: [
-                    // =========================
-                    // LABEL
-                    // =========================
                     Text(
-                      'SELLER ACCOUNT',
+                      'ZAYLO ACCOUNT',
                       style: GoogleFonts.inter(
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
@@ -164,13 +229,10 @@ class _SellerRegistrationPageState
 
                     const SizedBox(height: 10),
 
-                    // =========================
-                    // TITLE
-                    // =========================
                     Text(
-                      'Create Your Seller Account',
+                      'Set Up Your Sign-In',
                       style: GoogleFonts.playfairDisplay(
-                        fontSize: 32,
+                        fontSize: 34,
                         fontWeight: FontWeight.w500,
                         color: dark,
                       ),
@@ -179,7 +241,7 @@ class _SellerRegistrationPageState
                     const SizedBox(height: 8),
 
                     Text(
-                      'Join ZAYLO and start selling your fashion products.',
+                      'Create the email and password you will use to access your ZAYLO account.',
                       style: GoogleFonts.inter(
                         fontSize: 13,
                         color: secondaryText,
@@ -189,34 +251,30 @@ class _SellerRegistrationPageState
 
                     const SizedBox(height: 28),
 
-                    // =========================
                     // PROGRESS
-                    // =========================
                     _buildProgress(),
 
                     const SizedBox(height: 32),
 
-                    // =========================
                     // EMAIL
-                    // =========================
                     _label('Email Address'),
 
                     const SizedBox(height: 8),
 
                     TextField(
                       controller: emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.next,
+                      keyboardType:
+                          TextInputType.emailAddress,
+                      textInputAction:
+                          TextInputAction.next,
                       decoration: _inputDecoration(
-                        hint: 'seller@email.com',
+                        hint: 'your@email.com',
                       ),
                     ),
 
                     const SizedBox(height: 20),
 
-                    // =========================
                     // PASSWORD
-                    // =========================
                     _label('Password'),
 
                     const SizedBox(height: 8),
@@ -224,9 +282,10 @@ class _SellerRegistrationPageState
                     TextField(
                       controller: passwordController,
                       obscureText: obscurePassword,
-                      textInputAction: TextInputAction.next,
+                      textInputAction:
+                          TextInputAction.next,
                       decoration: _inputDecoration(
-                        hint: 'Create a strong password',
+                        hint: 'Create a password',
                         suffixIcon: IconButton(
                           onPressed: () {
                             setState(() {
@@ -245,19 +304,30 @@ class _SellerRegistrationPageState
                       ),
                     ),
 
+                    const SizedBox(height: 8),
+
+                    Text(
+                      'Use at least 8 characters.',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: secondaryText,
+                      ),
+                    ),
+
                     const SizedBox(height: 20),
 
-                    // =========================
                     // CONFIRM PASSWORD
-                    // =========================
                     _label('Confirm Password'),
 
                     const SizedBox(height: 8),
 
                     TextField(
-                      controller: confirmPasswordController,
-                      obscureText: obscureConfirmPassword,
-                      textInputAction: TextInputAction.done,
+                      controller:
+                          confirmPasswordController,
+                      obscureText:
+                          obscureConfirmPassword,
+                      textInputAction:
+                          TextInputAction.done,
                       decoration: _inputDecoration(
                         hint: 'Repeat your password',
                         suffixIcon: IconButton(
@@ -278,11 +348,22 @@ class _SellerRegistrationPageState
                       ),
                     ),
 
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 12),
 
-                    // =========================
+                    // VERIFICATION INFORMATION
+                    Text(
+                      "We'll send a six-digit verification code to this email address. "
+                      "You'll need the code to finish creating your ZAYLO account.",
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: secondaryText,
+                        height: 1.5,
+                      ),
+                    ),
+
+                    const SizedBox(height: 28),
+
                     // BUTTONS
-                    // =========================
                     Row(
                       children: [
                         Expanded(
@@ -292,9 +373,11 @@ class _SellerRegistrationPageState
                               onPressed: () {
                                 Navigator.pop(context);
                               },
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: secondaryText,
-                                side: BorderSide(
+                              style:
+                                  OutlinedButton.styleFrom(
+                                foregroundColor:
+                                    secondaryText,
+                                side: const BorderSide(
                                   color: border,
                                 ),
                                 shape:
@@ -304,11 +387,12 @@ class _SellerRegistrationPageState
                                 ),
                               ),
                               child: Text(
-                                'Back',
+                                'BACK',
                                 style: GoogleFonts.inter(
-                                  fontSize: 12,
+                                  fontSize: 11,
                                   fontWeight:
-                                      FontWeight.w500,
+                                      FontWeight.w600,
+                                  letterSpacing: 1.2,
                                 ),
                               ),
                             ),
@@ -322,15 +406,8 @@ class _SellerRegistrationPageState
                           child: SizedBox(
                             height: 52,
                             child: ElevatedButton(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const SellerDetailsPage(),
-                                  ),
-                                );
-                              },
+                              onPressed:
+                                  _sendVerificationCode,
                               style:
                                   ElevatedButton.styleFrom(
                                 backgroundColor: dark,
@@ -344,12 +421,12 @@ class _SellerRegistrationPageState
                                 ),
                               ),
                               child: Text(
-                                'CONTINUE',
+                                'SEND VERIFICATION CODE',
                                 style: GoogleFonts.inter(
-                                  fontSize: 11,
+                                  fontSize: 9.5,
                                   fontWeight:
                                       FontWeight.w600,
-                                  letterSpacing: 1.5,
+                                  letterSpacing: 1.1,
                                 ),
                               ),
                             ),
@@ -358,14 +435,96 @@ class _SellerRegistrationPageState
                       ],
                     ),
 
+                    const SizedBox(height: 26),
+
+                    // OR DIVIDER
+                    Row(
+                      children: [
+                        const Expanded(
+                          child: Divider(
+                            color: border,
+                            thickness: 1,
+                          ),
+                        ),
+                        Padding(
+                          padding:
+                              const EdgeInsets.symmetric(
+                            horizontal: 16,
+                          ),
+                          child: Text(
+                            'OR',
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                              color: secondaryText,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                        ),
+                        const Expanded(
+                          child: Divider(
+                            color: border,
+                            thickness: 1,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // GOOGLE
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: OutlinedButton(
+                        onPressed: _continueWithGoogle,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: dark,
+                          backgroundColor: Colors.white,
+                          side: const BorderSide(
+                            color: border,
+                          ),
+                          shape:
+                              RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.circular(4),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment:
+                              MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'G',
+                              style: GoogleFonts.inter(
+                                fontSize: 19,
+                                fontWeight:
+                                    FontWeight.w600,
+                                color: Colors.red.shade600,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Continue with Google',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight:
+                                    FontWeight.w500,
+                                color: dark,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
                     const SizedBox(height: 22),
 
-                    // =========================
                     // SIGN IN
-                    // =========================
                     Center(
                       child: Wrap(
-                        alignment: WrapAlignment.center,
+                        alignment:
+                            WrapAlignment.center,
                         children: [
                           Text(
                             'Already have an account? ',
@@ -374,7 +533,6 @@ class _SellerRegistrationPageState
                               color: secondaryText,
                             ),
                           ),
-
                           GestureDetector(
                             onTap: () {
                               Navigator.popUntil(
@@ -405,17 +563,28 @@ class _SellerRegistrationPageState
     );
   }
 
-  // =========================
-  // PROGRESS INDICATOR
-  // =========================
-
   Widget _buildProgress() {
     return Row(
       children: [
-        // ACCOUNT - COMPLETED
+        // STEP 1
         _buildProgressItem(
           number: '✓',
-          title: 'Account',
+          title: 'Details',
+          completed: true,
+          active: false,
+        ),
+
+        Expanded(
+          child: Container(
+            height: 1,
+            color: brown,
+          ),
+        ),
+
+        // STEP 2
+        _buildProgressItem(
+          number: '✓',
+          title: 'Sign in',
           completed: true,
           active: false,
         ),
@@ -427,40 +596,10 @@ class _SellerRegistrationPageState
           ),
         ),
 
-        // PERSONAL - ACTIVE
-        _buildProgressItem(
-          number: '02',
-          title: 'Personal',
-          completed: false,
-          active: true,
-        ),
-
-        Expanded(
-          child: Container(
-            height: 1,
-            color: border,
-          ),
-        ),
-
-        // DETAILS
+        // STEP 3
         _buildProgressItem(
           number: '03',
-          title: 'Details',
-          completed: false,
-          active: false,
-        ),
-
-        Expanded(
-          child: Container(
-            height: 1,
-            color: border,
-          ),
-        ),
-
-        // COMPLETE
-        _buildProgressItem(
-          number: '04',
-          title: 'Complete',
+          title: 'Verify',
           completed: false,
           active: false,
         ),
@@ -507,17 +646,15 @@ class _SellerRegistrationPageState
             ),
           ),
         ),
-
         const SizedBox(height: 5),
-
         Text(
           title,
           style: GoogleFonts.inter(
             fontSize: 7,
-            fontWeight: active || completed
+            fontWeight: completed || active
                 ? FontWeight.w600
                 : FontWeight.w400,
-            color: active || completed
+            color: completed || active
                 ? dark
                 : secondaryText,
           ),

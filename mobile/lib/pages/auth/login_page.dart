@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'register_page.dart';
+import 'buyer_registration_page.dart';
+import '../../services/api_service.dart';
+import '../buyer/buyer_shell_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -12,6 +14,71 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   bool _obscurePassword = true;
   bool _rememberMe = true;
+  bool _isLoading = false;
+
+  final TextEditingController _emailController =
+      TextEditingController();
+
+  final TextEditingController _passwordController =
+      TextEditingController();
+
+      Future<void> _login() async {
+  final email = _emailController.text.trim();
+  final password = _passwordController.text;
+
+  if (email.isEmpty || password.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Please enter your email and password.'),
+      ),
+    );
+    return;
+  }
+
+  setState(() {
+    _isLoading = true;
+  });
+
+  try {
+    final data = await ApiService.login(
+      email: email,
+      password: password,
+    );
+
+    if (!mounted) return;
+
+    final token = data['token'] as String?;
+
+    if (token == null || token.isEmpty) {
+      throw Exception('Login token was not returned.');
+}
+
+if (!mounted) return;
+
+Navigator.pushReplacement(
+  context,
+  MaterialPageRoute(
+    builder: (_) => BuyerShellPage(token: token),
+  ),
+);
+  } catch (e) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          e.toString().replaceFirst('Exception: ', ''),
+        ),
+      ),
+    );
+  } finally {
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+}
 
   
   static const dark = Color(0xFF1A1714);
@@ -127,7 +194,8 @@ class _LoginPageState extends State<LoginPage> {
               const SizedBox(height: 9),
 
               TextField(
-                keyboardType: TextInputType.emailAddress,
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
 
                 decoration: InputDecoration(
                   hintText: 'Enter your email address',
@@ -176,6 +244,7 @@ class _LoginPageState extends State<LoginPage> {
               const SizedBox(height: 9),
 
               TextField(
+                controller: _passwordController,
                 obscureText: _obscurePassword,
 
                 decoration: InputDecoration(
@@ -294,9 +363,7 @@ class _LoginPageState extends State<LoginPage> {
                 height: 50,
 
                 child: ElevatedButton(
-                  onPressed: () {
-                    // Backend authentication later
-                  },
+                  onPressed: _isLoading ? null : _login,
 
                   style: ElevatedButton.styleFrom(
                     backgroundColor: dark,
@@ -435,7 +502,7 @@ class _LoginPageState extends State<LoginPage> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const RegisterPage(),
+                            builder: (context) => const BuyerRegistrationPage(),
                           ),
                         );
                       },
