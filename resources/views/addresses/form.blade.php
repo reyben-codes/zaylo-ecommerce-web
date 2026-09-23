@@ -58,7 +58,10 @@
         <p class="empty-note">Your first address becomes the default. To change an existing default, choose another saved address.</p>
         <noscript><p>Please enable JavaScript to load Philippine locations.</p></noscript>
         <button class="market-button" type="submit" data-address-save disabled>Save address</button>
-        <a href="{{ $returnTo === 'checkout' ? route('buyer.cart') : route('addresses.index') }}">Cancel</a>
+        <a class="text-button" href="{{ $returnTo === 'checkout' ? route('buyer.cart') : route('addresses.index') }}">
+            <i class="fas fa-xmark" aria-hidden="true"></i>
+            Cancel
+        </a>
     </form>
 </div>
 @endsection

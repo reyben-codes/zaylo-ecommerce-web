@@ -4,6 +4,7 @@ use App\Http\Controllers\AddressController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BuyerController;
+use App\Http\Controllers\BuyerNotificationController;
 use App\Http\Controllers\CourierController;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\LocationController;
@@ -13,15 +14,23 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 
 Route::get('/', function () {
-    $newArrivals = Schema::hasTable('products')
-        ? Product::query()
-            ->where('is_active', true)
-            ->where('stock', '>', 0)
-            ->withCount(['variants as active_variants_count' => fn ($query) => $query->where('is_active', true)])
-            ->latest()
-            ->limit(8)
-            ->get()
-        : collect();
+    $newArrivals = collect();
+
+    if (Schema::hasTable('products')) {
+        $query = Product::query()->where('is_active', true);
+
+        if (Schema::hasColumn('products', 'stock')) {
+            $query->where('stock', '>', 0)
+                ->with('images')
+                ->withCount(['variants as active_variants_count' => fn ($builder) => $builder->where('is_active', true)]);
+        } else {
+            $query->whereHas('variants', fn ($builder) => $builder->where('is_active', true)->where('stock', '>', 0))
+                ->with(['images', 'defaultVariant', 'category'])
+                ->withCount(['variants as active_variants_count' => fn ($builder) => $builder->where('is_active', true)]);
+        }
+
+        $newArrivals = $query->latest()->limit(10)->get();
+    }
 
     return view('index', compact('newArrivals'));
 })->name('home');
@@ -53,6 +62,8 @@ Route::middleware('guest')->group(function () {
     Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])->middleware('throttle:10,1')->name('google.callback');
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
+    Route::get('/seller/login', [AuthController::class, 'showSellerLogin'])->name('seller.login');
+    Route::post('/seller/login', [AuthController::class, 'sellerLogin'])->middleware('throttle:login')->name('seller.login.submit');
     Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
     Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:6,1');
     Route::get('/forgot-password', [AuthController::class, 'showForgotPassword'])->name('password.request');
@@ -70,13 +81,18 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware(['auth', 'active', 'verified', 'role:buyer', 'nocache'])->prefix('buyer')->name('buyer.')->group(function () {
     Route::get('/dashboard', [BuyerController::class, 'dashboard'])->name('dashboard');
+    Route::get('/notifications', [BuyerNotificationController::class, 'index'])->name('notifications');
+    Route::post('/notifications/open', [BuyerNotificationController::class, 'open'])->name('notifications.open');
+    Route::post('/notifications/read-all', [BuyerNotificationController::class, 'markAllRead'])->name('notifications.read-all');
     Route::get('/products', fn () => redirect()->route('products.index'))->name('products');
     Route::get('/orders', [BuyerController::class, 'orders'])->name('orders');
     Route::post('/orders/{order}/cancel', [BuyerController::class, 'cancelOrder'])->name('orders.cancel');
     Route::get('/cart', [BuyerController::class, 'cart'])->name('cart');
+    Route::post('/cart/selection', [BuyerController::class, 'cartSelection'])->name('cart.selection');
     Route::post('/cart/{product}', [BuyerController::class, 'addToCart'])->name('cart.add');
     Route::patch('/cart/items/{cartItem}', [BuyerController::class, 'updateCart'])->name('cart.update');
     Route::delete('/cart/items/{cartItem}', [BuyerController::class, 'removeCartItem'])->name('cart.remove');
+    Route::get('/checkout', [BuyerController::class, 'showCheckout'])->name('checkout.show');
     Route::post('/checkout', [BuyerController::class, 'checkout'])->name('checkout');
     Route::get('/wishlist', [BuyerController::class, 'wishlist'])->name('wishlist');
     Route::post('/wishlist/{product}', [BuyerController::class, 'toggleWishlist'])->name('wishlist.toggle');

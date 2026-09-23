@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ZAYLO · Access Denied</title>
+    <title>ZAYLO</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600&display=swap" rel="stylesheet" />
@@ -17,9 +17,9 @@
         .error-title { font-family: 'Playfair Display', serif; font-size: 1.6rem; font-weight: 600; margin-bottom: 12px; }
         .error-message { font-size: 0.9rem; color: #6b5f54; line-height: 1.6; margin-bottom: 36px; }
         .error-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
-        .btn-primary { background: #1a1714; color: white; padding: 14px 32px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none; display: inline-block; transition: 0.15s; }
+        .btn-primary { background: #1a1714; color: white; border-radius: 8px; padding: 14px 32px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none; display: inline-block; transition: 0.15s; }
         .btn-primary:hover { background: #b28b6f; }
-        .btn-secondary { background: transparent; color: #1a1714; border: 1px solid #1a1714; padding: 14px 32px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none; display: inline-block; transition: 0.15s; }
+        .btn-secondary { background: transparent; color: #1a1714; border: 1px solid #1a1714; border-radius: 8px; padding: 14px 32px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none; display: inline-block; transition: 0.15s; }
         .btn-secondary:hover { background: #1a1714; color: white; }
         .divider { width: 48px; height: 2px; background: #ece4db; margin: 24px auto; }
     </style>

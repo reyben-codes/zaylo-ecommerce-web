@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Rules\PersonName;
+use App\Rules\PhoneNumber;
+use App\Rules\StrongPassword;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -18,6 +21,11 @@ class AuthController extends Controller
     public function showLogin()
     {
         return view('auth.login');
+    }
+
+    public function showSellerLogin()
+    {
+        return view('auth.login', ['sellerPortal' => true]);
     }
 
     public function login(Request $request)
@@ -50,7 +58,45 @@ class AuthController extends Controller
             ]);
         }
 
-        return $this->redirectByRole(Auth::user()->role);
+        return $this->redirectByRole(Auth::user());
+    }
+
+    public function sellerLogin(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'password' => 'required',
+        ]);
+
+        $credentials = $request->only('email', 'password');
+        if (! Auth::attempt($credentials, $request->boolean('remember'))) {
+            throw ValidationException::withMessages([
+                'email' => 'Incorrect seller email or password.',
+            ]);
+        }
+
+        if (! Auth::user()->hasRole('seller')) {
+            Auth::logout();
+            throw ValidationException::withMessages(['email' => 'Incorrect seller email or password.']);
+        }
+
+        $request->session()->regenerate();
+
+        if (! Auth::user()->hasVerifiedEmail()) {
+            return redirect()->route('verification.notice');
+        }
+
+        if (! Auth::user()->isActive()) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            throw ValidationException::withMessages([
+                'email' => 'This seller account is pending approval or has been suspended.',
+            ]);
+        }
+
+        return redirect()->route('seller.dashboard');
     }
 
     public function showRegister()
@@ -62,10 +108,11 @@ class AuthController extends Controller
     {
         $request->validate([
             'email'                 => 'required|email|unique:users,email',
-            'password'              => 'required|string|min:8|confirmed',
-            'first_name'            => 'required|string|max:100',
-            'last_name'             => 'required|string|max:100',
-            'phone'                 => 'nullable|string|max:20',
+            'password'              => ['required', 'string', 'confirmed', new StrongPassword],
+            'first_name'            => ['required', 'string', 'max:100', new PersonName],
+            'last_name'             => ['required', 'string', 'max:100', new PersonName],
+            'phone'                 => ['required', 'string', 'max:11', new PhoneNumber],
+            'date_of_birth'         => 'required_if:role,buyer|nullable|date|before_or_equal:today',
             'role'                  => 'required|in:buyer,seller,courier',
         ]);
 
@@ -74,23 +121,17 @@ class AuthController extends Controller
                 'name'       => $request->first_name . ' ' . $request->last_name,
                 'email'      => $request->email,
                 'password'   => Hash::make($request->password),
-                'role'       => $request->role,
+                'role'       => $request->role === 'courier' ? 'rider' : $request->role,
                 'phone'      => $request->phone,
+                'date_of_birth' => $request->role === 'buyer' ? $request->date_of_birth : null,
                 'status'     => $request->role === 'buyer' ? 'active' : 'pending',
             ]);
 
-            if ($user->role === 'seller') {
-                DB::table('seller_profiles')->insert([
-                    'user_id' => $user->id,
-                    'store_name' => $user->name."'s Store",
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            } elseif ($user->role === 'courier') {
-                DB::table('courier_profiles')->insert([
-                    'user_id' => $user->id,
-                    'created_at' => now(),
-                    'updated_at' => now(),
+            if ($user->hasRole('seller')) {
+                $user->sellers()->create([
+                    'name' => $user->name."'s Store",
+                    'slug' => Str::slug($user->name).'-'.Str::lower(Str::random(6)),
+                    'status' => 'pending',
                 ]);
             }
 
@@ -141,7 +182,7 @@ class AuthController extends Controller
             return redirect()->route('login')->with('status', 'Email verified. Your marketplace account is still awaiting administrator approval.');
         }
 
-        return $this->redirectByRole($request->user()->role)->with('status', 'Email verified successfully.');
+        return $this->redirectByRole($request->user())->with('status', 'Email verified successfully.');
     }
 
     public function resendVerification(Request $request)
@@ -188,7 +229,7 @@ class AuthController extends Controller
         $request->validate([
             'token' => 'required',
             'email' => 'required|email',
-            'password' => 'required|string|min:8|confirmed',
+            'password' => ['required', 'string', 'confirmed', new StrongPassword],
         ]);
 
         $status = Password::reset(
@@ -210,20 +251,20 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
+        $redirectRoute = $request->user()?->hasRole('seller') ? 'seller.login' : 'home';
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-        return redirect()->route('home');
+        return redirect()->route($redirectRoute);
     }
 
-    private function redirectByRole(string $role)
+    private function redirectByRole(User $user)
     {
-        return match ($role) {
-            'buyer'   => redirect()->route('buyer.dashboard'),
-            'seller'  => redirect()->route('seller.dashboard'),
-            'courier' => redirect()->route('courier.dashboard'),
-            'admin'   => redirect()->route('admin.dashboard'),
-            default   => redirect()->route('home'),
-        };
+        if ($user->hasRole('admin')) return redirect()->route('admin.dashboard');
+        if ($user->hasRole('seller')) return redirect()->route('seller.dashboard');
+        if ($user->hasRole('rider')) return redirect()->route('courier.dashboard');
+        if ($user->hasRole('buyer')) return redirect()->route('buyer.dashboard');
+
+        return redirect()->route('home');
     }
 }

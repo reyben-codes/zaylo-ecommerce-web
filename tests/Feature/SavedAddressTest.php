@@ -182,7 +182,8 @@ class SavedAddressTest extends TestCase
         $default = $user->addresses()->create($this->savedAddressData(['is_default' => true]));
         $chosen = $user->addresses()->create($this->savedAddressData(['label' => 'Work', 'line1' => 'Office street']));
         $this->fillCart();
-        $this->get(route('buyer.cart'))->assertOk()->assertSee('name="address_id"', false)->assertDontSee('name="line1"', false);
+        $this->get(route('buyer.cart'))->assertOk()->assertDontSee('name="address_id"', false);
+        $this->get(route('buyer.checkout.show'))->assertOk()->assertSee('name="address_id"', false)->assertDontSee('name="line1"', false);
         $this->post(route('buyer.checkout'), [
             'address_id' => $chosen->id, 'idempotency_key' => (string) Str::uuid(),
             'recipient_name' => 'Forged recipient', 'phone' => '0000000', 'line1' => 'Forged street',
@@ -209,11 +210,11 @@ class SavedAddressTest extends TestCase
         $this->assertDatabaseCount('cart_items', 1);
     }
 
-    public function test_checkout_add_address_returns_to_cart_with_saved_selection(): void
+    public function test_checkout_add_address_returns_to_checkout_with_saved_selection(): void
     {
         $user = $this->buyer();
         $this->post(route('addresses.store'), $this->addressInput(['return_to' => 'checkout']))
-            ->assertRedirect(route('buyer.cart'))->assertSessionHas('selected_address_id', $user->addresses()->first()->id);
+            ->assertRedirect(route('buyer.checkout.show'))->assertSessionHas('selected_address_id', $user->addresses()->first()->id);
     }
 
     private function buyer(): User

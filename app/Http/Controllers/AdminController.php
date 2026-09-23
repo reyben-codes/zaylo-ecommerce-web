@@ -24,7 +24,7 @@ class AdminController extends Controller
     public function users(Request $request)
     {
         $users = User::query()
-            ->when($request->filled('role'), fn ($query) => $query->where('role', $request->role))
+            ->when($request->filled('role'), fn ($query) => $query->whereHas('roles', fn ($roles) => $roles->where('name', $request->role)))
             ->when($request->filled('status'), fn ($query) => $query->where('status', $request->status))
             ->when($request->filled('search'), fn ($query) => $query->where(fn ($nested) => $nested
                 ->where('name', 'like', '%'.$request->search.'%')->orWhere('email', 'like', '%'.$request->search.'%')))

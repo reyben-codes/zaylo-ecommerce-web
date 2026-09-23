@@ -38,7 +38,7 @@
     .form-group { margin-bottom: 20px; min-width: 0; }
     label { display: block; font-size: .75rem; font-weight: 500; margin-bottom: 8px; }
     label span { color: var(--muted); font-weight: 400; }
-    input, textarea, select { width: 100%; padding: 14px 18px; border: 1px solid var(--border); border-radius: 4px; font: inherit; font-size: .95rem; color: var(--ink); background: white; }
+    input, textarea, select { width: 100%; padding: 14px 18px; border: 1px solid var(--border); border-radius: 10px; font: inherit; font-size: .95rem; color: var(--ink); background: white; }
     input:focus, textarea:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
     input::placeholder, textarea::placeholder { color: #9b9188; }
     textarea { min-height: 95px; resize: vertical; line-height: 1.5; }
@@ -48,7 +48,7 @@
     .toggle-password { position: absolute; top: 50%; right: 8px; transform: translateY(-50%); border: 0; background: none; color: var(--muted); font: inherit; font-size: .75rem; min-width: 44px; min-height: 44px; cursor: pointer; }
     .field-note, .verification-note { color: var(--muted); font-size: .75rem; line-height: 1.6; margin-top: 8px; }
     .step-actions { display: flex; gap: 12px; margin-top: 26px; }
-    .btn-primary, .btn-back { min-height: 48px; padding: 14px 20px; border-radius: 4px; font: inherit; font-size: .8rem; cursor: pointer; }
+    .btn-primary, .btn-back { min-height: 48px; padding: 14px 20px; border-radius: 10px; font: inherit; font-size: .8rem; cursor: pointer; }
     .btn-primary { flex: 1; background: var(--ink); color: white; border: 1px solid var(--ink); font-weight: 600; text-transform: uppercase; letter-spacing: .07em; }
     .btn-primary:hover { background: #46392e; }
     .btn-primary:disabled { opacity: .65; cursor: wait; }
@@ -58,10 +58,10 @@
     .auth-footer a:hover { text-decoration: underline; }
     .partner-links { margin-top: 14px; font-size: .75rem; display: flex; justify-content: center; gap: 8px 18px; flex-wrap: wrap; }
     .partner-links a { color: var(--muted); font-weight: 400; }
-    .partner-note { padding: 12px 16px; background: var(--cream); border: 1px solid var(--border); font-size: .8rem; color: var(--muted); line-height: 1.6; margin-bottom: 24px; }
-    .alert-error { border: 1px solid #f5c6c6; background: #fdf2f2; color: #a52b23; padding: 14px 18px; border-radius: 4px; margin-bottom: 24px; font-size: .85rem; line-height: 1.6; }
+    .partner-note { padding: 12px 16px; background: var(--cream); border: 1px solid var(--border); border-radius: 10px; font-size: .8rem; color: var(--muted); line-height: 1.6; margin-bottom: 24px; }
+    .alert-error { border: 1px solid #f5c6c6; background: #fdf2f2; color: #a52b23; padding: 14px 18px; border-radius: 10px; margin-bottom: 24px; font-size: .85rem; line-height: 1.6; }
     .alert-error ul { padding-left: 18px; }
-    .alert-status { padding: 14px 18px; margin-bottom: 24px; background: var(--cream); border: 1px solid var(--border); font-size: .85rem; line-height: 1.6; }
+    .alert-status { padding: 14px 18px; margin-bottom: 24px; background: var(--cream); border: 1px solid var(--border); border-radius: 10px; font-size: .85rem; line-height: 1.6; }
     .email-address { overflow-wrap: anywhere; font-weight: 600; color: var(--ink); }
     .otp-input { text-align: center; font-size: 1.8rem; letter-spacing: .35em; font-variant-numeric: tabular-nums; }
     .resend-form { margin-top: 20px; text-align: center; }
@@ -101,7 +101,7 @@
     color: #222222;
 
     border: 1px solid #d8d8d8;
-    border-radius: 8px;
+    border-radius: 10px;
 
     font-size: 15px;
     font-weight: 600;

@@ -77,7 +77,7 @@ class AddressController extends Controller
         });
 
         if ($request->input('return_to') === 'checkout' && $request->user()->role === 'buyer') {
-            return redirect()->route('buyer.cart')->with('selected_address_id', $saved->id)->with('status', 'Address saved.');
+            return redirect()->route('buyer.checkout.show')->with('selected_address_id', $saved->id)->with('status', 'Address saved.');
         }
 
         return redirect()->route('addresses.index')->with('status', 'Address saved.');

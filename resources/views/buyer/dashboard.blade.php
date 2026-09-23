@@ -9,15 +9,27 @@
     .icon-group a { color: #1e1e1e; text-decoration: none; transition: 0.15s; position: relative; }
     .icon-group a:hover { color: #8a7a6b; }
     .hero { position: relative; width: 100%; height: 580px; max-height: 620px; margin: 2px auto 0; overflow: hidden; background: #e8dfd6; }
+    .hero::after { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(90deg, rgba(250, 247, 242, .96), rgba(250, 247, 242, .83) 32%, rgba(250, 247, 242, .12) 72%); }
+    .hero-slides, .hero-slide { position: absolute; inset: 0; }
+    .hero-slide { opacity: 0; visibility: hidden; transition: opacity .7s ease, visibility .7s ease; }
+    .hero-slide.is-active { opacity: 1; visibility: visible; }
     .hero-image { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .hero-text { position: absolute; top: 50%; left: 6%; transform: translateY(-50%); max-width: 700px; color: #1e1e1e; pointer-events: none; }
+    .hero-text { position: absolute; z-index: 2; top: 50%; left: 6%; transform: translateY(-50%); max-width: 700px; color: #1e1e1e; pointer-events: none; }
+    .hero-carousel-controls { position: absolute; z-index: 3; right: 5%; bottom: 28px; display: flex; align-items: center; gap: 16px; }
+    .hero-carousel-arrow { display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid rgba(26, 23, 20, .18); border-radius: 50%; background: rgba(255, 255, 255, .88); color: #1a1714; cursor: pointer; }
+    .hero-carousel-arrow:hover { background: #fff; }
+    .hero-carousel-dots { display: flex; align-items: center; gap: 7px; }
+    .hero-carousel-dot { width: 24px; height: 24px; padding: 0; border: 0; background: transparent; cursor: pointer; display: grid; place-items: center; }
+    .hero-carousel-dot::before { content: ''; display: block; width: 8px; height: 8px; border-radius: 50%; background: rgba(26, 23, 20, .4); transition: width .2s ease, background-color .2s ease; }
+    .hero-carousel-dot[aria-pressed="true"]::before { width: 20px; border-radius: 999px; background: #1a1714; }
+    .hero-carousel-controls button:focus-visible { outline: 2px solid #1a1714; outline-offset: 3px; }
     .hero-label { font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; color: #4a4037; margin-bottom: 16px; font-weight: 400; opacity: 0.8; }
     .hero-headline { font-family: 'Playfair Display', serif; font-size: 4.25rem; font-weight: 600; line-height: 1.1; margin-bottom: 20px; letter-spacing: -0.02em; }
     .hero-headline .line1 { color: #1a1714; display: block; }
     .hero-headline .line2 { color: #b28b6f; display: block; font-style: italic; }
     .hero-desc { font-size: 1rem; font-weight: 350; color: #2a241f; max-width: 420px; line-height: 1.6; margin-bottom: 32px; letter-spacing: 0.01em; opacity: 0.85; }
     .hero-actions { display: flex; align-items: center; gap: 32px; pointer-events: auto; }
-    .btn-primary { background: #1a1714; color: white; border: none; padding: 14px 36px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; font-family: 'Inter', sans-serif; transition: 0.1s; text-decoration: none; display: inline-block; }
+    .btn-primary { background: #1a1714; color: white; border: none; border-radius: 8px; padding: 14px 36px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; font-family: 'Inter', sans-serif; transition: 0.1s; text-decoration: none; display: inline-block; }
     .btn-primary:hover { background: #2f2721; color: white; }
     .link-lookbook { font-size: 0.85rem; font-weight: 450; letter-spacing: 0.04em; color: #1a1714; text-decoration: none; border-bottom: 1px solid transparent; transition: 0.15s; }
     .link-lookbook:hover { border-bottom-color: #1a1714; }
@@ -32,22 +44,22 @@
     .flash-header { display: flex; justify-content: space-between; align-items: center; max-width: 1400px; margin: 0 auto 28px; flex-wrap: wrap; gap: 16px; }
     .flash-header-left { display: flex; align-items: center; gap: 20px; }
     .flash-header-left h2 { font-family: 'Playfair Display', serif; font-size: 2.2rem; font-weight: 600; color: #1a1714; }
-    .flash-badge { background: #c0392b; color: white; padding: 5px 18px; font-size: 0.65rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+    .flash-badge { background: #c0392b; color: white; border-radius: 999px; padding: 5px 18px; font-size: 0.65rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
     .flash-timer { display: flex; align-items: center; gap: 12px; font-size: 0.85rem; color: #6b5f54; }
     .flash-timer .time-block { display: flex; align-items: center; gap: 6px; }
     .flash-timer .time-block .number { font-size: 1.6rem; font-weight: 600; color: #1a1714; font-family: 'Playfair Display', serif; min-width: 36px; text-align: center; }
     .flash-timer .time-block .label { font-size: 0.6rem; text-transform: uppercase; color: #6b5f54; }
     .flash-timer .separator { font-size: 1.4rem; color: #b28b6f; font-weight: 300; }
-    .flash-product { background: white; border: 1px solid #1a1714; position: relative; overflow: hidden; transition: 0.2s; }
+    .flash-product { background: white; border: 1px solid #1a1714; position: relative; overflow: hidden; transition: transform .38s cubic-bezier(.22, 1, .36, 1), box-shadow .38s cubic-bezier(.22, 1, .36, 1); }
     .flash-product:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(192,57,43,0.1); }
     .flash-product:hover .product-image img { transform: scale(1.03); }
-    .flash-discount { position: absolute; top: 12px; left: 12px; background: #c0392b; color: white; padding: 4px 12px; font-size: 0.65rem; font-weight: 700; }
+    .flash-discount { position: absolute; top: 12px; left: 12px; background: #c0392b; color: white; border-radius: 999px; padding: 4px 12px; font-size: 0.65rem; font-weight: 700; }
     .flash-product .product-wishlist { position: absolute; top: 12px; right: 12px; background: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; transition: 0.15s; box-shadow: 0 2px 8px rgba(0,0,0,0.06); font-size: 1rem; color: #1a1714; display: flex; align-items: center; justify-content: center; }
     .flash-product .product-wishlist:hover { background: #1a1714; color: white; }
     .flash-product .product-price { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
     .flash-product .current-price { font-size: 1.05rem; font-weight: 600; color: #c0392b; }
     .flash-product .original-price { font-size: 0.8rem; color: #6b5f54; text-decoration: line-through; }
-    .flash-product .btn-flash { width: 100%; margin-top: 4px; padding: 10px 8px; min-height: 42px; background: #c0392b; color: white; border: none; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: 0.15s; font-family: 'Inter', sans-serif; text-decoration: none; text-align: center; display: block; }
+    .flash-product .btn-flash { width: 100%; margin-top: 4px; padding: 10px 8px; min-height: 42px; background: #c0392b; color: white; border: none; border-radius: 8px; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: 0.15s; font-family: 'Inter', sans-serif; text-decoration: none; text-align: center; display: block; }
     .flash-product .btn-flash:hover { background: #a93226; }
     .flash-product .btn-flash.added { background: #2d7d46; }
     .suggested-products { padding: 60px 48px 72px; background: #faf7f2; }
@@ -56,14 +68,14 @@
     .section-header .section-label { font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; color: #6b5f54; font-weight: 400; display: block; margin-bottom: 6px; }
     .section-header a { color: #6b5f54; text-decoration: none; font-size: 0.85rem; transition: 0.15s; }
     .section-header a:hover { color: #1a1714; }
-    .product-card { background: white; border: 1px solid #1a1714; transition: 0.3s; overflow: hidden; animation: floatIn 0.6s ease forwards; opacity: 0; }
+    .product-card { background: white; border: 1px solid #1a1714; transition: transform .38s cubic-bezier(.22, 1, .36, 1), box-shadow .38s cubic-bezier(.22, 1, .36, 1); overflow: hidden; animation: floatIn 0.6s ease forwards; opacity: 0; }
     .product-card:nth-child(1){animation-delay:0.05s} .product-card:nth-child(2){animation-delay:0.1s} .product-card:nth-child(3){animation-delay:0.15s} .product-card:nth-child(4){animation-delay:0.2s}
     @keyframes floatIn { 0%{opacity:0;transform:translateY(30px) scale(0.95)} 100%{opacity:1;transform:translateY(0) scale(1)} }
     .product-card:hover { transform: translateY(-6px) scale(1.01); border-color: #1a1714; box-shadow: 0 8px 32px rgba(0,0,0,0.06); }
     .product-card:hover .product-image img { transform: scale(1.05); }
     .product-card .product-wishlist { position: absolute; top: 12px; right: 12px; background: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; transition: 0.15s; box-shadow: 0 2px 8px rgba(0,0,0,0.06); font-size: 1rem; color: #1a1714; display: flex; align-items: center; justify-content: center; }
     .product-card .product-wishlist:hover, .product-card .product-wishlist.active { background: #1a1714; color: white; }
-    .product-card .product-badge { position: absolute; top: 12px; left: 12px; padding: 4px 14px; font-size: 0.55rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; background: #1a1714; color: white; }
+    .product-card .product-badge { position: absolute; top: 12px; left: 12px; padding: 4px 14px; border-radius: 999px; font-size: 0.55rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; background: #1a1714; color: white; }
     .product-card .product-badge.sale { background: #b28b6f; }
     .product-card .product-badge.best { background: #d4af37; }
     .product-card .product-rating { font-size: 0.7rem; color: #d4af37; margin: 8px 0; }
@@ -77,15 +89,25 @@
     .loader { display: inline-block; width: 36px; height: 36px; border: 2px solid #ece4db; border-top: 2px solid #1a1714; border-radius: 50%; animation: spin 0.8s linear infinite; }
     @keyframes spin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
     .end-message { text-align: center; padding: 48px 0; color: #6b5f54; font-size: 0.95rem; max-width: 1400px; margin: 0 auto; }
-    .end-message span { display: block; font-size: 1.8rem; margin-bottom: 10px; }
+    .end-message .end-icon { display: block; font-size: 1.8rem; margin-bottom: 10px; }
+    @media (max-width: 820px) { .hero { height: 420px; } .hero-text { left: 5%; max-width: 460px; } .hero-headline { font-size: 3.6rem; } .hero-desc { max-width: 340px; font-size: .9rem; } }
     @media (max-width: 640px) { .flash-sales, .suggested-products { padding: 36px 16px; } .section-header { flex-wrap: wrap; gap: 12px; } .flash-header-left { flex-wrap: wrap; } .categories { flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; gap: 28px; padding: 28px 20px 36px; } .category-item { flex: 0 0 auto; } }
+    @media (max-width: 640px) { .hero { height: 390px; } .hero::after { background: linear-gradient(90deg, rgba(250, 247, 242, .94), rgba(250, 247, 242, .69) 65%, rgba(250, 247, 242, .25)); } .hero-text { max-width: 320px; } .hero-headline { font-size: 2.8rem; } .hero-desc { max-width: 260px; font-size: .8rem; } .hero-carousel-controls { right: 5%; bottom: 12px; gap: 8px; } .hero-carousel-arrow { width: 36px; height: 36px; } }
+    @media (max-width: 480px) { .hero-headline { font-size: 2.2rem; } .hero-desc { display: none; } .hero-actions { gap: 16px; } .hero-actions .btn-primary { padding: 10px 16px; } }
+    @media (prefers-reduced-motion: reduce) { .hero-slide, .hero-carousel-dot::before { transition: none; } }
 </style>
 @endpush
 
 @section('content')
     <!-- Hero -->
-    <div class="hero">
-        <img class="hero-image" src="https://images.unsplash.com/photo-1583394838336-acd977736f90?w=1400&q=80&auto=format&fit=crop&crop=center" alt="Featured products available on ZAYLO" onerror="this.style.display='none'" />
+    <div class="hero" id="buyer-hero" role="region" aria-roledescription="carousel" aria-label="Featured marketplace images">
+        <div class="hero-slides" aria-hidden="true">
+            <div class="hero-slide is-active"><img class="hero-image" src="https://images.unsplash.com/photo-1583394838336-acd977736f90?w=1600&q=80&auto=format&fit=crop" alt="" fetchpriority="high" onerror="this.onerror=null;this.src='{{ asset('images/login-marketplace.png') }}'" /></div>
+            <div class="hero-slide"><img class="hero-image" src="https://images.unsplash.com/photo-1445205170230-053b83016050?w=1600&q=80&auto=format&fit=crop" alt="" fetchpriority="low" onerror="this.onerror=null;this.src='{{ asset('images/login-marketplace.png') }}'" /></div>
+            <div class="hero-slide"><img class="hero-image" src="https://images.unsplash.com/photo-1498049794561-7780e7231661?w=1600&q=80&auto=format&fit=crop" alt="" fetchpriority="low" onerror="this.onerror=null;this.src='{{ asset('images/login-marketplace.png') }}'" /></div>
+            <div class="hero-slide"><img class="hero-image" src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=1600&q=80&auto=format&fit=crop" alt="" fetchpriority="low" onerror="this.onerror=null;this.src='{{ asset('images/login-marketplace.png') }}'" /></div>
+            <div class="hero-slide"><img class="hero-image" src="https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=1600&q=80&auto=format&fit=crop" alt="" fetchpriority="low" onerror="this.onerror=null;this.src='{{ asset('images/login-marketplace.png') }}'" /></div>
+        </div>
         <div class="hero-text">
             <div class="hero-label">Welcome back, {{ $user->name }}</div>
             <div class="hero-headline">
@@ -97,6 +119,15 @@
                 <a href="{{ route('products.index') }}" class="btn-primary">Shop the marketplace</a>
                 <a href="{{ route('products.index', ['sort' => 'newest']) }}" class="link-lookbook">See what's new →</a>
             </div>
+        </div>
+        <div class="hero-carousel-controls" aria-label="Carousel controls">
+            <button class="hero-carousel-arrow" type="button" data-hero-prev aria-label="Previous image"><i class="fas fa-chevron-left" aria-hidden="true"></i></button>
+            <div class="hero-carousel-dots">
+                @for($slide = 0; $slide < 5; $slide++)
+                    <button class="hero-carousel-dot" type="button" data-hero-slide="{{ $slide }}" aria-label="Show image {{ $slide + 1 }} of 5" aria-pressed="{{ $slide === 0 ? 'true' : 'false' }}"></button>
+                @endfor
+            </div>
+            <button class="hero-carousel-arrow" type="button" data-hero-next aria-label="Next image"><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
         </div>
     </div>
 
@@ -129,15 +160,15 @@
         <div class="flash-grid" id="flashGrid">
             @foreach($flashProducts as $product)
             @php $discount = round((1 - $product->price / $product->original_price) * 100) . '% OFF'; @endphp
-            <div class="flash-product">
+            <div class="flash-product" data-product-url="{{ route('products.show', $product) }}">
                 <div class="product-image">
-                    <img src="{{ $product->image_url }}" alt="{{ $product->name }}" loading="lazy" />
+                    @include('partials.product-card-image', ['product' => $product])
                     <span class="flash-discount">{{ $discount }}</span>
                     <form method="POST" action="{{ route('buyer.wishlist.toggle', $product) }}">@csrf<button class="product-wishlist" aria-label="Save {{ $product->name }}"><i class="far fa-heart"></i></button></form>
                 </div>
                 <div class="product-info">
-                    <h3 class="product-name">{{ $product->name }}</h3>
-                    <p class="product-category">{{ config('marketplace.categories.'.$product->category, str($product->category)->replace('_', ' ')->title()) }}</p>
+                    <h3 class="product-name"><a href="{{ route('products.show', $product) }}">{{ $product->name }}</a></h3>
+                    <p class="product-category">{{ $product->category_label }}</p>
                     <div class="product-price">
                         <span class="current-price">₱{{ number_format($product->price, 2) }}</span>
                         <span class="original-price">₱{{ number_format($product->original_price, 2) }}</span>
@@ -164,17 +195,17 @@
         </div>
         <div class="product-grid" id="productGrid">
             @foreach($suggestedProducts as $product)
-            <div class="product-card">
+            <div class="product-card" data-product-url="{{ route('products.show', $product) }}">
                 <div class="product-image">
-                    <img src="{{ $product->image_url }}" alt="{{ $product->name }}" loading="lazy" />
+                    @include('partials.product-card-image', ['product' => $product])
                     <form method="POST" action="{{ route('buyer.wishlist.toggle', $product) }}">@csrf<button class="product-wishlist" aria-label="Save {{ $product->name }}"><i class="far fa-heart"></i></button></form>
                     @if($product->badge)
                         <span class="product-badge {{ $product->badge === 'Sale' ? 'sale' : ($product->badge === 'Best Seller' ? 'best' : '') }}">{{ $product->badge }}</span>
                     @endif
                 </div>
                 <div class="product-info">
-                    <h3 class="product-name">{{ $product->name }}</h3>
-                    <p class="product-category">{{ config('marketplace.categories.'.$product->category, str($product->category)->replace('_', ' ')->title()) }}</p>
+                    <h3 class="product-name"><a href="{{ route('products.show', $product) }}">{{ $product->name }}</a></h3>
+                    <p class="product-category">{{ $product->category_label }}</p>
                     <div class="product-price">
                         <span class="current-price">₱{{ number_format($product->price, 2) }}</span>
                         @if($product->original_price)
@@ -190,12 +221,52 @@
             </div>
             @endforeach
         </div>
-        <div class="end-message"><span>✨</span>You've reached the end of our suggestions</div>
+        <div class="end-message"><i class="far fa-circle-check end-icon" aria-hidden="true"></i>You've reached the end of our suggestions</div>
     </section>
 @endsection
 
 @push('scripts')
 <script>
+(() => {
+    const hero = document.getElementById('buyer-hero');
+    const slides = [...hero.querySelectorAll('.hero-slide')];
+    const dots = [...hero.querySelectorAll('[data-hero-slide]')];
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let current = 0;
+    let timer;
+
+    function showSlide(index) {
+        current = (index + slides.length) % slides.length;
+        slides.forEach((slide, position) => slide.classList.toggle('is-active', position === current));
+        dots.forEach((dot, position) => dot.setAttribute('aria-pressed', String(position === current)));
+    }
+
+    function stopRotation() {
+        window.clearInterval(timer);
+        timer = undefined;
+    }
+
+    function startRotation() {
+        if (timer || reducedMotion.matches || document.hidden || hero.querySelector(':focus-visible')) return;
+        timer = window.setInterval(() => showSlide(current + 1), 3500);
+    }
+
+    function navigateTo(index) {
+        showSlide(index);
+        stopRotation();
+        startRotation();
+    }
+
+    hero.querySelector('[data-hero-prev]').addEventListener('click', () => navigateTo(current - 1));
+    hero.querySelector('[data-hero-next]').addEventListener('click', () => navigateTo(current + 1));
+    dots.forEach((dot, index) => dot.addEventListener('click', () => navigateTo(index)));
+    hero.addEventListener('focusin', (event) => { if (event.target.matches(':focus-visible')) stopRotation(); });
+    hero.addEventListener('focusout', () => window.setTimeout(startRotation, 0));
+    document.addEventListener('visibilitychange', () => document.hidden ? stopRotation() : startRotation());
+    reducedMotion.addEventListener('change', () => reducedMotion.matches ? stopRotation() : startRotation());
+    startRotation();
+})();
+
 // Flash timer
 let flashEndTime = new Date();
 flashEndTime.setHours(flashEndTime.getHours() + 2);

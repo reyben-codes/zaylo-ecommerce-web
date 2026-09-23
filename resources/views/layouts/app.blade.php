@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'ZAYLO · Driven by passion. Defined by your origin')</title>
+    <title>ZAYLO</title>
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -73,7 +73,7 @@
                 </form>
                 @else
                     <a href="{{ route('login') }}" class="login-text">Log in</a>
-                    <a href="{{ route('register') }}">Register</a>
+                    <a href="{{ route('register') }}">Create new account</a>
                 @endauth
             </div>
         </div>
@@ -88,6 +88,7 @@
 
     <script src="{{ asset('js/navigation.js') }}?v={{ filemtime(public_path('js/navigation.js')) }}" defer></script>
     <script src="{{ asset('js/notifications.js') }}?v={{ filemtime(public_path('js/notifications.js')) }}" defer></script>
+    <script src="{{ asset('js/product-carousel.js') }}?v={{ filemtime(public_path('js/product-carousel.js')) }}" defer></script>
     @stack('scripts')
 </body>
 </html>

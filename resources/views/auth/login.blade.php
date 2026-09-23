@@ -1,6 +1,8 @@
 @extends('layouts.auth')
 
-@section('title', 'ZAYLO · Login')
+@php($sellerPortal = $sellerPortal ?? false)
+
+@section('title', $sellerPortal ? 'ZAYLO · Seller Sign In' : 'ZAYLO · Log In')
 
 @push('styles')
 <style>
@@ -41,7 +43,7 @@
     .auth-subtitle { font-size: 0.95rem; color: var(--color-gray); font-weight: 400; line-height: 1.65; }
     .form-group { margin-bottom: 20px; }
     .form-group label { display: block; font-size: 0.75rem; font-weight: 500; color: var(--color-primary); margin-bottom: 8px; letter-spacing: 0.02em; }
-    .form-group input { width: 100%; padding: 14px 18px; border: 1px solid var(--color-border); border-radius: 4px; font-size: 0.95rem; font-family: var(--font-sans); transition: var(--transition); outline: none; background: white; color: var(--color-primary); }
+    .form-group input { width: 100%; padding: 14px 18px; border: 1px solid var(--color-border); border-radius: 10px; font-size: 0.95rem; font-family: var(--font-sans); transition: var(--transition); outline: none; background: white; color: var(--color-primary); }
     .form-group input:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(26, 23, 20, 0.05); }
     .form-group input::placeholder { color: #c5c0b8; }
     .form-group input.error { border-color: var(--color-error); }
@@ -54,13 +56,13 @@
     .remember-me input[type="checkbox"] { accent-color: var(--color-primary); width: 16px; height: 16px; cursor: pointer; }
     .forgot-password { font-size: 0.78rem; color: var(--color-gray); text-decoration: none; transition: var(--transition); }
     .forgot-password:hover { color: var(--color-primary); }
-    .btn-auth-primary { width: 100%; padding: 16px; background: var(--color-primary); color: white; border: none; border-radius: 4px; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; transition: var(--transition); font-family: var(--font-sans); }
+    .btn-auth-primary { width: 100%; padding: 16px; background: var(--color-primary); color: white; border: none; border-radius: 10px; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; transition: var(--transition); font-family: var(--font-sans); }
     .btn-auth-primary:hover { background: var(--color-secondary); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
     .auth-divider { text-align: center; margin: 24px 0; position: relative; }
     .auth-divider::before { content: ''; position: absolute; left: 0; top: 50%; width: 100%; height: 1px; background: var(--color-border); }
     .auth-divider span { background: white; padding: 0 18px; font-size: 0.7rem; color: var(--color-gray); position: relative; text-transform: uppercase; letter-spacing: 0.04em; }
     .social-login { display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 28px; }
-    .btn-social { padding: 13px; background: white; border: 1px solid var(--color-border); border-radius: 4px; font-size: 0.8rem; font-weight: 500; font-family: var(--font-sans); cursor: pointer; transition: var(--transition); display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--color-primary); }
+    .btn-social { padding: 13px; background: white; border: 1px solid var(--color-border); border-radius: 10px; font-size: 0.8rem; font-weight: 500; font-family: var(--font-sans); cursor: pointer; transition: var(--transition); display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--color-primary); }
     .btn-social:hover { border-color: var(--color-primary); background: var(--color-cream); }
     .btn-social i { font-size: 1.05rem; }
     .btn-social .google-icon { width: 18px; height: 18px; flex-shrink: 0; }
@@ -68,7 +70,7 @@
     .auth-footer { margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--color-border); text-align: center; font-size: 0.82rem; color: var(--color-gray); line-height: 1.6; }
     .auth-footer a { color: var(--color-primary); text-decoration: none; font-weight: 500; transition: var(--transition); }
     .auth-footer a:hover { color: var(--color-secondary); text-decoration: underline; }
-    .alert-error { background: #fdf2f2; border: 1px solid #f5c6c6; color: var(--color-error); padding: 12px 16px; border-radius: 4px; font-size: 0.85rem; margin-bottom: 20px; }
+    .alert-error { background: #fdf2f2; border: 1px solid #f5c6c6; color: var(--color-error); padding: 12px 16px; border-radius: 10px; font-size: 0.85rem; margin-bottom: 20px; }
     @media (max-width: 820px) {
         .auth-container { flex-direction: column; }
         .auth-image { flex: none; min-height: 260px; border-radius: 0 0 24px 24px; background-size: 55% auto; background-position: right 65%; }
@@ -94,7 +96,7 @@
 @endpush
 
 @section('content')
-<div class="auth-container">
+<div class="auth-container{{ $sellerPortal ? ' seller-auth' : '' }}">
     <!-- Left Side - Image -->
     <div class="auth-image">
         <div class="auth-image-content">
@@ -105,8 +107,8 @@
                 </span>
             </div>
             <div class="auth-image-text">
-                <p>Driven by passion.</p>
-                <p>Defined by your origin</p>
+                <p>{{ $sellerPortal ? 'Build your business.' : 'Driven by passion.' }}</p>
+                <p>{{ $sellerPortal ? 'Grow with ZAYLO' : 'Defined by your origin' }}</p>
             </div>
         </div>
         <div class="auth-image-overlay"></div>
@@ -114,15 +116,15 @@
 
     <!-- Right Side - Form -->
     <div class="auth-form">
-        <a href="{{ route('products.index') }}" class="continue-shopping">
-            <span aria-hidden="true">&larr;</span> Continue shopping
+        <a href="{{ $sellerPortal ? route('home') : route('products.index') }}" class="continue-shopping">
+            <span aria-hidden="true">&larr;</span> {{ $sellerPortal ? 'Back to ZAYLO' : 'Continue shopping' }}
         </a>
 
         <div class="auth-form-content">
             <div class="auth-header">
-                <span class="auth-label">ZAYLO ACCOUNT</span>
-                <h1 id="welcomeHeading">Welcome Back</h1>
-                <p class="auth-subtitle">Sign in to track orders, save favorites, and shop your everyday essentials.</p>
+                <span class="auth-label">{{ $sellerPortal ? 'ZAYLO SELLER CENTER' : 'ZAYLO ACCOUNT' }}</span>
+                <h1 id="welcomeHeading">{{ $sellerPortal ? 'Welcome, Seller' : 'Welcome Back' }}</h1>
+                <p class="auth-subtitle">{{ $sellerPortal ? 'Sign in to manage products, inventory, orders, and sales.' : 'Sign in to track orders, save favorites, and shop your everyday essentials.' }}</p>
             </div>
 
             @if ($errors->any())
@@ -142,7 +144,7 @@
             @endif
 
             <!-- Login Form -->
-            <form method="POST" action="{{ route('login') }}" id="loginForm">
+            <form method="POST" action="{{ $sellerPortal ? route('seller.login.submit') : route('login') }}" id="loginForm">
                 @csrf
 
                 <div class="form-group">
@@ -170,9 +172,10 @@
                     <a href="{{ route('password.request') }}" class="forgot-password">Forgot Password?</a>
                 </div>
 
-                <button type="submit" class="btn-auth-primary">Sign In</button>
+                <button type="submit" class="btn-auth-primary">{{ $sellerPortal ? 'Enter Seller Center' : 'Sign In' }}</button>
             </form>
 
+            @unless($sellerPortal)
             <div class="auth-divider"><span>or</span></div>
             <div class="social-login">
                 <a href="{{ route('google.redirect') }}" class="btn-social btn-google">
@@ -207,9 +210,16 @@
                     Continue with Google
                 </a>
             </div>
+            @endunless
 
             <div class="auth-footer">
-                <p>Don't have an account? <a href="{{ route('register') }}">Create an account</a></p>
+                @if($sellerPortal)
+                    <p>New to ZAYLO? <a href="{{ route('register', ['role' => 'seller']) }}">Apply to become a seller</a></p>
+                    <p style="margin-top:8px;">Shopping on ZAYLO? <a href="{{ route('login') }}">Use the shop sign in</a></p>
+                @else
+                    <p>Don't have an account? <a href="{{ route('register') }}">Create new account</a></p>
+                    <p style="margin-top:8px;">Selling on ZAYLO? <a href="{{ route('seller.login') }}">Sign in to Seller Center</a></p>
+                @endif
             </div>
         </div>
     </div>

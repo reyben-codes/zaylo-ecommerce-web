@@ -26,6 +26,8 @@ npm run build
 php artisan serve
 ```
 
+The demo free-shipping voucher is `ZAYLOSHIP`. On an existing development database, run `php artisan migrate` and then `php artisan db:seed --class=VoucherSeeder` to add it without re-running the sample accounts and products.
+
 For local development, file-backed sessions/cache and synchronous queues are recommended. These are the defaults in `.env.example`, so public pages still render when queue or cache infrastructure is unavailable.
 
 After changing `.env`, clear stale cached values:

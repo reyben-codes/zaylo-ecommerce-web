@@ -3,14 +3,14 @@
 namespace Database\Seeders;
 
 use App\Models\Product;
-use App\Models\User;
+use App\Models\Seller;
 use Illuminate\Database\Seeder;
 
 class GardeningProductSeeder extends Seeder
 {
     public function run(): void
     {
-        $sellerId = User::where('role', 'seller')->value('id');
+        $sellerId = Seller::query()->value('id');
 
         $products = [
             [
@@ -114,15 +114,21 @@ class GardeningProductSeeder extends Seeder
                 );
             }
 
+            if ($variants !== []) {
+                $product->variants()->delete();
+            }
+
             foreach ($variants as [$sku, $name, $size, $color, $stock]) {
                 $product->variants()->updateOrCreate(
                     ['sku' => $sku],
                     [
                         'name' => $name,
-                        'size' => $size,
-                        'color' => $color,
-                        'price' => $data['price'],
+                        'options' => array_filter(['size' => $size, 'color' => $color]),
+                        'price_minor' => (int) round($data['price'] * 100),
+                        'original_price_minor' => isset($data['original_price']) ? (int) round($data['original_price'] * 100) : null,
                         'stock' => $stock,
+                        'low_stock_threshold' => $data['low_stock_threshold'],
+                        'weight_grams' => $data['weight_grams'],
                         'is_active' => true,
                     ],
                 );

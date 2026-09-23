@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\User;
+use Illuminate\Support\Str;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
@@ -55,7 +56,7 @@ class GoogleAccountService
                             'name' => $attributes['name'] ?: $attributes['email'],
                             'email' => $attributes['email'],
                             'password' => null,
-                            'role' => $role,
+                            'role' => $role === 'courier' ? 'rider' : $role,
                             'status' => $role === 'buyer' ? 'active' : 'pending',
                             'auth_provider' => 'google',
                         ]);
@@ -77,13 +78,10 @@ class GoogleAccountService
                     $user->save();
 
                     if ($new && $role === 'seller') {
-                        DB::table('seller_profiles')->insert([
-                            'user_id' => $user->id, 'store_name' => $user->name."'s Store",
-                            'created_at' => now(), 'updated_at' => now(),
-                        ]);
-                    } elseif ($new && $role === 'courier') {
-                        DB::table('courier_profiles')->insert([
-                            'user_id' => $user->id, 'created_at' => now(), 'updated_at' => now(),
+                        $user->sellers()->create([
+                            'name' => $user->name."'s Store",
+                            'slug' => Str::slug($user->name).'-'.Str::lower(Str::random(6)),
+                            'status' => 'pending',
                         ]);
                     }
 

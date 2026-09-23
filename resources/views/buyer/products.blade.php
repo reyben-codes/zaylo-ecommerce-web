@@ -9,6 +9,7 @@
 </div></div></div>
 <div class="page-content">
     <form method="GET" action="{{ route('products.index') }}" class="market-form filter-bar">
+        <input type="search" name="search" value="{{ request('search') }}" placeholder="Search products" aria-label="Search products">
         <select name="category" aria-label="Category">
             <option value="">All categories</option>
             @foreach(config('marketplace.categories') as $cat => $label)
@@ -21,7 +22,6 @@
                 <option value="{{ $gender }}" @selected(request('gender') === $gender)>{{ ucfirst($gender) }}</option>
             @endforeach
         </select>
-        <input type="search" name="search" value="{{ request('search') }}" placeholder="Search products">
         <select name="sort" aria-label="Sort products">
             <option value="newest">Newest</option>
             <option value="price_low" @selected(request('sort') === 'price_low')>Price: low to high</option>
@@ -33,13 +33,13 @@
     @if($products->count())
         <div class="product-grid">
             @foreach($products as $product)
-            <article class="product-card">
-                <a href="{{ route('products.show', $product) }}" class="product-image">
-                    <img src="{{ $product->image_url ?: asset('images/ZAYLO_ICON_DARK.png') }}" alt="{{ $product->name }}" loading="lazy">
+            <article class="product-card" data-product-url="{{ route('products.show', $product) }}">
+                <a href="{{ route('products.show', $product) }}" class="product-image" aria-label="View {{ $product->name }}">
+                    @include('partials.product-card-image', ['product' => $product])
                     @if($product->badge)<span class="product-badge">{{ $product->badge }}</span>@endif
                 </a>
                 <div class="product-info">
-                    <p class="product-category">{{ config('marketplace.categories.'.$product->category, str($product->category)->replace('_', ' ')->title()) }}</p>
+                    <p class="product-category">{{ $product->category_label }}</p>
                     <h2 class="product-name"><a href="{{ route('products.show', $product) }}">{{ $product->name }}</a></h2>
                     <div class="product-price"><span class="current-price">₱{{ number_format($product->price, 2) }}</span></div>
                     <div class="card-actions">

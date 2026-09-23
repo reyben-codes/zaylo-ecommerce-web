@@ -47,11 +47,11 @@
                 @method('PATCH')
                 <div class="form-row">
                     <label for="profile-name">Full name
-                        <input id="profile-name" name="name" autocomplete="name" maxlength="255" value="{{ old('name', $user->name) }}" required>
+                        <input id="profile-name" name="name" autocomplete="name" maxlength="255" value="{{ old('name', $user->name) }}" data-person-name required>
                         @error('name')<span class="field-error">{{ $message }}</span>@enderror
                     </label>
-                    <label for="profile-phone">Phone number
-                        <input id="profile-phone" type="tel" name="phone" autocomplete="tel" maxlength="20" value="{{ old('phone', $user->phone) }}" placeholder="e.g. 0917 123 4567">
+                    <label for="profile-phone">Mobile number
+                        <input id="profile-phone" type="tel" name="phone" autocomplete="tel" inputmode="numeric" maxlength="11" pattern="09[0-9]{9}" title="Enter 11 digits starting with 09" value="{{ old('phone', $user->phone) }}" placeholder="e.g. 09171234567" data-phone-number required>
                         @error('phone')<span class="field-error">{{ $message }}</span>@enderror
                     </label>
                 </div>
@@ -60,6 +60,17 @@
                     @if($user->google_id)<span>Managed by your connected Google account.</span>@else<span>Changing your email requires verification of the new address.</span>@endif
                     @error('email')<span class="field-error">{{ $message }}</span>@enderror
                 </label>
+                <div class="form-row">
+                    <label for="profile-birthday">Birthday
+                        <input id="profile-birthday" type="date" name="date_of_birth" autocomplete="bday" max="{{ today()->toDateString() }}" value="{{ old('date_of_birth', $user->date_of_birth?->format('Y-m-d')) }}" required>
+                        <span>Your birthday is used to keep your age accurate.</span>
+                        @error('date_of_birth')<span class="field-error">{{ $message }}</span>@enderror
+                    </label>
+                    <label for="profile-age">Current age
+                        <input id="profile-age" value="{{ $user->age === null ? 'Add your birthday' : $user->age.' years old' }}" readonly aria-describedby="profile-age-note">
+                        <span id="profile-age-note">Calculated automatically.</span>
+                    </label>
+                </div>
                 <div><button class="market-button" type="submit">Save profile</button></div>
             </form>
         </section>
@@ -89,7 +100,7 @@
                             @unless($address->isStructured())<p class="field-error">Complete the location details before checkout.</p>@endunless
                         </div>
                         <div class="address-card-actions">
-                            <a href="{{ route('addresses.edit', $address) }}">Edit</a>
+                            <a class="text-button" href="{{ route('addresses.edit', $address) }}"><i class="far fa-pen-to-square" aria-hidden="true"></i> Edit</a>
                             @unless($address->is_default)
                                 <form method="POST" action="{{ route('addresses.default', $address) }}">@csrf @method('PATCH')<button class="text-button">Use for delivery</button></form>
                             @endunless
@@ -119,16 +130,50 @@
                 @endif
                 <div class="form-row">
                     <label for="new-password">New password
-                        <input id="new-password" type="password" name="password" autocomplete="new-password" minlength="8" required>
+                        <input id="new-password" type="password" name="password" autocomplete="new-password" minlength="8" aria-describedby="profile-password-note" data-new-password required>
                         @error('password')<span class="field-error">{{ $message }}</span>@enderror
                     </label>
                     <label for="password-confirmation">Confirm new password
                         <input id="password-confirmation" type="password" name="password_confirmation" autocomplete="new-password" minlength="8" required>
                     </label>
                 </div>
+                <p id="profile-password-note" class="empty-note">Use at least 8 characters, one uppercase letter, one lowercase letter, and one symbol.</p>
                 <div><button class="market-button" type="submit">{{ filled($user->getAuthPassword()) ? 'Update password' : 'Create password' }}</button></div>
             </form>
         </section>
     </main>
 </div>
 @endsection
+
+@push('scripts')
+<script src="{{ asset('js/personal-details.js') }}?v={{ filemtime(public_path('js/personal-details.js')) }}" defer></script>
+<script src="{{ asset('js/password-requirements.js') }}?v={{ filemtime(public_path('js/password-requirements.js')) }}" defer></script>
+<script>
+(() => {
+    const birthday = document.getElementById('profile-birthday');
+    const age = document.getElementById('profile-age');
+
+    if (!birthday || !age) return;
+
+    const updateAge = () => {
+        const parts = birthday.value.split('-').map(Number);
+        if (parts.length !== 3 || parts.some(Number.isNaN)) {
+            age.value = 'Add your birthday';
+            return;
+        }
+
+        const today = new Date();
+        let years = today.getFullYear() - parts[0];
+        if (today.getMonth() + 1 < parts[1] ||
+            (today.getMonth() + 1 === parts[1] && today.getDate() < parts[2])) {
+            years--;
+        }
+
+        age.value = years >= 0 ? `${years} years old` : 'Invalid birthday';
+    };
+
+    birthday.addEventListener('input', updateAge);
+    updateAge();
+})();
+</script>
+@endpush

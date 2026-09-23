@@ -9,7 +9,11 @@ class ProductPolicy
 {
     public function update(User $user, Product $product): bool
     {
-        return $user->role === 'admin' || ($user->role === 'seller' && $product->seller_id === $user->id);
+        $ownsProduct = Product::usesLegacySchema()
+            ? $product->seller_id === $user->id
+            : $product->seller?->user_id === $user->id;
+
+        return $user->hasRole('admin') || ($user->hasRole('seller') && $ownsProduct);
     }
 
     public function delete(User $user, Product $product): bool

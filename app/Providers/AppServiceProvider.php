@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\CartItem;
+use App\Services\BuyerNotificationFeed;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -30,6 +31,7 @@ class AppServiceProvider extends ServiceProvider
             $view->with([
                 'navCartQuantity' => (int) CartItem::whereHas('cart', fn ($query) => $query->where('user_id', $buyer->id))->sum('quantity'),
                 'navWishlistCount' => $buyer->wishlistItems()->count(),
+                'navUnreadNotificationCount' => app(BuyerNotificationFeed::class)->forUser($buyer)->where('read', false)->count(),
             ]);
         });
 

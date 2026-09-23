@@ -87,7 +87,7 @@ class MarketplaceFlowTest extends TestCase
     {
         $seller = User::factory()->create(['role' => 'seller', 'status' => 'pending']);
 
-        $this->actingAs($seller)->get(route('seller.dashboard'))->assertRedirect(route('login'));
+        $this->actingAs($seller)->get(route('seller.dashboard'))->assertRedirect(route('seller.login'));
         $this->assertGuest();
     }
 
@@ -97,7 +97,7 @@ class MarketplaceFlowTest extends TestCase
 
         $this->post(route('register'), [
             'first_name' => 'New', 'last_name' => 'Seller', 'email' => 'new-seller@example.com',
-            'password' => 'strong-password', 'password_confirmation' => 'strong-password',
+            'password' => 'Strong-password!', 'password_confirmation' => 'Strong-password!',
             'role' => 'seller', 'phone' => '09170000000',
         ])->assertRedirect(route('verification.notice'));
 
@@ -132,6 +132,7 @@ class MarketplaceFlowTest extends TestCase
         $this->post(route('buyer.checkout'), [
             'address_id' => $address->id,
             'idempotency_key' => (string) Str::uuid(),
+            'payment_method' => 'cod',
         ])->assertRedirect(route('buyer.orders'));
 
         $order = Order::firstOrFail();

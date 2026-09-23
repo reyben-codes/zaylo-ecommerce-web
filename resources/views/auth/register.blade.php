@@ -1,6 +1,6 @@
 @extends('layouts.auth')
 
-@section('title', 'ZAYLO · Create Account')
+@section('title', 'ZAYLO · Create new account')
 
 @php
     $requestedRole = old('role', request('role', 'buyer'));
@@ -17,6 +17,7 @@
         'first_name',
         'last_name',
         'phone',
+        'date_of_birth',
         'role'
     ]) ? 1
         : (
@@ -88,7 +89,7 @@
                             : (
                                 $selectedRole === 'courier'
                                     ? 'Become a courier'
-                                    : 'Create your account'
+                                    : 'Create new account'
                             )
                     }}
                 </h1>
@@ -196,6 +197,7 @@
                                 value="{{ old('first_name') }}"
                                 autocomplete="given-name"
                                 maxlength="100"
+                                data-person-name
                                 required
                             >
 
@@ -214,6 +216,7 @@
                                 value="{{ old('last_name') }}"
                                 autocomplete="family-name"
                                 maxlength="100"
+                                data-person-name
                                 required
                             >
 
@@ -225,8 +228,7 @@
                     <div class="form-group">
 
                         <label for="phone">
-                            Phone number
-                            <span>(optional)</span>
+                            Mobile number
                         </label>
 
                         <input
@@ -234,12 +236,44 @@
                             id="phone"
                             name="phone"
                             value="{{ old('phone') }}"
-                            placeholder="09XX XXX XXXX"
+                            placeholder="09171234567"
                             autocomplete="tel"
-                            maxlength="20"
+                            maxlength="11"
+                            inputmode="numeric"
+                            pattern="09[0-9]{9}"
+                            title="Enter 11 digits starting with 09"
+                            data-phone-number
+                            required
                         >
 
                     </div>
+
+
+                    @if($selectedRole === 'buyer')
+
+                        <div class="form-group">
+
+                            <label for="date_of_birth">
+                                Birthday
+                            </label>
+
+                            <input
+                                type="date"
+                                id="date_of_birth"
+                                name="date_of_birth"
+                                value="{{ old('date_of_birth') }}"
+                                max="{{ today()->toDateString() }}"
+                                autocomplete="bday"
+                                required
+                            >
+
+                            <p class="field-note">
+                                Your age is calculated automatically from your birthday.
+                            </p>
+
+                        </div>
+
+                    @endif
 
 
                     <input type="hidden" name="role" id="selectedRole" value="{{ $selectedRole }}">
@@ -322,6 +356,7 @@
                                 autocomplete="new-password"
                                 minlength="8"
                                 aria-describedby="password-note"
+                                data-new-password
                                 required
                             >
 
@@ -344,7 +379,7 @@
                             id="password-note"
                             class="field-note"
                         >
-                            Use at least 8 characters.
+                            Use at least 8 characters, one uppercase letter, one lowercase letter, and one symbol.
                         </p>
 
                     </div>
@@ -527,7 +562,7 @@
                 <p>
                     Already have an account?
 
-                    <a href="{{ route('login') }}">
+                    <a href="{{ $selectedRole === 'seller' ? route('seller.login') : route('login') }}">
                         Sign in
                     </a>
                 </p>
@@ -538,7 +573,7 @@
                     @if($isPartner)
 
                         <a href="{{ route('register') }}">
-                            Create a shopping account
+                            Create new account
                         </a>
 
                     @endif
@@ -585,6 +620,9 @@
 
 
 @push('scripts')
+
+<script src="{{ asset('js/personal-details.js') }}?v={{ filemtime(public_path('js/personal-details.js')) }}" defer></script>
+<script src="{{ asset('js/password-requirements.js') }}?v={{ filemtime(public_path('js/password-requirements.js')) }}" defer></script>
 
 <script>
 
@@ -642,7 +680,7 @@
                     : (
                         role.value === 'courier'
                             ? 'Become a courier'
-                            : 'Create your account'
+                            : 'Create new account'
                     );
 
 

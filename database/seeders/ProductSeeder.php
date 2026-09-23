@@ -3,14 +3,14 @@
 namespace Database\Seeders;
 
 use App\Models\Product;
-use App\Models\User;
+use App\Models\Seller;
 use Illuminate\Database\Seeder;
 
 class ProductSeeder extends Seeder
 {
     public function run(): void
     {
-        $sellerId = User::where('role', 'seller')->value('id');
+        $sellerId = Seller::query()->value('id');
         $products = [
             // Clothing
             ['name' => 'Wool Blend Blazer',      'category' => 'clothing',    'gender' => 'women', 'price' => 4250, 'original_price' => 5500,  'badge' => 'New',         'image_url' => 'https://images.unsplash.com/photo-1539008835657-9e8e9680c956?w=400&h=533&fit=crop&auto=format', 'stock' => 20, 'description' => 'A luxurious wool blend blazer perfect for any occasion.'],

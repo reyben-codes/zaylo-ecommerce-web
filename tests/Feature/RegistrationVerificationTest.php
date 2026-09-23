@@ -24,7 +24,12 @@ class RegistrationVerificationTest extends TestCase
                 ->assertOk()
                 ->assertDontSee('<select', false)
                 ->assertDontSee('Account type')
-                ->assertSee('type="hidden" name="role" id="selectedRole" value="'.$role.'"', false);
+                ->assertSee('type="hidden" name="role" id="selectedRole" value="'.$role.'"', false)
+                ->when(
+                    $role === 'buyer',
+                    fn ($response) => $response->assertSee('name="date_of_birth"', false),
+                    fn ($response) => $response->assertDontSee('name="date_of_birth"', false),
+                );
         }
     }
 
@@ -60,12 +65,58 @@ class RegistrationVerificationTest extends TestCase
 
     public function test_registration_errors_select_the_correct_step(): void
     {
-        foreach (['first_name' => 1, 'last_name' => 1, 'phone' => 1, 'role' => 1, 'email' => 2, 'password' => 2, 'password_confirmation' => 2] as $field => $step) {
+        foreach (['first_name' => 1, 'last_name' => 1, 'phone' => 1, 'date_of_birth' => 1, 'role' => 1, 'email' => 2, 'password' => 2, 'password_confirmation' => 2] as $field => $step) {
             $errors = new \Illuminate\Support\ViewErrorBag;
             $errors->put('default', new \Illuminate\Support\MessageBag([$field => 'Test error']));
             $response = $this->withSession(['errors' => $errors])->get(route('register'))->assertOk();
             $this->assertMatchesRegularExpression('/const firstErrorStep\s*=\s*'.$step.';/', $response->getContent());
         }
+    }
+
+    public function test_registration_rejects_numbered_names_and_phone_letters(): void
+    {
+        foreach ([
+            ['first_name', 'Jane2'],
+            ['last_name', 'Doe7'],
+            ['phone', '0917CALL123'],
+            ['phone', '0917123456'],
+            ['phone', '091712345678'],
+            ['phone', '08171234567'],
+        ] as [$field, $value]) {
+            $registration = $this->registration();
+            $registration[$field] = $value;
+
+            $this->post(route('register'), $registration)->assertSessionHasErrors($field);
+            $this->assertDatabaseMissing('users', ['email' => $registration['email']]);
+        }
+    }
+
+    public function test_registration_requires_a_mobile_number_for_every_role(): void
+    {
+        foreach (['buyer', 'seller', 'courier'] as $role) {
+            $registration = $this->registration($role);
+            unset($registration['phone']);
+
+            $this->post(route('register'), $registration)->assertSessionHasErrors('phone');
+            $this->assertDatabaseMissing('users', ['email' => $registration['email']]);
+        }
+    }
+
+    public function test_registration_accepts_accented_names_and_philippine_mobile_numbers(): void
+    {
+        Notification::fake();
+        $registration = $this->registration();
+        $registration['first_name'] = 'María-Clara';
+        $registration['last_name'] = "D'Angelo";
+        $registration['phone'] = '09175550101';
+
+        $this->post(route('register'), $registration)
+            ->assertRedirect(route('verification.notice'))
+            ->assertSessionHasNoErrors();
+
+        $user = User::where('email', $registration['email'])->firstOrFail();
+        $this->assertSame("María-Clara D'Angelo", $user->name);
+        $this->assertSame('09175550101', $user->phone);
     }
 
     public function test_buyer_registers_then_verifies_with_the_emailed_code_once(): void
@@ -77,6 +128,7 @@ class RegistrationVerificationTest extends TestCase
         $this->assertAuthenticatedAs($user);
         $this->assertNull($user->email_verified_at);
         $this->assertNull($user->address);
+        $this->assertSame('2000-09-15', $user->date_of_birth->toDateString());
         $code = $this->codeFor($user);
         $this->assertMatchesRegularExpression('/^[0-9]{6}$/', $code);
         $this->assertTrue(Hash::check($code, DB::table('email_verification_codes')->where('user_id', $user->id)->value('code_hash')));
@@ -209,8 +261,9 @@ class RegistrationVerificationTest extends TestCase
         return [
             'first_name' => 'Test', 'last_name' => 'Shopper', 'role' => $role,
             'email' => $role === 'buyer' ? 'shopper@example.com' : $role.'@example.com',
-            'password' => 'strong-password', 'password_confirmation' => 'strong-password',
+            'password' => 'Strong-password!', 'password_confirmation' => 'Strong-password!',
             'phone' => '09170000000',
+            'date_of_birth' => $role === 'buyer' ? '2000-09-15' : null,
         ];
     }
 

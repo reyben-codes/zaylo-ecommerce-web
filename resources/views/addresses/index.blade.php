@@ -32,7 +32,7 @@
                             <p>{{ $address->formatted() }}</p>
                             @unless($address->isStructured())<p class="field-error">Complete this address before using it at checkout.</p>@endunless
                             <div class="saved-address-actions">
-                                <a href="{{ route('addresses.edit', $address) }}">Edit</a>
+                                <a class="text-button" href="{{ route('addresses.edit', $address) }}"><i class="far fa-pen-to-square" aria-hidden="true"></i> Edit</a>
                                 @unless($address->is_default)
                                     <form method="POST" action="{{ route('addresses.default', $address) }}">@csrf @method('PATCH')<button class="text-button">Set as delivery default</button></form>
                                 @endunless

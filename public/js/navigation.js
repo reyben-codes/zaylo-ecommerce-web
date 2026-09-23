@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const desktopNavigation = window.matchMedia('(min-width: 641px)');
+    const desktopNavigation = window.matchMedia('(min-width: 1181px)');
 
     document.querySelectorAll('[data-nav-toggle]').forEach((toggle) => {
         const navbar = toggle.closest('.navbar');
