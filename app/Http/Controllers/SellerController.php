@@ -5,10 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductVariant;
-use App\Models\SellerProfile;
 use App\Models\SellerOrder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -16,6 +16,24 @@ use Illuminate\Validation\ValidationException;
 
 class SellerController extends Controller
 {
+    private const ORDER_TRANSITIONS = [
+        'placed' => ['confirmed', 'cancelled'],
+        'confirmed' => ['processing', 'cancelled'],
+        'processing' => ['ready_for_pickup'],
+        'ready_for_pickup' => ['picked_up'],
+        'picked_up' => ['in_transit'],
+        'in_transit' => ['out_for_delivery'],
+        'out_for_delivery' => ['completed'],
+    ];
+
+    private const DELIVERY_STATUSES = [
+        'ready_for_pickup' => 'ready',
+        'picked_up' => 'picked_up',
+        'in_transit' => 'in_transit',
+        'out_for_delivery' => 'out_for_delivery',
+        'completed' => 'delivered',
+    ];
+
     public function dashboard()
     {
         $legacy = Product::usesLegacySchema();
@@ -79,48 +97,122 @@ class SellerController extends Controller
         return back()->with('status', 'Product removed. Existing order records were preserved.');
     }
 
-    public function orders()
+    public function orders(Request $request)
     {
-        $orders = Order::where('seller_id', auth()->id())->with(['buyer', 'items', 'shipment'])->latest()->paginate(12);
-        return view('seller.orders', compact('orders'));
+        $filter = $request->validate([
+            'status' => ['nullable', Rule::in(['all', 'to_prepare', 'shipping', 'delivered', 'cancelled'])],
+        ])['status'] ?? 'all';
+        $statusGroups = [
+            'to_prepare' => ['placed', 'confirmed', 'processing'],
+            'shipping' => ['ready_for_pickup', 'picked_up', 'in_transit', 'out_for_delivery'],
+            'delivered' => ['completed'],
+            'cancelled' => ['cancelled'],
+        ];
+        $baseQuery = Order::where('seller_id', auth()->id());
+        $statusCounts = (clone $baseQuery)
+            ->selectRaw('status, COUNT(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+        $counts = ['all' => $statusCounts->sum()];
+
+        foreach ($statusGroups as $group => $statuses) {
+            $counts[$group] = collect($statuses)->sum(fn ($status) => (int) $statusCounts->get($status, 0));
+        }
+
+        $orders = $baseQuery
+            ->with(['buyer', 'items', 'payment', 'shipment', 'statusHistory' => fn ($query) => $query->oldest()])
+            ->when($filter !== 'all', fn ($query) => $query->whereIn('status', $statusGroups[$filter]))
+            ->latest('placed_at')
+            ->paginate(12)
+            ->withQueryString();
+
+        return view('seller.orders', compact('orders', 'filter', 'counts'));
     }
 
     public function updateOrderStatus(Request $request, Order $order)
     {
         abort_unless($order->seller_id === auth()->id(), 403);
-        $data = $request->validate(['status' => 'required|in:confirmed,processing,ready_for_pickup,cancelled']);
-        $allowed = [
-            'placed' => ['confirmed', 'cancelled'],
-            'confirmed' => ['processing', 'cancelled'],
-            'processing' => ['ready_for_pickup'],
-        ];
+        $data = $request->validate([
+            'status' => ['required', Rule::in(['confirmed', 'processing', 'ready_for_pickup', 'picked_up', 'in_transit', 'out_for_delivery', 'completed', 'cancelled'])],
+        ]);
 
-        DB::transaction(function () use ($order, $data, $allowed) {
+        DB::transaction(function () use ($order, $data) {
             $locked = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
-            if (! in_array($data['status'], $allowed[$locked->status] ?? [], true)) {
+            if (! in_array($data['status'], self::ORDER_TRANSITIONS[$locked->status] ?? [], true)) {
                 throw ValidationException::withMessages(['status' => 'That order status transition is not allowed.']);
             }
+            if (! config('marketplace.seller_managed_delivery')
+                && in_array($data['status'], ['picked_up', 'in_transit', 'out_for_delivery', 'completed'], true)) {
+                throw ValidationException::withMessages(['status' => 'The assigned logistics provider must update this delivery.']);
+            }
+
             if ($data['status'] === 'cancelled') {
-                $locked->load('items');
+                $locked->load(['items', 'payment', 'shipment']);
                 foreach ($locked->items as $item) {
                     $item->product_variant_id
                         ? ProductVariant::whereKey($item->product_variant_id)->increment('stock', $item->quantity)
                         : Product::whereKey($item->product_id)->increment('stock', $item->quantity);
                 }
                 $locked->payment?->update(['status' => 'cancelled']);
+                $locked->shipment?->update(['status' => 'cancelled']);
             }
-            $locked->update(['status' => $data['status']]);
+
+            $orderAttributes = ['status' => $data['status']];
+            if ($data['status'] === 'completed') {
+                $orderAttributes['completed_at'] = now();
+            }
+            $locked->update($orderAttributes);
             $locked->statusHistory()->create([
-                'changed_by' => auth()->id(), 'status' => $data['status'], 'note' => 'Updated by seller.',
+                'changed_by' => auth()->id(),
+                'status' => $data['status'],
+                'note' => in_array($data['status'], ['picked_up', 'in_transit', 'out_for_delivery', 'completed'], true)
+                    ? 'Updated by seller in self-managed delivery mode.'
+                    : 'Updated by seller.',
             ]);
-            if ($data['status'] === 'ready_for_pickup') {
-                $locked->shipment()->firstOrCreate([], [
-                    'tracking_number' => 'TRK-'.Str::upper(Str::random(12)), 'status' => 'ready',
+
+            if (isset(self::DELIVERY_STATUSES[$data['status']])) {
+                $shipment = $locked->shipment()->firstOrCreate([], [
+                    'tracking_number' => 'TRK-'.Str::upper(Str::random(12)),
+                    'status' => 'ready',
                 ]);
+                $shipmentAttributes = ['status' => self::DELIVERY_STATUSES[$data['status']]];
+                if ($data['status'] === 'picked_up' && ! $shipment->picked_up_at) {
+                    $shipmentAttributes['picked_up_at'] = now();
+                }
+                if ($data['status'] === 'completed') {
+                    $shipmentAttributes['delivered_at'] = now();
+                }
+                $shipment->update($shipmentAttributes);
+            }
+
+            if ($data['status'] === 'completed') {
+                $locked->payment?->update(['status' => 'paid', 'paid_at' => now()]);
+                if (Schema::hasTable('commissions')) {
+                    DB::table('commissions')->updateOrInsert(
+                        ['order_id' => $locked->id],
+                        [
+                            'seller_id' => $locked->seller_id,
+                            'rate' => 10,
+                            'amount' => round((float) $locked->subtotal * 0.10, 2),
+                            'status' => 'earned',
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]
+                    );
+                }
             }
         });
 
-        return back()->with('status', 'Order status updated.');
+        $message = match ($data['status']) {
+            'picked_up' => 'Parcel marked as shipped.',
+            'in_transit' => 'Parcel marked as in transit.',
+            'out_for_delivery' => 'Parcel marked as out for delivery.',
+            'completed' => 'Order marked as delivered and completed.',
+            'cancelled' => 'Order cancelled and stock restored.',
+            default => 'Order status updated.',
+        };
+
+        return back()->with('status', $message);
     }
 
     public function inventory()
@@ -132,7 +224,12 @@ class SellerController extends Controller
         return view('seller.inventory', compact('products'));
     }
 
-    public function handover() { return view('seller.handover'); }
+    public function handover(Request $request)
+    {
+        $request->merge(['status' => 'shipping']);
+
+        return $this->orders($request);
+    }
     public function reports() { return view('seller.reports'); }
     public function account()
     {
@@ -143,7 +240,6 @@ class SellerController extends Controller
                 : (auth()->user()->sellers()->value('name') ?? 'My Shop'),
         ]);
     }
-    public function chat() { return view('seller.chat'); }
 
     private function validatedProduct(Request $request, ?Product $product = null): array
     {

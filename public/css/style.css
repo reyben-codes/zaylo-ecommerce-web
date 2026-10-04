@@ -662,6 +662,45 @@ th { color: #6b5f54; font-size: .72rem; text-transform: uppercase; letter-spacin
 .nav-actions a:hover { color: #8a7a6b; }
 
 .buyer-nav-icon { position: relative; }
+.buyer-nav-svg {
+    display: block;
+    width: 1.5rem;
+    height: 1.5rem;
+    overflow: visible;
+    color: #2c241e;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.buyer-nav-svg .icon-fill,
+.page-hero-svg .icon-fill,
+.cart-empty-svg .icon-fill { fill: #fff; }
+.buyer-cart-svg {
+    width: 1.62rem;
+    height: 1.62rem;
+}
+.icon-group .buyer-nav-icon:hover .buyer-nav-svg { color: #8a7a6b; }
+.icon-group .buyer-nav-icon[aria-current="page"] .buyer-nav-svg { color: #a17455; }
+.page-hero-svg {
+    flex: 0 0 2rem;
+    width: 2rem;
+    height: 2rem;
+    color: #2c241e;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.cart-empty-svg {
+    width: 2.1rem;
+    height: 2.1rem;
+    color: currentColor;
+    stroke: currentColor;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
 .nav-item-count {
     position: absolute;
     top: -8px;
@@ -714,6 +753,28 @@ th { color: #6b5f54; font-size: .72rem; text-transform: uppercase; letter-spacin
     line-height: 1;
     color: #4a4037;
     margin-right: 2px;
+}
+
+@media (min-width: 1281px) {
+    .navbar .nav-actions {
+        width: 100%;
+        justify-self: stretch;
+    }
+
+    .navbar .search-wrapper {
+        flex: 1 1 auto;
+        min-width: 180px;
+    }
+
+    .navbar .search-wrapper input {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .navbar .icon-group,
+    .navbar .nav-actions > form:not(.search-wrapper) {
+        flex: 0 0 auto;
+    }
 }
 
 .icon-group {
@@ -1017,7 +1078,7 @@ th { color: #6b5f54; font-size: .72rem; text-transform: uppercase; letter-spacin
     display: block;
     overflow: hidden;
     aspect-ratio: 1;
-    background: #f1ebe4;
+    background: #fff;
 }
 
 .home-product-image img {

@@ -20,7 +20,7 @@ class SellerSidebarConsistencyTest extends TestCase
         $routes = [
             'seller.dashboard' => 'Dashboard',
             'seller.orders' => 'Orders',
-            'seller.handover' => 'Handover',
+            'seller.handover' => 'Delivery',
             'seller.inventory' => 'Inventory',
             'seller.products' => 'Products',
             'seller.reports' => 'Reports',

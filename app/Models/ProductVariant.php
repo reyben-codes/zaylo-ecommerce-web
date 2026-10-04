@@ -16,8 +16,13 @@ class ProductVariant extends Model
 
     public function getPriceAttribute(mixed $value): float
     {
+        return (float) ($this->product?->priceFor($this) ?? $this->regular_price);
+    }
+
+    public function getRegularPriceAttribute(): float
+    {
         return Schema::hasColumn('product_variants', 'price')
-            ? (float) $value
+            ? (float) ($this->attributes['price'] ?? 0)
             : ((int) ($this->attributes['price_minor'] ?? 0)) / 100;
     }
 

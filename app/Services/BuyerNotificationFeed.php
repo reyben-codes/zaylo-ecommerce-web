@@ -78,10 +78,11 @@ class BuyerNotificationFeed
             'placed' => 'Your order was placed and is waiting for the seller.',
             'confirmed' => 'The seller confirmed your order.',
             'processing' => 'The seller is preparing your order.',
-            'ready_for_pickup' => 'Your order is ready for courier pickup.',
+            'ready_for_pickup' => 'Your order is packed and ready to ship.',
             'assigned' => 'A courier has been assigned to your order.',
-            'picked_up' => 'The courier picked up your order.',
+            'picked_up' => 'The seller shipped your order.',
             'in_transit' => 'Your order is on its way.',
+            'out_for_delivery' => 'Your order is out for delivery.',
             'completed' => 'Your order was delivered.',
             'cancelled' => 'Your order was cancelled.',
         ];

@@ -1,0 +1,45 @@
+.catalog-filters { max-width: 1400px; margin: 0 auto 24px; padding: 24px; border: 1px solid #e3dbd3; border-radius: 14px; background: #fff; box-shadow: 0 6px 24px #392a2008; }
+.catalog-filters label { display: grid; gap: 8px; min-width: 0; font-size: .76rem; font-weight: 600; color: #514439; }
+.catalog-filters input:not([type=checkbox]), .catalog-filters select { width: 100%; min-width: 0; min-height: 44px; padding: 10px 12px; border: 1px solid #ded5cc; border-radius: 8px; background: #fffdfb; color: #1a1714; font: inherit; font-size: .84rem; }
+.catalog-filters :is(input, select, button):focus-visible, .catalog-filter-chips a:focus-visible { outline: 2px solid #9a755e; outline-offset: 3px; }
+.catalog-search-row { display: flex; align-items: flex-end; gap: 12px; margin-bottom: 22px; }
+.catalog-search-row label { flex: 1; }
+.catalog-filters .market-button { min-height: 44px; border-radius: 8px; }
+.catalog-filter-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.catalog-more-filters { margin-top: 18px; border-top: 1px solid #eee7df; }
+.catalog-more-filters summary { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 10px 0; cursor: pointer; list-style: none; color: #6b503d; font-size: .84rem; font-weight: 600; }
+.catalog-more-filters summary::-webkit-details-marker { display: none; }
+.catalog-more-filters summary:focus-visible { outline: 2px solid #9a755e; outline-offset: 3px; border-radius: 4px; }
+.catalog-filter-count { border-radius: 12px; padding: 3px 8px; background: #f5eee6; font-size: .72rem; }
+.catalog-disclosure-icon { margin-left: auto; font-size: 1.3rem; transition: transform .32s cubic-bezier(.22, 1, .36, 1); }
+.catalog-more-filters[open] summary:not([aria-expanded="false"]) .catalog-disclosure-icon { transform: rotate(45deg); }
+.catalog-extra-fields { padding: 12px 0 18px; }
+.catalog-submit-row { display: flex; justify-content: flex-end; margin-top: 8px; }
+@media (prefers-reduced-motion: reduce) { .catalog-disclosure-icon { transition: none; } }
+.catalog-filter-footer { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin-top: 20px; padding-top: 18px; border-top: 1px solid #eee7df; }
+.catalog-filter-footer .catalog-sale-toggle { display: flex; align-items: center; gap: 8px; }
+.catalog-sale-toggle input { width: 18px; height: 18px; accent-color: #795a43; }
+.catalog-filter-footer > span { flex: 1; color: #81756b; font-size: .73rem; }
+.catalog-results-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; max-width: 1400px; margin: 0 auto 18px; font-size: .83rem; }
+.catalog-results-heading span { color: #81756b; }
+.catalog-reset-button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 16px; border: 1px solid #decfc0; border-radius: 8px; background: #fffdfb; color: #6b503d; font-weight: 600; text-align: center; text-decoration: none; transition: background-color .18s ease, border-color .18s ease; }
+.catalog-reset-button:hover { background: #f5eee6; border-color: #9a755e; }
+.catalog-reset-button:active { background: #ece0d4; }
+.catalog-reset-button:focus-visible { outline: 2px solid #9a755e; outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .catalog-reset-button { transition: none; } }
+.catalog-filter-chips { display: flex; flex-wrap: wrap; gap: 8px; max-width: 1400px; margin: 0 auto 24px; }
+.catalog-filter-chips a { max-width: 100%; overflow-wrap: anywhere; padding: 7px 12px; border: 1px solid #decfc0; border-radius: 20px; background: #f5eee6; color: #6b503d; text-decoration: none; font-size: .76rem; }
+.catalog-filter-chips span { margin-left: 8px; font-size: 1rem; }
+.catalog-stock { font-size: .73rem; color: #52714a; margin-top: 8px; }
+.catalog-stock.is-sold-out { color: #8b6058; }
+.catalog-empty a { display: inline-block; margin-top: 18px; }
+@media (max-width: 700px) {
+    .catalog-filters { padding: 18px 14px; }
+    .catalog-filter-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .catalog-search-row { flex-direction: column; align-items: stretch; }
+    .catalog-filter-footer > span { flex-basis: 100%; }
+    .catalog-filter-footer button { width: 100%; }
+    .catalog-submit-row .market-button { width: 100%; }
+    .catalog-filters input:not([type=checkbox]), .catalog-filters select { font-size: 16px; }
+}
+@media (max-width: 380px) { .catalog-filter-fields { grid-template-columns: minmax(0, 1fr); } }

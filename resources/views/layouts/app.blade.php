@@ -19,7 +19,7 @@
 
     @stack('styles')
 </head>
-<body>
+<body class="@yield('body-class')">
     <!-- Navigation -->
     <header class="navbar">
         <button
@@ -64,9 +64,11 @@
                 @auth
                 <form method="POST" action="{{ route('logout') }}" style="display:inline;margin-left:4px;">
                     @csrf
+                    @if(auth()->user()->role !== 'buyer')
                     <span style="font-size:0.8rem;font-weight:500;color:#6b5f54;border-left:1px solid #d8d0c8;padding-left:20px;margin-right:10px;">
                         {{ auth()->user()->name }}
                     </span>
+                    @endif
                     <button type="submit" class="login-text" style="background:none;border:none;cursor:pointer;font-size:0.8rem;font-weight:500;letter-spacing:0.04em;color:#1e1e1e;border-left:1px solid #d8d0c8;padding-left:16px;">
                         Logout
                     </button>
@@ -90,5 +92,6 @@
     <script src="{{ asset('js/notifications.js') }}?v={{ filemtime(public_path('js/notifications.js')) }}" defer></script>
     <script src="{{ asset('js/product-carousel.js') }}?v={{ filemtime(public_path('js/product-carousel.js')) }}" defer></script>
     @stack('scripts')
+    @include('partials.chat-widget')
 </body>
 </html>

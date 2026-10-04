@@ -148,14 +148,7 @@
                 <h2>Flash Sales</h2>
                 <span class="flash-badge">🔥 Limited Time</span>
             </div>
-            <div class="flash-timer">
-                <span>Ends in:</span>
-                <div class="time-block"><span class="number" id="hours">02</span><span class="label">Hrs</span></div>
-                <span class="separator">:</span>
-                <div class="time-block"><span class="number" id="minutes">45</span><span class="label">Min</span></div>
-                <span class="separator">:</span>
-                <div class="time-block"><span class="number" id="seconds">30</span><span class="label">Sec</span></div>
-            </div>
+            <p class="flash-timer">Current seller offers · See each product for its sale period.</p>
         </div>
         <div class="flash-grid" id="flashGrid">
             @foreach($flashProducts as $product)
@@ -268,17 +261,6 @@
 })();
 
 // Flash timer
-let flashEndTime = new Date();
-flashEndTime.setHours(flashEndTime.getHours() + 2);
-flashEndTime.setMinutes(flashEndTime.getMinutes() + 45);
-function updateFlashTimer() {
-    const diff = flashEndTime - new Date();
-    if (diff <= 0) return;
-    document.getElementById('hours').textContent = String(Math.floor(diff/3600000)).padStart(2,'0');
-    document.getElementById('minutes').textContent = String(Math.floor((diff%3600000)/60000)).padStart(2,'0');
-    document.getElementById('seconds').textContent = String(Math.floor((diff%60000)/1000)).padStart(2,'0');
-}
-setInterval(updateFlashTimer, 1000); updateFlashTimer();
 
 </script>
 @endpush

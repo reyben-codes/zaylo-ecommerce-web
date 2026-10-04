@@ -5,6 +5,8 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BuyerController;
 use App\Http\Controllers\BuyerNotificationController;
+use App\Http\Controllers\ChatController;
+use App\Http\Controllers\ProductSaleController;
 use App\Http\Controllers\CourierController;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\LocationController;
@@ -99,13 +101,15 @@ Route::middleware(['auth', 'active', 'verified', 'role:buyer', 'nocache'])->pref
     Route::get('/account', [BuyerController::class, 'account'])->name('account');
     Route::patch('/account/profile', [BuyerController::class, 'updateProfile'])->name('account.profile');
     Route::put('/account/password', [BuyerController::class, 'updatePassword'])->name('account.password');
-    Route::get('/chat', [BuyerController::class, 'chat'])->name('chat');
+    Route::get('/chat', [ChatController::class, 'index'])->name('chat');
+    Route::post('/chat/products/{product}', [ChatController::class, 'start'])->middleware('throttle:20,1')->name('chat.start');
 });
 
 Route::middleware(['auth', 'active', 'verified', 'role:seller', 'nocache'])->prefix('seller')->name('seller.')->group(function () {
     Route::get('/dashboard', [SellerController::class, 'dashboard'])->name('dashboard');
     Route::get('/products', [SellerController::class, 'products'])->name('products');
     Route::post('/products', [SellerController::class, 'storeProduct'])->name('products.store');
+    Route::put('/products/{product}/sale', [ProductSaleController::class, 'update'])->name('products.sale');
     Route::put('/products/{product}', [SellerController::class, 'updateProduct'])->name('products.update');
     Route::delete('/products/{product}', [SellerController::class, 'deleteProduct'])->name('products.destroy');
     Route::get('/orders', [SellerController::class, 'orders'])->name('orders');
@@ -114,7 +118,14 @@ Route::middleware(['auth', 'active', 'verified', 'role:seller', 'nocache'])->pre
     Route::get('/handover', [SellerController::class, 'handover'])->name('handover');
     Route::get('/reports', [SellerController::class, 'reports'])->name('reports');
     Route::get('/account', [SellerController::class, 'account'])->name('account');
-    Route::get('/chat', [SellerController::class, 'chat'])->name('chat');
+    Route::get('/chat', [ChatController::class, 'index'])->name('chat');
+});
+
+Route::middleware(['auth', 'active', 'verified', 'role:buyer,seller', 'nocache'])->prefix('messages')->name('messages.')->group(function () {
+    Route::get('/inbox', [ChatController::class, 'inbox'])->middleware('throttle:120,1')->name('inbox');
+    Route::get('/{conversation}', [ChatController::class, 'messages'])->whereNumber('conversation')->middleware('throttle:120,1')->name('list');
+    Route::post('/{conversation}', [ChatController::class, 'send'])->whereNumber('conversation')->middleware('throttle:30,1')->name('send');
+    Route::post('/{conversation}/read', [ChatController::class, 'read'])->whereNumber('conversation')->middleware('throttle:120,1')->name('read');
 });
 
 Route::middleware(['auth', 'active', 'verified', 'role:courier', 'nocache'])->prefix('courier')->name('courier.')->group(function () {

@@ -25,6 +25,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        View::composer('partials.seller-header', function ($view) {
+            $shop = auth()->user()?->sellerProfile;
+            $view->with('sellerHeaderStoreName', $shop?->store_name ?? $shop?->name ?? 'My Shop');
+        });
+
         View::composer('partials.buyer-nav-icons', function ($view) {
             $buyer = auth()->user();
 

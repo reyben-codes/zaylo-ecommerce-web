@@ -1,24 +1,13 @@
 ﻿@extends('layouts.app')
 
-@section('title', 'ZAYLO · Chat')
-
-
-
+@section('title', 'ZAYLO · Messages')
+@section('body-class', 'messaging-page')
+@push('styles')
+    <link rel="stylesheet" href="{{ asset('css/messaging.css') }}?v={{ filemtime(public_path('css/messaging.css')) }}">
+@endpush
 @section('content')
-<div class="page-hero">
-    <div class="page-hero-inner">
-        <i class="fas fa-comment-dots"></i>
-        <div>
-            <h1></h1>
-            <p></p>
-        </div>
-    </div>
-</div>
-<div class="page-content">
-    <div class="placeholder-card">
-        <i class="fas fa-comment-dots"></i>
-        <h2>Messages</h2>
-        <p>Chat with sellers about your orders.</p>
-    </div>
-</div>
+<main class="messaging-buyer-main">@include('partials.messaging')</main>
 @endsection
+@push('scripts')
+    <script src="{{ asset('js/messaging.js') }}?v={{ filemtime(public_path('js/messaging.js')) }}" defer></script>
+@endpush

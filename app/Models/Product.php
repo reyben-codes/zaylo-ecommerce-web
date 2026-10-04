@@ -34,9 +34,10 @@ class Product extends Model
         'low_stock_threshold',
         'weight_grams',
         'category_id',
+        'sale_type', 'sale_value', 'sale_starts_at', 'sale_ends_at', 'sale_variant_id',
     ];
 
-    protected $casts = ['is_active' => 'boolean'];
+    protected $casts = ['is_active' => 'boolean', 'sale_value' => 'decimal:2', 'sale_starts_at' => 'datetime', 'sale_ends_at' => 'datetime', 'sale_variant_id' => 'integer'];
 
     protected static function booted(): void
     {
@@ -65,6 +66,8 @@ class Product extends Model
                     'weight_grams' => $product->variantInput['weight_grams'] ?? null,
                     'is_active' => $product->is_active ?? true,
                 ])->save();
+                $product->variantInput = [];
+                $product->unsetRelation('defaultVariant');
             }
 
             if ($product->coverImageInput) {
@@ -127,9 +130,67 @@ class Product extends Model
     }
 
     public function setPriceAttribute(mixed $value): void { static::usesLegacySchema() ? $this->attributes['price'] = $value : $this->variantInput['price_minor'] = (int) round((float) $value * 100); }
-    public function getPriceAttribute(mixed $value): string { return static::usesLegacySchema() ? number_format((float) $value, 2, '.', '') : number_format(($this->defaultVariant?->price_minor ?? 0) / 100, 2, '.', ''); }
+    public function getPriceAttribute(mixed $value): string { return $this->priceFor(static::usesLegacySchema() ? null : $this->defaultVariant); }
+    public function getRegularPriceAttribute(): string { return number_format(static::usesLegacySchema() ? (float) ($this->attributes['price'] ?? 0) : (($this->defaultVariant?->price_minor ?? 0) / 100), 2, '.', ''); }
     public function setOriginalPriceAttribute(mixed $value): void { static::usesLegacySchema() ? $this->attributes['original_price'] = $value : $this->variantInput['original_price_minor'] = filled($value) ? (int) round((float) $value * 100) : null; }
-    public function getOriginalPriceAttribute(mixed $value): ?string { return static::usesLegacySchema() ? (filled($value) ? number_format((float) $value, 2, '.', '') : null) : ($this->defaultVariant?->original_price_minor === null ? null : number_format($this->defaultVariant->original_price_minor / 100, 2, '.', '')); }
+    public function getOriginalPriceAttribute(mixed $value): ?string
+    {
+        if ($this->sale_type) {
+            return (float) $this->price < (float) $this->regular_price ? $this->regular_price : null;
+        }
+        return static::usesLegacySchema() ? (filled($value) ? number_format((float) $value, 2, '.', '') : null) : ($this->defaultVariant?->original_price_minor === null ? null : number_format($this->defaultVariant->original_price_minor / 100, 2, '.', ''));
+    }
+
+    public function priceFor(?ProductVariant $variant = null): string
+    {
+        $regular = (int) round((float) ($variant?->regular_price ?? $this->regular_price) * 100);
+        $price = $regular;
+        if ($this->saleIsActive() && (! $this->sale_variant_id || $this->sale_variant_id === $variant?->id)) {
+            $price = $this->sale_type === 'percent'
+                ? (int) round($regular * (10000 - (int) round((float) $this->sale_value * 100)) / 10000)
+                : (int) round((float) $this->sale_value * 100);
+        }
+        return number_format(max(0, min($regular, $price)) / 100, 2, '.', '');
+    }
+
+    public function saleIsActive(): bool
+    {
+        $now = now();
+        return in_array($this->sale_type, ['price', 'percent'], true)
+            && $this->sale_starts_at && $this->sale_ends_at
+            && $now->gte($this->sale_starts_at) && $now->lt($this->sale_ends_at);
+    }
+
+    public function getSaleStatusAttribute(): string
+    {
+        if (! $this->sale_type) return 'No scheduled sale';
+        if (now()->lt($this->sale_starts_at)) return 'Scheduled';
+        return $this->saleIsActive() ? 'On sale' : 'Ended';
+    }
+
+    public function getDiscountPercentageAttribute(): int
+    {
+        return (float) $this->original_price > (float) $this->price
+            ? (int) round((1 - (float) $this->price / (float) $this->original_price) * 100) : 0;
+    }
+
+    public function getBadgeAttribute(?string $value): ?string
+    {
+        if ($this->discount_percentage > 0) return 'Sale';
+        return $value === 'Sale' ? null : $value;
+    }
+
+    public static function regularPriceSql(): string
+    {
+        return static::usesLegacySchema() ? 'products.price' : 'COALESCE((SELECT price_minor / 100.0 FROM product_variants WHERE product_id = products.id ORDER BY id LIMIT 1), 0)';
+    }
+
+    public static function sellingPriceSql(): string
+    {
+        $regular = static::regularPriceSql();
+        $variant = static::usesLegacySchema() ? 'NULL' : '(SELECT id FROM product_variants WHERE product_id = products.id ORDER BY id LIMIT 1)';
+        return "CASE WHEN sale_type IS NOT NULL AND sale_starts_at <= ? AND sale_ends_at > ? AND (sale_variant_id IS NULL OR sale_variant_id = {$variant}) THEN CASE WHEN sale_type = 'percent' THEN ROUND({$regular} * (100 - sale_value) / 100, 2) WHEN sale_value < {$regular} THEN sale_value ELSE {$regular} END ELSE {$regular} END";
+    }
     public function setStockAttribute(mixed $value): void { static::usesLegacySchema() ? $this->attributes['stock'] = (int) $value : $this->variantInput['stock'] = (int) $value; }
     public function getStockAttribute(mixed $value): int { return static::usesLegacySchema() ? (int) $value : (int) ($this->defaultVariant?->stock ?? 0); }
     public function setSkuAttribute(?string $value): void { static::usesLegacySchema() ? $this->attributes['sku'] = ($value ?: 'ZAY-'.Str::upper(Str::random(8))) : $this->variantInput['sku'] = ($value ?: 'ZAY-'.Str::upper(Str::random(8))); }

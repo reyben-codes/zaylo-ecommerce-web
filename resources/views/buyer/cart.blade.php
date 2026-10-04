@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Shopping Cart · ZAYLO')
 @section('content')
-<div class="page-hero"><div class="page-hero-inner"><i class="fas fa-shopping-bag" aria-hidden="true"></i><div><h1>Your Cart</h1><p>Choose what to buy, update quantities, or remove items.</p></div></div></div>
+<div class="page-hero"><div class="page-hero-inner">@include('partials.icons.cart', ['class' => 'page-hero-svg'])<div><h1>Your Cart</h1><p>Choose what to buy, update quantities, or remove items.</p></div></div></div>
 
 <div @class(['page-content', 'checkout-grid', 'cart-empty-layout' => $cart->items->isEmpty(), 'cart-page'])>
     <section>
@@ -37,7 +37,7 @@
             </article>
         @empty
             <div class="cart-empty-state" aria-labelledby="empty-cart-title">
-                <div class="cart-empty-icon" aria-hidden="true"><i class="fas fa-shopping-bag"></i></div>
+                <div class="cart-empty-icon" aria-hidden="true">@include('partials.icons.cart', ['class' => 'cart-empty-svg'])</div>
                 <h2 id="empty-cart-title">Your cart is empty</h2>
                 <p>Discover your next everyday favorite. Add something you love and find it here when you're ready.</p>
                 <a href="{{ route('products.index') }}" class="btn-primary cart-empty-button">Browse the collection <i class="fas fa-arrow-right" aria-hidden="true"></i></a>

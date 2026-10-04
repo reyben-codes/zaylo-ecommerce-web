@@ -25,7 +25,10 @@
 
     <form method="POST" action="{{ route('buyer.checkout') }}" class="checkout-grid checkout-order-form">@csrf
         <input type="hidden" name="idempotency_key" value="{{ (string) Illuminate\Support\Str::uuid() }}">
-        @foreach($items as $item)<input type="hidden" name="cart_item_ids[]" value="{{ $item->id }}">@endforeach
+        @foreach($items as $item)
+            <input type="hidden" name="cart_item_ids[]" value="{{ $item->id }}">
+            <input type="hidden" name="quoted_unit_prices[{{ $item->id }}]" value="{{ number_format($item->unitPrice(), 2, '.', '') }}">
+        @endforeach
         @if($voucher)<input type="hidden" name="voucher_code" value="{{ $voucher->code }}">@endif
 
         <div class="checkout-main-column">

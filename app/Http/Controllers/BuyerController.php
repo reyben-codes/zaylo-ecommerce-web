@@ -37,9 +37,15 @@ class BuyerController extends Controller
                 ->with(['images', 'defaultVariant', 'category'])
                 ->withCount(['variants as active_variants_count' => fn ($query) => $query->where('is_active', true)]);
         }
-        $flashProducts = Product::usesLegacySchema()
-            ? (clone $base)->whereNotNull('original_price')->inRandomOrder()->limit(5)->get()
-            : (clone $base)->whereHas('variants', fn ($query) => $query->whereNotNull('original_price_minor'))->inRandomOrder()->limit(5)->get();
+        $flashProducts = (clone $base)->where(function ($query) {
+            $query->whereRaw('('.Product::sellingPriceSql().') < ('.Product::regularPriceSql().')', [now(), now()])
+                ->orWhere(function ($legacySale) {
+                    $legacySale->whereNull('sale_type');
+                    Product::usesLegacySchema()
+                        ? $legacySale->whereColumn('original_price', '>', 'price')
+                        : $legacySale->whereHas('defaultVariant', fn ($variant) => $variant->whereColumn('original_price_minor', '>', 'price_minor'));
+                });
+        })->inRandomOrder()->limit(5)->get();
         $suggestedProducts = (clone $base)->inRandomOrder()->limit(10)->get();
 
         return view('buyer.dashboard', compact('flashProducts', 'suggestedProducts') + ['user' => auth()->user()]);
@@ -51,14 +57,31 @@ class BuyerController extends Controller
             'category' => ['nullable', Rule::in(array_keys(config('marketplace.categories')))],
             'gender' => 'nullable|in:men,women,unisex',
             'search' => 'nullable|string|max:100',
-            'sort' => 'nullable|in:newest,price_low,price_high',
+            'sort' => 'nullable|in:relevance,newest,price_low,price_high',
+            'min_price' => 'nullable|numeric|min:0|max:99999999.99',
+            'max_price' => 'nullable|numeric|min:0|max:99999999.99',
+            'availability' => 'nullable|in:all,in_stock,out_of_stock',
+            'on_sale' => 'nullable|boolean',
         ]);
+        if (isset($validated['min_price'], $validated['max_price']) && $validated['max_price'] < $validated['min_price']) {
+            throw ValidationException::withMessages(['max_price' => 'Maximum price must be greater than or equal to minimum price.']);
+        }
+        $validated['search'] = trim(preg_replace('/\s+/u', ' ', $validated['search'] ?? ''));
+        $validated['sort'] = $validated['sort'] ?? ($validated['search'] !== '' ? 'relevance' : 'newest');
+        $validated['availability'] = $validated['availability'] ?? 'in_stock';
         $query = Product::with(['seller', 'images'])
             ->withCount(['variants as active_variants_count' => fn ($builder) => $builder->where('is_active', true)])
+            ->withSum(['variants as catalog_variant_stock' => fn ($builder) => $builder->where('is_active', true)], 'stock')
             ->where('is_active', true);
-        Product::usesLegacySchema()
-            ? $query->where('stock', '>', 0)
-            : $query->whereHas('variants', fn ($builder) => $builder->where('is_active', true)->where('stock', '>', 0))->with(['defaultVariant', 'category']);
+        if (! Product::usesLegacySchema()) $query->with(['defaultVariant', 'category']);
+        $available = function ($builder) {
+            $builder->whereHas('variants', fn ($variant) => $variant->where('is_active', true)->where('stock', '>', 0));
+            if (Product::usesLegacySchema()) {
+                $builder->orWhere(fn ($fallback) => $fallback->whereDoesntHave('variants', fn ($variant) => $variant->where('is_active', true))->where('stock', '>', 0));
+            }
+        };
+        if ($validated['availability'] === 'in_stock') $query->where($available);
+        if ($validated['availability'] === 'out_of_stock') $query->whereNot($available);
 
         if (! empty($validated['category'])) {
             if (Product::usesLegacySchema()) {
@@ -74,35 +97,78 @@ class BuyerController extends Controller
         if (! empty($validated['gender'])) {
             $query->where('gender', $validated['gender']);
         }
-        if (! empty($validated['search'])) {
-            $query->where(fn ($builder) => $builder
-                ->where('name', 'like', '%'.$validated['search'].'%')
-                ->orWhere('description', 'like', '%'.$validated['search'].'%'));
+        $escapeLike = fn ($text) => str_replace(['!', '%', '_'], ['!!', '!%', '!_'], mb_strtolower($text));
+        if ($validated['search'] !== '') {
+            foreach (array_unique(explode(' ', $validated['search'])) as $word) {
+                $pattern = '%'.$escapeLike($word).'%';
+                $query->where(function ($match) use ($pattern) {
+                    $match->whereRaw("LOWER(products.name) LIKE ? ESCAPE '!'", [$pattern])
+                        ->orWhereRaw("LOWER(products.description) LIKE ? ESCAPE '!'", [$pattern]);
+                    if (Product::usesLegacySchema()) {
+                        $match->orWhereRaw("LOWER(products.sku) LIKE ? ESCAPE '!'", [$pattern])
+                            ->orWhereRaw("LOWER(products.category) LIKE ? ESCAPE '!'", [$pattern]);
+                    } else {
+                        $match->orWhereHas('category', fn ($category) => $category->whereRaw("LOWER(name) LIKE ? ESCAPE '!'", [$pattern]));
+                    }
+                    $match->orWhereHas('variants', fn ($variant) => $variant->where('is_active', true)->whereRaw("LOWER(sku) LIKE ? ESCAPE '!'", [$pattern]));
+                });
+            }
         }
 
-        if (Product::usesLegacySchema()) {
-            match ($validated['sort'] ?? 'newest') {
-                'price_low' => $query->orderBy('price'),
-                'price_high' => $query->orderByDesc('price'),
-                default => $query->latest(),
-            };
+        $priceSql = Product::sellingPriceSql();
+        $priceTime = now();
+        foreach (['min_price' => '>=', 'max_price' => '<='] as $field => $operator) {
+            if (isset($validated[$field])) $query->whereRaw("({$priceSql}) {$operator} CAST(? AS DECIMAL(12, 2))", [$priceTime, $priceTime, $validated[$field]]);
+        }
+        if (! empty($validated['on_sale'])) {
+            $query->where(function ($sale) use ($priceSql, $priceTime) {
+                $sale->whereRaw('('.$priceSql.') < ('.Product::regularPriceSql().')', [$priceTime, $priceTime])
+                    ->orWhere(function ($legacy) {
+                        $legacy->whereNull('sale_type');
+                        Product::usesLegacySchema()
+                            ? $legacy->whereColumn('original_price', '>', 'price')
+                            : $legacy->whereHas('defaultVariant', fn ($variant) => $variant->whereColumn('original_price_minor', '>', 'price_minor'));
+                    });
+            });
+        }
+
+        if (in_array($validated['sort'] ?? '', ['price_low', 'price_high'], true)) {
+            $direction = $validated['sort'] === 'price_high' ? 'DESC' : 'ASC';
+            $query->orderByRaw(Product::sellingPriceSql()." {$direction}", [now(), now()]);
+        } elseif ($validated['sort'] === 'relevance' && $validated['search'] !== '') {
+            $query->orderByRaw("CASE WHEN LOWER(products.name) = ? THEN 0 WHEN LOWER(products.name) LIKE ? ESCAPE '!' THEN 1 ELSE 2 END", [mb_strtolower($validated['search']), $escapeLike($validated['search']).'%'])->latest();
         } else {
-            match ($validated['sort'] ?? 'newest') {
-                'price_low' => $query->orderBy(ProductVariant::select('price_minor')->whereColumn('product_id', 'products.id')->where('is_active', true)->oldest('id')->limit(1)),
-                'price_high' => $query->orderByDesc(ProductVariant::select('price_minor')->whereColumn('product_id', 'products.id')->where('is_active', true)->oldest('id')->limit(1)),
-                default => $query->latest(),
+            $query->latest();
+        }
+        $query->orderByDesc('products.id');
+
+        $chips = [];
+        foreach (['search', 'category', 'gender', 'min_price', 'max_price', 'availability', 'on_sale'] as $key) {
+            if (! isset($validated[$key]) || $validated[$key] === '' || ($key === 'availability' && $validated[$key] === 'in_stock') || ($key === 'on_sale' && ! $validated[$key])) continue;
+            $label = match ($key) {
+                'search' => 'Search: '.$validated[$key],
+                'category' => config('marketplace.categories')[$validated[$key]],
+                'gender' => ucfirst($validated[$key]),
+                'min_price' => 'From ₱'.number_format($validated[$key], 2),
+                'max_price' => 'Up to ₱'.number_format($validated[$key], 2),
+                'availability' => $validated[$key] === 'all' ? 'All availability' : 'Sold out',
+                'on_sale' => 'On sale',
             };
+            $remaining = $validated;
+            unset($remaining[$key]);
+            $chips[] = ['label' => $label, 'url' => route('products.index', $remaining)];
         }
 
         return view('buyer.products', [
-            'products' => $query->paginate(15)->withQueryString(),
+            'products' => $query->paginate(15)->appends($validated),
             'category' => $validated['category'] ?? null,
+            'filters' => $validated, 'filterChips' => $chips,
         ]);
     }
 
     public function showProduct(Product $product)
     {
-        abort_unless($product->is_active && $product->stock > 0, 404);
+        abort_unless($product->is_active, 404);
         $relations = ['seller', 'variants' => fn ($query) => $query->where('is_active', true), 'images'];
         if (! Product::usesLegacySchema()) {
             $relations[] = 'category';
@@ -130,7 +196,7 @@ class BuyerController extends Controller
 
         $statusGroups = [
             'to_ship' => ['placed', 'confirmed', 'processing', 'ready_for_pickup', 'assigned'],
-            'shipped' => ['picked_up', 'in_transit'],
+            'shipped' => ['picked_up', 'in_transit', 'out_for_delivery'],
             'delivered' => ['completed'],
             'cancelled' => ['cancelled'],
         ];
@@ -339,6 +405,8 @@ class BuyerController extends Controller
             'cart_item_ids' => ['nullable', 'array', 'min:1'],
             'cart_item_ids.*' => ['required', 'integer', 'distinct'],
             'voucher_code' => ['nullable', 'string', 'max:50'],
+            'quoted_unit_prices' => ['nullable', 'array'],
+            'quoted_unit_prices.*' => ['required', 'numeric', 'min:0', 'decimal:0,2'],
         ]);
         $validated['payment_method'] ??= 'cod';
         if (Payment::where('idempotency_key', 'like', $validated['idempotency_key'].'%')->exists()) {
@@ -382,9 +450,14 @@ class BuyerController extends Controller
                     if (! $product->is_active || $stock < $item->quantity) {
                         throw ValidationException::withMessages(['cart' => "{$product->name} no longer has enough stock."]);
                     }
-                    $prepared->push(compact('item', 'product', 'variant') + [
-                        'unitPrice' => (float) ($variant?->price ?? $product->price),
-                    ]);
+                    $unitPrice = (float) ($variant ? $product->priceFor($variant) : $product->price);
+                    if (isset($validated['quoted_unit_prices']) && (
+                        ! isset($validated['quoted_unit_prices'][$item->id])
+                        || (int) round((float) $validated['quoted_unit_prices'][$item->id] * 100) !== (int) round($unitPrice * 100)
+                    )) {
+                        throw ValidationException::withMessages(['cart' => 'A product price changed since you reviewed checkout. Please review the updated total before placing your order.']);
+                    }
+                    $prepared->push(compact('item', 'product', 'variant', 'unitPrice'));
                 }
 
                 $subtotal = $prepared->sum(fn ($row) => $row['unitPrice'] * $row['item']->quantity);
@@ -509,11 +582,6 @@ class BuyerController extends Controller
         ])->save();
 
         return back()->with('status', $hasPassword ? 'Password updated.' : 'Password created. You can now also sign in with email.');
-    }
-
-    public function chat()
-    {
-        return view('buyer.chat');
     }
 
     private function cartSubtotal(Cart $cart): float

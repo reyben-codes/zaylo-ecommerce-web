@@ -6,20 +6,13 @@
     <title>{{ $storeName }} | Products</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="{{ asset('css/seller-sidebar.css') }}">
     <style>
         * { box-sizing: border-box; }
         body { margin: 0; font-family: Inter, sans-serif; background: #faf7f2; color: #1e1e1e; }
         button, input, select, textarea { font: inherit; }
-        .navbar { min-height: 72px; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; border-top: 2px solid #8cb58a; border-bottom: 1px solid #ece4db; position: sticky; top: 0; z-index: 20; }
-        .logo img { width: 78px; display: block; }
-        .shop-chip { display: flex; align-items: center; gap: 10px; color: #6b5f54; font-size: .82rem; }
-        .shop-chip strong { color: #1a1714; }
-        .header-actions { display: flex; align-items: center; gap: 10px; }
-        .icon-button, .logout-button { width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid #e2d9cf; border-radius: 50%; background: #fff; color: #1e1e1e; cursor: pointer; text-decoration: none; }
-        .logout-form { margin: 0; }
         .layout { min-height: calc(100vh - 72px); display: flex; }
         .main-content { min-width: 0; flex: 1; padding: 34px clamp(20px, 4vw, 54px) 60px; }
         .page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 26px; }
@@ -79,19 +72,14 @@
         .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #9a755e; box-shadow: 0 0 0 3px rgba(154,117,94,.11); }
         .file-help { margin: 6px 0 0; color: #81756b; font-size: .7rem; }
         .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; padding-top: 18px; border-top: 1px solid #eee5dc; }
-        @media (max-width: 820px) { .navbar { padding: 0 16px; } .shop-chip { display: none; } .main-content { padding: 25px 16px 45px; } .page-header { align-items: flex-start; flex-direction: column; } }
+        @media (max-width: 820px) { .main-content { padding: 25px 16px 45px; } .page-header { align-items: flex-start; flex-direction: column; } }
         @media (max-width: 560px) { .form-grid { grid-template-columns: 1fr; } .form-group.full { grid-column: auto; } .products-grid { grid-template-columns: 1fr; } .toolbar { align-items: flex-start; flex-direction: column; } }
     </style>
+    <link rel="stylesheet" href="{{ asset('css/product-sales.css') }}?v={{ filemtime(public_path('css/product-sales.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/seller-header.css') }}?v={{ filemtime(public_path('css/seller-header.css')) }}">
 </head>
 <body class="seller-workspace">
-    <header class="navbar">
-        <div class="shop-chip"><i class="fa-solid fa-store"></i><span>Managing <strong>{{ $storeName }}</strong></span></div>
-        <a href="{{ route('seller.dashboard') }}" class="logo" aria-label="Seller dashboard"><img src="{{ asset('images/ZAYLO_LOGO_DARK.png') }}" alt="ZAYLO"></a>
-        <div class="header-actions">
-            <a href="{{ route('seller.account') }}" class="icon-button" aria-label="Seller account"><i class="fa-regular fa-user"></i></a>
-            <form method="POST" action="{{ route('logout') }}" class="logout-form">@csrf<button type="submit" class="logout-button" aria-label="Log out"><i class="fa-solid fa-arrow-right-from-bracket"></i></button></form>
-        </div>
-    </header>
+    @include('partials.seller-header')
 
     <div class="layout">
         @include('partials.seller-sidebar')
@@ -125,8 +113,9 @@
                                 <span><span class="price">₱{{ number_format((float) $product->price, 2) }}</span>@if($product->original_price)<span class="original-price">₱{{ number_format((float) $product->original_price, 2) }}</span>@endif</span>
                                 <span class="stock {{ $product->stock === 0 ? 'out' : ($product->stock <= $product->low_stock_threshold ? 'low' : '') }}">{{ $product->stock === 0 ? 'Out of stock' : $product->stock.' in stock' }}</span>
                             </div>
+                            @include('seller.partials.product-sale-form')
                             <div class="product-actions">
-                                <button type="button" class="action-button edit-product" data-action="{{ route('seller.products.update', $product) }}" data-name="{{ $product->name }}" data-sku="{{ $product->sku }}" data-category="{{ $product->category_key }}" data-gender="{{ $product->gender }}" data-price="{{ $product->price }}" data-original-price="{{ $product->original_price }}" data-stock="{{ $product->stock }}" data-threshold="{{ $product->low_stock_threshold }}" data-weight="{{ $product->weight_grams }}" data-badge="{{ $product->badge }}" data-active="{{ $product->is_active ? '1' : '0' }}" data-description="{{ $product->description }}"><i class="fa-solid fa-pen"></i> Edit details</button>
+                                <button type="button" class="action-button edit-product" data-action="{{ route('seller.products.update', $product) }}" data-name="{{ $product->name }}" data-sku="{{ $product->sku }}" data-category="{{ $product->category_key }}" data-gender="{{ $product->gender }}" data-price="{{ $product->regular_price }}" data-original-price="{{ $product->original_price }}" data-stock="{{ $product->stock }}" data-threshold="{{ $product->low_stock_threshold }}" data-weight="{{ $product->weight_grams }}" data-badge="{{ $product->badge }}" data-active="{{ $product->is_active ? '1' : '0' }}" data-description="{{ $product->description }}"><i class="fa-solid fa-pen"></i> Edit details</button>
                                 <form method="POST" action="{{ route('seller.products.destroy', $product) }}" onsubmit="return confirm('Delete this product from the shop?')">@csrf @method('DELETE')<button type="submit" class="action-button delete" aria-label="Delete {{ $product->name }}"><i class="fa-solid fa-trash"></i></button></form>
                             </div>
                         </div>
@@ -140,7 +129,7 @@
         </main>
     </div>
 
-    <div class="modal-overlay {{ $errors->any() ? 'show' : '' }}" id="productModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-overlay {{ $errors->any() && !old('sale_product_id') ? 'show' : '' }}" id="productModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
         <div class="modal">
             <div class="modal-header"><h2 class="modal-title" id="modalTitle">Add Product</h2><button type="button" class="close-modal" onclick="closeProductModal()" aria-label="Close"><i class="fa-solid fa-xmark"></i></button></div>
             <form method="POST" action="{{ route('seller.products.store') }}" enctype="multipart/form-data" class="product-form" id="productForm">
@@ -151,9 +140,9 @@
                     <div class="form-group"><label for="productSku">SKU</label><input id="productSku" name="sku" value="{{ old('sku') }}" maxlength="80" placeholder="Generated when left blank"></div>
                     <div class="form-group"><label for="productCategory">Category *</label><select id="productCategory" name="category" required><option value="">Select category</option>@foreach(config('marketplace.fashion_categories') as $category)<option value="{{ $category }}" @selected(old('category') === $category)>{{ config('marketplace.categories')[$category] }}</option>@endforeach</select></div>
                     <div class="form-group"><label for="productGender">Gender</label><select id="productGender" name="gender"><option value="">Not specified</option><option value="women">Women</option><option value="men">Men</option><option value="unisex">Unisex</option></select></div>
-                    <div class="form-group"><label for="productBadge">Badge</label><select id="productBadge" name="badge"><option value="">No badge</option><option value="New">New</option><option value="Sale">Sale</option><option value="Best Seller">Best Seller</option></select></div>
-                    <div class="form-group"><label for="productPrice">Selling price (₱) *</label><input type="number" id="productPrice" name="price" value="{{ old('price') }}" min="0" max="99999999.99" step="0.01" required></div>
-                    <div class="form-group"><label for="productOriginalPrice">Original price (₱)</label><input type="number" id="productOriginalPrice" name="original_price" value="{{ old('original_price') }}" min="0" max="99999999.99" step="0.01"></div>
+                    <div class="form-group"><label for="productBadge">Badge</label><select id="productBadge" name="badge"><option value="">No badge</option><option value="New">New</option><option value="Best Seller">Best Seller</option></select></div>
+                    <div class="form-group"><label for="productPrice">Regular price (₱) *</label><input type="number" id="productPrice" name="price" value="{{ old('price') }}" min="0" max="99999999.99" step="0.01" required></div>
+
                     <div class="form-group"><label for="productStock">Available stock *</label><input type="number" id="productStock" name="stock" value="{{ old('stock', 0) }}" min="0" required></div>
                     <div class="form-group"><label for="productThreshold">Low stock alert *</label><input type="number" id="productThreshold" name="low_stock_threshold" value="{{ old('low_stock_threshold', 5) }}" min="0" required></div>
                     <div class="form-group"><label for="productWeight">Weight (grams)</label><input type="number" id="productWeight" name="weight_grams" value="{{ old('weight_grams') }}" min="0"></div>
@@ -167,6 +156,7 @@
         </div>
     </div>
 
+    <script src="{{ asset('js/product-sales.js') }}?v={{ filemtime(public_path('js/product-sales.js')) }}" defer></script>
     <script>
         const modal = document.getElementById('productModal');
         const form = document.getElementById('productForm');
@@ -180,7 +170,7 @@
         document.querySelectorAll('.edit-product').forEach(button => button.addEventListener('click', () => {
             const data = button.dataset; form.reset(); form.action = data.action; field('formMethod').disabled = false; field('formMethod').value = 'PUT'; field('modalTitle').textContent = 'Edit Product';
             field('productName').value = data.name || ''; field('productSku').value = data.sku || ''; field('productCategory').value = data.category || ''; field('productGender').value = data.gender || ''; field('productBadge').value = data.badge || '';
-            field('productPrice').value = data.price || ''; field('productOriginalPrice').value = data.originalPrice || ''; field('productStock').value = data.stock || '0'; field('productThreshold').value = data.threshold || '0'; field('productWeight').value = data.weight || '';
+            field('productPrice').value = data.price || ''; field('productStock').value = data.stock || '0'; field('productThreshold').value = data.threshold || '0'; field('productWeight').value = data.weight || '';
             field('productStatus').value = data.active || '0'; field('productDescription').value = data.description || ''; field('imageHelp').textContent = 'Leave empty to keep the current picture. JPG, PNG, or WebP up to 5 MB.'; modal.classList.add('show'); field('productName').focus();
         }));
         function closeProductModal() { modal.classList.remove('show'); }

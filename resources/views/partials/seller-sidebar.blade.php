@@ -6,7 +6,7 @@
             $sellerNavigation = [
                 ['route' => 'seller.dashboard', 'label' => 'Dashboard', 'icon' => 'fa-home'],
                 ['route' => 'seller.orders', 'label' => 'Orders', 'icon' => 'fa-box'],
-                ['route' => 'seller.handover', 'label' => 'Handover', 'icon' => 'fa-truck'],
+                ['route' => 'seller.handover', 'label' => 'Delivery', 'icon' => 'fa-truck'],
                 ['route' => 'seller.inventory', 'label' => 'Inventory', 'icon' => 'fa-warehouse'],
                 ['route' => 'seller.products', 'label' => 'Products', 'icon' => 'fa-shopping-bag'],
                 ['route' => 'seller.reports', 'label' => 'Reports', 'icon' => 'fa-chart-bar'],

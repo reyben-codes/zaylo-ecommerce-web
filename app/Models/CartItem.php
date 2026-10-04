@@ -30,7 +30,7 @@ class CartItem extends Model
 
     public function unitPrice(): float
     {
-        return (float) ($this->variant?->price ?? $this->product->price);
+        return (float) ($this->variant ? $this->product->priceFor($this->variant) : $this->product->price);
     }
 
     public function availableStock(): int

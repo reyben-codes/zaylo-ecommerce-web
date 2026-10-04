@@ -1,0 +1,12 @@
+.seller-workspace .products-grid { align-items: start; }
+.product-sale { margin-top: 14px; border-top: 1px solid #eee7df; padding-top: 12px; font-size: .76rem; }
+.product-sale summary { cursor: pointer; font-weight: 600; color: #795a43; }
+.product-sale summary span { float: right; color: #6b5f54; font-weight: 400; }
+.product-sale form { display: grid; gap: 12px; padding-top: 12px; }
+.product-sale label { display: grid; gap: 5px; font-weight: 600; }
+.product-sale input, .product-sale select { width: 100%; min-width: 0; padding: 9px; border: 1px solid #dcd2c8; border-radius: 7px; background: #fff; color: #1e1e1e; font: inherit; }
+.product-sale p { margin: 0; color: #6b5f54; line-height: 1.5; }
+.product-sale ul { padding-left: 16px; color: #963e38; }
+.sale-price-original { margin-left: 8px; color: #81756b; font-size: .8em; }
+.sale-price-saving { margin-left: 8px; font-size: .75rem; color: #795a43; }
+.sale-period { font-size: .78rem; color: #795a43; margin: -12px 0 18px; }

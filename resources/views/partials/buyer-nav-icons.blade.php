@@ -11,13 +11,16 @@
     @endif
 </a>
 <a href="{{ route('buyer.cart') }}" class="buyer-nav-icon" aria-label="Shopping cart ({{ $navCartQuantity }} items)" @if(request()->routeIs('buyer.cart')) aria-current="page" @endif>
-    <i class="fas fa-shopping-bag" aria-hidden="true"></i>
+    @include('partials.icons.cart', ['class' => 'buyer-nav-svg buyer-cart-svg'])
     @if($navCartQuantity > 0)
         <span class="nav-item-count" data-cart-count aria-hidden="true">{{ $navCartQuantity }}</span>
     @endif
 </a>
 <a href="{{ route('buyer.orders') }}" class="buyer-nav-icon" aria-label="Order status and tracking" @if(request()->routeIs('buyer.orders')) aria-current="page" @endif>
-    <i class="fas fa-box" aria-hidden="true"></i>
+    @include('partials.icons.order-package')
+</a>
+<a href="{{ route('buyer.chat') }}" class="buyer-nav-icon" aria-label="Messages" @if(request()->routeIs('buyer.chat')) aria-current="page" @endif>
+    <i class="far fa-comment-dots" aria-hidden="true"></i>
 </a>
 <a href="{{ route('buyer.account') }}" class="buyer-nav-icon" aria-label="Profile settings" @if(request()->routeIs('buyer.account')) aria-current="page" @endif>
     <i class="far fa-user" aria-hidden="true"></i>

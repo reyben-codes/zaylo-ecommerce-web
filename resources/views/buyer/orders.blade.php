@@ -5,7 +5,7 @@
 @section('content')
 <div class="page-hero">
     <div class="page-hero-inner">
-        <i class="fas fa-box" aria-hidden="true"></i>
+        @include('partials.icons.order-package', ['class' => 'page-hero-svg'])
         <div>
             <h1>My Orders</h1>
             <p>Follow your orders from checkout to delivery.</p>
@@ -26,10 +26,11 @@
             'placed' => 'Order placed. Waiting for the seller to confirm.',
             'confirmed' => 'The seller has confirmed your order.',
             'processing' => 'The seller is preparing your items.',
-            'ready_for_pickup' => 'Your order is ready for courier pickup.',
+            'ready_for_pickup' => 'Your order is packed and ready to ship.',
             'assigned' => 'A courier has been assigned to your order.',
-            'picked_up' => 'The courier has picked up your order.',
+            'picked_up' => 'The seller has shipped your order.',
             'in_transit' => 'Your order is on its way.',
+            'out_for_delivery' => 'Your order is out for delivery.',
             'completed' => 'Your order has been delivered.',
             'cancelled' => 'This order was cancelled.',
         ];

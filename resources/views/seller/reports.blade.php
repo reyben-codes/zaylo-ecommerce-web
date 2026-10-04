@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
@@ -650,51 +650,14 @@
         }
     </style>
     <link rel="stylesheet" href="{{ asset('css/seller-sidebar.css') }}?v={{ filemtime(public_path('css/seller-sidebar.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/seller-header.css') }}?v={{ filemtime(public_path('css/seller-header.css')) }}">
 </head>
 
 <body class="seller-workspace">
 
     <!-- ================= HEADER ================= -->
 
-    <header class="navbar">
-        <div class="nav-spacer"></div>
-
-        <a href="{{ route('seller.dashboard') }}" class="logo">
-            <img src="{{ asset('images/ZAYLO_LOGO_DARK.png') }}" alt="ZAYLO Logo">
-        </a>
-
-        <div class="nav-right">
-
-            <div class="search-box">
-                <i class="fas fa-search"></i>
-                <input type="text" id="globalSearch" placeholder="Search products...">
-            </div>
-
-            <button class="nav-icon" type="button" aria-label="Notifications">
-                <i class="far fa-bell"></i>
-                <span class="notification-badge">5</span>
-            </button>
-
-            <button class="nav-icon" type="button" aria-label="Shopping bag">
-                <i class="fas fa-shopping-bag"></i>
-                <span class="notification-badge">2</span>
-            </button>
-
-            <a href="{{ route('seller.account') }}" class="nav-icon" aria-label="Account">
-                <i class="far fa-user"></i>
-            </a>
-
-            <div class="nav-divider"></div>
-
-            <form action="{{ route('login') }}" method="GET">
-                <button type="submit" class="logout-btn">
-                    <i class="fas fa-sign-out-alt"></i>
-                    Logout
-                </button>
-            </form>
-
-        </div>
-    </header>
+    @include('partials.seller-header')
 
     <!-- ================= DASHBOARD LAYOUT ================= -->
 
@@ -787,6 +750,11 @@
             <div class="top-products">
 
                 <h3>Top Performing Products</h3>
+
+                <label class="search-box">
+                    <i class="fas fa-search" aria-hidden="true"></i>
+                    <input type="search" id="globalSearch" placeholder="Search products..." aria-label="Search top performing products">
+                </label>
 
                 <table>
                     <thead>

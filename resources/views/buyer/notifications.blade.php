@@ -39,7 +39,7 @@
             @foreach($notifications as $notification)
                 <article class="notification-item{{ $notification['read'] ? '' : ' is-unread' }}">
                     <div class="notification-type-icon notification-type-{{ $notification['type'] }}" aria-hidden="true">
-                        <i class="fas {{ match($notification['type']) { 'product' => 'fa-bag-shopping', 'voucher' => 'fa-ticket', default => 'fa-box' } }}"></i>
+                    <i class="fas {{ match($notification['type']) { 'product' => 'fa-bag-shopping', 'voucher' => 'fa-ticket', default => 'fa-receipt' } }}"></i>
                     </div>
                     <div class="notification-item-copy">
                         <div class="notification-item-top">

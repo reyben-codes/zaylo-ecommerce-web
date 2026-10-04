@@ -11,8 +11,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -642,6 +641,7 @@
         }
     </style>
     <link rel="stylesheet" href="{{ asset('css/seller-sidebar.css') }}?v={{ filemtime(public_path('css/seller-sidebar.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/seller-header.css') }}?v={{ filemtime(public_path('css/seller-header.css')) }}">
 </head>
 
 <body class="seller-workspace">
@@ -650,50 +650,7 @@
 
         <!-- HEADER -->
 
-        <header class="navbar">
-
-            <div class="nav-spacer"></div>
-
-            <a href="{{ route('seller.dashboard') }}" class="logo">
-                <img src="{{ asset('images/ZAYLO_LOGO_DARK.png') }}" alt="ZAYLO Logo">
-            </a>
-
-            <div class="nav-actions">
-
-                <div class="search-wrapper">
-                    <i class="fas fa-search"></i>
-                    <input type="text" placeholder="Search" aria-label="Search">
-                </div>
-
-                <div class="icon-group">
-
-                    <a href="#"
-                        onclick="showNotification('You have 5 notifications'); return false;"
-                        aria-label="Notifications">
-                        <i class="far fa-bell"></i>
-                        <span class="badge-count">5</span>
-                    </a>
-
-                    <a href="#"
-                        onclick="showNotification('Shopping bag preview'); return false;"
-                        aria-label="Shopping bag">
-                        <i class="fas fa-shopping-bag"></i>
-                        <span class="badge-count">2</span>
-                    </a>
-
-                    <a href="{{ route('seller.account') }}" aria-label="Account">
-                        <i class="far fa-user"></i>
-                    </a>
-
-                    <a href="{{ route('login') }}" class="login-text">
-                        Logout
-                    </a>
-
-                </div>
-
-            </div>
-
-        </header>
+    @include('partials.seller-header')
 
         <div class="dashboard-wrapper">
 

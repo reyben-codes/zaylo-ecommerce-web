@@ -1,6 +1,8 @@
 <?php
 
 return [
+    'seller_managed_delivery' => env('SELLER_MANAGED_DELIVERY', true),
+
     'categories' => [
         'fashion' => 'Fashion',
         'electronics' => 'Electronics',

@@ -11,8 +11,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -692,92 +691,14 @@
         }
     </style>
     <link rel="stylesheet" href="{{ asset('css/seller-sidebar.css') }}?v={{ filemtime(public_path('css/seller-sidebar.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/seller-header.css') }}?v={{ filemtime(public_path('css/seller-header.css')) }}">
 </head>
 
 <body class="seller-workspace">
 
     <!-- ================= HEADER ================= -->
 
-    <header class="navbar">
-
-        <div class="header-left">
-
-            <button
-                class="menu-toggle"
-                id="menu-toggle"
-                aria-label="Open Menu"
-                aria-expanded="false"
-                type="button">
-
-                <i class="fas fa-bars" id="menu-open-icon"></i>
-                <i class="fas fa-times" id="menu-close-icon" style="display: none;"></i>
-
-            </button>
-
-        </div>
-
-        <a href="{{ route('seller.dashboard') }}" class="logo">
-
-            <img
-                src="{{ asset('images/ZAYLO_LOGO_DARK.png') }}"
-                alt="ZAYLO Logo"
-                class="logo-image">
-
-        </a>
-
-        <div class="nav-actions">
-
-            <div class="search-wrapper">
-
-                <span class="search-icon">
-                    <i class="fas fa-search"></i>
-                </span>
-
-                <input
-                    type="text"
-                    id="header-search"
-                    placeholder="Search"
-                    aria-label="Search">
-
-            </div>
-
-            <div class="icon-group">
-
-                <a href="#" aria-label="Notifications">
-
-                    <i class="far fa-bell"></i>
-                    <span class="badge-count">5</span>
-
-                </a>
-
-                <a href="{{ url('/cart') }}" aria-label="Shopping Cart">
-
-                    <i class="fas fa-shopping-bag"></i>
-                    <span class="badge-count">2</span>
-
-                </a>
-
-                <a
-                    href="{{ route('seller.account') }}"
-                    aria-label="Account">
-
-                    <i class="far fa-user"></i>
-
-                </a>
-
-                <a
-                    href="{{ route('login') }}"
-                    class="logout-link">
-
-                    Logout
-
-                </a>
-
-            </div>
-
-        </div>
-
-    </header>
+    @include('partials.seller-header')
 
     <!-- ================= MOBILE MENU ================= -->
 
@@ -1251,32 +1172,6 @@
 
     <script>
 
-        // MOBILE MENU OPEN / CLOSE
-
-        const menuToggle = document.getElementById('menu-toggle');
-        const mobileMenu = document.getElementById('mobile-menu');
-        const menuOpenIcon = document.getElementById('menu-open-icon');
-        const menuCloseIcon = document.getElementById('menu-close-icon');
-
-        menuToggle.addEventListener('click', function () {
-
-            const isOpen = mobileMenu.classList.toggle('show');
-
-            menuToggle.setAttribute('aria-expanded', isOpen);
-
-            if (isOpen) {
-
-                menuOpenIcon.style.display = 'none';
-                menuCloseIcon.style.display = 'inline-block';
-
-            } else {
-
-                menuOpenIcon.style.display = 'inline-block';
-                menuCloseIcon.style.display = 'none';
-
-            }
-
-        });
 
         // INVENTORY FILTER
 
