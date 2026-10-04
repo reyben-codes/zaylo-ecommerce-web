@@ -9,6 +9,7 @@ use App\Http\Controllers\CourierController;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\SellerController;
+use App\Http\Controllers\SortingCenterController;
 use App\Models\Product;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
@@ -126,6 +127,11 @@ Route::middleware(['auth', 'active', 'verified', 'role:courier', 'nocache'])->pr
     Route::get('/history', [CourierController::class, 'history'])->name('history');
     Route::get('/account', [CourierController::class, 'account'])->name('account');
     Route::get('/chat', [CourierController::class, 'chat'])->name('chat');
+});
+
+Route::middleware(['auth', 'active', 'verified', 'role:sorting_center', 'nocache'])->prefix('sorting-center')->name('sorting-center.')->group(function () {
+    Route::get('/dashboard', [SortingCenterController::class, 'dashboard'])->name('dashboard');
+    Route::patch('/shipments/{shipment}/status', [SortingCenterController::class, 'updateStatus'])->name('shipments.status');
 });
 
 Route::middleware(['auth', 'active', 'verified', 'role:admin', 'nocache'])->prefix('admin')->name('admin.')->group(function () {
