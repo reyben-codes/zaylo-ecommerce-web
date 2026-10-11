@@ -1,0 +1,259 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Http\Requests\RegisterRiderRequest;
+use App\Models\RiderApplication;
+use App\Models\User;
+use App\Services\PsgcService;
+use App\Notifications\VerifyEmailCode;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use LogicException;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
+use Tests\TestCase;
+
+class MobileRiderRegistrationTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // Location names normally come from the PSGC website; tests stay offline.
+        $this->mock(PsgcService::class, fn ($mock) => $mock->shouldReceive('addressNames')->andReturn([
+            'region_name' => 'CALABARZON', 'province' => 'Laguna', 'city' => 'City of Calamba', 'barangay' => 'Halang',
+        ]));
+    }
+
+    /** A 1x1 PNG, so the tests do not need the GD extension. */
+    private function photo(string $name): UploadedFile
+    {
+        return UploadedFile::fake()->createWithContent($name, base64_decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
+        ));
+    }
+
+    private function payload(array $overrides = []): array
+    {
+        return array_merge([
+            'first_name' => 'Juan',
+            'last_name' => 'Dela Cruz',
+            'date_of_birth' => '1995-04-12',
+            'gender' => 'male',
+            'region_code' => '040000000',
+            'province_code' => '043400000',
+            'city_municipality_code' => '043405000',
+            'barangay_code' => '043405029',
+            'line1' => '12 Rizal St.',
+            'postal_code' => '4027',
+            'email' => 'juan.rider@example.test',
+            'phone' => '09171234567',
+            'password' => 'Zaylo#2026',
+            'password_confirmation' => 'Zaylo#2026',
+            'license_number' => 'n01-23-456789',
+            'license_expires_on' => now()->addYear()->toDateString(),
+            'vehicle_type' => 'motorcycle',
+            'plate_number' => 'abc123',
+            'terms_accepted' => '1',
+            'license_image' => $this->photo('license.png'),
+            'or_cr_image' => $this->photo('or-cr.png'),
+        ], $overrides);
+    }
+
+    public function test_rider_registers_as_pending_with_private_documents(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+        Notification::fake();
+
+        $this->post('/api/mobile/rider/register', $this->payload(), ['Accept' => 'application/json'])
+            ->assertCreated()
+            ->assertJsonPath('email', 'juan.rider@example.test')
+            ->assertJsonPath('status', 'pending')
+            ->assertJsonPath('message', fn ($message) => str_contains($message, '24 hours'));
+
+        $user = User::where('email', 'juan.rider@example.test')->firstOrFail();
+        $this->assertTrue($user->hasRole('rider'));
+        $this->assertSame('pending', $user->status);
+        $this->assertSame('1995-04-12', $user->date_of_birth->toDateString());
+        $this->assertSame('male', $user->gender);
+        $address = $user->addresses()->sole();
+        $this->assertTrue($address->is_default);
+        $this->assertSame('12 Rizal St., Halang, City of Calamba, Laguna, CALABARZON, 4027', $address->formatted());
+
+        $application = $user->riderApplication;
+        $this->assertSame('N01-23-456789', $application->license_number);
+        $this->assertSame('motorcycle', $application->vehicle_type);
+        $this->assertSame('ABC123', $application->plate_number);
+        $this->assertSame('pending', $application->status);
+        Storage::disk('local')->assertExists([$application->license_image_path, $application->or_cr_image_path]);
+        $this->assertSame([], Storage::disk('public')->allFiles());
+
+        $this->assertNotNull($application->terms_accepted_at);
+        $this->assertSame(RiderApplication::TERMS_VERSION, $application->terms_version);
+        // Sign-up has no code step; the email is confirmed at first sign-in after approval.
+        Notification::assertNotSentTo($user, VerifyEmailCode::class);
+    }
+
+    public function test_pending_rider_cannot_sign_in_until_approved(): void
+    {
+        Storage::fake('local');
+        Notification::fake();
+        $this->post('/api/mobile/rider/register', $this->payload(), ['Accept' => 'application/json'])->assertCreated();
+        User::where('email', 'juan.rider@example.test')->update(['email_verified_at' => now()]);
+
+        $this->postJson('/api/mobile/rider/login', ['email' => 'juan.rider@example.test', 'password' => 'Zaylo#2026'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['email' => 'still under review']);
+    }
+
+    public function test_registration_rules_match_the_app_form(): void
+    {
+        Storage::fake('local');
+
+        $this->post('/api/mobile/rider/register', $this->payload([
+            'first_name' => 'J',
+            'last_name' => str_repeat('a', 51),
+            'date_of_birth' => now()->subYears(16)->toDateString(),
+            'license_expires_on' => now()->subDay()->toDateString(),
+            'vehicle_type' => 'rocket',
+            'license_image' => null,
+            'or_cr_image' => UploadedFile::fake()->createWithContent('or-cr.gif', base64_decode('R0lGODlhAQABAAAAACw=')),
+        ]), ['Accept' => 'application/json'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'first_name' => 'at least 2 characters',
+                'last_name' => '50 characters or fewer',
+                'date_of_birth' => 'at least 18',
+                'license_expires_on' => 'expired',
+                'vehicle_type',
+                'license_image' => 'Upload a photo',
+                'or_cr_image' => 'Only JPG, PNG, or PDF',
+            ]);
+
+        $this->assertDatabaseCount('users', 0);
+        $this->assertSame([], Storage::disk('local')->allFiles());
+    }
+
+    public function test_check_endpoint_reports_taken_details_and_formats_before_upload(): void
+    {
+        Storage::fake('local');
+        Notification::fake();
+        $this->post('/api/mobile/rider/register', $this->payload(), ['Accept' => 'application/json'])->assertCreated();
+
+        $details = collect($this->payload())->except(['license_image', 'or_cr_image'])->all();
+
+        // Same email, phone, license, and plate as the rider who just registered.
+        $this->postJson('/api/mobile/rider/register/check', $details)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'email' => 'already registered',
+                'phone' => 'already registered',
+                'license_number' => 'already registered',
+                'plate_number' => 'already registered',
+            ]);
+
+        $this->postJson('/api/mobile/rider/register/check', array_merge($details, [
+            'email' => 'no-extension@example',
+            'phone' => '19171234567',
+            'license_number' => '001-23-456789',
+            'plate_number' => 'ABCDEF',
+            'license_expires_on' => now(RegisterRiderRequest::TIMEZONE)->subDay()->toDateString(),
+        ]))->assertUnprocessable()->assertJsonValidationErrors([
+            'email' => 'valid email address',
+            'phone' => 'start with 09',
+            'license_number' => 'A00-00-000000',
+            'plate_number' => 'at least one of each',
+            'license_expires_on' => 'expired',
+        ]);
+
+        // A license expiring today is still valid; dashes and case are normalized.
+        $this->postJson('/api/mobile/rider/register/check', array_merge($details, [
+            'email' => 'second.rider@example.com',
+            'phone' => '09181234567',
+            'license_number' => 'm9876543210',
+            'plate_number' => 'xyz 789',
+            'license_expires_on' => now(RegisterRiderRequest::TIMEZONE)->toDateString(),
+        ]))->assertOk()->assertJson(['valid' => true]);
+    }
+
+    public function test_documents_over_five_megabytes_are_rejected(): void
+    {
+        Storage::fake('local');
+
+        $this->post('/api/mobile/rider/register', $this->payload([
+            'license_image' => UploadedFile::fake()->create('license.pdf', 5121, 'application/pdf'),
+        ]), ['Accept' => 'application/json'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['license_image']);
+    }
+
+    public function test_application_requires_accepting_the_rider_terms(): void
+    {
+        Storage::fake('local');
+
+        $this->post('/api/mobile/rider/register', $this->payload(['terms_accepted' => '0']), ['Accept' => 'application/json'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['terms_accepted' => 'Rider Terms and Conditions']);
+
+        $this->assertDatabaseCount('rider_applications', 0);
+        $this->assertSame([], Storage::disk('local')->allFiles());
+    }
+
+    public function test_approved_rider_confirms_email_with_a_code_at_first_sign_in(): void
+    {
+        Storage::fake('local');
+        Notification::fake();
+        $this->post('/api/mobile/rider/register', $this->payload(), ['Accept' => 'application/json'])->assertCreated();
+        $user = User::where('email', 'juan.rider@example.test')->firstOrFail();
+        $user->update(['status' => 'active']); // approved by an administrator
+
+        $this->postJson('/api/mobile/rider/login', ['email' => $user->email, 'password' => 'Zaylo#2026'])
+            ->assertForbidden()
+            ->assertJsonPath('code', 'unverified');
+
+        $this->postJson('/api/mobile/resend-verification', ['email' => $user->email])->assertOk();
+        Notification::assertSentTo($user, VerifyEmailCode::class);
+    }
+
+    public function test_logistics_approval_activates_the_rider_and_creates_their_courier_profile(): void
+    {
+        Storage::fake('local');
+        $this->post('/api/mobile/rider/register', $this->payload(), ['Accept' => 'application/json'])->assertCreated();
+        $application = RiderApplication::firstOrFail();
+        $reviewer = User::factory()->create(['role' => 'admin', 'status' => 'active']);
+
+        $application->approve($reviewer, 'Documents checked.');
+
+        $application->refresh();
+        $this->assertSame(RiderApplication::STATUS_APPROVED, $application->status);
+        $this->assertTrue($application->reviewer->is($reviewer));
+        $this->assertNotNull($application->reviewed_at);
+        $this->assertSame('active', $application->user->status);
+        $this->assertSame($reviewer->id, $application->user->approved_by);
+        $this->assertDatabaseHas('courier_profiles', [
+            'user_id' => $application->user_id,
+            'vehicle_type' => 'motorcycle',
+            'license_number' => 'N01-23-456789',
+        ]);
+
+        $this->expectException(LogicException::class);
+        $application->approve($reviewer);
+    }
+
+    public function test_rejected_rider_sees_the_reason_when_signing_in(): void
+    {
+        Storage::fake('local');
+        $this->post('/api/mobile/rider/register', $this->payload(), ['Accept' => 'application/json'])->assertCreated();
+        $application = RiderApplication::firstOrFail();
+
+        $application->reject('License photo is unreadable.');
+
+        $this->assertSame('suspended', $application->user->fresh()->status);
+        $this->postJson('/api/mobile/rider/login', ['email' => 'juan.rider@example.test', 'password' => 'Zaylo#2026'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['email' => 'not approved: License photo is unreadable.']);
+    }
+}

@@ -4,7 +4,7 @@
 @section('content')
 <main class="auth-simple">
     <h1>Choose a new password</h1>
-    <p id="password-note">Use at least 8 characters, one uppercase letter, one lowercase letter, and one symbol.</p>
+    <p id="password-note">Use at least 8 characters, one uppercase letter, one lowercase letter, one number, and one symbol.</p>
     @if($errors->any())<p class="error">{{ $errors->first() }}</p>@endif
     <form method="POST" action="{{ route('password.update') }}">
         @csrf

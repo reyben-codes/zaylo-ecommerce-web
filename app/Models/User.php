@@ -11,11 +11,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Schema;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
     private ?string $pendingRole = null;
 
@@ -24,6 +25,9 @@ class User extends Authenticatable implements MustVerifyEmail
      *
      * @var list<string>
      */
+    /** Gender options offered at rider sign-up, keyed by stored value. */
+    public const GENDERS = ['male' => 'Male', 'female' => 'Female'];
+
     protected $fillable = [
         'name',
         'email',
@@ -31,6 +35,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'role',
         'phone',
         'date_of_birth',
+        'gender',
         'address',
         'status',
         'is_suspended',
@@ -132,6 +137,16 @@ class User extends Authenticatable implements MustVerifyEmail
     public function rider(): HasOne
     {
         return $this->hasOne(Rider::class);
+    }
+
+    public function riderApplication(): HasOne
+    {
+        return $this->hasOne(RiderApplication::class);
+    }
+
+    public function courierProfile(): HasOne
+    {
+        return $this->hasOne(CourierProfile::class);
     }
 
     public function cart()

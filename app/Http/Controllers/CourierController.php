@@ -2,21 +2,21 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Order;
 use App\Models\Shipment;
+use App\Services\DeliveryService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 
 class CourierController extends Controller
 {
     public function dashboard()
     {
+        $deliveries = app(DeliveryService::class);
+
         return view('courier.dashboard', [
             'user' => auth()->user(),
-            'availableCount' => Shipment::whereNull('courier_id')->where('status', 'ready')->count(),
-            'activeCount' => Shipment::where('courier_id', auth()->id())->whereNotIn('status', ['delivered', 'cancelled'])->count(),
-            'completedCount' => Shipment::where('courier_id', auth()->id())->where('status', 'delivered')->count(),
+            'availableCount' => $deliveries->available()->count(),
+            'activeCount' => $deliveries->active(auth()->user())->count(),
+            'completedCount' => $deliveries->completed(auth()->user())->count(),
         ]);
     }
 
@@ -27,58 +27,19 @@ class CourierController extends Controller
         return view('courier.deliveries', compact('available', 'assigned'));
     }
 
-    public function claim(Shipment $shipment)
+    public function claim(Shipment $shipment, DeliveryService $deliveries)
     {
-        DB::transaction(function () use ($shipment) {
-            $locked = Shipment::whereKey($shipment->id)->lockForUpdate()->firstOrFail();
-            if ($locked->courier_id || $locked->status !== 'ready') {
-                throw ValidationException::withMessages(['delivery' => 'This delivery is no longer available.']);
-            }
-            $locked->update(['courier_id' => auth()->id(), 'status' => 'assigned']);
-            $locked->order()->update(['status' => 'assigned']);
-            $locked->order->statusHistory()->create([
-                'changed_by' => auth()->id(), 'status' => 'assigned', 'note' => 'Courier accepted delivery.',
-            ]);
-        });
+        $deliveries->claim($shipment, auth()->user());
+
         return back()->with('status', 'Delivery accepted.');
     }
 
-    public function updateDelivery(Request $request, Shipment $shipment)
+    public function updateDelivery(Request $request, Shipment $shipment, DeliveryService $deliveries)
     {
         abort_unless($shipment->courier_id === auth()->id(), 403);
         $data = $request->validate(['status' => 'required|in:picked_up,in_transit,delivered']);
-        $allowed = ['assigned' => ['picked_up'], 'picked_up' => ['in_transit'], 'in_transit' => ['delivered']];
+        $deliveries->advance($shipment, auth()->user(), $data['status']);
 
-        DB::transaction(function () use ($shipment, $data, $allowed) {
-            $locked = Shipment::whereKey($shipment->id)->lockForUpdate()->firstOrFail();
-            if (! in_array($data['status'], $allowed[$locked->status] ?? [], true)) {
-                throw ValidationException::withMessages(['status' => 'That delivery status transition is not allowed.']);
-            }
-            $timestamps = match ($data['status']) {
-                'picked_up' => ['picked_up_at' => now()],
-                'delivered' => ['delivered_at' => now()],
-                default => [],
-            };
-            $locked->update(['status' => $data['status']] + $timestamps);
-            $orderStatus = $data['status'] === 'delivered' ? 'completed' : $data['status'];
-            $locked->order()->update(['status' => $orderStatus] + ($orderStatus === 'completed' ? ['completed_at' => now()] : []));
-            $locked->order->statusHistory()->create([
-                'changed_by' => auth()->id(), 'status' => $orderStatus, 'note' => 'Updated by courier.',
-            ]);
-            if ($data['status'] === 'delivered') {
-                $locked->order->payment?->update(['status' => 'paid', 'paid_at' => now()]);
-                if ($locked->order->seller_id) {
-                    DB::table('commissions')->updateOrInsert(
-                        ['order_id' => $locked->order_id],
-                        [
-                            'seller_id' => $locked->order->seller_id, 'rate' => 10,
-                            'amount' => round((float) $locked->order->subtotal * 0.10, 2),
-                            'status' => 'earned', 'created_at' => now(), 'updated_at' => now(),
-                        ]
-                    );
-                }
-            }
-        });
         return back()->with('status', 'Delivery status updated.');
     }
 

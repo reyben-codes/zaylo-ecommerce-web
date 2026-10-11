@@ -2,30 +2,24 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Address;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Order;
-use App\Models\Payment;
 use App\Models\Product;
 use App\Models\ProductVariant;
-use App\Models\User;
-use App\Models\Voucher;
 use App\Rules\PersonName;
 use App\Rules\PhoneNumber;
 use App\Rules\StrongPassword;
 use App\Models\Wishlist;
+use App\Services\CartService;
+use App\Services\CheckoutService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class BuyerController extends Controller
 {
-    private const SHIPPING_PER_SELLER = 120.00;
-
     public function dashboard()
     {
         $base = Product::where('is_active', true);
@@ -153,30 +147,9 @@ class BuyerController extends Controller
         return view('buyer.orders', compact('orders', 'filter', 'counts'));
     }
 
-    public function cancelOrder(Order $order)
+    public function cancelOrder(Order $order, CheckoutService $checkout)
     {
-        abort_unless($order->user_id === auth()->id(), 403);
-
-        DB::transaction(function () use ($order) {
-            $lockedOrder = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
-            if (! in_array($lockedOrder->status, ['placed', 'confirmed'], true)) {
-                throw ValidationException::withMessages(['order' => 'This order can no longer be cancelled.']);
-            }
-            $lockedOrder->load(['items', 'shipment', 'payment']);
-            foreach ($lockedOrder->items as $item) {
-                if ($item->product_variant_id) {
-                    ProductVariant::whereKey($item->product_variant_id)->increment('stock', $item->quantity);
-                } elseif ($item->product_id) {
-                    Product::whereKey($item->product_id)->increment('stock', $item->quantity);
-                }
-            }
-            $lockedOrder->update(['status' => 'cancelled']);
-            $lockedOrder->shipment?->update(['status' => 'cancelled']);
-            $lockedOrder->payment?->update(['status' => 'cancelled']);
-            $lockedOrder->statusHistory()->create([
-                'changed_by' => auth()->id(), 'status' => 'cancelled', 'note' => 'Cancelled by buyer.',
-            ]);
-        });
+        $checkout->cancel($order, auth()->user());
 
         return back()->with('status', 'Order cancelled and stock restored.');
     }
@@ -226,23 +199,19 @@ class BuyerController extends Controller
             return redirect()->route('buyer.cart')->withErrors(['cart' => 'Select products from your cart to continue.']);
         }
 
-        $voucherCode = Str::upper(trim((string) $request->query('voucher', '')));
-        $voucher = null;
-        if ($voucherCode !== '') {
-            $voucher = Voucher::where('code', $voucherCode)->first();
-            if (! $voucher?->isAvailable() || $voucher->type !== 'free_shipping') {
-                return redirect()->route('buyer.checkout.show')->withErrors(['voucher_code' => 'This voucher is invalid or no longer available.']);
-            }
+        $checkout = app(CheckoutService::class);
+        try {
+            $voucher = $checkout->voucher($checkout->normalizeVoucherCode($request->query('voucher', '')));
+        } catch (ValidationException $exception) {
+            return redirect()->route('buyer.checkout.show')->withErrors($exception->errors());
         }
-
-        $subtotal = $items->sum(fn (CartItem $item) => $item->unitPrice() * $item->quantity);
-        $shipping = $items->pluck('product.seller_id')->unique()->count() * self::SHIPPING_PER_SELLER;
+        $totals = $checkout->quote($items, $voucher);
 
         return view('buyer.checkout', [
             'items' => $items,
-            'subtotal' => $subtotal,
-            'shipping' => $shipping,
-            'shippingDiscount' => $voucher ? $shipping : 0,
+            'subtotal' => $totals['subtotal'],
+            'shipping' => $totals['shipping'],
+            'shippingDiscount' => $totals['shipping_discount'],
             'voucher' => $voucher,
             'addresses' => $request->user()->addresses()->orderByDesc('is_default')->orderBy('id')->get(),
             'estimatedShipStart' => now()->addWeekdays(2),
@@ -257,47 +226,9 @@ class BuyerController extends Controller
             'product_variant_id' => 'nullable|integer|exists:product_variants,id',
             'purchase_action' => ['nullable', Rule::in(['add_to_cart', 'buy_now'])],
         ]);
-        abort_unless($product->is_active, 404);
-        $legacyCart = Schema::hasColumn('cart_items', 'product_id');
-        $variant = ! empty($validated['product_variant_id'])
-            ? $product->variants()->whereKey($validated['product_variant_id'])->where('is_active', true)->firstOrFail()
-            : ($product->variants()->where('is_active', true)->count() === 1
-                ? $product->variants()->where('is_active', true)->first()
-                : null);
-        if (! $variant && (! $legacyCart || $product->variants()->where('is_active', true)->exists())) {
-            throw ValidationException::withMessages([
-                'product_variant_id' => 'Please choose an available option before adding this product to your cart.',
-            ]);
-        }
-        $available = (int) ($variant?->stock ?? $product->stock);
-        $cart = Cart::firstOrCreate(['user_id' => auth()->id()]);
-        $itemQuery = $cart->items();
-        if ($legacyCart) {
-            $itemQuery->where('product_id', $product->id);
-            $variant
-                ? $itemQuery->where('product_variant_id', $variant->id)
-                : $itemQuery->whereNull('product_variant_id');
-        } else {
-            $itemQuery->where('product_variant_id', $variant->id);
-        }
-        $item = $itemQuery->first();
-        $newQuantity = ($item?->quantity ?? 0) + $validated['quantity'];
-
-        if ($newQuantity > $available) {
-            throw ValidationException::withMessages(['quantity' => "Only {$available} item(s) are available."]);
-        }
-        if ($item) {
-            $item->update(['quantity' => $newQuantity]);
-        } else {
-            $data = [
-                'product_variant_id' => $variant?->id,
-                'quantity' => $validated['quantity'],
-            ];
-            if ($legacyCart) {
-                $data['product_id'] = $product->id;
-            }
-            $item = $cart->items()->create($data);
-        }
+        $item = app(CartService::class)->add(
+            $request->user(), $product, $validated['quantity'], $validated['product_variant_id'] ?? null,
+        );
 
         if (($validated['purchase_action'] ?? 'add_to_cart') === 'buy_now') {
             $request->session()->put('checkout_cart_item_ids', [$item->id]);
@@ -312,11 +243,7 @@ class BuyerController extends Controller
     {
         abort_unless($cartItem->cart->user_id === auth()->id(), 403);
         $validated = $request->validate(['quantity' => 'required|integer|min:1|max:99']);
-        $cartItem->load(['product', 'variant']);
-        if ($validated['quantity'] > $cartItem->availableStock()) {
-            throw ValidationException::withMessages(['quantity' => 'Requested quantity exceeds available stock.']);
-        }
-        $cartItem->update($validated);
+        app(CartService::class)->updateQuantity($cartItem, $validated['quantity']);
 
         return back()->with('status', 'Cart updated.');
     }
@@ -340,8 +267,8 @@ class BuyerController extends Controller
             'cart_item_ids.*' => ['required', 'integer', 'distinct'],
             'voucher_code' => ['nullable', 'string', 'max:50'],
         ]);
-        $validated['payment_method'] ??= 'cod';
-        if (Payment::where('idempotency_key', 'like', $validated['idempotency_key'].'%')->exists()) {
+        $checkout = app(CheckoutService::class);
+        if ($checkout->alreadyPlaced($validated['idempotency_key'])) {
             return redirect()->route('buyer.orders')->with('status', 'This checkout was already completed.');
         }
         $cart = Cart::where('user_id', auth()->id())->with(['items.product', 'items.variant'])->first();
@@ -350,82 +277,7 @@ class BuyerController extends Controller
         }
 
         $selectedIds = $validated['cart_item_ids'] ?? $request->session()->get('checkout_cart_item_ids') ?? $cart->items->pluck('id')->all();
-        $voucherCode = Str::upper(trim((string) ($validated['voucher_code'] ?? '')));
-
-        DB::transaction(function () use ($selectedIds, $validated, $voucherCode) {
-            User::whereKey(auth()->id())->lockForUpdate()->firstOrFail();
-            $cart = Cart::where('user_id', auth()->id())->with(['items.product', 'items.variant'])->firstOrFail();
-            $itemsToOrder = $cart->items->whereIn('id', $selectedIds);
-            if ($itemsToOrder->isEmpty() || $itemsToOrder->count() !== count($selectedIds)) {
-                throw ValidationException::withMessages(['cart' => 'Your cart changed. Review your selection and try again.']);
-            }
-            $voucher = null;
-            if ($voucherCode !== '') {
-                $voucher = Voucher::where('code', $voucherCode)->lockForUpdate()->first();
-                if (! $voucher?->isAvailable() || $voucher->type !== 'free_shipping') {
-                    throw ValidationException::withMessages(['voucher_code' => 'This voucher is invalid or no longer available.']);
-                }
-            }
-            $address = Address::where('user_id', auth()->id())->whereKey($validated['address_id'])->firstOrFail();
-            if (! $address->isStructured()) {
-                throw ValidationException::withMessages(['address_id' => 'Please edit this saved address and select its Philippine locations before checkout.']);
-            }
-
-            foreach ($itemsToOrder->groupBy(fn ($item) => $item->product->seller_id ?? 0) as $sellerId => $items) {
-                $prepared = collect();
-                foreach ($items as $item) {
-                    $product = Product::whereKey($item->product_id)->lockForUpdate()->firstOrFail();
-                    $variant = $item->product_variant_id
-                        ? ProductVariant::whereKey($item->product_variant_id)->lockForUpdate()->firstOrFail()
-                        : null;
-                    $stock = (int) ($variant?->stock ?? $product->stock);
-                    if (! $product->is_active || $stock < $item->quantity) {
-                        throw ValidationException::withMessages(['cart' => "{$product->name} no longer has enough stock."]);
-                    }
-                    $prepared->push(compact('item', 'product', 'variant') + [
-                        'unitPrice' => (float) ($variant?->price ?? $product->price),
-                    ]);
-                }
-
-                $subtotal = $prepared->sum(fn ($row) => $row['unitPrice'] * $row['item']->quantity);
-                $shippingDiscount = $voucher ? self::SHIPPING_PER_SELLER : 0;
-                $shippingFee = self::SHIPPING_PER_SELLER - $shippingDiscount;
-                $order = Order::create([
-                    'order_number' => 'ZAY-'.now()->format('ymd').'-'.Str::upper(Str::random(8)),
-                    'user_id' => auth()->id(), 'seller_id' => $sellerId ?: null, 'status' => 'placed',
-                    'subtotal' => $subtotal, 'shipping_fee' => $shippingFee, 'total' => $subtotal + $shippingFee,
-                    'voucher_code' => $voucher?->code, 'shipping_discount' => $shippingDiscount,
-                    'payment_method' => $validated['payment_method'], 'recipient_name' => $address->recipient_name,
-                    'phone' => $address->phone, 'shipping_address' => $address->formatted(),
-                    'notes' => $validated['notes'] ?? null, 'placed_at' => now(),
-                ]);
-
-                foreach ($prepared as $row) {
-                    $item = $row['item'];
-                    $product = $row['product'];
-                    $variant = $row['variant'];
-                    $unitPrice = $row['unitPrice'];
-                    $order->items()->create([
-                        'product_id' => $product->id, 'product_variant_id' => $variant?->id,
-                        'seller_id' => $product->seller_id,
-                        'product_name' => $product->name.($variant ? ' — '.$variant->name : ''),
-                        'sku' => $variant?->sku ?? $product->sku, 'unit_price' => $unitPrice,
-                        'quantity' => $item->quantity, 'line_total' => $unitPrice * $item->quantity,
-                    ]);
-                    $variant ? $variant->decrement('stock', $item->quantity) : $product->decrement('stock', $item->quantity);
-                }
-
-                $order->payment()->create([
-                    'provider' => $validated['payment_method'], 'status' => 'pending', 'amount' => $order->total,
-                    'currency' => 'PHP', 'idempotency_key' => $validated['idempotency_key'].'-'.$order->id,
-                ]);
-                $order->statusHistory()->create([
-                    'changed_by' => auth()->id(), 'status' => 'placed', 'note' => 'Order placed by buyer.',
-                ]);
-            }
-            $voucher?->increment('used_count');
-            $cart->items()->whereIn('id', $selectedIds)->delete();
-        });
+        $checkout->place($request->user(), $selectedIds, $validated, $checkout->normalizeVoucherCode($validated['voucher_code'] ?? null));
 
         $request->session()->forget('checkout_cart_item_ids');
 

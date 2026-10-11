@@ -56,5 +56,4 @@ class AdminController extends Controller
     public function reports() { return view('admin.reports'); }
     public function settings() { return view('admin.settings'); }
     public function account() { return view('admin.account'); }
-    public function chat() { return view('admin.chat'); }
 }

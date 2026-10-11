@@ -4,10 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\SaveAddressRequest;
 use App\Models\Address;
-use App\Models\User;
+use App\Services\AddressBook;
 use App\Services\PsgcService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
 
 class AddressController extends Controller
@@ -58,23 +57,7 @@ class AddressController extends Controller
         } catch (ServiceUnavailableHttpException $exception) {
             return back()->withInput()->withErrors(['region_code' => $exception->getMessage()]);
         }
-        $saved = DB::transaction(function () use ($request, $address, $data) {
-            // Serialize all address/default mutations for this account.
-            $user = User::whereKey($request->user()->id)->lockForUpdate()->firstOrFail();
-            $current = $address ? $user->addresses()->whereKey($address->id)->firstOrFail() : new Address;
-            $makeDefault = $data['is_default'] || $current->is_default
-                || ! $user->addresses()->where('is_default', true)->exists();
-            if ($makeDefault) {
-                $user->addresses()->when($current->exists, fn ($query) => $query->where('id', '!=', $current->id))
-                    ->update(['is_default' => false]);
-            }
-            $current->fill($data);
-            $current->user_id = $user->id;
-            $current->is_default = $makeDefault;
-            $current->save();
-
-            return $current;
-        });
+        $saved = app(AddressBook::class)->save($request->user(), $data, $address);
 
         if ($request->input('return_to') === 'checkout' && $request->user()->role === 'buyer') {
             return redirect()->route('buyer.checkout.show')->with('selected_address_id', $saved->id)->with('status', 'Address saved.');
@@ -86,12 +69,7 @@ class AddressController extends Controller
     public function makeDefault(Request $request, Address $address)
     {
         $this->owned($request, $address);
-        DB::transaction(function () use ($request, $address) {
-            $user = User::whereKey($request->user()->id)->lockForUpdate()->firstOrFail();
-            $current = $user->addresses()->whereKey($address->id)->firstOrFail();
-            $user->addresses()->where('id', '!=', $current->id)->update(['is_default' => false]);
-            $current->update(['is_default' => true]);
-        });
+        app(AddressBook::class)->makeDefault($request->user(), $address);
 
         return back()->with('status', 'Default address updated.');
     }
@@ -99,16 +77,7 @@ class AddressController extends Controller
     public function destroy(Request $request, Address $address)
     {
         $this->owned($request, $address);
-        DB::transaction(function () use ($request, $address) {
-            $user = User::whereKey($request->user()->id)->lockForUpdate()->firstOrFail();
-            $current = $user->addresses()->whereKey($address->id)->firstOrFail();
-            $wasDefault = $current->is_default;
-            $current->delete();
-            if ($wasDefault) {
-                $user->addresses()->update(['is_default' => false]);
-                $user->addresses()->orderBy('id')->first()?->update(['is_default' => true]);
-            }
-        });
+        app(AddressBook::class)->delete($request->user(), $address);
 
         return redirect()->route('addresses.index')->with('status', 'Address deleted. Existing orders are unchanged.');
     }

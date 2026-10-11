@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AdminSupportController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BuyerController;
 use App\Http\Controllers\BuyerNotificationController;
@@ -145,5 +146,6 @@ Route::middleware(['auth', 'active', 'verified', 'role:admin', 'nocache'])->pref
     Route::get('/reports', [AdminController::class, 'reports'])->name('reports');
     Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
     Route::get('/account', [AdminController::class, 'account'])->name('account');
-    Route::get('/chat', [AdminController::class, 'chat'])->name('chat');
+    Route::get('/chat', [AdminSupportController::class, 'index'])->name('chat');
+    Route::post('/chat/{conversation}/messages', [AdminSupportController::class, 'reply'])->name('chat.reply');
 });

@@ -137,7 +137,7 @@
                         <input id="password-confirmation" type="password" name="password_confirmation" autocomplete="new-password" minlength="8" required>
                     </label>
                 </div>
-                <p id="profile-password-note" class="empty-note">Use at least 8 characters, one uppercase letter, one lowercase letter, and one symbol.</p>
+                <p id="profile-password-note" class="empty-note">Use at least 8 characters, one uppercase letter, one lowercase letter, one number, and one symbol.</p>
                 <div><button class="market-button" type="submit">{{ filled($user->getAuthPassword()) ? 'Update password' : 'Create password' }}</button></div>
             </form>
         </section>

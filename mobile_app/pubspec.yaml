@@ -1,0 +1,42 @@
+name: zaylo_mobile
+description: ZAYLO's buyer-facing mobile marketplace.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  file_picker: ^13.1.0
+  flutter:
+    sdk: flutter
+  flutter_secure_storage: ^11.2.0
+  image_picker: ^1.2.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/ZAYLO_LOGO_DARK.png
+    - assets/images/ZAYLO_LOGO_LIGHT.png
+    - assets/fonts/OFL.txt
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Variable.ttf
+        - asset: assets/fonts/Inter-Italic-Variable.ttf
+          style: italic
+    - family: Playfair Display
+      fonts:
+        - asset: assets/fonts/PlayfairDisplay-Variable.ttf
+        - asset: assets/fonts/PlayfairDisplay-Italic-Variable.ttf
+          style: italic
+
+# path_provider_android 2.3+ builds the native `jni` library, whose CMake step
+# fails on Windows with a locked timing file. 2.2.x has no native build.
+dependency_overrides:
+  path_provider_android: ">=2.2.0 <2.3.0"
