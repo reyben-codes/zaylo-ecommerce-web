@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -5,25 +6,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>ZAYLO · Admin Account</title>
+    <title>ZAYLO · Account Management</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-    <link
-        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600&display=swap"
-        rel="stylesheet"
-    >
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
 
-    <link
-        rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
-    >
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
     <style>
-        /* ========================================
-           RESET
-        ======================================== */
+        :root {
+            --black: #1a1714;
+            --brown: #6b5f54;
+            --light-brown: #8a7a6b;
+            --accent: #b28b6f;
+            --cream: #faf7f2;
+            --soft-cream: #f5f0ea;
+            --border: #ece4db;
+            --input-border: #ded5cc;
+            --white: #ffffff;
+        }
 
         * {
             margin: 0;
@@ -31,176 +36,153 @@
             box-sizing: border-box;
         }
 
-        html {
-            scroll-behavior: smooth;
+        html,
+        body {
+            width: 100%;
+            min-height: 100%;
         }
 
         body {
-            background: #faf7f2;
-            font-family: 'Inter', 'Helvetica Neue', sans-serif;
-            color: #1e1e1e;
-            line-height: 1.4;
+            background: var(--cream);
+            color: var(--black);
+            font-family: "Inter", sans-serif;
+            overflow-x: hidden;
         }
 
         a {
             text-decoration: none;
+            color: inherit;
         }
 
         button,
-        input {
-            font-family: 'Inter', sans-serif;
+        input,
+        select {
+            font-family: inherit;
         }
 
-        /* ========================================
-           TOP GREEN LINE
-        ======================================== */
+        button {
+            cursor: pointer;
+        }
 
-        .top-line {
-            position: fixed;
-            top: 0;
-            left: 0;
+        .container {
             width: 100%;
-            height: 3px;
-            background: #6f8f72;
-            z-index: 2000;
+            min-height: 100vh;
         }
 
-        /* ========================================
-           ADMIN HEADER
-        ======================================== */
+        /* HEADER */
 
         .navbar {
-            position: fixed;
-            top: 3px;
-            left: 0;
-            right: 0;
-
-            height: 68px;
-
+            width: 100%;
+            height: 64px;
+            padding: 0 28px;
+            background: var(--white);
             display: flex;
             align-items: center;
-            justify-content: center;
-
-            background: #ffffff;
-
-            border-bottom: 1px solid #e8e3dc;
-
-            z-index: 1500;
-
-            padding: 0 28px;
+            justify-content: space-between;
+            position: relative;
+            border-bottom: 1px solid var(--border);
         }
 
-        .header-logo {
+        .nav-spacer {
+            width: 240px;
+        }
+
+        .logo {
             position: absolute;
             left: 50%;
-            top: 50%;
-
-            transform: translate(-50%, -50%);
-
-            display: flex;
-            align-items: center;
-            justify-content: center;
-
-            text-decoration: none;
+            transform: translateX(-50%);
         }
 
-        .header-logo img {
+        .logo img {
+            width: 78px;
+            height: auto;
             display: block;
-            width: 82px;
-            height: 82px;
-            object-fit: contain;
         }
 
-        .header-search {
-            position: absolute;
-            right: 28px;
-
+        .nav-actions {
+            margin-left: auto;
             display: flex;
             align-items: center;
-
-            width: 260px;
-            height: 38px;
-
-            background: #f4f2ee;
-
-            border: 1px solid #e5e0d9;
-            border-radius: 22px;
-
-            padding: 0 14px;
-
-            transition: 0.2s ease;
+            gap: 16px;
         }
 
-        .header-search:focus-within {
-            border-color: #6f8f72;
-            background: #ffffff;
-            box-shadow: 0 0 0 3px rgba(111, 143, 114, 0.08);
+        .search-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            background: #f4f1ec;
+            border: 1px solid #e5dfd8;
+            border-radius: 30px;
         }
 
-        .header-search i {
-            color: #6b665f;
-            font-size: 0.8rem;
-            margin-right: 9px;
+        .search-wrapper i {
+            color: var(--brown);
+            font-size: 12px;
         }
 
-        .header-search input {
-            width: 100%;
-
+        .search-wrapper input {
+            width: 130px;
             border: none;
             outline: none;
-
             background: transparent;
-
-            color: #1e1e1e;
-
-            font-size: 0.72rem;
-            font-weight: 400;
+            font-size: 12px;
         }
 
-        .header-search input::placeholder {
-            color: #99938b;
+        .icon-group {
+            display: flex;
+            align-items: center;
+            gap: 18px;
         }
 
-        /* ========================================
-           PAGE LAYOUT
-        ======================================== */
+        .icon-group a {
+            position: relative;
+            font-size: 16px;
+        }
+
+        .icon-group a:hover {
+            color: var(--accent);
+        }
+
+        .badge-count {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            padding: 2px 6px;
+            background: var(--accent);
+            color: var(--white);
+            border-radius: 12px;
+            font-size: 10px;
+        }
+
+        .login-text {
+            border-left: 1px solid #d8d0c8;
+            padding-left: 16px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        /* MAIN LAYOUT */
 
         .dashboard-wrapper {
             display: flex;
-
-            min-height: 100vh;
-
-            padding-top: 71px;
-
-            background: #faf7f2;
+            width: 100%;
+            min-height: calc(100vh - 64px);
         }
 
-        /* ========================================
-           SIDEBAR
-        ======================================== */
+        /* SIDEBAR */
 
         .sidebar {
-            position: fixed;
-            left: 0;
-            top: 71px;
-            bottom: 0;
-
-            width: 245px;
-
-            background: #ffffff;
-
-            border-right: 1px solid #e6e1da;
-
+            width: 240px;
+            flex-shrink: 0;
+            background: var(--white);
+            border-right: 1px solid var(--border);
             padding: 24px 0;
-
-            overflow-y: auto;
-
-            z-index: 1200;
         }
 
         .sidebar-menu {
             list-style: none;
-            padding: 0 14px;
+            padding: 0 16px;
         }
 
         .sidebar-menu li {
@@ -210,1123 +192,1173 @@
         .sidebar-menu a {
             display: flex;
             align-items: center;
-
             gap: 12px;
-
-            width: 100%;
-
             padding: 11px 14px;
-
-            color: #6b665f;
-
-            font-size: 0.75rem;
-            font-weight: 500;
-
-            letter-spacing: 0.01em;
-
-            border-radius: 7px;
-
-            transition:
-                background 0.18s ease,
-                color 0.18s ease,
-                transform 0.18s ease;
+            color: var(--brown);
+            font-size: 12px;
+            border-radius: 3px;
+            transition: 0.2s ease;
         }
 
         .sidebar-menu a:hover {
-            background: #f1f5f1;
-            color: #26372a;
+            background: var(--soft-cream);
+            color: var(--black);
         }
 
         .sidebar-menu a.active {
-            background: #e9f0e9;
-            color: #47634d;
-            font-weight: 600;
+            background: var(--black);
+            color: var(--white);
         }
 
-        .sidebar-menu a i {
-            width: 19px;
-
+        .sidebar-menu i {
+            width: 18px;
             text-align: center;
-
-            font-size: 0.82rem;
-
-            color: #7b827b;
-
-            transition: 0.18s ease;
-        }
-
-        .sidebar-menu a.active i {
-            color: #5d7c62;
-        }
-
-        .sidebar-menu a:hover i {
-            color: #5d7c62;
         }
 
         .sidebar-menu .badge {
             margin-left: auto;
-
-            min-width: 20px;
-
-            padding: 2px 7px;
-
-            background: #6f8f72;
-
-            color: #ffffff;
-
-            border-radius: 10px;
-
-            font-size: 0.55rem;
-            font-weight: 600;
-
-            text-align: center;
+            padding: 2px 6px;
+            background: var(--accent);
+            color: var(--white);
+            border-radius: 12px;
+            font-size: 10px;
         }
 
         .sidebar-divider {
             height: 1px;
-
-            background: #e8e3dc;
-
-            margin: 14px 8px;
+            background: var(--border);
+            margin: 14px 0;
         }
 
-        /* ========================================
-           MAIN ACCOUNT CONTENT
-        ======================================== */
+        /* CONTENT */
 
-        .account-content {
-            margin-left: 245px;
-
-            width: calc(100% - 245px);
-
-            padding: 36px 42px 50px;
-
-            background: #faf7f2;
+        .content-area {
+            flex: 1;
+            min-width: 0;
+            width: 100%;
+            padding: 36px;
         }
 
-        /* ========================================
-           PAGE HEADER
-        ======================================== */
-
-        .page-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-
+        .page-heading {
             margin-bottom: 26px;
         }
 
-        .page-header h1 {
-            font-family: 'Playfair Display', serif;
-
-            font-size: 1.9rem;
+        .page-heading h1 {
+            margin-bottom: 6px;
+            font-family: "Playfair Display", serif;
+            font-size: clamp(25px, 3vw, 34px);
             font-weight: 600;
-
-            color: #1a1714;
-
-            letter-spacing: -0.01em;
         }
 
-        .page-header .subtitle {
-            font-size: 0.82rem;
-
-            color: #746c63;
-
-            margin-top: 5px;
+        .page-heading p {
+            color: var(--light-brown);
+            font-size: 13px;
+            line-height: 1.6;
         }
 
-        /* ========================================
-           ACCOUNT SECTIONS
-        ======================================== */
-
-        .account-sections {
-            display: grid;
-
-            grid-template-columns: 1fr 1fr;
-
-            gap: 22px;
-        }
+        /* ACCOUNT CARD */
 
         .account-card {
-            background: #ffffff;
-
-            border: 1px solid #e7e1d9;
-
-            padding: 25px 28px;
-
-            transition:
-                border-color 0.18s ease,
-                box-shadow 0.18s ease;
+            width: 100%;
+            max-width: 1200px;
+            background: var(--white);
+            border: 1px solid var(--border);
+            padding: 32px;
         }
 
-        .account-card:hover {
-            border-color: #d8d0c7;
-
-            box-shadow: 0 5px 18px rgba(38, 32, 26, 0.035);
+        .approval-notice {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 16px 18px;
+            margin-bottom: 30px;
+            background: var(--soft-cream);
+            border-left: 3px solid var(--accent);
         }
 
-        .account-card.full-width {
+        .approval-notice i {
+            color: var(--accent);
+            margin-top: 2px;
+        }
+
+        .approval-notice p {
+            color: var(--brown);
+            font-size: 11px;
+            line-height: 1.7;
+        }
+
+        .form-section {
+            margin-bottom: 38px;
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding-bottom: 15px;
+            margin-bottom: 22px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .section-title i {
+            color: var(--accent);
+            font-size: 18px;
+        }
+
+        .section-title h2 {
+            font-family: "Playfair Display", serif;
+            font-size: 22px;
+            font-weight: 600;
+        }
+
+        .section-description {
+            margin-top: -10px;
+            margin-bottom: 24px;
+            color: var(--light-brown);
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 20px 24px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        .form-group.full-width {
             grid-column: 1 / -1;
         }
 
-        .account-card .card-title {
-            font-family: 'Playfair Display', serif;
-
-            font-size: 1.1rem;
+        .form-group label {
+            color: #4d4239;
+            font-size: 11px;
             font-weight: 600;
-
-            color: #1a1714;
-
-            margin-bottom: 4px;
         }
 
-        .account-card .card-description {
-            font-size: 0.75rem;
-
-            color: #746c63;
-
-            margin-bottom: 17px;
+        .required {
+            color: #a05f43;
         }
 
-        /* ========================================
-           INFORMATION ROWS
-        ======================================== */
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            min-height: 43px;
+            padding: 12px 13px;
+            border: 1px solid var(--input-border);
+            outline: none;
+            background: var(--cream);
+            color: var(--black);
+            font-size: 12px;
+            transition: 0.2s ease;
+        }
 
-        .info-row {
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: var(--black);
+            background: var(--white);
+        }
+
+        .form-group input:disabled,
+        .form-group input:read-only {
+            background: #eee8e1;
+            color: var(--light-brown);
+        }
+
+        .form-help {
+            color: var(--light-brown);
+            font-size: 10px;
+            line-height: 1.5;
+        }
+
+        .address-label {
+            margin-bottom: 16px;
+            color: var(--black);
+            font-family: "Playfair Display", serif;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        /* UPLOAD */
+
+        .upload-box {
+            padding: 24px 18px;
+            text-align: center;
+            background: var(--cream);
+            border: 1px dashed #c8b9aa;
+            transition: 0.2s ease;
+        }
+
+        .upload-box:hover {
+            background: var(--white);
+            border-color: var(--black);
+        }
+
+        .upload-box i {
+            display: block;
+            margin-bottom: 10px;
+            color: var(--accent);
+            font-size: 26px;
+        }
+
+        .upload-box p {
+            margin-bottom: 14px;
+            color: var(--brown);
+            font-size: 11px;
+            line-height: 1.5;
+        }
+
+        .upload-box input {
+            width: 100%;
+            font-size: 11px;
+        }
+
+        .file-name {
+            display: block;
+            margin-top: 10px;
+            color: var(--light-brown);
+            font-size: 10px;
+            overflow-wrap: anywhere;
+        }
+
+        /* BUTTONS */
+
+        .form-actions {
             display: flex;
-
-            justify-content: space-between;
-            align-items: center;
-
-            gap: 20px;
-
-            padding: 11px 0;
-
-            border-bottom: 1px solid #f1ede8;
-
-            font-size: 0.78rem;
+            justify-content: flex-end;
+            gap: 12px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
         }
 
-        .info-row:last-of-type {
-            border-bottom: none;
-        }
-
-        .info-row .label {
-            color: #756d64;
-        }
-
-        .info-row .value {
-            color: #1a1714;
-
-            font-weight: 500;
-
-            text-align: right;
-        }
-
-        /* ========================================
-           BUTTONS
-        ======================================== */
-
-        .btn-edit {
-            margin-top: 17px;
-
+        .btn {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-
-            gap: 7px;
-
-            padding: 9px 18px;
-
-            background: transparent;
-
-            border: 1px solid #dcd5cd;
-
-            color: #1a1714;
-
-            font-size: 0.64rem;
+            gap: 8px;
+            min-height: 43px;
+            padding: 12px 25px;
+            border: none;
+            font-size: 11px;
             font-weight: 600;
-
-            text-transform: uppercase;
-
-            letter-spacing: 0.045em;
-
-            cursor: pointer;
-
-            transition:
-                background 0.18s ease,
-                border-color 0.18s ease,
-                color 0.18s ease;
+            letter-spacing: 0.03em;
+            transition: 0.2s ease;
         }
 
-        .btn-edit:hover {
-            background: #1a1714;
-            border-color: #1a1714;
-            color: #ffffff;
+        .btn-primary {
+            background: var(--black);
+            color: var(--white);
         }
 
-        /* ========================================
-           DANGER ZONE
-        ======================================== */
-
-        .danger-card {
-            border-color: #c98379 !important;
+        .btn-primary:hover {
+            background: var(--accent);
         }
 
-        .danger-card:hover {
-            border-color: #b76559 !important;
+        .btn-secondary {
+            background: var(--soft-cream);
+            color: var(--black);
+            border: 1px solid var(--input-border);
         }
 
-        .danger-title {
-            color: #a94238 !important;
+        .btn-secondary:hover {
+            background: var(--border);
         }
 
-        .danger-button {
-            border-color: #c98379;
-
-            color: #a94238;
-        }
-
-        .danger-button:hover {
-            background: #a94238;
-            border-color: #a94238;
-            color: #ffffff;
-        }
-
-        .danger-note {
-            font-size: 0.65rem;
-
-            color: #746c63;
-
-            margin-top: 9px;
-        }
-
-        /* ========================================
-           NOTIFICATION
-        ======================================== */
+        /* NOTIFICATION */
 
         .zaylo-notification {
             position: fixed;
-
-            bottom: 24px;
             right: 24px;
-
-            max-width: 360px;
-
-            background: #1a1714;
-
-            color: #ffffff;
-
-            padding: 14px 20px;
-
-            font-size: 0.78rem;
-
-            border-left: 3px solid #6f8f72;
-
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-
+            bottom: 24px;
             z-index: 9999;
-
-            animation: slideUp 0.3s ease;
+            width: min(350px, calc(100% - 32px));
+            padding: 15px 20px;
+            background: var(--black);
+            color: var(--white);
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.15);
+            font-size: 12px;
+            line-height: 1.6;
+            animation: slideIn 0.25s ease;
         }
 
-        @keyframes slideUp {
+        @keyframes slideIn {
             from {
-                transform: translateY(100px);
                 opacity: 0;
+                transform: translateY(15px);
             }
 
             to {
-                transform: translateY(0);
                 opacity: 1;
-            }
-        }
-
-        @keyframes slideDown {
-            from {
                 transform: translateY(0);
-                opacity: 1;
-            }
-
-            to {
-                transform: translateY(100px);
-                opacity: 0;
             }
         }
 
-        /* ========================================
-           RESPONSIVE — TABLET
-        ======================================== */
+        /* RESPONSIVE */
 
-        @media (max-width: 1100px) {
-
-            .header-search {
-                width: 220px;
-                right: 20px;
+        @media (max-width: 1000px) {
+            .content-area {
+                padding: 28px;
             }
 
-            .account-content {
-                padding: 32px 28px 45px;
-            }
-
-            .account-sections {
-                gap: 18px;
+            .account-card {
+                padding: 26px;
             }
         }
-
-        /* ========================================
-           RESPONSIVE — MOBILE SIDEBAR
-        ======================================== */
 
         @media (max-width: 820px) {
+            .nav-spacer {
+                display: none;
+            }
 
             .navbar {
-                justify-content: center;
+                padding: 0 16px;
             }
 
-            .header-logo img {
-                width: 70px;
-                height: 70px;
+            .search-wrapper input {
+                width: 90px;
             }
 
-            .header-search {
-                position: absolute;
-
-                right: 14px;
-
-                width: 190px;
-                height: 35px;
+            .dashboard-wrapper {
+                flex-direction: column;
             }
 
             .sidebar {
-                position: fixed;
-
-                top: 71px;
-                left: 0;
-                right: 0;
-
                 width: 100%;
-                height: auto;
-                min-height: auto;
-
                 padding: 10px 0;
-
                 border-right: none;
-                border-bottom: 1px solid #e6e1da;
-
-                overflow-x: auto;
-                overflow-y: hidden;
+                border-bottom: 1px solid var(--border);
             }
 
             .sidebar-menu {
                 display: flex;
-
-                align-items: center;
-
                 gap: 4px;
-
-                padding: 0 12px;
-
-                min-width: max-content;
+                padding: 0 10px;
+                overflow-x: auto;
             }
 
             .sidebar-menu li {
+                flex-shrink: 0;
                 margin-bottom: 0;
             }
 
             .sidebar-menu a {
-                width: auto;
-
                 white-space: nowrap;
-
-                padding: 9px 12px;
-
-                font-size: 0.68rem;
-            }
-
-            .sidebar-menu a i {
-                font-size: 0.75rem;
-            }
-
-            .sidebar-menu .badge {
-                display: none;
+                padding: 10px 12px;
             }
 
             .sidebar-divider {
                 display: none;
             }
 
-            .account-content {
-                margin-left: 0;
-
-                width: 100%;
-
-                padding: 130px 20px 40px;
-            }
-
-            .account-sections {
-                grid-template-columns: 1fr;
-            }
-
-            .account-card.full-width {
-                grid-column: auto;
-            }
-        }
-
-        /* ========================================
-           RESPONSIVE — SMALL MOBILE
-        ======================================== */
-
-        @media (max-width: 600px) {
-
-            .navbar {
-                height: 62px;
-                top: 3px;
-            }
-
-            .header-logo img {
-                width: 62px;
-                height: 62px;
-            }
-
-            .header-search {
-                right: 10px;
-
-                width: 150px;
-                height: 32px;
-            }
-
-            .header-search input {
-                font-size: 0.65rem;
-            }
-
-            .dashboard-wrapper {
-                padding-top: 65px;
-            }
-
-            .sidebar {
-                top: 65px;
-            }
-
-            .account-content {
-                padding: 120px 14px 30px;
-            }
-
-            .page-header h1 {
-                font-size: 1.55rem;
-            }
-
-            .page-header .subtitle {
-                font-size: 0.74rem;
+            .content-area {
+                padding: 24px;
             }
 
             .account-card {
-                padding: 20px 18px;
-            }
-
-            .info-row {
-                flex-direction: column;
-
-                align-items: flex-start;
-
-                gap: 4px;
-            }
-
-            .info-row .value {
-                text-align: left;
-            }
-
-            .btn-edit {
-                width: 100%;
-            }
-
-            .zaylo-notification {
-                left: 14px;
-                right: 14px;
-                bottom: 14px;
-
                 max-width: none;
             }
         }
 
-        /* ========================================
-           VERY SMALL MOBILE
-        ======================================== */
-
-        @media (max-width: 420px) {
-
-            .header-search {
-                width: 125px;
+        @media (max-width: 600px) {
+            .navbar {
+                height: 60px;
             }
 
-            .header-search i {
-                margin-right: 5px;
+            .dashboard-wrapper {
+                min-height: calc(100vh - 60px);
             }
 
-            .sidebar-menu a {
-                padding: 8px 10px;
+            .search-wrapper {
+                display: none;
             }
 
-            .account-content {
-                padding-left: 10px;
-                padding-right: 10px;
+            .logo img {
+                width: 65px;
+            }
+
+            .login-text {
+                display: none;
+            }
+
+            .icon-group {
+                gap: 15px;
+            }
+
+            .content-area {
+                padding: 16px;
+            }
+
+            .page-heading {
+                margin-bottom: 20px;
+            }
+
+            .page-heading h1 {
+                font-size: 26px;
+            }
+
+            .page-heading p {
+                font-size: 12px;
+            }
+
+            .account-card {
+                padding: 18px;
+            }
+
+            .approval-notice {
+                padding: 13px;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+                gap: 17px;
+            }
+
+            .form-group.full-width {
+                grid-column: auto;
+            }
+
+            .section-title h2 {
+                font-size: 20px;
+            }
+
+            .form-actions {
+                flex-direction: column-reverse;
+            }
+
+            .btn {
+                width: 100%;
+            }
+
+            .zaylo-notification {
+                right: 16px;
+                bottom: 16px;
             }
         }
     </style>
-<link rel="stylesheet" href="{{ asset('css/admin-shell.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/seller-theme.css') }}">
 </head>
 
 <body>
 
-    <!-- ========================================
-         TOP GREEN LINE
-    ======================================== -->
+    <div class="container">
 
-    <div class="top-line"></div>
+        <!-- HEADER -->
 
+        <header class="navbar">
 
-    <!-- ========================================
-         ADMIN HEADER
-    ======================================== -->
+            <div class="nav-spacer"></div>
 
-    @include('admin.partials.header', ['searchId' => 'headerSearch', 'searchPlaceholder' => 'Search admin pages...'])
+            <a href="{{ route('seller.dashboard') }}" class="logo">
+                <img src="{{ asset('images/logo.png') }}" alt="ZAYLO Logo">
+            </a>
 
+            <div class="nav-actions">
 
-    <!-- ========================================
-         ADMIN LAYOUT
-    ======================================== -->
-
-    <div class="dashboard-wrapper">
-
-        <!-- ========================================
-             ADMIN SIDEBAR
-        ======================================== -->
-
-        @include('admin.partials.sidebar')
-
-
-        <!-- ========================================
-             ACCOUNT CONTENT
-        ======================================== -->
-
-        <main class="main-content account-content">
-
-            <!-- Page Header -->
-            <div class="page-header">
-
-                <div>
-                    <h1>Account Settings</h1>
-
-                    <p class="subtitle">
-                        Manage your administrator profile
-                    </p>
+                <div class="search-wrapper">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="Search" aria-label="Search">
                 </div>
 
-            </div>
-
-
-            <!-- ========================================
-                 ACCOUNT SECTIONS
-            ======================================== -->
-
-            <div class="account-sections">
-
-                <!-- ========================================
-                     PERSONAL INFORMATION
-                ======================================== -->
-
-                <div class="account-card">
-
-                    <h2 class="card-title">
-                        Personal Information
-                    </h2>
-
-                    <p class="card-description">
-                        Your administrator details
-                    </p>
-
-                    <div class="info-row">
-                        <span class="label">
-                            Full Name
-                        </span>
-
-                        <span
-                            class="value"
-                            id="fullName"
-                        >
-                            Administrator
-                        </span>
-                    </div>
-
-                    <div class="info-row">
-                        <span class="label">
-                            Email
-                        </span>
-
-                        <span
-                            class="value"
-                            id="email"
-                        >
-                            admin@zaylo.com
-                        </span>
-                    </div>
-
-                    <div class="info-row">
-                        <span class="label">
-                            Phone
-                        </span>
-
-                        <span
-                            class="value"
-                            id="phone"
-                        >
-                            09171234567
-                        </span>
-                    </div>
-
-                    <button
-                        type="button"
-                        class="btn-edit"
-                        onclick="showNotification('Edit personal information coming soon!')"
-                    >
-                        Edit Information
-                    </button>
-
-                </div>
-
-
-                <!-- ========================================
-                     ROLE & PERMISSIONS
-                ======================================== -->
-
-                <div class="account-card">
-
-                    <h2 class="card-title">
-                        Role &amp; Permissions
-                    </h2>
-
-                    <p class="card-description">
-                        Your administrator role and access level
-                    </p>
-
-                    <div class="info-row">
-                        <span class="label">
-                            Role
-                        </span>
-
-                        <span class="value">
-                            Super Admin
-                        </span>
-                    </div>
-
-                    <div class="info-row">
-                        <span class="label">
-                            Access Level
-                        </span>
-
-                        <span class="value">
-                            Full Access
-                        </span>
-                    </div>
-
-                    <div class="info-row">
-                        <span class="label">
-                            Assigned Date
-                        </span>
-
-                        <span class="value">
-                            Dec 1, 2024
-                        </span>
-                    </div>
-
-                </div>
-
-
-                <!-- ========================================
-                     SECURITY
-                ======================================== -->
-
-                <div class="account-card full-width">
-
-                    <h2 class="card-title">
-                        Security
-                    </h2>
-
-                    <p class="card-description">
-                        Manage your password and security settings
-                    </p>
-
-                    <div class="info-row">
-                        <span class="label">
-                            Password
-                        </span>
-
-                        <span class="value">
-                            ••••••••
-                        </span>
-                    </div>
-
-                    <div class="info-row">
-                        <span class="label">
-                            Two-Factor Authentication
-                        </span>
-
-                        <span class="value">
-                            Disabled
-                        </span>
-                    </div>
-
-                    <div class="info-row">
-                        <span class="label">
-                            Last Login
-                        </span>
-
-                        <span class="value">
-                            Dec 15, 2024 2:30 PM
-                        </span>
-                    </div>
-
-                    <div class="info-row">
-                        <span class="label">
-                            Login IP
-                        </span>
-
-                        <span class="value">
-                            192.168.1.1
-                        </span>
-                    </div>
-
-                    <button
-                        type="button"
-                        class="btn-edit"
-                        onclick="showNotification('Change password coming soon!')"
-                    >
-                        Change Password
-                    </button>
-
-                </div>
-
-
-                <!-- ========================================
-                     RECENT ACTIVITY
-                ======================================== -->
-
-                <div class="account-card full-width">
-
-                    <h2 class="card-title">
-                        Recent Activity
-                    </h2>
-
-                    <p class="card-description">
-                        Your recent administrative actions
-                    </p>
-
-                    <div class="info-row">
-                        <span class="label">
-                            Dec 15, 2024 2:30 PM
-                        </span>
-
-                        <span class="value">
-                            Logged in
-                        </span>
-                    </div>
-
-                    <div class="info-row">
-                        <span class="label">
-                            Dec 15, 2024 2:25 PM
-                        </span>
-
-                        <span class="value">
-                            Approved seller registration - Juan Dela Cruz
-                        </span>
-                    </div>
-
-                    <div class="info-row">
-                        <span class="label">
-                            Dec 15, 2024 1:45 PM
-                        </span>
-
-                        <span class="value">
-                            Updated platform settings
-                        </span>
-                    </div>
-
-                    <div class="info-row">
-                        <span class="label">
-                            Dec 15, 2024 11:20 AM
-                        </span>
-
-                        <span class="value">
-                            Resolved dispute #DSP-2024-002
-                        </span>
-                    </div>
-
-                    <div class="info-row">
-                        <span class="label">
-                            Dec 14, 2024 4:00 PM
-                        </span>
-
-                        <span class="value">
-                            Generated monthly report
-                        </span>
-                    </div>
-
-                    <button
-                        type="button"
-                        class="btn-edit"
-                        onclick="showNotification('View full activity log coming soon!')"
-                    >
-                        View Full Log
-                    </button>
-
-                </div>
-
-
-                <!-- ========================================
-                     DANGER ZONE
-                ======================================== -->
-
-                <div class="account-card full-width danger-card">
-
-                    <h2 class="card-title danger-title">
-                        Danger Zone
-                    </h2>
-
-                    <p class="card-description">
-                        Deactivate your administrator account
-                    </p>
-
-                    <button
-                        type="button"
-                        class="btn-edit danger-button"
-                        onclick="deleteAccount()"
-                    >
-                        <i class="fas fa-trash-alt"></i>
-                        Deactivate Account
-                    </button>
-
-                    <p class="danger-note">
-                        Deactivating your account will remove your access
-                        to the admin panel.
-                    </p>
+                <div class="icon-group">
+
+                    <a href="#"
+                        onclick="showNotification('You have 5 notifications'); return false;"
+                        aria-label="Notifications">
+                        <i class="far fa-bell"></i>
+                        <span class="badge-count">5</span>
+                    </a>
+
+                    <a href="#"
+                        onclick="showNotification('Shopping bag preview'); return false;"
+                        aria-label="Shopping bag">
+                        <i class="fas fa-shopping-bag"></i>
+                        <span class="badge-count">2</span>
+                    </a>
+
+                    <a href="{{ route('seller.account') }}" aria-label="Account">
+                        <i class="far fa-user"></i>
+                    </a>
+
+                    <a href="{{ route('login') }}" class="login-text">
+                        Logout
+                    </a>
 
                 </div>
 
             </div>
 
-        </main>
+        </header>
+
+        <div class="dashboard-wrapper">
+
+            <!-- SIDEBAR -->
+
+            <aside class="sidebar">
+
+                <ul class="sidebar-menu">
+
+                    <li>
+                        <a href="{{ route('seller.dashboard') }}">
+                            <i class="fas fa-home"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="{{ route('seller.orders') }}">
+                            <i class="fas fa-box"></i>
+                            <span>Orders</span>
+                            <span class="badge">3</span>
+                        </a>
+                    </li>
+
+                    <!-- HANDOVER -->
+
+                    <li>
+                        <a href="{{ route('seller.handover') }}">
+                            <i class="fas fa-truck"></i>
+                            <span>Handover</span>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="{{ route('seller.inventory') }}">
+                            <i class="fas fa-warehouse"></i>
+                            <span>Inventory</span>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="{{ route('seller.products') }}">
+                            <i class="fas fa-shopping-bag"></i>
+                            <span>Products</span>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="{{ route('seller.reports') }}">
+                            <i class="fas fa-chart-bar"></i>
+                            <span>Reports</span>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="{{ route('seller.chat') }}">
+                            <i class="fas fa-comment"></i>
+                            <span>Messages</span>
+                            <span class="badge">2</span>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="{{ route('seller.account') }}" class="active">
+                            <i class="fas fa-user"></i>
+                            <span>Account</span>
+                        </a>
+                    </li>
+
+                    <div class="sidebar-divider"></div>
+
+                    <li>
+                        <a href="{{ route('login') }}">
+                            <i class="fas fa-sign-out-alt"></i>
+                            <span>Logout</span>
+                        </a>
+                    </li>
+
+                </ul>
+
+            </aside>
+
+            <!-- MAIN CONTENT -->
+
+            <main class="content-area">
+
+                <div class="page-heading">
+                    <h1>Account Management</h1>
+                    <p>
+                        Manage your personal information, business details,
+                        and verification documents.
+                    </p>
+                </div>
+
+                <div class="account-card">
+
+                    <div class="approval-notice">
+                        <i class="fas fa-info-circle"></i>
+
+                        <p>
+                            Please ensure that all information and uploaded documents
+                            are correct. Your seller account may require administrator
+                            approval before full access is granted.
+                        </p>
+                    </div>
+
+                    <form
+                        method="POST"
+                        action="#"
+                        enctype="multipart/form-data"
+                        id="accountForm"
+                        onsubmit="submitAccount(event)"
+                    >
+
+                        @csrf
+
+                        <!-- PERSONAL INFORMATION -->
+
+                        <section class="form-section">
+
+                            <div class="section-title">
+                                <i class="fas fa-user"></i>
+                                <h2>Personal Information</h2>
+                            </div>
+
+                            <p class="section-description">
+                                Enter your complete and accurate personal details.
+                            </p>
+
+                            <div class="form-grid">
+
+                                <div class="form-group">
+                                    <label for="last_name">
+                                        Last Name <span class="required">*</span>
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        id="last_name"
+                                        name="last_name"
+                                        placeholder="Enter last name"
+                                        required
+                                    >
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="first_name">
+                                        First Name <span class="required">*</span>
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        id="first_name"
+                                        name="first_name"
+                                        placeholder="Enter first name"
+                                        required
+                                    >
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="middle_initial">
+                                        Middle Initial
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        id="middle_initial"
+                                        name="middle_initial"
+                                        placeholder="e.g. A."
+                                        maxlength="3"
+                                    >
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="sex">
+                                        Sex <span class="required">*</span>
+                                    </label>
+
+                                    <select id="sex" name="sex" required>
+                                        <option value="">Select sex</option>
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                        <option value="Prefer not to say">
+                                            Prefer not to say
+                                        </option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="email">
+                                        E-mail <span class="required">*</span>
+                                    </label>
+
+                                    <input
+                                        type="email"
+                                        id="email"
+                                        name="email"
+                                        placeholder="Enter email address"
+                                        required
+                                    >
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="contact_no">
+                                        Contact No. <span class="required">*</span>
+                                    </label>
+
+                                    <input
+                                        type="tel"
+                                        id="contact_no"
+                                        name="contact_no"
+                                        placeholder="09XXXXXXXXX"
+                                        pattern="^09[0-9]{9}$"
+                                        required
+                                    >
+
+                                    <span class="form-help">
+                                        Format: 09XXXXXXXXX
+                                    </span>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="birthday">
+                                        Birthday <span class="required">*</span>
+                                    </label>
+
+                                    <input
+                                        type="date"
+                                        id="birthday"
+                                        name="birthday"
+                                        required
+                                        onchange="calculateAge()"
+                                    >
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="age">
+                                        Age (Autogenerated)
+                                    </label>
+
+                                    <input
+                                        type="number"
+                                        id="age"
+                                        name="age"
+                                        placeholder="Automatically calculated"
+                                        readonly
+                                        disabled
+                                    >
+
+                                    <span class="form-help">
+                                        Your age will be calculated from your birthday.
+                                    </span>
+                                </div>
+
+                            </div>
+
+                        </section>
+
+                        <!-- ADDRESS INFORMATION -->
+
+                        <section class="form-section">
+
+                            <div class="section-title">
+                                <i class="fas fa-location-dot"></i>
+                                <h2>Address Information</h2>
+                            </div>
+
+                            <p class="section-description">
+                                Select your location and enter your complete address.
+                            </p>
+
+                            <h3 class="address-label">
+                                Address via API
+                            </h3>
+
+                            <div class="form-grid">
+
+                                <div class="form-group">
+                                    <label for="province">
+                                        Province <span class="required">*</span>
+                                    </label>
+
+                                    <select id="province" name="province" required>
+                                        <option value="">Select province</option>
+                                        <option value="Laguna">Laguna</option>
+                                        <option value="Batangas">Batangas</option>
+                                        <option value="Cavite">Cavite</option>
+                                        <option value="Rizal">Rizal</option>
+                                        <option value="Quezon">Quezon</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="municipality">
+                                        Municipality / City
+                                        <span class="required">*</span>
+                                    </label>
+
+                                    <select id="municipality" name="municipality" required>
+                                        <option value="">Select municipality</option>
+                                        <option value="Magdalena">Magdalena</option>
+                                        <option value="Santa Cruz">Santa Cruz</option>
+                                        <option value="Calamba">Calamba</option>
+                                        <option value="Los Baños">Los Baños</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="barangay">
+                                        Barangay <span class="required">*</span>
+                                    </label>
+
+                                    <select id="barangay" name="barangay" required>
+                                        <option value="">Select barangay</option>
+                                        <option value="Barangay 1">Barangay 1</option>
+                                        <option value="Barangay 2">Barangay 2</option>
+                                        <option value="Barangay 3">Barangay 3</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+
+                            </div>
+
+                            <h3 class="address-label" style="margin-top: 28px;">
+                                Manual Address Entry
+                            </h3>
+
+                            <div class="form-grid">
+
+                                <div class="form-group">
+                                    <label for="house_number">
+                                        House Number
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        id="house_number"
+                                        name="house_number"
+                                        placeholder="House number"
+                                    >
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="street">
+                                        Street
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        id="street"
+                                        name="street"
+                                        placeholder="Street name"
+                                    >
+                                </div>
+
+                                <div class="form-group full-width">
+                                    <label for="additional_address">
+                                        Additional Address Details
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        id="additional_address"
+                                        name="additional_address"
+                                        placeholder="Subdivision, building, unit number, etc."
+                                    >
+                                </div>
+
+                            </div>
+
+                        </section>
+
+                        <!-- BUSINESS INFORMATION -->
+
+                        <section class="form-section">
+
+                            <div class="section-title">
+                                <i class="fas fa-store"></i>
+                                <h2>Business Information</h2>
+                            </div>
+
+                            <p class="section-description">
+                                Provide your business information for seller verification.
+                            </p>
+
+                            <div class="form-grid">
+
+                                <div class="form-group">
+                                    <label for="business_name">
+                                        Business Name
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        id="business_name"
+                                        name="business_name"
+                                        placeholder="Enter business name"
+                                    >
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="line_of_business">
+                                        Line of Business / Category
+                                    </label>
+
+                                    <select
+                                        id="line_of_business"
+                                        name="line_of_business"
+                                    >
+                                        <option value="">Select category</option>
+                                        <option value="Home and Garden">
+                                            Home and Garden
+                                        </option>
+                                        <option value="Kitchen Appliances">
+                                            Kitchen Appliances
+                                        </option>
+                                        <option value="Furniture and Decor">
+                                            Furniture and Decor
+                                        </option>
+                                        <option value="Gardening Tools">
+                                            Gardening Tools
+                                        </option>
+                                        <option value="Outdoor Living">
+                                            Outdoor Living
+                                        </option>
+                                        <option value="Home Improvement Tools">
+                                            Home Improvement Tools
+                                        </option>
+                                        <option value="Bedding and Bath">
+                                            Bedding and Bath
+                                        </option>
+                                        <option value="Fashion and Accessories">
+                                            Fashion and Accessories
+                                        </option>
+                                        <option value="Other">
+                                            Other
+                                        </option>
+                                    </select>
+                                </div>
+
+                            </div>
+
+                        </section>
+
+                        <!-- VERIFICATION DOCUMENTS -->
+
+                        <section class="form-section">
+
+                            <div class="section-title">
+                                <i class="fas fa-file-shield"></i>
+                                <h2>Verification Documents</h2>
+                            </div>
+
+                            <p class="section-description">
+                                Upload clear and valid documents for administrator review.
+                            </p>
+
+                            <div class="form-grid">
+
+                                <div class="form-group">
+
+                                    <label for="valid_id">
+                                        Upload ID <span class="required">*</span>
+                                    </label>
+
+                                    <div class="upload-box">
+                                        <i class="fas fa-id-card"></i>
+
+                                        <p>
+                                            Upload a valid government-issued ID.
+                                        </p>
+
+                                        <input
+                                            type="file"
+                                            id="valid_id"
+                                            name="valid_id"
+                                            accept=".jpg,.jpeg,.png,.pdf"
+                                            required
+                                            onchange="showFileName(this, 'validIdName')"
+                                        >
+
+                                        <span class="file-name" id="validIdName">
+                                            No file selected
+                                        </span>
+                                    </div>
+
+                                </div>
+
+                                <div class="form-group">
+
+                                    <label for="business_permit">
+                                        Upload Business Permit
+                                    </label>
+
+                                    <div class="upload-box">
+                                        <i class="fas fa-file-contract"></i>
+
+                                        <p>
+                                            Upload your business permit document.
+                                        </p>
+
+                                        <input
+                                            type="file"
+                                            id="business_permit"
+                                            name="business_permit"
+                                            accept=".jpg,.jpeg,.png,.pdf"
+                                            onchange="showFileName(this, 'businessPermitName')"
+                                        >
+
+                                        <span class="file-name" id="businessPermitName">
+                                            No file selected
+                                        </span>
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </section>
+
+                        <!-- FORM ACTIONS -->
+
+                        <div class="form-actions">
+
+                            <button
+                                type="reset"
+                                class="btn btn-secondary"
+                                onclick="resetFileNames()"
+                            >
+                                <i class="fas fa-rotate-left"></i>
+                                Reset Form
+                            </button>
+
+                            <button
+                                type="submit"
+                                class="btn btn-primary"
+                            >
+                                <i class="fas fa-save"></i>
+                                Save Changes
+                            </button>
+
+                        </div>
+
+                    </form>
+
+                </div>
+
+            </main>
+
+        </div>
 
     </div>
 
-
-    <!-- ========================================
-         JAVASCRIPT
-    ======================================== -->
-
     <script>
+        // AUTOMATIC AGE CALCULATION
 
-        /* ========================================
-           LOAD ADMIN DATA
-        ======================================== */
+        function calculateAge() {
+            const birthdayInput = document.getElementById("birthday");
+            const ageInput = document.getElementById("age");
 
-        function loadAdminData() {
-
-            try {
-
-                const storedData =
-                    localStorage.getItem('zaylo_user_data');
-
-                if (!storedData) {
-                    return;
-                }
-
-                const userData =
-                    JSON.parse(storedData);
-
-                if (
-                    userData &&
-                    userData.role === 'admin'
-                ) {
-
-                    if (
-                        userData.firstName &&
-                        userData.lastName
-                    ) {
-
-                        document.getElementById(
-                            'fullName'
-                        ).textContent =
-                            `${userData.firstName} ${userData.lastName}`;
-                    }
-
-                    if (userData.email) {
-
-                        document.getElementById(
-                            'email'
-                        ).textContent =
-                            userData.email;
-                    }
-
-                    if (userData.phone) {
-
-                        document.getElementById(
-                            'phone'
-                        ).textContent =
-                            userData.phone;
-                    }
-                }
-
-            } catch (error) {
-
-                console.error(
-                    'Unable to load admin data:',
-                    error
-                );
-
-            }
-        }
-
-
-        /* ========================================
-           ADMIN SEARCH
-        ======================================== */
-
-        const headerSearch =
-            document.getElementById('headerSearch');
-
-        if (headerSearch) {
-
-            headerSearch.addEventListener(
-                'keydown',
-                function (event) {
-
-                    if (event.key === 'Enter') {
-
-                        const searchValue =
-                            this.value.trim();
-
-                        if (searchValue !== '') {
-
-                            showNotification(
-                                `Searching admin pages for "${searchValue}"...`
-                            );
-
-                        } else {
-
-                            showNotification(
-                                'Please enter something to search.'
-                            );
-
-                        }
-                    }
-                }
-            );
-
-        }
-
-
-        /* ========================================
-           DELETE / DEACTIVATE ACCOUNT
-        ======================================== */
-
-        function deleteAccount() {
-
-            const firstConfirmation =
-                confirm(
-                    'Are you sure you want to deactivate your admin account? This action cannot be undone.'
-                );
-
-            if (!firstConfirmation) {
+            if (!birthdayInput.value) {
+                ageInput.value = "";
                 return;
             }
 
-            const secondConfirmation =
-                confirm(
-                    'Please confirm again: You will lose access to the admin panel.'
-                );
+            const birthDate = new Date(birthdayInput.value);
+            const today = new Date();
 
-            if (!secondConfirmation) {
-                return;
+            let age = today.getFullYear() - birthDate.getFullYear();
+
+            const monthDifference =
+                today.getMonth() - birthDate.getMonth();
+
+            if (
+                monthDifference < 0 ||
+                (
+                    monthDifference === 0 &&
+                    today.getDate() < birthDate.getDate()
+                )
+            ) {
+                age--;
             }
 
-            localStorage.removeItem(
-                'zaylo_user_data'
-            );
+            ageInput.value = age >= 0 ? age : "";
+        }
+
+        // FILE NAME DISPLAY
+
+        function showFileName(input, outputId) {
+            const output = document.getElementById(outputId);
+
+            if (input.files && input.files.length > 0) {
+                output.textContent = input.files[0].name;
+            } else {
+                output.textContent = "No file selected";
+            }
+        }
+
+        function resetFileNames() {
+            setTimeout(() => {
+                document.getElementById("validIdName").textContent =
+                    "No file selected";
+
+                document.getElementById("businessPermitName").textContent =
+                    "No file selected";
+
+                document.getElementById("age").value = "";
+            }, 50);
+        }
+
+        // FORM SUBMISSION
+
+        function submitAccount(event) {
+            event.preventDefault();
+
+            const form = document.getElementById("accountForm");
+
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
 
             showNotification(
-                'Account deactivated. Redirecting...'
+                "Account details are ready. Connect this form to your Laravel controller to save the data."
             );
-
-            setTimeout(function () {
-
-                window.location.href =
-                    "{{ route('login') }}";
-
-            }, 2000);
         }
 
-
-        /* ========================================
-           NOTIFICATION SYSTEM
-        ======================================== */
+        // NOTIFICATION
 
         function showNotification(message) {
+            const existingNotification =
+                document.querySelector(".zaylo-notification");
 
-            const existing =
-                document.querySelector(
-                    '.zaylo-notification'
-                );
-
-            if (existing) {
-                existing.remove();
+            if (existingNotification) {
+                existingNotification.remove();
             }
 
-            const notification =
-                document.createElement('div');
+            const notification = document.createElement("div");
 
-            notification.className =
-                'zaylo-notification';
+            notification.className = "zaylo-notification";
+            notification.textContent = message;
 
-            notification.textContent =
-                message;
+            document.body.appendChild(notification);
 
-            document.body.appendChild(
-                notification
-            );
-
-            setTimeout(function () {
-
-                notification.style.animation =
-                    'slideDown 0.3s ease';
-
-                setTimeout(function () {
-
-                    if (notification) {
-                        notification.remove();
-                    }
-
-                }, 300);
-
-            }, 3000);
+            setTimeout(() => {
+                if (notification && notification.parentNode) {
+                    notification.remove();
+                }
+            }, 4000);
         }
 
+        // SET MAXIMUM BIRTHDAY TO TODAY
 
-        /* ========================================
-           INITIALIZE
-        ======================================== */
+        document.addEventListener("DOMContentLoaded", function () {
+            const birthdayInput = document.getElementById("birthday");
 
-        document.addEventListener(
-            'DOMContentLoaded',
-            function () {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, "0");
+            const day = String(today.getDate()).padStart(2, "0");
 
-                loadAdminData();
-
-            }
-        );
-
+            birthdayInput.max = `${year}-${month}-${day}`;
+        });
     </script>
 
-<script src="{{ asset('js/admin-shell.js') }}"></script>
 </body>
 
 </html>

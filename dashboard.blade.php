@@ -6,51 +6,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>ZAYLO · Admin Dashboard</title>
+    <title>ZAYLO | Seller Dashboard</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
     <style>
-        :root {
-            --cream: #faf7f2;
-            --white: #ffffff;
-            --dark: #1a1714;
-            --text: #1e1e1e;
-            --muted: #6b5f54;
-            --brown: #b28b6f;
-            --border: #ece4db;
-            --light-brown: #f5f0ea;
-            --green: #2d7d46;
-            --red: #c0392b;
-            --orange: #e67e22;
-        }
-
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
-        html,
         body {
-            width: 100%;
-            min-height: 100%;
-        }
-
-        body {
-            overflow-x: hidden;
-            background: var(--cream);
-            color: var(--text);
-            font-family: "Inter", sans-serif;
+            background: #faf7f2;
+            font-family: 'Inter', sans-serif;
+            color: #1e1e1e;
             line-height: 1.4;
         }
 
         a {
+            text-decoration: none;
             color: inherit;
         }
 
@@ -59,130 +41,221 @@
             font-family: inherit;
         }
 
-        button {
-            cursor: pointer;
-        }
-
-        .container {
-            width: 100%;
-            min-height: 100vh;
-            background: var(--cream);
-        }
-
-        /* ================================
+        /* ========================================
            HEADER
-        ================================= */
+        ======================================== */
 
         .navbar {
-            position: relative;
+            height: 72px;
             display: flex;
             align-items: center;
-            justify-content: center;
-            width: 100%;
-            height: 72px;
+            justify-content: space-between;
+            background: #ffffff;
             padding: 0 32px;
-            background: var(--white);
-            border-top: 1px solid #6f9d73;
-            border-bottom: 1px solid var(--border);
+            border-top: 2px solid #8cb58a;
+            border-bottom: 1px solid #ece4db;
+            position: relative;
+            z-index: 1000;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .menu-toggle {
+            display: none;
+            border: none;
+            background: transparent;
+            color: #1e1e1e;
+            font-size: 22px;
+            cursor: pointer;
         }
 
         .logo {
             position: absolute;
-            top: 50%;
             left: 50%;
+            transform: translateX(-50%);
             display: flex;
             align-items: center;
             justify-content: center;
-            text-decoration: none;
-            transform: translate(-50%, -50%);
         }
 
-        .logo img {
-            display: block;
+        .logo-image {
             width: 78px;
             height: auto;
+            max-height: 55px;
             object-fit: contain;
-            transition: transform 0.2s ease;
+            display: block;
+            transition: 0.2s ease;
         }
 
-        .logo:hover img {
+        .logo:hover .logo-image {
             transform: scale(1.05);
         }
 
         .nav-actions {
-            position: absolute;
-            right: 32px;
             display: flex;
             align-items: center;
+            gap: 16px;
+            margin-left: auto;
         }
-
-        /* LONGER SEARCH BAR */
 
         .search-wrapper {
             display: flex;
             align-items: center;
-            gap: 10px;
-            width: 360px;
-            height: 42px;
-            padding: 0 17px;
-            background: #f5f2ee;
-            border: 1px solid #e5ddd5;
-            border-radius: 24px;
-            transition: border-color 0.2s ease,
-                        box-shadow 0.2s ease;
+            background: #f4f1ec;
+            border: 1px solid #e5dfd8;
+            border-radius: 30px;
+            padding: 4px 14px;
         }
 
         .search-wrapper:focus-within {
-            border-color: var(--brown);
-            box-shadow: 0 0 0 3px rgba(178, 139, 111, 0.12);
+            border-color: #b28b6f;
         }
 
         .search-icon {
-            color: #342b25;
-            font-size: 0.85rem;
+            font-size: 12px;
+            color: #4a4037;
         }
 
         .search-wrapper input {
-            width: 100%;
-            min-width: 0;
-            padding: 5px 0;
+            width: 90px;
             border: none;
             outline: none;
             background: transparent;
-            color: var(--text);
-            font-size: 0.78rem;
+            padding: 6px 0 6px 7px;
+            font-size: 11px;
+            color: #1e1e1e;
         }
 
         .search-wrapper input::placeholder {
-            color: #988d83;
+            color: #a89b8c;
         }
 
-        /* ================================
-           DASHBOARD LAYOUT
-        ================================= */
+        .icon-group {
+            display: flex;
+            align-items: center;
+            gap: 17px;
+        }
+
+        .icon-group a {
+            position: relative;
+            color: #1e1e1e;
+            transition: 0.2s ease;
+        }
+
+        .icon-group a:hover {
+            color: #a87957;
+        }
+
+        .icon-group i {
+            font-size: 19px;
+        }
+
+        .badge-count {
+            position: absolute;
+            top: -9px;
+            right: -9px;
+            min-width: 18px;
+            height: 18px;
+            padding: 2px 5px;
+            background: #b28b6f;
+            color: #ffffff;
+            border-radius: 50%;
+            font-size: 9px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .logout-link {
+            border-left: 1px solid #d8d0c8;
+            padding-left: 16px;
+            font-size: 11px;
+            font-weight: 500;
+            color: #1e1e1e;
+        }
+
+        .logout-link:hover {
+            color: #a87957;
+        }
+
+        /* ========================================
+           MOBILE MENU
+        ======================================== */
+
+        .mobile-menu {
+            display: none;
+            background: #ffffff;
+            border-bottom: 1px solid #ece4db;
+            padding: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            position: relative;
+            z-index: 999;
+        }
+
+        .mobile-menu.show {
+            display: block;
+        }
+
+        .mobile-menu a {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 13px 15px;
+            color: #6b5f54;
+            font-size: 13px;
+            border-radius: 5px;
+            transition: 0.2s ease;
+        }
+
+        .mobile-menu a:hover,
+        .mobile-menu a.active {
+            background: #f5f0ea;
+            color: #1e1e1e;
+        }
+
+        .mobile-menu a i {
+            width: 18px;
+            text-align: center;
+        }
+
+        .mobile-menu .mobile-badge {
+            margin-left: auto;
+            background: #b28b6f;
+            color: #ffffff;
+            font-size: 9px;
+            padding: 3px 7px;
+            border-radius: 10px;
+        }
+
+        /* ========================================
+           DASHBOARD WRAPPER
+        ======================================== */
 
         .dashboard-wrapper {
             display: flex;
-            width: 100%;
             min-height: calc(100vh - 72px);
+            background: #faf7f2;
         }
 
-        /* ================================
+        /* ========================================
            SIDEBAR
-        ================================= */
+        ======================================== */
 
         .sidebar {
-            width: 245px;
-            min-height: calc(100vh - 72px);
+            width: 240px;
             flex-shrink: 0;
+            min-height: calc(100vh - 72px);
+            background: #ffffff;
+            border-right: 1px solid #ece4db;
             padding: 24px 0;
-            background: var(--white);
-            border-right: 1px solid var(--border);
         }
 
         .sidebar-menu {
-            padding: 0 16px;
             list-style: none;
+            padding: 0 16px;
         }
 
         .sidebar-menu li {
@@ -194,523 +267,359 @@
             align-items: center;
             gap: 12px;
             padding: 11px 14px;
-            color: var(--muted);
-            text-decoration: none;
-            font-size: 0.75rem;
+            color: #6b5f54;
+            font-size: 12px;
             font-weight: 400;
             letter-spacing: 0.02em;
-            transition: all 0.2s ease;
+            border-radius: 4px;
+            transition: 0.2s ease;
         }
 
         .sidebar-menu a:hover {
-            background: var(--light-brown);
-            color: var(--text);
+            background: #f5f0ea;
+            color: #1e1e1e;
         }
 
         .sidebar-menu a.active {
-            background: var(--dark);
-            color: var(--white);
+            background: #1a1714;
+            color: #ffffff;
         }
 
         .sidebar-menu a i {
             width: 18px;
+            font-size: 13px;
             text-align: center;
-            font-size: 0.85rem;
         }
 
-        .sidebar-menu .badge {
+        .sidebar-menu a .badge {
             margin-left: auto;
-            padding: 2px 8px;
+            background: #b28b6f;
+            color: #ffffff;
+            font-size: 9px;
+            padding: 3px 7px;
             border-radius: 10px;
-            background: var(--brown);
-            color: var(--white);
-            font-size: 0.5rem;
-            font-weight: 600;
         }
 
         .sidebar-divider {
             height: 1px;
+            background: #ece4db;
             margin: 14px 16px;
-            background: var(--border);
         }
 
-        /* ================================
+        /* ========================================
            MAIN CONTENT
-        ================================= */
+        ======================================== */
 
         .main-content {
             flex: 1;
             min-width: 0;
-            padding: 34px 42px;
-            background: var(--cream);
+            padding: 32px 40px;
+            background: #faf7f2;
         }
 
         .page-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 16px;
             margin-bottom: 32px;
         }
 
         .page-header h1 {
-            color: var(--dark);
-            font-family: "Playfair Display", serif;
-            font-size: 1.9rem;
+            font-family: 'Playfair Display', serif;
+            font-size: 29px;
             font-weight: 600;
+            color: #1a1714;
         }
 
-        .subtitle {
+        .page-header .subtitle {
+            font-size: 13px;
+            color: #6b5f54;
             margin-top: 5px;
-            color: var(--muted);
-            font-size: 0.85rem;
         }
 
-        .subtitle strong {
-            color: var(--dark);
-            font-weight: 600;
+        .page-header .store-name {
+            font-size: 13px;
+            color: #b28b6f;
+            margin-top: 5px;
         }
 
-        /* ================================
+        /* ========================================
            STATISTICS
-        ================================= */
+        ======================================== */
 
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
+            grid-template-columns: repeat(4, 1fr);
             gap: 20px;
             margin-bottom: 32px;
         }
 
         .stat-card {
-            padding: 22px 24px;
-            background: var(--white);
-            border: 1px solid var(--border);
-            transition: all 0.2s ease;
+            background: #ffffff;
+            border: 1px solid #ece4db;
+            padding: 20px 24px;
+            transition: 0.2s ease;
         }
 
         .stat-card:hover {
-            border-color: var(--brown);
-            transform: translateY(-2px);
+            border-color: #b28b6f;
         }
 
-        .stat-icon {
+        .stat-card .stat-icon {
+            font-size: 20px;
+            color: #b28b6f;
             margin-bottom: 10px;
-            color: var(--brown);
-            font-size: 1.3rem;
         }
 
         .stat-card h3 {
-            margin-bottom: 5px;
-            color: var(--muted);
-            font-size: 0.65rem;
+            font-size: 10px;
             font-weight: 500;
-            letter-spacing: 0.06em;
             text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #6b5f54;
+            margin-bottom: 5px;
         }
 
         .stat-card .number {
-            color: var(--dark);
-            font-size: 1.8rem;
+            font-size: 29px;
             font-weight: 600;
+            color: #1a1714;
         }
 
-        .trend {
+        .stat-card .trend {
             display: block;
             margin-top: 5px;
-            color: var(--muted);
-            font-size: 0.6rem;
+            font-size: 10px;
+            color: #6b5f54;
         }
 
-        .trend.up {
-            color: var(--green);
+        .stat-card .trend.up {
+            color: #2d7d46;
         }
 
-        .trend.down {
-            color: var(--red);
-        }
+        /* ========================================
+           RECENT ORDERS
+        ======================================== */
 
-        /* ================================
-           RECENT ACTIVITY
-        ================================= */
-
-        .notifications-section {
-            margin-bottom: 32px;
+        .recent-orders {
+            background: #ffffff;
+            border: 1px solid #ece4db;
             padding: 24px 28px;
-            background: var(--white);
-            border: 1px solid var(--border);
+            margin-bottom: 32px;
         }
 
         .section-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 12px;
-            margin-bottom: 16px;
+            margin-bottom: 17px;
         }
 
         .section-header h2 {
-            color: var(--dark);
-            font-family: "Playfair Display", serif;
-            font-size: 1.25rem;
+            font-family: 'Playfair Display', serif;
+            font-size: 20px;
             font-weight: 600;
+            color: #1a1714;
         }
 
-        .badge-new {
-            display: inline-block;
-            margin-left: 5px;
-            padding: 3px 10px;
-            border-radius: 12px;
-            background: var(--red);
-            color: var(--white);
-            font-family: "Inter", sans-serif;
-            font-size: 0.55rem;
-            font-weight: 600;
-            vertical-align: middle;
+        .section-header a {
+            font-size: 11px;
+            color: #6b5f54;
         }
 
-        .view-all {
-            color: var(--muted);
-            font-size: 0.7rem;
-            text-decoration: none;
+        .section-header a:hover {
+            color: #b28b6f;
         }
 
-        .view-all:hover {
-            color: var(--dark);
-        }
-
-        .notification-item {
+        .order-item {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 16px;
-            padding: 13px 0;
+            gap: 15px;
+            padding: 14px 0;
             border-bottom: 1px solid #f5f0ea;
         }
 
-        .notification-item:last-child {
+        .order-item:last-child {
             border-bottom: none;
         }
 
-        .notif-info {
+        .order-info {
             display: flex;
-            align-items: center;
-            gap: 12px;
-            min-width: 0;
-            flex: 1;
+            flex-direction: column;
+            gap: 3px;
         }
 
-        .notif-icon {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 34px;
-            height: 34px;
-            flex-shrink: 0;
-            border-radius: 50%;
-            font-size: 0.75rem;
-        }
-
-        .notif-icon.pending {
-            background: #f5e0c0;
-            color: var(--orange);
-        }
-
-        .notif-icon.approved {
-            background: #d6e4d0;
-            color: var(--green);
-        }
-
-        .notif-icon.rejected {
-            background: #f5e0e0;
-            color: var(--red);
-        }
-
-        .notif-icon.info {
-            background: #e0e8f5;
-            color: #2c6b9e;
-        }
-
-        .notif-text {
-            color: var(--dark);
-            font-size: 0.8rem;
-        }
-
-        .notif-text .highlight {
+        .order-id {
+            font-size: 12px;
             font-weight: 600;
+            color: #1a1714;
         }
 
-        .notif-time {
-            flex-shrink: 0;
-            color: var(--muted);
-            font-size: 0.65rem;
+        .order-customer {
+            font-size: 10px;
+            color: #6b5f54;
         }
 
-        .notif-action button {
-            padding: 5px 13px;
-            background: transparent;
-            border: 1px solid var(--border);
-            color: var(--dark);
-            font-size: 0.6rem;
-            transition: all 0.2s ease;
+        .order-status {
+            padding: 5px 11px;
+            font-size: 9px;
+            font-weight: 600;
+            text-transform: uppercase;
         }
 
-        .notif-action button:hover {
-            background: var(--dark);
-            border-color: var(--dark);
-            color: var(--white);
+        .status-pending {
+            background: #f5f0ea;
+            color: #6b5f54;
         }
 
-        /* ================================
+        .status-shipping {
+            background: #e8dfd6;
+            color: #1a1714;
+        }
+
+        .status-delivery {
+            background: #d4c5b8;
+            color: #1a1714;
+        }
+
+        .status-delivered {
+            background: #d6e4d0;
+            color: #2d7d46;
+        }
+
+        .order-amount {
+            font-size: 12px;
+            font-weight: 600;
+            color: #1a1714;
+        }
+
+        /* ========================================
            QUICK ACTIONS
-        ================================= */
+        ======================================== */
 
         .quick-actions {
             display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
+            grid-template-columns: repeat(3, 1fr);
             gap: 20px;
         }
 
         .quick-action {
+            background: #ffffff;
+            border: 1px solid #ece4db;
             padding: 25px 20px;
-            background: var(--white);
-            border: 1px solid var(--border);
-            color: var(--dark);
             text-align: center;
-            text-decoration: none;
-            transition: all 0.2s ease;
+            transition: 0.2s ease;
         }
 
         .quick-action:hover {
-            border-color: var(--brown);
+            border-color: #b28b6f;
             transform: translateY(-2px);
         }
 
         .quick-action i {
             display: block;
-            margin-bottom: 11px;
-            color: var(--brown);
-            font-size: 1.8rem;
+            font-size: 28px;
+            color: #b28b6f;
+            margin-bottom: 12px;
         }
 
         .quick-action span {
             display: block;
-            font-size: 0.8rem;
+            font-size: 13px;
             font-weight: 500;
         }
 
         .quick-action .action-desc {
             margin-top: 5px;
-            color: var(--muted);
-            font-size: 0.6rem;
-            font-weight: 400;
+            font-size: 10px;
+            color: #6b5f54;
         }
 
-        /* ================================
-           TOAST NOTIFICATION
-        ================================= */
+        /* ========================================
+           RESPONSIVE
+        ======================================== */
 
-        .sable-notification {
-            position: fixed;
-            right: 24px;
-            bottom: 24px;
-            z-index: 9999;
-            max-width: calc(100% - 48px);
-            padding: 14px 24px;
-            background: var(--dark);
-            border: 1px solid #3b342e;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-            color: var(--white);
-            font-size: 0.8rem;
-            animation: slideUp 0.3s ease;
-        }
-
-        .sable-notification.hide {
-            animation: slideDown 0.3s ease forwards;
-        }
-
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(100px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes slideDown {
-            from {
-                opacity: 1;
-                transform: translateY(0);
-            }
-
-            to {
-                opacity: 0;
-                transform: translateY(100px);
-            }
-        }
-
-        /* ================================
-           RESPONSIVE DESIGN
-        ================================= */
-
-        @media (max-width: 1200px) {
+        @media (max-width: 1100px) {
             .main-content {
-                padding: 28px;
+                padding: 28px 25px;
             }
 
             .stats-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
+                grid-template-columns: repeat(2, 1fr);
             }
 
             .quick-actions {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
-
-            .search-wrapper {
-                width: 300px;
+                grid-template-columns: repeat(2, 1fr);
             }
         }
 
-        @media (max-width: 900px) {
+        @media (max-width: 820px) {
             .navbar {
-                height: 68px;
+                height: 72px;
                 padding: 0 20px;
             }
 
-            .logo img {
-                width: 72px;
+            .menu-toggle {
+                display: block;
             }
 
-            .nav-actions {
-                right: 20px;
-            }
-
-            .search-wrapper {
-                width: 280px;
-            }
-
-            .dashboard-wrapper {
-                flex-direction: column;
-            }
-
-            .sidebar {
-                width: 100%;
-                min-height: auto;
-                padding: 12px 0;
-                border-right: none;
-                border-bottom: 1px solid var(--border);
-            }
-
-            .sidebar-menu {
-                display: flex;
-                gap: 5px;
-                overflow-x: auto;
-                padding: 0 16px;
-            }
-
-            .sidebar-menu li {
-                flex-shrink: 0;
-                margin-bottom: 0;
-            }
-
-            .sidebar-menu a {
-                padding: 9px 13px;
-                white-space: nowrap;
-            }
-
-            .sidebar-menu .badge,
-            .sidebar-divider {
-                display: none;
-            }
-
-            .main-content {
-                padding: 24px 20px;
-            }
-        }
-
-        @media (max-width: 640px) {
-            .navbar {
-                height: 64px;
-            }
-
-            .logo img {
+            .logo-image {
                 width: 68px;
             }
 
-            .nav-actions {
-                right: 16px;
-            }
-
             .search-wrapper {
-                width: 200px;
-                height: 36px;
-                padding: 0 12px;
+                padding: 5px;
+                border: none;
+                background: transparent;
             }
 
+            .search-wrapper input {
+                display: none;
+            }
+
+            .nav-actions {
+                gap: 14px;
+            }
+
+            .logout-link {
+                display: none;
+            }
+
+            .sidebar {
+                display: none;
+            }
+
+            .dashboard-wrapper {
+                min-height: calc(100vh - 72px);
+            }
+
+            .main-content {
+                padding: 25px 20px;
+            }
+
+            .order-item {
+                flex-wrap: wrap;
+            }
+        }
+
+        @media (max-width: 560px) {
             .stats-grid {
+                grid-template-columns: 1fr 1fr;
                 gap: 10px;
             }
 
             .stat-card {
-                padding: 16px;
+                padding: 15px;
             }
 
             .stat-card .number {
-                font-size: 1.35rem;
+                font-size: 23px;
             }
 
-            .main-content {
-                padding: 20px 12px;
-            }
-
-            .page-header {
-                align-items: flex-start;
-                margin-bottom: 22px;
-            }
-
-            .page-header h1 {
-                font-size: 1.5rem;
-            }
-
-            .subtitle {
-                font-size: 0.75rem;
-            }
-
-            .notifications-section {
-                padding: 18px 16px;
-            }
-
-            .section-header {
-                align-items: flex-start;
-            }
-
-            .section-header h2 {
-                font-size: 1.05rem;
-            }
-
-            .notification-item {
-                align-items: flex-start;
-                flex-direction: column;
-                gap: 9px;
-            }
-
-            .notif-time {
-                margin-left: 46px;
-            }
-
-            .notif-action {
-                width: 100%;
-            }
-
-            .notif-action button {
-                width: 100%;
+            .stat-card h3 {
+                font-size: 9px;
             }
 
             .quick-actions {
+                grid-template-columns: 1fr 1fr;
                 gap: 10px;
             }
 
@@ -719,576 +628,671 @@
             }
 
             .quick-action i {
-                font-size: 1.4rem;
+                font-size: 23px;
             }
 
             .quick-action span {
-                font-size: 0.7rem;
+                font-size: 11px;
             }
 
-            .quick-action .action-desc {
-                font-size: 0.55rem;
-            }
-        }
-
-        @media (max-width: 400px) {
-            .logo img {
-                width: 62px;
+            .recent-orders {
+                padding: 20px 16px;
             }
 
-            .search-wrapper {
-                width: 160px;
-                padding: 0 10px;
+            .main-content {
+                padding: 22px 14px;
             }
 
-            .stats-grid {
+            .page-header h1 {
+                font-size: 25px;
+            }
+
+            .order-item {
+                align-items: flex-start;
+                flex-direction: column;
                 gap: 8px;
-            }
-
-            .stat-card {
-                padding: 12px;
-            }
-
-            .stat-card h3 {
-                font-size: 0.55rem;
-            }
-
-            .stat-card .number {
-                font-size: 1.1rem;
-            }
-
-            .trend {
-                font-size: 0.52rem;
-            }
-
-            .quick-action i {
-                font-size: 1.2rem;
-            }
-
-            .quick-action span {
-                font-size: 0.62rem;
             }
         }
     </style>
-<link rel="stylesheet" href="{{ asset('css/admin-shell.css') }}">
 </head>
 
 <body>
 
-    <div class="container">
+    <!-- ========================================
+         HEADER
+    ======================================== -->
 
-        <!-- HEADER -->
+    <header class="navbar">
 
-        @include('admin.partials.header', ['searchId' => 'globalSearch', 'searchPlaceholder' => 'Search dashboard...', 'searchOnInput' => ''])
+        <!-- MOBILE MENU BUTTON -->
+        <div class="header-left">
 
+            <button
+                class="menu-toggle"
+                id="menu-toggle"
+                aria-label="Open Menu"
+                aria-expanded="false"
+                type="button">
 
-        <!-- DASHBOARD WRAPPER -->
+                <i class="fas fa-bars" id="menu-open-icon"></i>
+                <i class="fas fa-times" id="menu-close-icon" style="display: none;"></i>
 
-        <div class="dashboard-wrapper">
-
-
-            <!-- SIDEBAR -->
-
-            @include('admin.partials.sidebar')
-
-
-            <!-- MAIN CONTENT -->
-
-            <main class="main-content">
-
-
-                <!-- PAGE HEADER -->
-
-                <div class="page-header">
-
-                    <div>
-
-                        <h1>Admin Dashboard</h1>
-
-                        <p class="subtitle">
-
-                            Welcome back,
-                            <strong>Administrator</strong>!
-
-                            Here's your platform overview.
-
-                        </p>
-
-                    </div>
-
-                </div>
-
-
-                <!-- STATISTICS -->
-
-                <section class="stats-grid">
-
-                    <div class="stat-card">
-
-                        <div class="stat-icon">
-                            <i class="fas fa-users"></i>
-                        </div>
-
-                        <h3>Total Users</h3>
-
-                        <div class="number">
-                            1,284
-                        </div>
-
-                        <span class="trend up">
-                            ↑ 24 new this week
-                        </span>
-
-                    </div>
-
-
-                    <div class="stat-card">
-
-                        <div class="stat-icon">
-                            <i class="fas fa-store"></i>
-                        </div>
-
-                        <h3>Sellers</h3>
-
-                        <div class="number">
-                            156
-                        </div>
-
-                        <span class="trend up">
-                            ↑ 5 new this week
-                        </span>
-
-                    </div>
-
-
-                    <div class="stat-card">
-
-                        <div class="stat-icon">
-                            <i class="fas fa-shopping-bag"></i>
-                        </div>
-
-                        <h3>Orders</h3>
-
-                        <div class="number">
-                            342
-                        </div>
-
-                        <span class="trend up">
-                            ↑ 12% this month
-                        </span>
-
-                    </div>
-
-
-                    <div class="stat-card">
-
-                        <div class="stat-icon">
-                            <i class="fas fa-coins"></i>
-                        </div>
-
-                        <h3>Revenue</h3>
-
-                        <div class="number">
-                            ₱48,250
-                        </div>
-
-                        <span class="trend up">
-                            ↑ 8% this month
-                        </span>
-
-                    </div>
-
-                </section>
-
-
-                <!-- RECENT ACTIVITY -->
-
-                <section class="notifications-section">
-
-                    <div class="section-header">
-
-                        <h2>
-
-                            Recent Activity
-
-                            <span class="badge-new">
-                                8 New
-                            </span>
-
-                        </h2>
-
-                        <a href="{{ route('admin.reports') }}"
-                           class="view-all">
-
-                            View All →
-
-                        </a>
-
-                    </div>
-
-
-                    <div class="notification-item">
-
-                        <div class="notif-info">
-
-                            <div class="notif-icon pending">
-                                <i class="fas fa-clock"></i>
-                            </div>
-
-                            <div class="notif-text">
-
-                                <span class="highlight">
-                                    Juan Dela Cruz
-                                </span>
-
-                                requested to register as a
-                                <strong>Seller</strong>
-
-                            </div>
-
-                        </div>
-
-                        <div class="notif-time">
-                            5 mins ago
-                        </div>
-
-                        <div class="notif-action">
-
-                            <button type="button"
-                                    onclick="showNotification('Registration review opened.')">
-
-                                Review
-
-                            </button>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="notification-item">
-
-                        <div class="notif-info">
-
-                            <div class="notif-icon info">
-                                <i class="fas fa-info-circle"></i>
-                            </div>
-
-                            <div class="notif-text">
-
-                                New order
-                                <span class="highlight">
-                                    #SBL-2024-001
-                                </span>
-
-                                placed by
-                                <strong>Maria Reyes</strong>
-
-                            </div>
-
-                        </div>
-
-                        <div class="notif-time">
-                            15 mins ago
-                        </div>
-
-                        <div class="notif-action">
-
-                            <button type="button"
-                                    onclick="showNotification('Order details opened.')">
-
-                                View
-
-                            </button>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="notification-item">
-
-                        <div class="notif-info">
-
-                            <div class="notif-icon pending">
-                                <i class="fas fa-clock"></i>
-                            </div>
-
-                            <div class="notif-text">
-
-                                <span class="highlight">
-                                    Pedro Santos
-                                </span>
-
-                                requested to register as a
-                                <strong>Sorting Center</strong>
-
-                            </div>
-
-                        </div>
-
-                        <div class="notif-time">
-                            1 hour ago
-                        </div>
-
-                        <div class="notif-action">
-
-                            <button type="button"
-                                    onclick="showNotification('Registration review opened.')">
-
-                                Review
-
-                            </button>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="notification-item">
-
-                        <div class="notif-info">
-
-                            <div class="notif-icon approved">
-                                <i class="fas fa-check-circle"></i>
-                            </div>
-
-                            <div class="notif-text">
-
-                                <span class="highlight">
-                                    Ana Lopez
-                                </span>
-
-                                registration as
-                                <strong>Seller</strong>
-
-                                was approved
-
-                            </div>
-
-                        </div>
-
-                        <div class="notif-time">
-                            2 hours ago
-                        </div>
-
-                        <div class="notif-action">
-
-                            <button type="button"
-                                    onclick="showNotification('User profile opened.')">
-
-                                Profile
-
-                            </button>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="notification-item">
-
-                        <div class="notif-info">
-
-                            <div class="notif-icon rejected">
-                                <i class="fas fa-times-circle"></i>
-                            </div>
-
-                            <div class="notif-text">
-
-                                <span class="highlight">
-                                    Carlos Garcia
-                                </span>
-
-                                registration as
-                                <strong>Seller</strong>
-
-                                was rejected
-
-                            </div>
-
-                        </div>
-
-                        <div class="notif-time">
-                            3 hours ago
-                        </div>
-
-                        <div class="notif-action">
-
-                            <button type="button"
-                                    onclick="showNotification('Rejection details opened.')">
-
-                                Details
-
-                            </button>
-
-                        </div>
-
-                    </div>
-
-                </section>
-
-
-                <!-- QUICK ACTIONS -->
-
-                <section class="quick-actions">
-
-
-                    <a href="{{ route('admin.registrations') }}"
-                       class="quick-action">
-
-                        <i class="fas fa-user-plus"></i>
-
-                        <span>
-                            Pending Registrations
-                        </span>
-
-                        <span class="action-desc">
-                            Review new account requests
-                        </span>
-
-                    </a>
-
-
-                    <a href="{{ route('admin.disputes') }}"
-                       class="quick-action">
-
-                        <i class="fas fa-gavel"></i>
-
-                        <span>
-                            Disputes
-                        </span>
-
-                        <span class="action-desc">
-                            Resolve customer issues
-                        </span>
-
-                    </a>
-
-
-                    <a href="{{ route('admin.reports') }}"
-                       class="quick-action">
-
-                        <i class="fas fa-chart-bar"></i>
-
-                        <span>
-                            Reports
-                        </span>
-
-                        <span class="action-desc">
-                            View platform analytics
-                        </span>
-
-                    </a>
-
-
-                    <a href="{{ route('admin.settings') }}"
-                       class="quick-action">
-
-                        <i class="fas fa-cog"></i>
-
-                        <span>
-                            Settings
-                        </span>
-
-                        <span class="action-desc">
-                            Manage platform settings
-                        </span>
-
-                    </a>
-
-                </section>
-
-            </main>
+            </button>
 
         </div>
 
+        <!-- CONNECTED ZAYLO LOGO -->
+        <a href="{{ route('seller.dashboard') }}" class="logo">
+
+            <img
+                src="{{ asset('images/logo.png') }}"
+                alt="ZAYLO Logo"
+                class="logo-image">
+
+        </a>
+
+        <!-- HEADER ACTIONS -->
+        <div class="nav-actions">
+
+            <div class="search-wrapper">
+
+                <span class="search-icon">
+                    <i class="fas fa-search"></i>
+                </span>
+
+                <input
+                    type="text"
+                    id="header-search"
+                    placeholder="Search"
+                    aria-label="Search">
+
+            </div>
+
+            <div class="icon-group">
+
+                <a href="#" aria-label="Notifications">
+                    <i class="far fa-bell"></i>
+                    <span class="badge-count">5</span>
+                </a>
+
+                <a href="{{ url('/cart') }}" aria-label="Shopping Cart">
+                    <i class="fas fa-shopping-bag"></i>
+                    <span class="badge-count">2</span>
+                </a>
+
+                <a
+                    href="{{ route('seller.account') }}"
+                    aria-label="Account">
+
+                    <i class="far fa-user"></i>
+
+                </a>
+
+                <a
+                    href="{{ route('login') }}"
+                    class="logout-link">
+
+                    Logout
+
+                </a>
+
+            </div>
+
+        </div>
+
+    </header>
+
+    <!-- ========================================
+         MOBILE MENU
+    ======================================== -->
+
+    <div class="mobile-menu" id="mobile-menu">
+
+        <a
+            href="{{ route('seller.dashboard') }}"
+            class="{{ request()->routeIs('seller.dashboard') ? 'active' : '' }}">
+
+            <i class="fas fa-home"></i>
+            <span>Dashboard</span>
+
+        </a>
+
+        <a
+            href="{{ route('seller.orders') }}"
+            class="{{ request()->routeIs('seller.orders') ? 'active' : '' }}">
+
+            <i class="fas fa-box"></i>
+            <span>Orders</span>
+            <span class="mobile-badge">3</span>
+
+        </a>
+
+        <a
+            href="{{ route('seller.handover') }}"
+            class="{{ request()->routeIs('seller.handover') ? 'active' : '' }}">
+
+            <i class="fas fa-truck"></i>
+            <span>Handover</span>
+
+        </a>
+
+        <a
+            href="{{ route('seller.inventory') }}"
+            class="{{ request()->routeIs('seller.inventory') ? 'active' : '' }}">
+
+            <i class="fas fa-warehouse"></i>
+            <span>Inventory</span>
+
+        </a>
+
+        <a
+            href="{{ route('seller.products') }}"
+            class="{{ request()->routeIs('seller.products') ? 'active' : '' }}">
+
+            <i class="fas fa-shopping-bag"></i>
+            <span>Products</span>
+
+        </a>
+
+        <a
+            href="{{ route('seller.reports') }}"
+            class="{{ request()->routeIs('seller.reports') ? 'active' : '' }}">
+
+            <i class="fas fa-chart-bar"></i>
+            <span>Reports</span>
+
+        </a>
+
+        <a
+            href="{{ route('seller.chat') }}"
+            class="{{ request()->routeIs('seller.chat') ? 'active' : '' }}">
+
+            <i class="fas fa-comment"></i>
+            <span>Messages</span>
+            <span class="mobile-badge">2</span>
+
+        </a>
+
+        <a
+            href="{{ route('seller.account') }}"
+            class="{{ request()->routeIs('seller.account') ? 'active' : '' }}">
+
+            <i class="fas fa-user"></i>
+            <span>Account</span>
+
+        </a>
+
+        <a href="{{ route('login') }}">
+
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Logout</span>
+
+        </a>
+
     </div>
 
+    <!-- ========================================
+         DASHBOARD
+    ======================================== -->
 
-    <!-- JAVASCRIPT -->
+    <div class="dashboard-wrapper">
+
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+
+            <ul class="sidebar-menu">
+
+                <li>
+                    <a
+                        href="{{ route('seller.dashboard') }}"
+                        class="{{ request()->routeIs('seller.dashboard') ? 'active' : '' }}">
+
+                        <i class="fas fa-home"></i>
+                        <span>Dashboard</span>
+
+                    </a>
+                </li>
+
+                <li>
+                    <a
+                        href="{{ route('seller.orders') }}"
+                        class="{{ request()->routeIs('seller.orders') ? 'active' : '' }}">
+
+                        <i class="fas fa-box"></i>
+                        <span>Orders</span>
+                        <span class="badge">3</span>
+
+                    </a>
+                </li>
+
+                <li>
+                    <a
+                        href="{{ route('seller.handover') }}"
+                        class="{{ request()->routeIs('seller.handover') ? 'active' : '' }}">
+
+                        <i class="fas fa-truck"></i>
+                        <span>Handover</span>
+
+                    </a>
+                </li>
+
+                <li>
+                    <a
+                        href="{{ route('seller.inventory') }}"
+                        class="{{ request()->routeIs('seller.inventory') ? 'active' : '' }}">
+
+                        <i class="fas fa-warehouse"></i>
+                        <span>Inventory</span>
+
+                    </a>
+                </li>
+
+                <li>
+                    <a
+                        href="{{ route('seller.products') }}"
+                        class="{{ request()->routeIs('seller.products') ? 'active' : '' }}">
+
+                        <i class="fas fa-shopping-bag"></i>
+                        <span>Products</span>
+
+                    </a>
+                </li>
+
+                <li>
+                    <a
+                        href="{{ route('seller.reports') }}"
+                        class="{{ request()->routeIs('seller.reports') ? 'active' : '' }}">
+
+                        <i class="fas fa-chart-bar"></i>
+                        <span>Reports</span>
+
+                    </a>
+                </li>
+
+                <li>
+                    <a
+                        href="{{ route('seller.chat') }}"
+                        class="{{ request()->routeIs('seller.chat') ? 'active' : '' }}">
+
+                        <i class="fas fa-comment"></i>
+                        <span>Messages</span>
+                        <span class="badge">2</span>
+
+                    </a>
+                </li>
+
+                <li>
+                    <a
+                        href="{{ route('seller.account') }}"
+                        class="{{ request()->routeIs('seller.account') ? 'active' : '' }}">
+
+                        <i class="fas fa-user"></i>
+                        <span>Account</span>
+
+                    </a>
+                </li>
+
+                <div class="sidebar-divider"></div>
+
+                <li>
+                    <a href="{{ route('login') }}">
+
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Logout</span>
+
+                    </a>
+                </li>
+
+            </ul>
+
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="main-content">
+
+            <!-- PAGE HEADER -->
+            <div class="page-header">
+
+                <h1>Seller Dashboard</h1>
+
+                <p class="subtitle">
+                    Welcome back,
+                    <strong id="sellerName">Maria Santos</strong>!
+                </p>
+
+                <p class="store-name" id="storeName">
+                    <i class="fas fa-location-dot"></i>
+                    ZAYLO Fashion Hub
+                </p>
+
+            </div>
+
+            <!-- STATISTICS -->
+            <div class="stats-grid">
+
+                <div class="stat-card">
+
+                    <div class="stat-icon">
+                        <i class="fas fa-shopping-bag"></i>
+                    </div>
+
+                    <h3>Total Orders</h3>
+
+                    <div class="number">24</div>
+
+                    <span class="trend up">
+                        ↑ 5 this month
+                    </span>
+
+                </div>
+
+                <div class="stat-card">
+
+                    <div class="stat-icon">
+                        <i class="fas fa-peso-sign"></i>
+                    </div>
+
+                    <h3>Revenue</h3>
+
+                    <div class="number">₱48,250</div>
+
+                    <span class="trend up">
+                        ↑ 12% this month
+                    </span>
+
+                </div>
+
+                <div class="stat-card">
+
+                    <div class="stat-icon">
+                        <i class="fas fa-boxes"></i>
+                    </div>
+
+                    <h3>Products</h3>
+
+                    <div class="number">48</div>
+
+                    <span class="trend">
+                        12 in stock
+                    </span>
+
+                </div>
+
+                <div class="stat-card">
+
+                    <div class="stat-icon">
+                        <i class="fas fa-star"></i>
+                    </div>
+
+                    <h3>Rating</h3>
+
+                    <div class="number">4.8</div>
+
+                    <span class="trend up">
+                        ★ 128 reviews
+                    </span>
+
+                </div>
+
+            </div>
+
+            <!-- RECENT ORDERS -->
+            <div class="recent-orders">
+
+                <div class="section-header">
+
+                    <h2>Recent Orders</h2>
+
+                    <a href="{{ route('seller.orders') }}">
+                        View All →
+                    </a>
+
+                </div>
+
+                <div class="order-item">
+
+                    <div class="order-info">
+
+                        <span class="order-id">
+                            #ZYL-2024-001
+                        </span>
+
+                        <span class="order-customer">
+                            Juan Dela Cruz · Dec 15, 2024
+                        </span>
+
+                    </div>
+
+                    <span class="order-status status-pending">
+                        To Ship
+                    </span>
+
+                    <span class="order-amount">
+                        ₱4,250.00
+                    </span>
+
+                </div>
+
+                <div class="order-item">
+
+                    <div class="order-info">
+
+                        <span class="order-id">
+                            #ZYL-2024-002
+                        </span>
+
+                        <span class="order-customer">
+                            Maria Reyes · Dec 14, 2024
+                        </span>
+
+                    </div>
+
+                    <span class="order-status status-shipping">
+                        In Transit
+                    </span>
+
+                    <span class="order-amount">
+                        ₱1,280.00
+                    </span>
+
+                </div>
+
+                <div class="order-item">
+
+                    <div class="order-info">
+
+                        <span class="order-id">
+                            #ZYL-2024-003
+                        </span>
+
+                        <span class="order-customer">
+                            Pedro Santos · Dec 12, 2024
+                        </span>
+
+                    </div>
+
+                    <span class="order-status status-delivery">
+                        Out for Delivery
+                    </span>
+
+                    <span class="order-amount">
+                        ₱3,750.00
+                    </span>
+
+                </div>
+
+                <div class="order-item">
+
+                    <div class="order-info">
+
+                        <span class="order-id">
+                            #ZYL-2024-004
+                        </span>
+
+                        <span class="order-customer">
+                            Ana Lopez · Dec 10, 2024
+                        </span>
+
+                    </div>
+
+                    <span class="order-status status-delivered">
+                        Delivered
+                    </span>
+
+                    <span class="order-amount">
+                        ₱890.00
+                    </span>
+
+                </div>
+
+            </div>
+
+            <!-- QUICK ACTIONS -->
+            <div class="quick-actions">
+
+                <a
+                    href="{{ route('seller.orders') }}"
+                    class="quick-action">
+
+                    <i class="fas fa-box"></i>
+
+                    <span>Manage Orders</span>
+
+                    <span class="action-desc">
+                        View and process orders
+                    </span>
+
+                </a>
+
+                <a
+                    href="{{ route('seller.products') }}"
+                    class="quick-action">
+
+                    <i class="fas fa-plus-circle"></i>
+
+                    <span>Add Product</span>
+
+                    <span class="action-desc">
+                        List new items
+                    </span>
+
+                </a>
+
+                <a
+                    href="{{ route('seller.inventory') }}"
+                    class="quick-action">
+
+                    <i class="fas fa-warehouse"></i>
+
+                    <span>Inventory</span>
+
+                    <span class="action-desc">
+                        Manage stock levels
+                    </span>
+
+                </a>
+
+            </div>
+
+        </main>
+
+    </div>
+
+    <!-- ========================================
+         JAVASCRIPT
+    ======================================== -->
 
     <script>
+        document.addEventListener('DOMContentLoaded', function () {
 
-        /*
-        |--------------------------------------------------------------------------
-        | Toast Notification
-        |--------------------------------------------------------------------------
-        */
+            // MOBILE MENU OPEN / CLOSE
+            const menuToggle = document.getElementById('menu-toggle');
+            const mobileMenu = document.getElementById('mobile-menu');
+            const menuOpenIcon = document.getElementById('menu-open-icon');
+            const menuCloseIcon = document.getElementById('menu-close-icon');
 
-        function showNotification(message) {
+            if (menuToggle && mobileMenu) {
 
-            const existingNotification =
-                document.querySelector(".sable-notification");
+                menuToggle.addEventListener('click', function () {
 
-            if (existingNotification) {
-                existingNotification.remove();
-            }
+                    const isOpen = mobileMenu.classList.toggle('show');
 
-            const notification =
-                document.createElement("div");
+                    menuToggle.setAttribute(
+                        'aria-expanded',
+                        String(isOpen)
+                    );
 
-            notification.className =
-                "sable-notification";
+                    if (isOpen) {
 
-            notification.textContent =
-                message;
+                        menuOpenIcon.style.display = 'none';
+                        menuCloseIcon.style.display = 'inline-block';
 
-            document.body.appendChild(notification);
+                    } else {
 
-            setTimeout(() => {
+                        menuOpenIcon.style.display = 'inline-block';
+                        menuCloseIcon.style.display = 'none';
 
-                notification.classList.add("hide");
-
-                setTimeout(() => {
-
-                    notification.remove();
-
-                }, 300);
-
-            }, 3000);
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Global Search
-        |--------------------------------------------------------------------------
-        */
-
-        const globalSearch =
-            document.getElementById("globalSearch");
-
-        if (globalSearch) {
-
-            globalSearch.addEventListener("input", function () {
-
-                const searchValue =
-                    this.value.toLowerCase().trim();
-
-                const notificationItems =
-                    document.querySelectorAll(".notification-item");
-
-                notificationItems.forEach((item) => {
-
-                    const text =
-                        item.textContent.toLowerCase();
-
-                    item.style.display =
-                        text.includes(searchValue)
-                            ? "flex"
-                            : "none";
+                    }
 
                 });
 
-            });
+            }
 
-        }
+            // LOAD SELLER DATA SAFELY
+            function loadSellerData() {
 
+                let userData = null;
+
+                try {
+
+                    const savedData = localStorage.getItem('zaylo_user_data');
+
+                    if (savedData) {
+                        userData = JSON.parse(savedData);
+                    }
+
+                } catch (error) {
+
+                    console.warn('Unable to load seller data:', error);
+
+                }
+
+                if (userData && userData.role === 'seller') {
+
+                    const sellerNameElement =
+                        document.getElementById('sellerName');
+
+                    const storeNameElement =
+                        document.getElementById('storeName');
+
+                    if (
+                        userData.firstName &&
+                        userData.lastName &&
+                        sellerNameElement
+                    ) {
+
+                        sellerNameElement.textContent =
+                            `${userData.firstName} ${userData.lastName}`;
+
+                    }
+
+                    if (userData.businessName && storeNameElement) {
+
+                        storeNameElement.innerHTML =
+                            `<i class="fas fa-location-dot"></i>
+                             ${userData.businessName}`;
+
+                    }
+
+                }
+
+            }
+
+            loadSellerData();
+
+        });
     </script>
 
-<script src="{{ asset('js/admin-shell.js') }}"></script>
 </body>
 
 </html>

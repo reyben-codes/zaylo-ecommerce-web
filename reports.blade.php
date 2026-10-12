@@ -1,361 +1,330 @@
 
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>ZAYLO · Reports</title>
+    <title>ZAYLO · Sales Reports</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
     <style>
-        :root {
-            --green: #78a878;
-            --green-dark: #527b52;
-            --green-light: #edf5ed;
-            --black: #1a1714;
-            --brown: #6b5f54;
-            --accent: #b28b6f;
-            --background: #faf7f2;
-            --border: #ece4db;
-            --white: #ffffff;
-            --red: #c0392b;
-        }
-
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
-        html {
-            scroll-behavior: smooth;
+        :root {
+            --cream: #faf7f2;
+            --white: #ffffff;
+            --brown: #1a1714;
+            --text: #51463f;
+            --muted: #6b5f54;
+            --light-brown: #b28b6f;
+            --border: #eee7df;
+            --soft: #f5f0ea;
+            --green: #2d7d46;
         }
 
         body {
-            background: var(--background);
-            font-family: "Inter", "Helvetica Neue", sans-serif;
-            color: #1e1e1e;
-            line-height: 1.4;
-            min-height: 100vh;
-        }
-
-        a {
-            color: inherit;
-            text-decoration: none;
-        }
-
-        button,
-        input,
-        select {
+            background: var(--cream);
+            color: var(--brown);
             font-family: "Inter", sans-serif;
         }
 
-        button {
-            cursor: pointer;
+        button,
+        input {
+            font-family: inherit;
         }
 
-        /* ========================================
-           STANDARD ZAYLO HEADER
-           DO NOT CHANGE THIS DESIGN
-        ======================================== */
-
-        .top-line {
-            position: fixed;
-            top: 0;
-            left: 0;
-            z-index: 2000;
-            width: 100%;
-            height: 3px;
-            background: var(--green);
+        button,
+        a {
+            -webkit-tap-highlight-color: transparent;
         }
 
-        .header {
-            position: fixed;
-            top: 3px;
-            left: 0;
-            z-index: 1999;
-            width: 100%;
-            height: 70px;
-            background: #ffffff;
-            border-bottom: 1px solid #eeeeeb;
+        /* ================= HEADER ================= */
+
+        .navbar {
+            height: 64px;
+            background: var(--white);
+            border-bottom: 1px solid var(--border);
             display: flex;
             align-items: center;
-            justify-content: center;
+            justify-content: space-between;
+            padding: 0 32px;
+            position: relative;
+            z-index: 100;
         }
 
-        .header-logo {
+        .nav-spacer {
+            width: 260px;
+        }
+
+        .logo {
             position: absolute;
-            top: 50%;
             left: 50%;
-            transform: translate(-50%, -50%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .header-logo img {
-            width: 76px;
-            height: auto;
-            max-height: 40px;
-            object-fit: contain;
-        }
-
-        .header-search {
-            position: absolute;
             top: 50%;
-            right: 78px;
-            transform: translateY(-50%);
-            width: 360px;
-            height: 43px;
-            padding: 0 17px;
+            transform: translate(-50%, -50%);
+        }
+
+        .logo img {
+            width: 78px;
+            height: auto;
+            display: block;
+        }
+
+        .nav-right {
+            margin-left: auto;
             display: flex;
             align-items: center;
-            gap: 11px;
-            background: #f8f7f5;
-            border: 1px solid #e2dfd9;
-            border-radius: 24px;
+            gap: 18px;
         }
 
-        .header-search i {
-            color: #252525;
-            font-size: 14px;
+        .search-box {
+            width: 220px;
+            height: 38px;
+            background: var(--cream);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            padding: 0 12px;
         }
 
-        .header-search input {
+        .search-box i {
+            color: #9b8878;
+        }
+
+        .search-box input {
             width: 100%;
             border: none;
             outline: none;
             background: transparent;
-            color: #333333;
+            color: var(--brown);
             font-size: 12px;
         }
 
-        .header-search input::placeholder {
-            color: #99938b;
+        .nav-icon {
+            position: relative;
+            border: none;
+            background: transparent;
+            color: var(--text);
+            font-size: 17px;
+            cursor: pointer;
+            text-decoration: none;
         }
 
-        /* ========================================
-           FULL-SCREEN DASHBOARD LAYOUT
-        ======================================== */
-
-        .dashboard-wrapper {
-            display: flex;
-            width: 100%;
-            min-height: 100vh;
-            padding-top: 73px;
-            background: var(--background);
-        }
-
-        /* ========================================
-           SIDEBAR
-        ======================================== */
-
-        .sidebar {
-            position: fixed;
-            top: 73px;
-            left: 0;
-            z-index: 1000;
-            width: 245px;
-            height: calc(100vh - 73px);
-            padding: 26px 15px;
-            overflow-y: auto;
-            background: var(--white);
-            border-right: 1px solid var(--border);
-        }
-
-        .sidebar-title {
-            padding: 0 15px;
-            margin-bottom: 15px;
-            color: #aaa59d;
-            font-size: 10px;
-            font-weight: 800;
-            letter-spacing: 1.4px;
-            text-transform: uppercase;
-        }
-
-        .sidebar-menu {
-            list-style: none;
-        }
-
-        .sidebar-menu li {
-            margin-bottom: 5px;
-        }
-
-        .sidebar-menu a {
-            display: flex;
-            align-items: center;
-            gap: 13px;
-            padding: 12px 15px;
-            color: #77736d;
-            border-radius: 10px;
-            font-size: 12px;
-            font-weight: 600;
-            transition: 0.2s ease;
-        }
-
-        .sidebar-menu a:hover {
-            background: #f5f7f3;
-            color: var(--green-dark);
-        }
-
-        .sidebar-menu a.active {
-            background: var(--green-light);
-            color: var(--green-dark);
-            font-weight: 800;
-        }
-
-        .sidebar-menu a i {
-            width: 17px;
-            text-align: center;
-            font-size: 14px;
-        }
-
-        .sidebar-menu .badge {
-            min-width: 20px;
-            height: 20px;
-            padding: 0 6px;
-            margin-left: auto;
+        .notification-badge {
+            position: absolute;
+            top: -8px;
+            right: -9px;
+            min-width: 16px;
+            height: 16px;
+            padding: 0 3px;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: #e9e9e6;
-            color: #74746d;
-            border-radius: 20px;
-            font-size: 10px;
-            font-weight: 800;
+            background: var(--light-brown);
+            color: white;
+            border-radius: 50%;
+            font-size: 9px;
         }
 
-        .sidebar-menu a.active .badge {
-            background: var(--green);
+        .nav-divider {
+            width: 1px;
+            height: 28px;
+            background: #e5ddd5;
+        }
+
+        .logout-btn {
+            border: none;
+            background: transparent;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .logout-btn:hover {
+            color: var(--light-brown);
+        }
+
+        /* ================= LAYOUT ================= */
+
+        .dashboard-wrapper {
+            display: flex;
+            min-height: calc(100vh - 64px);
+        }
+
+        /* ================= SIDEBAR ================= */
+
+        .sidebar {
+            width: 260px;
+            flex-shrink: 0;
+            background: var(--white);
+            border-right: 1px solid var(--border);
+            padding: 28px 18px;
+        }
+
+        .sidebar-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            list-style: none;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 14px 18px;
+            border-radius: 10px;
+            color: #76685e;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: 0.2s ease;
+        }
+
+        .menu-item i {
+            width: 20px;
+            text-align: center;
+            font-size: 16px;
+        }
+
+        .menu-item:hover {
+            background: #faf3ec;
+            color: var(--light-brown);
+        }
+
+        .menu-item.active {
+            background: var(--light-brown);
             color: white;
+            box-shadow: 0 4px 12px rgba(178, 139, 111, 0.2);
+        }
+
+        .menu-item.active:hover {
+            background: #a17b61;
+            color: white;
+        }
+
+        .menu-badge {
+            margin-left: auto;
+            background: var(--light-brown);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 20px;
+            font-size: 10px;
         }
 
         .sidebar-divider {
             height: 1px;
-            margin: 24px 12px;
             background: var(--border);
+            margin: 14px 0;
         }
 
-        .logout-link {
-            color: #b96d6d !important;
-        }
-
-        .logout-link:hover {
-            background: #fff3f3 !important;
-            color: #a94e4e !important;
-        }
-
-        /* ========================================
-           MAIN CONTENT
-        ======================================== */
+        /* ================= MAIN CONTENT ================= */
 
         .main-content {
-            width: calc(100% - 245px);
+            flex: 1;
             min-width: 0;
-            margin-left: 245px;
-            padding: 38px 42px 55px;
-            background: var(--background);
+            padding: 32px 40px;
+            background: var(--cream);
         }
 
         .page-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 20px;
             margin-bottom: 24px;
         }
 
+        .page-header h1 { color: var(--brown); }
+
         .page-header h1 {
-            color: var(--black);
             font-family: "Playfair Display", serif;
             font-size: 30px;
             font-weight: 600;
-            letter-spacing: -0.7px;
+            color: var(--brown);
         }
 
         .subtitle {
-            margin-top: 6px;
-            color: var(--brown);
-            font-size: 13px;
+            margin-top: 5px;
+            color: var(--muted);
+            font-size: 14px;
         }
 
-        /* ========================================
-           DATE FILTER
-        ======================================== */
+        /* ================= DATE FILTER ================= */
 
         .date-filter {
             display: flex;
             align-items: center;
             flex-wrap: wrap;
             gap: 12px;
-            padding: 18px 20px;
-            margin-bottom: 24px;
             background: var(--white);
             border: 1px solid var(--border);
+            padding: 13px 16px;
+            margin-bottom: 24px;
         }
 
-        .date-filter label {
-            color: var(--brown);
+        .date-field {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .date-field label {
+            color: var(--muted);
             font-size: 10px;
             font-weight: 700;
             letter-spacing: 0.04em;
             text-transform: uppercase;
         }
 
-        .date-filter input {
+        .date-field input {
             height: 38px;
-            padding: 8px 12px;
-            background: white;
+            padding: 8px 10px;
             border: 1px solid var(--border);
             outline: none;
             color: #1e1e1e;
+            background: white;
             font-size: 12px;
         }
 
-        .date-filter input:focus {
-            border-color: var(--black);
+        .date-field input:focus {
+            border-color: var(--light-brown);
         }
 
-        .btn-generate,
-        .btn-export {
+        .btn-apply, .btn-export {
             height: 38px;
-            padding: 0 24px;
+            padding: 0 20px;
             border: none;
             color: white;
+            cursor: pointer;
             font-size: 10px;
             font-weight: 700;
             letter-spacing: 0.04em;
             text-transform: uppercase;
-            transition: 0.2s ease;
         }
 
-        .btn-generate {
-            background: var(--black);
+        .btn-apply { background: var(--brown); }
+        .btn-export { background: #2d7d46; }
+
+        .btn-apply:hover {
+            background: #b28b6f;
         }
 
-        .btn-generate:hover {
-            background: var(--accent);
-        }
+        .btn-export:hover { background: #1e5a34; }
 
-        .btn-export {
-            background: #2d7d46;
-        }
-
-        .btn-export:hover {
-            background: #1e5a34;
-        }
-
-        /* ========================================
-           REPORT STATISTICS
-        ======================================== */
+        /* ================= STATS ================= */
 
         .report-stats {
             display: grid;
@@ -365,44 +334,35 @@
         }
 
         .report-stat {
-            padding: 20px;
             background: var(--white);
-            border: 1px solid var(--border);
+            border: 1px solid #ece4db;
+            padding: 18px;
         }
 
-        .report-stat .label {
+        .stat-label {
+            color: var(--muted);
             margin-bottom: 8px;
-            color: var(--brown);
             font-size: 10px;
             font-weight: 700;
             letter-spacing: 0.04em;
             text-transform: uppercase;
         }
 
-        .report-stat .number {
-            color: var(--black);
-            font-size: 25px;
+        .stat-number {
+            color: var(--brown);
+            font-size: 24px;
             font-weight: 800;
-            letter-spacing: -0.7px;
+            word-break: break-word;
         }
 
-        .report-stat .change {
+        .stat-change {
             display: block;
             margin-top: 8px;
+            color: var(--green);
             font-size: 10px;
         }
 
-        .report-stat .change.up {
-            color: #2d7d46;
-        }
-
-        .report-stat .change.down {
-            color: var(--red);
-        }
-
-        /* ========================================
-           CHARTS
-        ======================================== */
+        /* ================= CHARTS ================= */
 
         .chart-container {
             display: grid;
@@ -412,51 +372,51 @@
         }
 
         .chart-box {
-            padding: 24px;
             background: var(--white);
-            border: 1px solid var(--border);
+            border: 1px solid #ece4db;
+            padding: 20px;
+            min-width: 0;
         }
 
-        .chart-box h3 {
+        .chart-box h3,
+        .top-products h3 {
             margin-bottom: 20px;
-            color: var(--black);
+            color: var(--brown);
             font-size: 13px;
             font-weight: 800;
         }
 
         .chart-placeholder {
-            position: relative;
+            height: 210px;
             display: flex;
             align-items: flex-end;
             justify-content: space-around;
-            width: 100%;
-            height: 210px;
+            gap: 12px;
             padding: 28px 20px 25px;
-            background: #f5f0ea;
-            overflow: hidden;
+            background: var(--soft);
+            overflow-x: auto;
+            overflow-y: hidden;
         }
 
         .chart-bar {
             position: relative;
             width: 8%;
+            min-width: 12px;
             min-height: 4px;
-            background: var(--black);
+            background: #1a1714;
             border-radius: 2px 2px 0 0;
-            transition: 0.3s ease;
+            transition: 0.2s;
         }
+
+        .category-chart { height: 210px; display: flex; background: var(--soft); align-items: stretch; justify-content: space-around; flex-direction: column; gap: 10px; padding: 15px 0; }
+        .category-row { display: grid; grid-template-columns: 90px 1fr 54px; align-items: center; gap: 10px; padding: 0 15px; }
+        .category-name { color: var(--muted); font-size: 10px; font-weight: 600; }
+        .category-track { height: 13px; background: #e4dcd3; overflow: hidden; }
+        .category-fill { height: 100%; background: #1a1714; }
+        .category-amount { color: var(--brown); font-size: 9px; font-weight: 700; text-align: right; }
 
         .chart-bar:hover {
-            background: var(--accent) !important;
-        }
-
-        .bar-label {
-            position: absolute;
-            bottom: -23px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: var(--brown);
-            font-size: 9px;
-            white-space: nowrap;
+            background: var(--light-brown) !important;
         }
 
         .bar-value {
@@ -464,202 +424,129 @@
             top: -20px;
             left: 50%;
             transform: translateX(-50%);
-            color: var(--black);
+            color: var(--brown);
             font-size: 9px;
-            font-weight: 700;
             white-space: nowrap;
         }
 
-        .category-chart {
-            display: flex;
-            flex-direction: column;
-            justify-content: space-around;
-            gap: 10px;
-            height: 210px;
-            padding: 15px 0;
-            background: #f5f0ea;
-        }
-
-        .category-row {
-            display: grid;
-            grid-template-columns: 85px 1fr 50px;
-            align-items: center;
-            gap: 10px;
-            padding: 0 15px;
-        }
-
-        .category-name {
-            color: var(--brown);
-            font-size: 10px;
-            font-weight: 600;
-        }
-
-        .category-track {
-            height: 13px;
-            background: #e4dcd3;
-            overflow: hidden;
-        }
-
-        .category-fill {
-            height: 100%;
-            background: var(--black);
-            transition: width 0.4s ease;
-        }
-
-        .category-amount {
-            color: var(--black);
+        .bar-label {
+            position: absolute;
+            bottom: -22px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: var(--muted);
             font-size: 9px;
-            font-weight: 700;
-            text-align: right;
+            white-space: nowrap;
         }
 
-        /* ========================================
-           REPORT TABLE
-        ======================================== */
+        /* ================= TABLE ================= */
 
-        .report-table-wrapper {
-            width: 100%;
+        .top-products {
             background: var(--white);
-            border: 1px solid var(--border);
+            border: 1px solid #ece4db;
+            padding: 0;
             overflow-x: auto;
         }
 
-        .report-table {
+        .top-products table {
             width: 100%;
-            min-width: 850px;
+            min-width: 650px;
             border-collapse: collapse;
-            font-size: 12px;
         }
 
-        .report-table th {
-            padding: 15px 16px;
-            background: #f5f0ea;
-            border-bottom: 1px solid var(--border);
-            color: var(--brown);
+        .top-products th {
+            padding: 14px 16px;
+            background: var(--soft);
+            border-bottom: 1px solid #ece4db;
+            color: var(--muted);
             font-size: 10px;
             font-weight: 800;
             letter-spacing: 0.04em;
             text-align: left;
             text-transform: uppercase;
-            white-space: nowrap;
         }
 
-        .report-table td {
-            padding: 16px;
-            border-bottom: 1px solid #f5f0ea;
-            color: #514940;
+        .top-products td {
+            padding: 15px 16px;
+            border-bottom: 1px solid var(--soft);
+            color: var(--text);
             font-size: 11px;
-            white-space: nowrap;
         }
 
-        .report-table tbody tr:hover td {
-            background: #faf7f2;
+        .top-products tbody tr:hover td {
+            background: var(--cream);
         }
 
-        .report-table tbody tr:last-child td {
-            border-bottom: none;
+        .product-cell {
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
-        .report-table td strong {
-            color: var(--black);
-            font-weight: 800;
+        .product-image {
+            width: 40px;
+            height: 40px;
+            flex-shrink: 0;
+            overflow: hidden;
+            background: var(--soft);
         }
 
-        .status-badge {
+        .product-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .product-name {
+            color: var(--brown);
+            font-weight: 500;
+        }
+
+        .rank-badge {
             display: inline-flex;
             align-items: center;
-            padding: 5px 12px;
-            border-radius: 12px;
-            font-size: 9px;
-            font-weight: 800;
+            justify-content: center;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            background: var(--soft);
+            color: var(--muted);
+            font-size: 11px;
+            font-weight: 600;
         }
 
-        .status-badge.completed {
-            background: #d6e4d0;
-            color: #2d7d46;
+        .rank-badge.gold {
+            background: #d4af37;
+            color: white;
         }
 
-        .status-badge.pending {
-            background: #f5e0c0;
-            color: #e67e22;
+        .rank-badge.silver {
+            background: #c0c0c0;
+            color: white;
         }
 
-        .status-badge.cancelled {
-            background: #f5e0e0;
-            color: #c0392b;
+        .rank-badge.bronze {
+            background: #cd7f32;
+            color: white;
         }
 
-        .empty-row {
-            padding: 45px !important;
-            color: var(--brown) !important;
-            text-align: center;
-        }
-
-        .empty-row i {
-            display: block;
-            margin-bottom: 10px;
-            color: var(--accent);
-            font-size: 30px;
-        }
-
-        /* ========================================
-           NOTIFICATION
-        ======================================== */
+        /* ================= NOTIFICATION ================= */
 
         .zaylo-notification {
             position: fixed;
-            right: 25px;
-            bottom: 25px;
-            z-index: 3000;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            max-width: 350px;
-            padding: 15px 20px;
-            background: var(--black);
+            right: 24px;
+            bottom: 24px;
+            z-index: 9999;
+            padding: 14px 22px;
+            background: var(--brown);
             color: white;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.18);
             font-size: 12px;
-            animation: slideUp 0.3s ease;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
         }
 
-        .zaylo-notification i {
-            color: #9ed39e;
-        }
+        /* ================= RESPONSIVE ================= */
 
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(25px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(8px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        /* ========================================
-           RESPONSIVE DESIGN
-        ======================================== */
-
-        @media (max-width: 1200px) {
-            .main-content {
-                padding: 32px 28px 45px;
-            }
-
+        @media (max-width: 1100px) {
             .report-stats {
                 grid-template-columns: repeat(2, 1fr);
             }
@@ -668,96 +555,93 @@
                 grid-template-columns: 1fr;
             }
 
-            .header-search {
-                right: 30px;
-            }
-        }
-
-        @media (max-width: 850px) {
-            .sidebar {
-                width: 205px;
-            }
-
             .main-content {
-                width: calc(100% - 205px);
-                margin-left: 205px;
-                padding: 28px 20px;
-            }
-
-            .header-search {
-                width: 280px;
+                padding: 28px;
             }
         }
 
-        @media (max-width: 650px) {
-            .header {
-                height: 62px;
+        @media (max-width: 820px) {
+            .navbar {
+                padding: 0 18px;
             }
 
-            .header-logo img {
-                width: 68px;
+            .nav-spacer {
+                display: none;
             }
 
-            .header-search {
-                right: 12px;
-                width: 190px;
-                height: 38px;
-            }
-
-            .header-search input {
-                font-size: 10px;
+            .search-box {
+                width: 160px;
             }
 
             .dashboard-wrapper {
-                display: block;
-                padding-top: 65px;
+                flex-direction: column;
             }
 
             .sidebar {
-                position: static;
                 width: 100%;
-                height: auto;
-                min-height: auto;
-                padding: 15px;
+                padding: 10px;
                 border-right: none;
                 border-bottom: 1px solid var(--border);
             }
 
-            .sidebar-title {
+            .sidebar-menu {
+                flex-direction: row;
+                overflow-x: auto;
+            }
+
+            .menu-item {
+                padding: 11px 14px;
+                white-space: nowrap;
+            }
+
+            .menu-badge,
+            .sidebar-divider {
+                display: none;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .search-box {
+                width: 35px;
+                border: none;
+                background: transparent;
+                padding: 0;
+            }
+
+            .search-box input {
                 display: none;
             }
 
-            .sidebar-menu {
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 5px;
+            .nav-right {
+                gap: 12px;
             }
 
-            .sidebar-menu li {
-                margin-bottom: 0;
+            .logout-btn {
+                font-size: 0;
             }
 
-            .sidebar-menu a {
-                padding: 11px;
-                font-size: 11px;
-            }
-
-            .sidebar-divider {
-                margin: 15px 5px;
+            .logout-btn i {
+                font-size: 16px;
             }
 
             .main-content {
-                width: 100%;
-                margin-left: 0;
-                padding: 25px 15px 35px;
-            }
-
-            .page-header {
-                align-items: flex-start;
+                padding: 20px 14px;
             }
 
             .page-header h1 {
                 font-size: 25px;
+            }
+
+            .report-stats {
+                gap: 10px;
+            }
+
+            .report-stat {
+                padding: 16px;
+            }
+
+            .stat-number {
+                font-size: 20px;
             }
 
             .date-filter {
@@ -766,176 +650,136 @@
             }
 
             .date-filter input,
-            .btn-generate,
+            .date-field,
+            .btn-apply,
             .btn-export {
                 width: 100%;
             }
 
-            .report-stats {
-                grid-template-columns: 1fr 1fr;
-                gap: 10px;
-            }
-
-            .report-stat {
-                padding: 15px;
-            }
-
-            .report-stat .number {
-                font-size: 20px;
-            }
-
-            .chart-box {
-                padding: 18px;
+            .chart-box,
+            .top-products {
+                padding: 16px;
             }
 
             .chart-placeholder {
-                height: 170px;
-                padding: 28px 10px 25px;
-            }
-
-            .category-chart {
-                height: auto;
-                min-height: 210px;
-            }
-
-            .category-row {
-                grid-template-columns: 75px 1fr 45px;
-                gap: 7px;
-                padding: 0 12px;
-            }
-        }
-
-        @media (max-width: 400px) {
-            .header-search {
-                width: 155px;
-            }
-
-            .report-stats {
-                grid-template-columns: 1fr;
-            }
-
-            .sidebar-menu {
-                grid-template-columns: 1fr;
-            }
-
-            .page-header h1 {
-                font-size: 22px;
+                gap: 8px;
+                padding-left: 8px;
+                padding-right: 8px;
             }
         }
     </style>
+    <link rel="stylesheet" href="{{ asset('css/seller-theme.css') }}">
 </head>
 
-<body>
+<body class="seller-dashboard-sidebar">
 
-    <!-- ========================================
-         STANDARD ZAYLO HEADER
-    ======================================== -->
+    <!-- ================= HEADER ================= -->
 
-    <div class="top-line"></div>
+    <header class="navbar">
+        <div class="nav-spacer"></div>
 
-    <header class="header">
-
-        <a href="{{ url('/admin/dashboard') }}" class="header-logo">
+        <a href="{{ route('seller.dashboard') }}" class="logo">
             <img src="{{ asset('images/logo.png') }}" alt="ZAYLO Logo">
         </a>
 
-        <div class="header-search">
-            <i class="fa-solid fa-magnifying-glass"></i>
+        <div class="nav-right">
 
-            <input
-                type="text"
-                id="headerSearch"
-                placeholder="Search dashboard..."
-                autocomplete="off"
-                oninput="searchDashboard(this.value)"
-            >
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="globalSearch" placeholder="Search products...">
+            </div>
+
+            <button class="nav-icon" type="button" aria-label="Notifications">
+                <i class="far fa-bell"></i>
+                <span class="notification-badge">5</span>
+            </button>
+
+            <button class="nav-icon" type="button" aria-label="Shopping bag">
+                <i class="fas fa-shopping-bag"></i>
+                <span class="notification-badge">2</span>
+            </button>
+
+            <a href="{{ route('seller.account') }}" class="nav-icon" aria-label="Account">
+                <i class="far fa-user"></i>
+            </a>
+
+            <div class="nav-divider"></div>
+
+            <form action="{{ route('login') }}" method="GET">
+                <button type="submit" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Logout
+                </button>
+            </form>
+
         </div>
-
     </header>
 
-    <!-- ========================================
-         DASHBOARD WRAPPER
-    ======================================== -->
+    <!-- ================= DASHBOARD LAYOUT ================= -->
 
     <div class="dashboard-wrapper">
 
-        <!-- SIDEBAR -->
+        <!-- ================= SIDEBAR ================= -->
 
         <aside class="sidebar">
-
-            <div class="sidebar-title">Main Menu</div>
-
             <ul class="sidebar-menu">
 
                 <li>
-                    <a href="{{ url('/admin/dashboard') }}">
-                        <i class="fa-solid fa-chart-pie"></i>
+                    <a href="{{ route('seller.dashboard') }}" class="menu-item">
+                        <i class="fas fa-th-large"></i>
                         <span>Dashboard</span>
                     </a>
                 </li>
 
                 <li>
-                    <a href="{{ url('/admin/registrations') }}">
-                        <i class="fa-solid fa-user-plus"></i>
-                        <span>Registrations</span>
-                        <span class="badge">5</span>
+                    <a href="{{ route('seller.orders') }}" class="menu-item">
+                        <i class="fas fa-shopping-cart"></i>
+                        <span>Orders</span>
+                        <span class="menu-badge">3</span>
+                    </a>
+                </li>
+
+                <!-- HANDOVER MENU -->
+                <li>
+                    <a href="{{ route('seller.handover') }}" class="menu-item">
+                        <i class="fas fa-truck"></i>
+                        <span>Handover</span>
                     </a>
                 </li>
 
                 <li>
-                    <a href="{{ url('/admin/users') }}">
-                        <i class="fa-solid fa-users"></i>
-                        <span>Users</span>
+                    <a href="{{ route('seller.inventory') }}" class="menu-item">
+                        <i class="fas fa-boxes"></i>
+                        <span>Inventory</span>
                     </a>
                 </li>
 
                 <li>
-                    <a href="{{ url('/admin/compliance') }}">
-                        <i class="fa-solid fa-shield-halved"></i>
-                        <span>Compliance</span>
+                    <a href="{{ route('seller.products') }}" class="menu-item">
+                        <i class="fas fa-box-open"></i>
+                        <span>Products</span>
                     </a>
                 </li>
 
+                <!-- ACTIVE REPORTS MENU -->
                 <li>
-                    <a href="{{ url('/admin/disputes') }}">
-                        <i class="fa-solid fa-scale-balanced"></i>
-                        <span>Disputes</span>
-                        <span class="badge">2</span>
-                    </a>
-                </li>
-
-                <li>
-                    <a href="{{ url('/admin/commissions') }}">
-                        <i class="fa-solid fa-coins"></i>
-                        <span>Commissions</span>
-                    </a>
-                </li>
-
-                <li>
-                    <a href="{{ url('/admin/reports') }}" class="active">
-                        <i class="fa-solid fa-chart-column"></i>
+                    <a href="{{ route('seller.reports') }}" class="menu-item active">
+                        <i class="fas fa-chart-line"></i>
                         <span>Reports</span>
                     </a>
                 </li>
 
                 <li>
-                    <a href="{{ url('/admin/settings') }}">
-                        <i class="fa-solid fa-gear"></i>
-                        <span>Settings</span>
+                    <a href="{{ route('seller.chat') }}" class="menu-item">
+                        <i class="fas fa-comments"></i>
+                        <span>Chat</span>
+                        <span class="menu-badge">2</span>
                     </a>
                 </li>
 
                 <li>
-                    <a href="{{ url('/admin/chat') }}">
-                        <i class="fa-regular fa-comments"></i>
-                        <span>Messages</span>
-                        <span class="badge">3</span>
-                    </a>
-                </li>
-
-                <li>
-                    <a href="{{ url('/admin/account') }}">
-                        <i class="fa-regular fa-user"></i>
+                    <a href="{{ route('seller.account') }}" class="menu-item">
+                        <i class="fas fa-user-circle"></i>
                         <span>Account</span>
                     </a>
                 </li>
@@ -943,31 +787,24 @@
                 <div class="sidebar-divider"></div>
 
                 <li>
-                    <a href="{{ route('login') }}" class="logout-link">
-                        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                    <a href="{{ route('login') }}" class="menu-item">
+                        <i class="fas fa-sign-out-alt"></i>
                         <span>Logout</span>
                     </a>
                 </li>
 
             </ul>
-
         </aside>
 
-        <!-- MAIN CONTENT -->
+        <!-- ================= MAIN CONTENT ================= -->
 
         <main class="main-content">
 
-            <!-- PAGE HEADER -->
-
             <div class="page-header">
-
                 <div>
-                    <h1>Reports</h1>
-                    <p class="subtitle">
-                        Generate and view platform reports
-                    </p>
+                    <h1>Sales Reports</h1>
+                    <p class="subtitle">Track sales and product performance for your store</p>
                 </div>
-
             </div>
 
             <!-- DATE FILTER -->
@@ -975,98 +812,48 @@
             <div class="date-filter">
 
                 <label for="dateFrom">From</label>
+                <input type="date" id="dateFrom" value="2026-09-01">
 
-                <input
-                    type="date"
-                    id="dateFrom"
-                    value="{{ request('from') ?: '2026-09-01' }}"
-                >
+                <div class="date-field">
+                    <label for="dateTo">To</label>
+                    <input type="date" id="dateTo" value="2026-09-30">
+                </div>
 
-                <label for="dateTo">To</label>
-
-                <input
-                    type="date"
-                    id="dateTo"
-                    value="{{ request('to') ?: '2026-09-30' }}"
-                >
-
-                <button
-                    type="button"
-                    class="btn-generate"
-                    onclick="generateReport()"
-                >
+                <button class="btn-apply" type="button" onclick="generateReport()">
                     Generate Report
                 </button>
-
-                <button
-                    type="button"
-                    class="btn-export"
-                    onclick="exportPdfReport()"
-                >
-                    <i class="fa-solid fa-file-pdf"></i>
-                    Download PDF
+                <button class="btn-export" type="button" onclick="exportPdfReport()">
+                    <i class="fas fa-file-pdf"></i> Download PDF
                 </button>
 
             </div>
 
-            <!-- REPORT STATISTICS -->
+            <!-- REPORT STATS -->
 
             <div class="report-stats">
 
                 <div class="report-stat">
-
-                    <div class="label">Total Sales</div>
-
-                    <div class="number" id="totalSales">
-                        ₱0.00
-                    </div>
-
-                    <span class="change up">
-                        ↑ 12% from last month
-                    </span>
-
+                    <div class="stat-label">Total Sales</div>
+                    <div class="stat-number" id="totalSales">&#8369;101,750</div>
+                    <span class="stat-change">For the selected period</span>
                 </div>
 
                 <div class="report-stat">
-
-                    <div class="label">Total Orders</div>
-
-                    <div class="number" id="totalOrders">
-                        0
-                    </div>
-
-                    <span class="change up">
-                        ↑ 8% from last month
-                    </span>
-
+                    <div class="stat-label">Orders</div>
+                    <div class="stat-number" id="totalOrders">24</div>
+                    <span class="stat-change">Orders in the selected period</span>
                 </div>
 
                 <div class="report-stat">
-
-                    <div class="label">Total Commission</div>
-
-                    <div class="number" id="totalCommission">
-                        ₱0.00
-                    </div>
-
-                    <span class="change up">
-                        ↑ 10% from last month
-                    </span>
-
+                    <div class="stat-label">Top Product Revenue</div>
+                    <div class="stat-number" id="avgOrder">&#8369;34,000</div>
+                    <span class="stat-change">Wool Blend Blazer</span>
                 </div>
 
                 <div class="report-stat">
-
-                    <div class="label">Active Sellers</div>
-
-                    <div class="number" id="activeSellers">
-                        0
-                    </div>
-
-                    <span class="change up">
-                        ↑ 5 new this month
-                    </span>
-
+                    <div class="stat-label">Units Sold</div>
+                    <div class="stat-number" id="totalCommission">26</div>
+                    <span class="stat-change">Across 5 products</span>
                 </div>
 
             </div>
@@ -1076,49 +863,35 @@
             <div class="chart-container">
 
                 <div class="chart-box">
-
-                    <h3>Daily Sales</h3>
-
-                    <div
-                        class="chart-placeholder"
-                        id="salesChart"
-                    ></div>
-
+                    <h3>Daily Product Sales</h3>
+                    <div class="chart-placeholder" id="salesChart"></div>
                 </div>
 
                 <div class="chart-box">
-
-                    <h3>Commission by Category</h3>
-
-                    <div
-                        class="category-chart"
-                        id="categoryChart"
-                    ></div>
-
+                    <h3>Sales by Product</h3>
+                    <div class="category-chart" id="categoryChart"></div>
                 </div>
 
             </div>
 
-            <!-- REPORT TABLE -->
+            <!-- TOP PRODUCTS -->
 
-            <div class="report-table-wrapper">
+            <div class="top-products">
 
-                <table class="report-table">
+                <h3>Product Sales</h3>
 
+                <table>
                     <thead>
                         <tr>
-                            <th>Order ID</th>
-                            <th>Customer</th>
-                            <th>Seller</th>
-                            <th>Amount</th>
-                            <th>Commission</th>
-                            <th>Status</th>
-                            <th>Date</th>
+                            <th>#</th>
+                            <th>Product</th>
+                            <th>Category</th>
+                            <th>Units Sold</th>
+                            <th>Revenue</th>
                         </tr>
                     </thead>
 
-                    <tbody id="reportBody"></tbody>
-
+                    <tbody id="topProductsBody"></tbody>
                 </table>
 
             </div>
@@ -1127,128 +900,74 @@
 
     </div>
 
+    <!-- ================= JAVASCRIPT ================= -->
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script>
-        /* ========================================
-           REPORT DATA
-        ======================================== */
+        const salesData = {
+            dailySales: [
+                { day: "Mon", amount: 5200 },
+                { day: "Tue", amount: 3800 },
+                { day: "Wed", amount: 7200 },
+                { day: "Thu", amount: 4500 },
+                { day: "Fri", amount: 8900 },
+                { day: "Sat", amount: 10500 },
+                { day: "Sun", amount: 6200 }
+            ],
 
-        const reportData = [
-            {
-                order: "ZYL-2026-001",
-                customer: "Juan Dela Cruz",
-                seller: "ZAYLO Fashion Hub",
-                category: "Clothing",
-                amount: 4250,
-                commission: 425,
-                status: "completed",
-                date: "2026-09-15"
-            },
-            {
-                order: "ZYL-2026-002",
-                customer: "Maria Reyes",
-                seller: "Luxury Bags Co.",
-                category: "Bags",
-                amount: 3750,
-                commission: 375,
-                status: "completed",
-                date: "2026-09-14"
-            },
-            {
-                order: "ZYL-2026-003",
-                customer: "Pedro Santos",
-                seller: "Urban Wear PH",
-                category: "Clothing",
-                amount: 6670,
-                commission: 667,
-                status: "pending",
-                date: "2026-09-13"
-            },
-            {
-                order: "ZYL-2026-004",
-                customer: "Ana Lopez",
-                seller: "Elegant Accessories",
-                category: "Accessories",
-                amount: 3800,
-                commission: 380,
-                status: "completed",
-                date: "2026-09-12"
-            },
-            {
-                order: "ZYL-2026-005",
-                customer: "Carlos Garcia",
-                seller: "Footwear Plus",
-                category: "Shoes",
-                amount: 5200,
-                commission: 520,
-                status: "completed",
-                date: "2026-09-11"
-            },
-            {
-                order: "ZYL-2026-006",
-                customer: "Rosa Santos",
-                seller: "Watch Emporium",
-                category: "Watches",
-                amount: 7000,
-                commission: 700,
-                status: "pending",
-                date: "2026-09-10"
-            },
-            {
-                order: "ZYL-2026-007",
-                customer: "Luis Martinez",
-                seller: "ZAYLO Fashion Hub",
-                category: "Clothing",
-                amount: 3100,
-                commission: 310,
-                status: "completed",
-                date: "2026-09-09"
-            },
-            {
-                order: "ZYL-2026-008",
-                customer: "Elena Cruz",
-                seller: "Luxury Bags Co.",
-                category: "Bags",
-                amount: 5600,
-                commission: 560,
-                status: "completed",
-                date: "2026-09-08"
-            },
-            {
-                order: "ZYL-2026-009",
-                customer: "Mark Reyes",
-                seller: "Urban Wear PH",
-                category: "Clothing",
-                amount: 4200,
-                commission: 420,
-                status: "cancelled",
-                date: "2026-09-07"
-            },
-            {
-                order: "ZYL-2026-010",
-                customer: "Sofia Garcia",
-                seller: "Elegant Accessories",
-                category: "Accessories",
-                amount: 2500,
-                commission: 250,
-                status: "completed",
-                date: "2026-09-06"
-            }
-        ];
+            categorySales: [
+                { category: "Wool Blend Blazer", amount: 34000 },
+                { category: "Leather Tote Bag", amount: 22500 },
+                { category: "Classic Sneakers", amount: 14450 },
+                { category: "Minimalist Watch", amount: 15600 },
+                { category: "Cashmere Sweater", amount: 15200 }
+            ],
 
-        let filteredReport = [...reportData];
+            topProducts: [
+                {
+                    name: "Wool Blend Blazer",
+                    category: "Clothing",
+                    units: 8,
+                    revenue: 34000,
+                    image: "https://images.unsplash.com/photo-1539008835657-9e8e9680c956?w=100&h=100&fit=crop"
+                },
 
-        /* ========================================
-           HELPERS
-        ======================================== */
+                {
+                    name: "Leather Tote Bag",
+                    category: "Bags",
+                    units: 6,
+                    revenue: 22500,
+                    image: "https://images.unsplash.com/photo-1560343090-f0409e92791a?w=100&h=100&fit=crop"
+                },
 
-        function formatCurrency(amount) {
-            return new Intl.NumberFormat("en-PH", {
-                style: "currency",
-                currency: "PHP",
-                minimumFractionDigits: 2
-            }).format(amount);
-        }
+                {
+                    name: "Classic Sneakers",
+                    category: "Shoes",
+                    units: 5,
+                    revenue: 14450,
+                    image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=100&h=100&fit=crop"
+                },
+
+                {
+                    name: "Minimalist Watch",
+                    category: "Watches",
+                    units: 3,
+                    revenue: 15600,
+                    image: "https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=100&h=100&fit=crop"
+                },
+
+                {
+                    name: "Cashmere Sweater",
+                    category: "Clothing",
+                    units: 4,
+                    revenue: 15200,
+                    image: "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=100&h=100&fit=crop"
+                }
+            ]
+        };
+
+        const fallbackImage =
+            "https://via.placeholder.com/100x100?text=ZAYLO";
 
         function escapeHtml(value) {
             return String(value)
@@ -1259,437 +978,311 @@
                 .replace(/'/g, "&#039;");
         }
 
-        const statusMap = {
-            completed: {
-                label: "Completed",
-                className: "completed"
-            },
-            pending: {
-                label: "Pending",
-                className: "pending"
-            },
-            cancelled: {
-                label: "Cancelled",
-                className: "cancelled"
-            }
-        };
-
-        /* ========================================
-           RENDER REPORT TABLE
-        ======================================== */
-
-        function renderReportTable() {
-            const tbody = document.getElementById("reportBody");
-
-            if (filteredReport.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="7" class="empty-row">
-                            <i class="fa-solid fa-file-circle-xmark"></i>
-                            No data found for the selected period.
-                        </td>
-                    </tr>
-                `;
-
-                return;
-            }
-
-            tbody.innerHTML = filteredReport.map((item, index) => {
-                const statusInfo =
-                    statusMap[item.status] || statusMap.pending;
-
-                return `
-                    <tr style="
-                        animation: fadeInUp 0.3s ease forwards;
-                        animation-delay: ${index * 0.05}s;
-                        opacity: 0;
-                    ">
-                        <td>
-                            <strong>${escapeHtml(item.order)}</strong>
-                        </td>
-
-                        <td>
-                            ${escapeHtml(item.customer)}
-                        </td>
-
-                        <td>
-                            ${escapeHtml(item.seller)}
-                        </td>
-
-                        <td>
-                            ${formatCurrency(item.amount)}
-                        </td>
-
-                        <td>
-                            ${formatCurrency(item.commission)}
-                        </td>
-
-                        <td>
-                            <span class="status-badge ${statusInfo.className}">
-                                ${statusInfo.label}
-                            </span>
-                        </td>
-
-                        <td>
-                            ${formatDate(item.date)}
-                        </td>
-                    </tr>
-                `;
-            }).join("");
-        }
-
-        function formatDate(dateString) {
-            const date = new Date(`${dateString}T00:00:00`);
-
-            return date.toLocaleDateString("en-PH", {
-                month: "short",
-                day: "numeric",
-                year: "numeric"
-            });
-        }
-
-        /* ========================================
-           RENDER SALES CHART
-        ======================================== */
-
         function renderSalesChart() {
             const container = document.getElementById("salesChart");
 
-            const dailySales = [
-                { day: "Mon", amount: 5200 },
-                { day: "Tue", amount: 3800 },
-                { day: "Wed", amount: 7200 },
-                { day: "Thu", amount: 4500 },
-                { day: "Fri", amount: 8900 },
-                { day: "Sat", amount: 10500 },
-                { day: "Sun", amount: 6200 }
-            ];
-
             const maxAmount = Math.max(
-                ...dailySales.map(item => item.amount)
+                ...salesData.dailySales.map(item => item.amount)
             );
 
-            container.innerHTML = dailySales.map((item, index) => {
-                const height = (item.amount / maxAmount) * 140;
+            container.innerHTML = salesData.dailySales.map(item => {
+                const height = (item.amount / maxAmount) * 160;
 
                 return `
                     <div
                         class="chart-bar"
-                        style="
-                            height: ${height}px;
-                            animation: fadeInUp 0.4s ease forwards;
-                            animation-delay: ${index * 0.05}s;
-                        "
+                        style="height: ${height}px;"
+                        title="${item.day}: ₱${item.amount.toLocaleString()}"
                     >
                         <span class="bar-value">
                             ₱${(item.amount / 1000).toFixed(1)}k
                         </span>
 
                         <span class="bar-label">
-                            ${item.day}
+                            ${escapeHtml(item.day)}
                         </span>
                     </div>
                 `;
             }).join("");
         }
-
-        /* ========================================
-           RENDER CATEGORY CHART
-        ======================================== */
 
         function renderCategoryChart() {
             const container = document.getElementById("categoryChart");
-
-            const categoryData = [
-                {
-                    category: "Clothing",
-                    amount: 18500
-                },
-                {
-                    category: "Bags",
-                    amount: 14200
-                },
-                {
-                    category: "Shoes",
-                    amount: 9800
-                },
-                {
-                    category: "Watches",
-                    amount: 5200
-                },
-                {
-                    category: "Accessories",
-                    amount: 4550
-                }
-            ];
-
-            const maxAmount = Math.max(
-                ...categoryData.map(item => item.amount)
-            );
-
-            container.innerHTML = categoryData.map(item => {
+            const maxAmount = Math.max(...salesData.categorySales.map(item => item.amount));
+            container.innerHTML = salesData.categorySales.map(item => {
                 const width = (item.amount / maxAmount) * 100;
-
                 return `
-                    <div class="category-row">
-
-                        <span class="category-name">
-                            ${escapeHtml(item.category)}
-                        </span>
-
-                        <div class="category-track">
-                            <div
-                                class="category-fill"
-                                style="width: ${width}%"
-                            ></div>
-                        </div>
-
-                        <span class="category-amount">
-                            ₱${(item.amount / 1000).toFixed(1)}k
-                        </span>
-
+                    <div class="category-row" title="${escapeHtml(item.category)}">
+                        <span class="category-name">${escapeHtml(item.category)}</span>
+                        <div class="category-track"><div class="category-fill" style="width:${width}%"></div></div>
+                        <span class="category-amount">&#8369;${(item.amount / 1000).toFixed(1)}k</span>
                     </div>
                 `;
             }).join("");
         }
 
-        /* ========================================
-           GENERATE REPORT
-        ======================================== */
+        function renderTopProducts() {
+            const tbody = document.getElementById("topProductsBody");
+
+            const rankClasses = [
+                "gold",
+                "silver",
+                "bronze",
+                "",
+                ""
+            ];
+
+            tbody.innerHTML = salesData.topProducts.map((product, index) => {
+                const rank = index + 1;
+                const rankClass = rankClasses[index] || "";
+
+                return `
+                    <tr>
+                        <td>
+                            <span class="rank-badge ${rankClass}">
+                                ${rank}
+                            </span>
+                        </td>
+
+                        <td>
+                            <div class="product-cell">
+                                <div class="product-image">
+                                    <img
+                                        src="${escapeHtml(product.image)}"
+                                        alt="${escapeHtml(product.name)}"
+                                        loading="lazy"
+                                        onerror="this.onerror=null; this.src='${fallbackImage}';"
+                                    >
+                                </div>
+
+                                <span class="product-name">
+                                    ${escapeHtml(product.name)}
+                                </span>
+                            </div>
+                        </td>
+
+                        <td>${escapeHtml(product.category)}</td>
+
+                        <td>${product.units}</td>
+
+                        <td>
+                            ₱${product.revenue.toLocaleString("en-PH", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
+                            })}
+                        </td>
+                    </tr>
+                `;
+            }).join("");
+        }
 
         function generateReport() {
             const from = document.getElementById("dateFrom").value;
             const to = document.getElementById("dateTo").value;
 
             if (!from || !to) {
-                showNotification(
-                    "Please select both date ranges.",
-                    "error"
-                );
-
+                showNotification("Please select both date ranges.");
                 return;
             }
 
             if (from > to) {
                 showNotification(
-                    "The starting date cannot be after the ending date.",
-                    "error"
+                    "The start date cannot be later than the end date."
                 );
-
                 return;
             }
 
-            filteredReport = reportData.filter(item => {
-                return item.date >= from && item.date <= to;
-            });
-
-            const totalSales = filteredReport.reduce(
-                (sum, item) => sum + item.amount,
-                0
-            );
-
-            const totalCommission = filteredReport.reduce(
-                (sum, item) => sum + item.commission,
-                0
-            );
-
-            const totalOrders = filteredReport.length;
-
-            const activeSellers = new Set(
-                filteredReport
-                    .filter(item => item.status !== "cancelled")
-                    .map(item => item.seller)
-            ).size;
-
-            document.getElementById("totalSales").textContent =
-                formatCurrency(totalSales);
-
-            document.getElementById("totalCommission").textContent =
-                formatCurrency(totalCommission);
-
-            document.getElementById("totalOrders").textContent =
-                totalOrders;
-
-            document.getElementById("activeSellers").textContent =
-                activeSellers;
-
-            renderReportTable();
-            renderSalesChart();
-            renderCategoryChart();
-
-            showNotification(
-                "Report generated successfully.",
-                "success"
-            );
+            showNotification(`Report generated: ${from} to ${to}`);
         }
-
-        /* ========================================
-           HEADER SEARCH
-        ======================================== */
 
         function exportPdfReport() {
             if (!window.jspdf || !window.jspdf.jsPDF) {
-                showNotification("PDF export is unavailable. Please try again.", "error");
+                showNotification("PDF export is unavailable. Please try again.");
                 return;
             }
+
             const from = document.getElementById("dateFrom").value;
             const to = document.getElementById("dateTo").value;
             if (!from || !to || from > to) {
-                showNotification("Select a valid report date range before downloading.", "error");
-                return;
-            }
-            const completed = reportData.filter(item => item.date >= from && item.date <= to && item.status === "completed");
-            if (!completed.length) {
-                showNotification("There are no completed sales to export for this date range.", "error");
+                showNotification("Select a valid report date range before downloading.");
                 return;
             }
 
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
-            const pw = doc.internal.pageSize.getWidth();
-            const ph = doc.internal.pageSize.getHeight();
-            const m = 36;
-            const cw = pw - 2 * m;
-            const money = n => `PHP ${Number(n).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            const sales = completed.reduce((sum, item) => sum + item.amount, 0);
-            const commission = completed.reduce((sum, item) => sum + item.commission, 0);
-            const sellerMap = new Map();
-            completed.forEach(item => {
-                const row = sellerMap.get(item.seller) || { name: item.seller, orders: 0, sales: 0, commission: 0 };
-                row.orders++;
-                row.sales += item.amount;
-                row.commission += item.commission;
-                sellerMap.set(item.seller, row);
-            });
-            const sellers = [...sellerMap.values()].sort((a, b) => b.sales - a.sales);
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const margin = 36;
+            const contentWidth = pageWidth - margin * 2;
+            const money = amount => `PHP ${Number(amount).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            const products = [...salesData.topProducts].sort((a, b) => b.revenue - a.revenue);
+            const grossSales = products.reduce((sum, product) => sum + product.revenue, 0);
+            const unitsSold = products.reduce((sum, product) => sum + product.units, 0);
+            const commission = grossSales * 0.10;
+            const averageSale = unitsSold ? grossSales / unitsSold : 0;
+            const formatDate = value => new Date(`${value}T00:00:00`).toLocaleDateString("en-PH", { day: "numeric", month: "short", year: "numeric" });
 
-            doc.setFillColor(245, 240, 234); doc.rect(0, 0, pw, 44, "F");
-            doc.setFont("helvetica", "bold"); doc.setFontSize(8); doc.setTextColor(105, 91, 78);
-            doc.text("ADMIN REPORT", m, 27);
-            const logo = document.querySelector(".header-logo img");
+            doc.setFillColor(245, 240, 234);
+            doc.rect(0, 0, pageWidth, 44, "F");
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(8);
+            doc.setTextColor(105, 91, 78);
+            doc.text("SELLER REPORT", margin, 27);
+
+            const logo = document.querySelector(".logo img");
             if (logo && logo.complete && logo.naturalWidth > 0) {
-                doc.addImage(logo, "PNG", pw / 2 - 31, 12, 62, 21);
+                try { doc.addImage(logo, "PNG", pageWidth / 2 - 31, 12, 62, 21); }
+                catch (_) { doc.setFontSize(20); doc.setTextColor(22, 21, 19); doc.text("ZAYLO", pageWidth / 2, 29, { align: "center" }); }
             } else {
-                doc.setFontSize(20); doc.setTextColor(22, 21, 19);
-                doc.text("ZAYLO", pw / 2, 29, { align: "center" });
+                doc.setFontSize(20);
+                doc.setTextColor(22, 21, 19);
+                doc.text("ZAYLO", pageWidth / 2, 29, { align: "center" });
             }
-            doc.setFont("times", "bold"); doc.setFontSize(21); doc.setTextColor(28, 27, 25);
-            doc.text("Sales Summary Report", m, 72);
-            doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(105, 91, 78);
-            doc.text(`Period: ${formatDate(from)} to ${formatDate(to)}`, m, 91);
-            const generated = new Date().toLocaleString("en-PH", { year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-            doc.text(`Generated: ${generated}`, pw - m, 91, { align: "right" });
+
+            doc.setFont("times", "bold");
+            doc.setFontSize(21);
+            doc.setTextColor(28, 27, 25);
+            doc.text("Sales Summary Report", margin, 72);
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(8);
+            doc.setTextColor(105, 91, 78);
+            doc.text(`Period: ${formatDate(from)} to ${formatDate(to)}`, margin, 91);
+            const generatedAt = new Date().toLocaleString("en-PH", { year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+            doc.text(`Generated: ${generatedAt}`, pageWidth - margin, 91, { align: "right" });
 
             const cards = [
-                ["GROSS SALES", money(sales), "Selected period"],
-                ["COMPLETED ORDERS", String(completed.length), "Selected period"],
-                ["AVERAGE ORDER", money(sales / completed.length), "Per completed order"],
+                ["GROSS SALES", money(grossSales), "Selected period"],
+                ["UNITS SOLD", String(unitsSold), "Across your products"],
+                ["AVERAGE SALE", money(averageSale), "Per unit sold"],
                 ["COMMISSION RATE 10%", money(commission), "Platform share"]
             ];
-            const gap = 9, cardY = 106, cardH = 76, cardW = (cw - gap * 3) / 4;
-            cards.forEach((card, i) => {
-                const x = m + i * (cardW + gap);
-                doc.setFillColor(248, 244, 239); doc.setDrawColor(231, 222, 213);
-                doc.rect(x, cardY, cardW, cardH, "FD");
-                doc.setFont("helvetica", "bold"); doc.setFontSize(6); doc.setTextColor(105, 91, 78);
+            const cardGap = 9;
+            const cardY = 106;
+            const cardHeight = 76;
+            const cardWidth = (contentWidth - cardGap * 3) / 4;
+            cards.forEach((card, index) => {
+                const x = margin + index * (cardWidth + cardGap);
+                doc.setFillColor(248, 244, 239);
+                doc.setDrawColor(231, 222, 213);
+                doc.rect(x, cardY, cardWidth, cardHeight, "FD");
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(6);
+                doc.setTextColor(105, 91, 78);
                 doc.text(card[0], x + 8, cardY + 16);
-                doc.setFontSize(8); doc.setTextColor(28, 27, 25);
-                doc.text(card[1], x + 8, cardY + 38, { maxWidth: cardW - 16 });
-                doc.setFont("helvetica", "normal"); doc.setFontSize(6); doc.setTextColor(145, 133, 121);
+                doc.setFontSize(8);
+                doc.setTextColor(28, 27, 25);
+                doc.text(card[1], x + 8, cardY + 38, { maxWidth: cardWidth - 16 });
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(6);
+                doc.setTextColor(145, 133, 121);
                 doc.text(card[2], x + 8, cardY + 57);
             });
 
             let y = 211;
-            doc.setFont("times", "bold"); doc.setFontSize(12); doc.setTextColor(28, 27, 25);
-            doc.text("Sales by seller", m, y);
-            doc.setFont("helvetica", "normal"); doc.setFontSize(7); doc.setTextColor(105, 91, 78);
-            doc.text("Gross sales by seller, highest first", m, y + 12);
-            const chartSellers = sellers.slice(0, 5);
-            const chartY = y + 22, chartH = Math.max(86, chartSellers.length * 21 + 18);
-            doc.setDrawColor(231, 222, 213); doc.rect(m, chartY, cw, chartH);
-            const maxSales = Math.max(...chartSellers.map(s => s.sales), 1);
-            const labelW = 118, barX = m + labelW + 8, barW = cw - labelW - 65;
-            chartSellers.forEach((seller, i) => {
-                const ry = chartY + 17 + i * 21;
-                doc.setFont("helvetica", "normal"); doc.setFontSize(7); doc.setTextColor(62, 55, 49);
-                doc.text(doc.splitTextToSize(seller.name, labelW - 8)[0] || "", m + 8, ry + 6);
-                doc.setFillColor(241, 236, 230); doc.rect(barX, ry, barW, 9, "F");
-                doc.setFillColor(83, 112, 89); doc.rect(barX, ry, Math.max(2, barW * seller.sales / maxSales), 9, "F");
-                doc.setFont("helvetica", "bold"); doc.setFontSize(7); doc.setTextColor(35, 32, 29);
-                doc.text(money(seller.sales), pw - m - 7, ry + 7, { align: "right" });
+            doc.setFont("times", "bold");
+            doc.setFontSize(12);
+            doc.setTextColor(28, 27, 25);
+            doc.text("Sales by product", margin, y);
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(7);
+            doc.setTextColor(105, 91, 78);
+            doc.text("Gross sales by product, highest first", margin, y + 12);
+            const chartProducts = products.slice(0, 5);
+            const chartY = y + 22;
+            const chartHeight = Math.max(86, chartProducts.length * 21 + 18);
+            doc.setDrawColor(231, 222, 213);
+            doc.rect(margin, chartY, contentWidth, chartHeight);
+            const maxRevenue = Math.max(...chartProducts.map(product => product.revenue), 1);
+            const labelWidth = 118;
+            const barX = margin + labelWidth + 8;
+            const barWidth = contentWidth - labelWidth - 65;
+            chartProducts.forEach((product, index) => {
+                const rowY = chartY + 17 + index * 21;
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(7);
+                doc.setTextColor(62, 55, 49);
+                doc.text(doc.splitTextToSize(product.name, labelWidth - 8)[0] || "", margin + 8, rowY + 6);
+                doc.setFillColor(241, 236, 230);
+                doc.rect(barX, rowY, barWidth, 9, "F");
+                doc.setFillColor(83, 112, 89);
+                doc.rect(barX, rowY, Math.max(2, barWidth * product.revenue / maxRevenue), 9, "F");
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(7);
+                doc.setTextColor(35, 32, 29);
+                doc.text(money(product.revenue), pageWidth - margin - 7, rowY + 7, { align: "right" });
             });
 
-            y = chartY + chartH + 25;
+            y = chartY + chartHeight + 25;
+            doc.setFont("times", "bold");
+            doc.setFontSize(12);
+            doc.setTextColor(28, 27, 25);
+            doc.text("Product sales", margin, y);
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(7);
+            doc.setTextColor(105, 91, 78);
+            doc.text("Sales summary. Philippine pesos (PHP).", margin, y + 11);
+            y += 17;
+
             const drawTableHeader = () => {
-                doc.setFillColor(233, 228, 216); doc.rect(m, y, cw, 20, "F");
-                doc.setFont("helvetica", "bold"); doc.setFontSize(7); doc.setTextColor(81, 70, 63);
-                doc.text("SELLER", m + 8, y + 13); doc.text("ORDERS", m + 245, y + 13);
-                doc.text("GROSS SALES", m + 310, y + 13);
-                doc.text("COMMISSION", pw - m - 8, y + 13, { align: "right" });
+                doc.setFillColor(233, 228, 216);
+                doc.rect(margin, y, contentWidth, 20, "F");
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(7);
+                doc.setTextColor(81, 70, 63);
+                doc.text("PRODUCT", margin + 8, y + 13);
+                doc.text("UNITS SOLD", margin + 275, y + 13);
+                doc.text("GROSS SALES", margin + 365, y + 13);
+                doc.text("COMMISSION", pageWidth - margin - 8, y + 13, { align: "right" });
                 y += 20;
             };
-            doc.setFont("times", "bold"); doc.setFontSize(12); doc.setTextColor(28, 27, 25);
-            doc.text("Sales by seller", m, y); y += 7;
-            doc.setFont("helvetica", "normal"); doc.setFontSize(7); doc.setTextColor(105, 91, 78);
-            doc.text("Completed orders. Philippine pesos (PHP).", m, y + 7); y += 12;
             drawTableHeader();
-            sellers.forEach((seller, i) => {
-                if (y + 22 > ph - 56) {
-                    doc.addPage(); y = 42;
-                    doc.setFont("times", "bold"); doc.setFontSize(15); doc.setTextColor(28, 27, 25);
-                    doc.text("Sales by seller (continued)", m, y); y += 12; drawTableHeader();
+            products.forEach((product, index) => {
+                if (y + 22 > pageHeight - 56) {
+                    doc.addPage();
+                    y = 42;
+                    doc.setFont("times", "bold");
+                    doc.setFontSize(15);
+                    doc.setTextColor(28, 27, 25);
+                    doc.text("Product sales (continued)", margin, y);
+                    y += 12;
+                    drawTableHeader();
                 }
-                if (i % 2) { doc.setFillColor(250, 248, 245); doc.rect(m, y, cw, 22, "F"); }
-                doc.setFont("helvetica", "normal"); doc.setFontSize(7); doc.setTextColor(35, 32, 29);
-                doc.text(doc.splitTextToSize(seller.name, 220)[0] || "", m + 8, y + 14);
-                doc.text(String(seller.orders), m + 255, y + 14);
-                doc.text(money(seller.sales), m + 310, y + 14);
-                doc.text(money(seller.commission), pw - m - 8, y + 14, { align: "right" });
-                doc.setDrawColor(235, 229, 222); doc.line(m, y + 22, pw - m, y + 22); y += 22;
+                if (index % 2) {
+                    doc.setFillColor(250, 248, 245);
+                    doc.rect(margin, y, contentWidth, 22, "F");
+                }
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(7);
+                doc.setTextColor(35, 32, 29);
+                doc.text(doc.splitTextToSize(product.name, 240)[0] || "", margin + 8, y + 14);
+                doc.text(String(product.units), margin + 290, y + 14);
+                doc.text(money(product.revenue), margin + 365, y + 14);
+                doc.text(money(product.revenue * 0.10), pageWidth - margin - 8, y + 14, { align: "right" });
+                doc.setDrawColor(235, 229, 222);
+                doc.line(margin, y + 22, pageWidth - margin, y + 22);
+                y += 22;
             });
 
-            const pages = doc.internal.getNumberOfPages();
-            for (let page = 1; page <= pages; page++) {
-                doc.setPage(page); doc.setDrawColor(220, 211, 201); doc.line(m, ph - 43, pw - m, ph - 43);
-                doc.setFont("helvetica", "normal"); doc.setFontSize(6); doc.setTextColor(120, 108, 97);
-                doc.text("Commission is calculated at 10% of completed order sales. Figures reflect sample data until connected to live sales and payment records.", m, ph - 29, { maxWidth: cw - 10 });
-                doc.text("Generated by: Administrator", m, ph - 12);
-                doc.text(`Sales Summary Report  |  Page ${page} of ${pages}`, pw - m, ph - 12, { align: "right" });
+            const pageCount = doc.internal.getNumberOfPages();
+            for (let page = 1; page <= pageCount; page++) {
+                doc.setPage(page);
+                doc.setDrawColor(220, 211, 201);
+                doc.line(margin, pageHeight - 43, pageWidth - margin, pageHeight - 43);
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(6);
+                doc.setTextColor(120, 108, 97);
+                doc.text("Commission is calculated at 10%. Figures reflect sample data until connected to live order records.", margin, pageHeight - 29, { maxWidth: contentWidth - 10 });
+                doc.text("Generated by: Seller", margin, pageHeight - 12);
+                doc.text(`Seller Sales Summary  |  Page ${page} of ${pageCount}`, pageWidth - margin, pageHeight - 12, { align: "right" });
             }
-            doc.save(`zaylo-sales-summary-${from}-to-${to}.pdf`);
-            showNotification("Sales summary PDF downloaded successfully.", "success");
+            doc.save(`zaylo-seller-sales-${from}-to-${to}.pdf`);
+            showNotification("Seller sales PDF downloaded successfully.");
         }
 
-        function searchDashboard(value) {
-            const searchValue = value.toLowerCase().trim();
-
-            if (searchValue === "") {
-                filteredReport = [...reportData];
-            } else {
-                filteredReport = reportData.filter(item => {
-                    const searchableText = [
-                        item.order,
-                        item.customer,
-                        item.seller,
-                        item.category,
-                        item.status,
-                        item.date
-                    ].join(" ").toLowerCase();
-
-                    return searchableText.includes(searchValue);
-                });
-            }
-
-            renderReportTable();
-        }
-
-        /* ========================================
-           NOTIFICATION SYSTEM
-        ======================================== */
-
-        function showNotification(message, type = "success") {
-            const existing =
-                document.querySelector(".zaylo-notification");
+        function showNotification(message) {
+            const existing = document.querySelector(
+                ".zaylo-notification"
+            );
 
             if (existing) {
                 existing.remove();
@@ -1698,33 +1291,42 @@
             const notification = document.createElement("div");
 
             notification.className = "zaylo-notification";
-
-            const icon =
-                type === "error"
-                    ? "fa-circle-exclamation"
-                    : "fa-circle-check";
-
-            notification.innerHTML = `
-                <i class="fa-solid ${icon}"></i>
-                <span>${escapeHtml(message)}</span>
-            `;
+            notification.textContent = message;
 
             document.body.appendChild(notification);
 
             setTimeout(() => {
-                notification.remove();
-            }, 3500);
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 3000);
         }
 
-        /* ========================================
-           INITIALIZE
-        ======================================== */
+        document.getElementById("globalSearch").addEventListener(
+            "input",
+            function () {
+                const searchTerm = this.value.toLowerCase().trim();
+
+                const rows = document.querySelectorAll(
+                    "#topProductsBody tr"
+                );
+
+                rows.forEach(row => {
+                    row.style.display = row.textContent
+                        .toLowerCase()
+                        .includes(searchTerm)
+                        ? ""
+                        : "none";
+                });
+            }
+        );
 
         document.addEventListener("DOMContentLoaded", () => {
-            generateReport();
+            renderSalesChart();
+            renderCategoryChart();
+            renderTopProducts();
         });
     </script>
 
 </body>
-
 </html>
