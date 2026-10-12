@@ -1,13 +1,13 @@
 .seller-workspace {
-    --zaylo-ink: #1a1714;
-    --zaylo-text: #1e1e1e;
-    --zaylo-muted: #6b5f54;
-    --zaylo-accent: #9a755e;
-    --zaylo-accent-soft: #eee6de;
-    --zaylo-surface: #ffffff;
-    --zaylo-background: #faf7f2;
-    --zaylo-hover: #f5f0ea;
-    --zaylo-border: #ece4db;
+    --zaylo-ink: var(--c-1a1714);
+    --zaylo-text: var(--c-1e1e1e);
+    --zaylo-muted: var(--c-6b5f54);
+    --zaylo-accent: var(--c-9a755e);
+    --zaylo-accent-soft: var(--c-eee6de);
+    --zaylo-surface: var(--c-ffffff);
+    --zaylo-background: var(--c-faf7f2);
+    --zaylo-hover: var(--c-f5f0ea);
+    --zaylo-border: var(--c-ece4db);
     background: var(--zaylo-background);
     color: var(--zaylo-text);
 }
@@ -33,13 +33,13 @@
 .seller-workspace :is(.primary-button, .btn-primary, .btn-apply) {
     border-color: var(--zaylo-ink);
     background: var(--zaylo-ink);
-    color: #fff;
+    color: var(--c-ffffff);
 }
 
 .seller-workspace :is(.primary-button, .btn-primary, .btn-apply):hover {
     border-color: var(--zaylo-accent);
     background: var(--zaylo-accent);
-    color: #fff;
+    color: var(--c-ffffff);
 }
 
 .seller-workspace :is(button, a, input, select, textarea):focus-visible {
@@ -52,15 +52,15 @@
     flex: 0 0 240px;
     align-self: stretch;
     padding: 24px 16px;
-    background: var(--zaylo-surface, #fff);
-    border-right: 1px solid var(--zaylo-border, #ece4db);
-    color: var(--zaylo-text, #1e1e1e);
+    background: var(--zaylo-surface, var(--c-ffffff));
+    border-right: 1px solid var(--zaylo-border, var(--c-ece4db));
+    color: var(--zaylo-text, var(--c-1e1e1e));
     font-family: 'Inter', sans-serif;
 }
 
 .seller-sidebar__title {
     margin: 0 14px 14px;
-    color: var(--zaylo-muted, #6b5f54);
+    color: var(--zaylo-muted, var(--c-6b5f54));
     font-size: .65rem;
     font-weight: 700;
     letter-spacing: .14em;
@@ -83,7 +83,7 @@
     border: 0;
     border-radius: 8px;
     background: transparent;
-    color: var(--zaylo-muted, #6b5f54);
+    color: var(--zaylo-muted, var(--c-6b5f54));
     font: inherit;
     font-size: .82rem;
     font-weight: 500;
@@ -104,24 +104,24 @@
 }
 
 .seller-sidebar__link:hover {
-    background: var(--zaylo-hover, #f5f0ea);
-    color: var(--zaylo-ink, #1a1714);
+    background: var(--zaylo-hover, var(--c-f5f0ea));
+    color: var(--zaylo-ink, var(--c-1a1714));
 }
 
 .seller-sidebar__link.is-active {
-    background: var(--zaylo-ink, #1a1714);
-    color: #fff;
+    background: var(--zaylo-ink, var(--c-1a1714));
+    color: var(--c-ffffff);
 }
 
 .seller-sidebar__link:focus-visible {
-    outline: 2px solid var(--zaylo-accent, #9a755e);
+    outline: 2px solid var(--zaylo-accent, var(--c-9a755e));
     outline-offset: 2px;
 }
 
 .seller-sidebar__divider {
     height: 1px;
     margin: 12px 0;
-    background: var(--zaylo-border, #ece4db);
+    background: var(--zaylo-border, var(--c-ece4db));
 }
 
 .seller-sidebar__logout-form {
@@ -129,7 +129,7 @@
 }
 
 .seller-sidebar__logout {
-    color: #8d403b;
+    color: var(--c-8d403b);
 }
 
 @media (max-width: 1100px) and (min-width: 821px) {
@@ -162,7 +162,7 @@
         overflow-y: hidden;
         transform: none;
         border-right: 0;
-        border-bottom: 1px solid #ece4db;
+        border-bottom: 1px solid var(--c-ece4db);
         box-shadow: none;
         scrollbar-width: thin;
     }

@@ -19,15 +19,15 @@
 
     <style>
         :root {
-            --black: #1a1714;
-            --brown: #6b5f54;
-            --light-brown: #8a7a6b;
-            --accent: #b28b6f;
-            --cream: #faf7f2;
-            --soft-cream: #f5f0ea;
-            --border: #ece4db;
-            --input-border: #ded5cc;
-            --white: #ffffff;
+            --black: var(--c-1a1714);
+            --brown: var(--c-6b5f54);
+            --light-brown: var(--c-8a7a6b);
+            --accent: var(--c-b28b6f);
+            --cream: var(--c-faf7f2);
+            --soft-cream: var(--c-f5f0ea);
+            --border: var(--c-ece4db);
+            --input-border: var(--c-ded5cc);
+            --white: var(--c-ffffff);
         }
 
         * {
@@ -111,8 +111,8 @@
             align-items: center;
             gap: 8px;
             padding: 6px 14px;
-            background: #f4f1ec;
-            border: 1px solid #e5dfd8;
+            background: var(--c-f4f1ec);
+            border: 1px solid var(--c-e5dfd8);
             border-radius: 30px;
         }
 
@@ -156,7 +156,7 @@
         }
 
         .login-text {
-            border-left: 1px solid #d8d0c8;
+            border-left: 1px solid var(--c-d8d0c8);
             padding-left: 16px;
             font-size: 11px;
             font-weight: 600;
@@ -337,13 +337,13 @@
         }
 
         .form-group label {
-            color: #4d4239;
+            color: var(--c-4d4239);
             font-size: 11px;
             font-weight: 600;
         }
 
         .required {
-            color: #a05f43;
+            color: var(--c-a05f43);
         }
 
         .form-group input,
@@ -367,7 +367,7 @@
 
         .form-group input:disabled,
         .form-group input:read-only {
-            background: #eee8e1;
+            background: var(--c-eee8e1);
             color: var(--light-brown);
         }
 
@@ -391,7 +391,7 @@
             padding: 24px 18px;
             text-align: center;
             background: var(--cream);
-            border: 1px dashed #c8b9aa;
+            border: 1px dashed var(--c-c8b9aa);
             transition: 0.2s ease;
         }
 
@@ -642,6 +642,7 @@
         }
     </style>
     <link rel="stylesheet" href="{{ asset('css/seller-sidebar.css') }}?v={{ filemtime(public_path('css/seller-sidebar.css')) }}">
+    @include('partials.theme-head')
 </head>
 
 <body class="seller-workspace">

@@ -23,16 +23,16 @@
         }
 
         :root {
-            --cream: #faf7f2;
-            --white: #ffffff;
-            --dark: #1a1714;
-            --text: #1e1e1e;
-            --muted: #6b5f54;
-            --brown: #b28b6f;
-            --light-brown: #d6ccc1;
-            --border: #ece4db;
-            --hover: #f5f0ea;
-            --green: #2d7d46;
+            --cream: var(--c-faf7f2);
+            --white: var(--c-ffffff);
+            --dark: var(--c-1a1714);
+            --text: var(--c-1e1e1e);
+            --muted: var(--c-6b5f54);
+            --brown: var(--c-b28b6f);
+            --light-brown: var(--c-d6ccc1);
+            --border: var(--c-ece4db);
+            --hover: var(--c-f5f0ea);
+            --green: var(--c-2d7d46);
         }
 
         html,
@@ -151,8 +151,8 @@
             align-items: center;
             gap: 5px;
             padding: 4px 14px;
-            background: #f4f1ec;
-            border: 1px solid #e5dfd8;
+            background: var(--c-f4f1ec);
+            border: 1px solid var(--c-e5dfd8);
             border-radius: 30px;
             transition: border-color 0.2s ease;
         }
@@ -162,7 +162,7 @@
         }
 
         .search-icon {
-            color: #4a4037;
+            color: var(--c-4a4037);
             font-size: 0.95rem;
         }
 
@@ -177,7 +177,7 @@
         }
 
         .search-wrapper input::placeholder {
-            color: #a89b8c;
+            color: var(--c-a89b8c);
         }
 
         .icon-group {
@@ -197,7 +197,7 @@
         }
 
         .icon-group i {
-            color: #2c241e;
+            color: var(--c-2c241e);
             font-size: 1.1rem;
         }
 
@@ -209,7 +209,7 @@
             padding: 2px 5px;
             border-radius: 50%;
             background: var(--brown);
-            color: white;
+            color: var(--c-ffffff);
             font-size: 0.55rem;
             font-weight: 600;
             text-align: center;
@@ -217,7 +217,7 @@
 
         .login-text {
             padding-left: 16px;
-            border-left: 1px solid #d8d0c8;
+            border-left: 1px solid var(--c-d8d0c8);
             color: var(--text) !important;
             font-size: 0.7rem !important;
             font-weight: 500;
@@ -281,7 +281,7 @@
 
         .sidebar-menu a.active {
             background: var(--dark);
-            color: white;
+            color: var(--c-ffffff);
         }
 
         .sidebar-menu a i {
@@ -295,7 +295,7 @@
             padding: 2px 8px;
             border-radius: 10px;
             background: var(--brown);
-            color: white;
+            color: var(--c-ffffff);
             font-size: 0.5rem;
             font-weight: 600;
         }
@@ -352,7 +352,7 @@
             padding: 10px 12px;
             border: 1px solid var(--border);
             outline: none;
-            background: white;
+            background: var(--c-ffffff);
             color: var(--text);
             font-size: 0.72rem;
         }
@@ -366,7 +366,7 @@
             align-items: center;
             gap: 12px;
             padding: 15px 20px;
-            border-bottom: 1px solid #f5f0ea;
+            border-bottom: 1px solid var(--c-f5f0ea);
             cursor: pointer;
             transition: background 0.2s ease;
         }
@@ -433,7 +433,7 @@
             padding: 2px 7px;
             border-radius: 10px;
             background: var(--brown);
-            color: white;
+            color: var(--c-ffffff);
             font-size: 0.55rem;
             font-weight: 600;
         }
@@ -469,7 +469,7 @@
             align-items: center;
             gap: 12px;
             padding: 18px 28px;
-            background: white;
+            background: var(--c-ffffff);
             border-bottom: 1px solid var(--border);
         }
 
@@ -521,7 +521,7 @@
             min-height: 0;
             padding: 28px;
             overflow-y: auto;
-            background: white;
+            background: var(--c-ffffff);
         }
 
         .message {
@@ -550,7 +550,7 @@
             align-self: flex-end;
             border-radius: 12px 12px 4px 12px;
             background: var(--dark);
-            color: white;
+            color: var(--c-ffffff);
         }
 
         .message.received {
@@ -609,7 +609,7 @@
             align-items: center;
             gap: 10px;
             padding: 18px 28px;
-            background: white;
+            background: var(--c-ffffff);
             border-top: 1px solid var(--border);
         }
 
@@ -626,7 +626,7 @@
 
         .chat-input input:focus {
             border-color: var(--dark);
-            background: white;
+            background: var(--c-ffffff);
         }
 
         .btn-send,
@@ -643,7 +643,7 @@
             padding-left: 26px;
             border-color: var(--dark);
             background: var(--dark);
-            color: white;
+            color: var(--c-ffffff);
             font-weight: 500;
             letter-spacing: 0.04em;
             text-transform: uppercase;
@@ -678,7 +678,7 @@
             padding: 14px 24px;
             background: var(--dark);
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-            color: white;
+            color: var(--c-ffffff);
             font-size: 0.8rem;
             animation: slideUp 0.3s ease;
         }
@@ -908,6 +908,7 @@
         }
     </style>
     <link rel="stylesheet" href="{{ asset('css/seller-sidebar.css') }}?v={{ filemtime(public_path('css/seller-sidebar.css')) }}">
+    @include('partials.theme-head')
 </head>
 
 <body class="seller-workspace">

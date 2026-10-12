@@ -22,15 +22,15 @@
         }
 
         :root {
-            --cream: #faf7f2;
-            --white: #ffffff;
-            --brown: #1a1714;
-            --text: #51463f;
-            --muted: #6b5f54;
-            --light-brown: #b28b6f;
-            --border: #eee7df;
-            --soft: #f5f0ea;
-            --green: #2d7d46;
+            --cream: var(--c-faf7f2);
+            --white: var(--c-ffffff);
+            --brown: var(--c-1a1714);
+            --text: var(--c-51463f);
+            --muted: var(--c-6b5f54);
+            --light-brown: var(--c-b28b6f);
+            --border: var(--c-eee7df);
+            --soft: var(--c-f5f0ea);
+            --green: var(--c-2d7d46);
         }
 
         body {
@@ -100,7 +100,7 @@
         }
 
         .search-box i {
-            color: #9b8878;
+            color: var(--c-9b8878);
         }
 
         .search-box input {
@@ -133,7 +133,7 @@
             align-items: center;
             justify-content: center;
             background: var(--light-brown);
-            color: white;
+            color: var(--c-ffffff);
             border-radius: 50%;
             font-size: 9px;
         }
@@ -141,7 +141,7 @@
         .nav-divider {
             width: 1px;
             height: 28px;
-            background: #e5ddd5;
+            background: var(--c-e5ddd5);
         }
 
         .logout-btn {
@@ -189,7 +189,7 @@
             gap: 15px;
             padding: 14px 18px;
             border-radius: 10px;
-            color: #76685e;
+            color: var(--c-76685e);
             text-decoration: none;
             font-size: 14px;
             font-weight: 500;
@@ -203,25 +203,25 @@
         }
 
         .menu-item:hover {
-            background: #faf3ec;
+            background: var(--c-faf3ec);
             color: var(--light-brown);
         }
 
         .menu-item.active {
             background: var(--light-brown);
-            color: white;
-            box-shadow: 0 4px 12px rgba(178, 139, 111, 0.2);
+            color: var(--c-ffffff);
+            box-shadow: 0 4px 12px color-mix(in srgb, var(--c-b28b6f) 20%, transparent);
         }
 
         .menu-item.active:hover {
-            background: #a17b61;
-            color: white;
+            background: var(--c-a17b61);
+            color: var(--c-ffffff);
         }
 
         .menu-badge {
             margin-left: auto;
             background: var(--light-brown);
-            color: white;
+            color: var(--c-ffffff);
             padding: 3px 8px;
             border-radius: 20px;
             font-size: 10px;
@@ -267,7 +267,7 @@
             flex-wrap: wrap;
             gap: 14px;
             background: var(--white);
-            border: 1px solid #ece4db;
+            border: 1px solid var(--c-ece4db);
             padding: 20px;
             margin-bottom: 24px;
         }
@@ -288,10 +288,10 @@
 
         .date-field input {
             padding: 10px 12px;
-            border: 1px solid #e5ddd5;
+            border: 1px solid var(--c-e5ddd5);
             outline: none;
             color: var(--brown);
-            background: white;
+            background: var(--c-ffffff);
             font-size: 12px;
         }
 
@@ -303,7 +303,7 @@
             padding: 11px 24px;
             border: none;
             background: var(--brown);
-            color: white;
+            color: var(--c-ffffff);
             cursor: pointer;
             font-size: 11px;
             font-weight: 600;
@@ -326,7 +326,7 @@
 
         .report-stat {
             background: var(--white);
-            border: 1px solid #ece4db;
+            border: 1px solid var(--c-ece4db);
             padding: 22px;
         }
 
@@ -364,7 +364,7 @@
 
         .chart-box {
             background: var(--white);
-            border: 1px solid #ece4db;
+            border: 1px solid var(--c-ece4db);
             padding: 24px;
             min-width: 0;
         }
@@ -427,7 +427,7 @@
 
         .top-products {
             background: var(--white);
-            border: 1px solid #ece4db;
+            border: 1px solid var(--c-ece4db);
             padding: 24px;
             overflow-x: auto;
         }
@@ -440,7 +440,7 @@
 
         .top-products th {
             padding: 12px;
-            border-bottom: 1px solid #ece4db;
+            border-bottom: 1px solid var(--c-ece4db);
             color: var(--muted);
             font-size: 10px;
             font-weight: 600;
@@ -499,18 +499,18 @@
         }
 
         .rank-badge.gold {
-            background: #d4af37;
-            color: white;
+            background: var(--c-d4af37);
+            color: var(--c-ffffff);
         }
 
         .rank-badge.silver {
-            background: #c0c0c0;
-            color: white;
+            background: var(--c-c0c0c0);
+            color: var(--c-ffffff);
         }
 
         .rank-badge.bronze {
-            background: #cd7f32;
-            color: white;
+            background: var(--c-cd7f32);
+            color: var(--c-ffffff);
         }
 
         /* ================= NOTIFICATION ================= */
@@ -522,7 +522,7 @@
             z-index: 9999;
             padding: 14px 22px;
             background: var(--brown);
-            color: white;
+            color: var(--c-ffffff);
             font-size: 12px;
             box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
         }
@@ -650,6 +650,7 @@
         }
     </style>
     <link rel="stylesheet" href="{{ asset('css/seller-sidebar.css') }}?v={{ filemtime(public_path('css/seller-sidebar.css')) }}">
+    @include('partials.theme-head')
 </head>
 
 <body class="seller-workspace">
@@ -921,11 +922,11 @@
             );
 
             const colors = [
-                "#1a1714",
-                "#b28b6f",
-                "#6b5f54",
-                "#8a7a6b",
-                "#d4af37"
+                "var(--c-1a1714)",
+                "var(--c-b28b6f)",
+                "var(--c-6b5f54)",
+                "var(--c-8a7a6b)",
+                "var(--c-d4af37)"
             ];
 
             container.innerHTML = salesData.categorySales.map((item, index) => {

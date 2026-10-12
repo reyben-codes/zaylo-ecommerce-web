@@ -18,6 +18,7 @@
     <link rel="stylesheet" href="{{ asset('css/style.css') }}?v={{ filemtime(public_path('css/style.css')) }}" />
 
     @stack('styles')
+    @include('partials.theme-head')
 </head>
 <body>
     <!-- Navigation -->
@@ -55,6 +56,7 @@
                 <input type="search" name="search" value="{{ request('search') }}" placeholder="Search products" aria-label="Search products" />
             </form>
             <div class="icon-group">
+                <button type="button" class="theme-toggle" data-theme-toggle aria-label="Switch color theme"></button>
                 @if(auth()->user()?->role === 'buyer')
                     @include('partials.buyer-nav-icons')
                 @else
@@ -64,10 +66,10 @@
                 @auth
                 <form method="POST" action="{{ route('logout') }}" style="display:inline;margin-left:4px;">
                     @csrf
-                    <span style="font-size:0.8rem;font-weight:500;color:#6b5f54;border-left:1px solid #d8d0c8;padding-left:20px;margin-right:10px;">
+                    <span style="font-size:0.8rem;font-weight:500;color:var(--c-6b5f54);border-left:1px solid var(--c-d8d0c8);padding-left:20px;margin-right:10px;">
                         {{ auth()->user()->name }}
                     </span>
-                    <button type="submit" class="login-text" style="background:none;border:none;cursor:pointer;font-size:0.8rem;font-weight:500;letter-spacing:0.04em;color:#1e1e1e;border-left:1px solid #d8d0c8;padding-left:16px;">
+                    <button type="submit" class="login-text" style="background:none;border:none;cursor:pointer;font-size:0.8rem;font-weight:500;letter-spacing:0.04em;color:var(--c-1e1e1e);border-left:1px solid var(--c-d8d0c8);padding-left:16px;">
                         Logout
                     </button>
                 </form>

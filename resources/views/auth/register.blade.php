@@ -42,6 +42,7 @@
 
             <a class="auth-brand" href="{{ route('home') }}">
                 <img
+                    data-theme-fixed
                     src="{{ asset('images/ZAYLO_LOGO_LIGHT.png') }}"
                     alt="ZAYLO home"
                 >

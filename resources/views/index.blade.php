@@ -10,22 +10,23 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
     <link rel="stylesheet" href="{{ asset('css/style.css') }}?v={{ filemtime(public_path('css/style.css')) }}" />
     <style>
-        .home-hero::after { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(90deg, rgba(250, 247, 242, .96), rgba(250, 247, 242, .83) 32%, rgba(250, 247, 242, .12) 72%); }
+        .home-hero::after { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(90deg, color-mix(in srgb, var(--c-faf7f2) 96%, transparent), color-mix(in srgb, var(--c-faf7f2) 83%, transparent) 32%, color-mix(in srgb, var(--c-faf7f2) 12%, transparent) 72%); }
         .home-hero .hero-slides, .home-hero .hero-slide { position: absolute; inset: 0; }
         .home-hero .hero-slide { opacity: 0; visibility: hidden; transition: opacity .7s ease, visibility .7s ease; }
         .home-hero .hero-slide.is-active { opacity: 1; visibility: visible; }
         .home-hero .hero-text { z-index: 2; }
         .home-hero .hero-carousel-controls { position: absolute; z-index: 3; right: 5%; bottom: 28px; display: flex; align-items: center; gap: 16px; }
-        .home-hero .hero-carousel-arrow { display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid rgba(26, 23, 20, .18); border-radius: 50%; background: rgba(255, 255, 255, .88); color: #1a1714; cursor: pointer; }
-        .home-hero .hero-carousel-arrow:hover { background: #fff; }
+        .home-hero .hero-carousel-arrow { display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid color-mix(in srgb, var(--c-1a1714) 18%, transparent); border-radius: 50%; background: color-mix(in srgb, var(--c-ffffff) 88%, transparent); color: var(--c-1a1714); cursor: pointer; }
+        .home-hero .hero-carousel-arrow:hover { background: var(--c-ffffff); }
         .home-hero .hero-carousel-dots { display: flex; align-items: center; gap: 7px; }
         .home-hero .hero-carousel-dot { width: 24px; height: 24px; padding: 0; border: 0; background: transparent; cursor: pointer; display: grid; place-items: center; }
-        .home-hero .hero-carousel-dot::before { content: ''; display: block; width: 8px; height: 8px; border-radius: 50%; background: rgba(26, 23, 20, .4); transition: width .2s ease, background-color .2s ease; }
-        .home-hero .hero-carousel-dot[aria-pressed="true"]::before { width: 20px; border-radius: 999px; background: #1a1714; }
-        .home-hero .hero-carousel-controls button:focus-visible { outline: 2px solid #1a1714; outline-offset: 3px; }
-        @media (max-width: 640px) { .home-hero { height: 390px; } .home-hero::after { background: linear-gradient(90deg, rgba(250, 247, 242, .94), rgba(250, 247, 242, .69) 65%, rgba(250, 247, 242, .25)); } .home-hero .hero-carousel-controls { right: 5%; bottom: 12px; gap: 8px; } .home-hero .hero-carousel-arrow { width: 36px; height: 36px; } }
+        .home-hero .hero-carousel-dot::before { content: ''; display: block; width: 8px; height: 8px; border-radius: 50%; background: color-mix(in srgb, var(--c-1a1714) 40%, transparent); transition: width .2s ease, background-color .2s ease; }
+        .home-hero .hero-carousel-dot[aria-pressed="true"]::before { width: 20px; border-radius: 999px; background: var(--c-1a1714); }
+        .home-hero .hero-carousel-controls button:focus-visible { outline: 2px solid var(--c-1a1714); outline-offset: 3px; }
+        @media (max-width: 640px) { .home-hero { height: 390px; } .home-hero::after { background: linear-gradient(90deg, color-mix(in srgb, var(--c-faf7f2) 94%, transparent), color-mix(in srgb, var(--c-faf7f2) 69%, transparent) 65%, color-mix(in srgb, var(--c-faf7f2) 25%, transparent)); } .home-hero .hero-carousel-controls { right: 5%; bottom: 12px; gap: 8px; } .home-hero .hero-carousel-arrow { width: 36px; height: 36px; } }
         @media (prefers-reduced-motion: reduce) { .home-hero .hero-slide, .home-hero .hero-carousel-dot::before { transition: none; } }
     </style>
+    @include('partials.theme-head')
 </head>
 <body>
     <header class="navbar">
@@ -55,6 +56,7 @@
                 <input type="search" name="search" placeholder="Search products" aria-label="Search products" />
             </form>
             <div class="icon-group">
+                <button type="button" class="theme-toggle" data-theme-toggle aria-label="Switch color theme"></button>
                 @if(auth()->user()?->role === 'buyer')
                     @include('partials.buyer-nav-icons')
                 @else
@@ -182,7 +184,7 @@
 <footer class="site-footer">
     <div class="footer-main">
         <div class="footer-brand">
-            <img src="{{ asset('images/ZAYLO_LOGO_LIGHT.png') }}" alt="ZAYLO" />
+            <img data-theme-fixed src="{{ asset('images/ZAYLO_LOGO_LIGHT.png') }}" alt="ZAYLO" />
             <p>Everyday essentials, exciting finds, and trusted sellers—all together in one marketplace.</p>
         </div>
         <div class="footer-links">

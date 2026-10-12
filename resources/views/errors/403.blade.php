@@ -10,19 +10,20 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Inter', sans-serif; background: #faf7f2; color: #1a1714; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
+        body { font-family: 'Inter', sans-serif; background: var(--c-faf7f2); color: var(--c-1a1714); display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
         .error-container { text-align: center; max-width: 480px; }
-        .error-icon { font-size: 4rem; color: #b28b6f; margin-bottom: 24px; }
-        .error-code { font-family: 'Playfair Display', serif; font-size: 6rem; font-weight: 600; color: #1a1714; line-height: 1; margin-bottom: 8px; letter-spacing: -0.02em; }
+        .error-icon { font-size: 4rem; color: var(--c-b28b6f); margin-bottom: 24px; }
+        .error-code { font-family: 'Playfair Display', serif; font-size: 6rem; font-weight: 600; color: var(--c-1a1714); line-height: 1; margin-bottom: 8px; letter-spacing: -0.02em; }
         .error-title { font-family: 'Playfair Display', serif; font-size: 1.6rem; font-weight: 600; margin-bottom: 12px; }
-        .error-message { font-size: 0.9rem; color: #6b5f54; line-height: 1.6; margin-bottom: 36px; }
+        .error-message { font-size: 0.9rem; color: var(--c-6b5f54); line-height: 1.6; margin-bottom: 36px; }
         .error-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
-        .btn-primary { background: #1a1714; color: white; border-radius: 8px; padding: 14px 32px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none; display: inline-block; transition: 0.15s; }
-        .btn-primary:hover { background: #b28b6f; }
-        .btn-secondary { background: transparent; color: #1a1714; border: 1px solid #1a1714; border-radius: 8px; padding: 14px 32px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none; display: inline-block; transition: 0.15s; }
-        .btn-secondary:hover { background: #1a1714; color: white; }
-        .divider { width: 48px; height: 2px; background: #ece4db; margin: 24px auto; }
+        .btn-primary { background: var(--c-1a1714); color: var(--c-ffffff); border-radius: 8px; padding: 14px 32px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none; display: inline-block; transition: 0.15s; }
+        .btn-primary:hover { background: var(--c-b28b6f); }
+        .btn-secondary { background: transparent; color: var(--c-1a1714); border: 1px solid var(--c-1a1714); border-radius: 8px; padding: 14px 32px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none; display: inline-block; transition: 0.15s; }
+        .btn-secondary:hover { background: var(--c-1a1714); color: var(--c-ffffff); }
+        .divider { width: 48px; height: 2px; background: var(--c-ece4db); margin: 24px auto; }
     </style>
+    @include('partials.theme-head')
 </head>
 <body>
     <div class="error-container">

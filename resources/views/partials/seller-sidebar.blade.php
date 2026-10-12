@@ -28,6 +28,8 @@
 
         <div class="seller-sidebar__divider" aria-hidden="true"></div>
 
+        <button type="button" class="seller-sidebar__link" data-theme-toggle data-theme-toggle-label aria-label="Switch color theme"></button>
+
         <form method="POST" action="{{ route('logout') }}" class="seller-sidebar__logout-form">
             @csrf
             <button type="submit" class="seller-sidebar__link seller-sidebar__logout">

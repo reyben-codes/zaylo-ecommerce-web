@@ -24,14 +24,14 @@
         }
 
         :root {
-            --cream: #faf7f2;
-            --white: #ffffff;
-            --brown: #b28b6f;
-            --dark: #1a1714;
-            --text: #38312b;
-            --muted: #6b5f54;
-            --border: #ece4db;
-            --soft-brown: #f5f0ea;
+            --cream: var(--c-faf7f2);
+            --white: var(--c-ffffff);
+            --brown: var(--c-b28b6f);
+            --dark: var(--c-1a1714);
+            --text: var(--c-38312b);
+            --muted: var(--c-6b5f54);
+            --border: var(--c-ece4db);
+            --soft-brown: var(--c-f5f0ea);
         }
 
         body {
@@ -61,7 +61,7 @@
             justify-content: space-between;
             background: var(--white);
             padding: 0 32px;
-            border-top: 2px solid #8cb58a;
+            border-top: 2px solid var(--c-8cb58a);
             border-bottom: 1px solid var(--border);
             position: relative;
             z-index: 1000;
@@ -115,15 +115,15 @@
         .search-wrapper {
             display: flex;
             align-items: center;
-            background: #f4f1ec;
-            border: 1px solid #e5dfd8;
+            background: var(--c-f4f1ec);
+            border: 1px solid var(--c-e5dfd8);
             border-radius: 30px;
             padding: 4px 14px;
         }
 
         .search-icon {
             font-size: 12px;
-            color: #4a4037;
+            color: var(--c-4a4037);
         }
 
         .search-wrapper input {
@@ -136,7 +136,7 @@
         }
 
         .search-wrapper input::placeholder {
-            color: #a89b8c;
+            color: var(--c-a89b8c);
         }
 
         .icon-group {
@@ -167,7 +167,7 @@
             height: 18px;
             padding: 2px 5px;
             background: var(--brown);
-            color: white;
+            color: var(--c-ffffff);
             border-radius: 50%;
             font-size: 9px;
             text-align: center;
@@ -175,7 +175,7 @@
         }
 
         .logout-link {
-            border-left: 1px solid #d8d0c8;
+            border-left: 1px solid var(--c-d8d0c8);
             padding-left: 16px;
             font-size: 11px;
             font-weight: 500;
@@ -393,11 +393,11 @@
         }
 
         .filter-button {
-            border: 1px solid #e5dcd2;
+            border: 1px solid var(--c-e5dcd2);
             background: transparent;
             border-radius: 25px;
             padding: 9px 16px;
-            color: #4b4037;
+            color: var(--c-4b4037);
             font-size: 11px;
             cursor: pointer;
             transition: 0.2s ease;
@@ -455,14 +455,14 @@
         }
 
         .orders-table thead {
-            background: #faf8f5;
+            background: var(--c-faf8f5);
         }
 
         .orders-table th {
             text-align: left;
             padding: 15px 17px;
             border-bottom: 1px solid var(--border);
-            color: #806b58;
+            color: var(--c-806b58);
             font-size: 10px;
             font-weight: 600;
             text-transform: uppercase;
@@ -471,8 +471,8 @@
 
         .orders-table td {
             padding: 17px;
-            border-bottom: 1px solid #f0eae4;
-            color: #39332e;
+            border-bottom: 1px solid var(--c-f0eae4);
+            color: var(--c-39332e);
             font-size: 11px;
             white-space: nowrap;
         }
@@ -482,7 +482,7 @@
         }
 
         .orders-table tbody tr:hover {
-            background: #fdfbf9;
+            background: var(--c-fdfbf9);
         }
 
         .order-number {
@@ -511,38 +511,38 @@
         }
 
         .status.to-ship {
-            background: #fff0d5;
-            color: #966019;
+            background: var(--c-fff0d5);
+            color: var(--c-966019);
         }
 
         .status.in-transit {
-            background: #eee8e2;
-            color: #6f6258;
+            background: var(--c-eee8e2);
+            color: var(--c-6f6258);
         }
 
         .status.out-delivery {
-            background: #f0e3d8;
-            color: #966b4e;
+            background: var(--c-f0e3d8);
+            color: var(--c-966b4e);
         }
 
         .status.delivered {
-            background: #d6e4d0;
-            color: #2d7d46;
+            background: var(--c-d6e4d0);
+            color: var(--c-2d7d46);
         }
 
         .status.cancelled {
-            background: #fde1df;
-            color: #c34540;
+            background: var(--c-fde1df);
+            color: var(--c-c34540);
         }
 
         .view-details {
             display: inline-flex;
             align-items: center;
             gap: 7px;
-            border: 1px solid #d5c5b6;
+            border: 1px solid var(--c-d5c5b6);
             border-radius: 20px;
             padding: 8px 12px;
-            color: #493d33;
+            color: var(--c-493d33);
             font-size: 10px;
             transition: 0.2s ease;
         }
@@ -632,7 +632,7 @@
                 left: 0;
                 right: 0;
                 bottom: 0;
-                background: rgba(26, 23, 20, 0.35);
+                background: color-mix(in srgb, #1a1714 35%, transparent);
                 z-index: 1050;
             }
 
@@ -700,6 +700,7 @@
         }
     </style>
     <link rel="stylesheet" href="{{ asset('css/seller-sidebar.css') }}?v={{ filemtime(public_path('css/seller-sidebar.css')) }}">
+    @include('partials.theme-head')
 </head>
 
 <body class="seller-workspace">

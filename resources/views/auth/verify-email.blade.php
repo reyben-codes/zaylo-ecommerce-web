@@ -6,7 +6,7 @@
 <main class="auth-container">
     <aside class="auth-image" aria-label="ZAYLO marketplace">
         <div class="auth-image-content">
-            <a class="auth-brand" href="{{ route('home') }}"><img src="{{ asset('images/ZAYLO_LOGO_LIGHT.png') }}" alt="ZAYLO home"></a>
+            <a class="auth-brand" href="{{ route('home') }}"><img data-theme-fixed src="{{ asset('images/ZAYLO_LOGO_LIGHT.png') }}" alt="ZAYLO home"></a>
             <div class="auth-image-text"><p>Driven by passion.</p><p>Defined by your origin</p></div>
         </div>
     </aside>
