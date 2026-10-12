@@ -61,9 +61,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         if (_sentMessage != null) ...[
           SectionCard(
             child: Row(children: [
-              const Icon(Icons.mark_email_read_outlined, color: Color(0xFF2E7D32)),
+              Icon(Icons.mark_email_read_outlined, color: ZayloColors.success),
               const SizedBox(width: 12),
-              Expanded(child: Text(_sentMessage!, style: const TextStyle(color: ZayloColors.ink))),
+              Expanded(child: Text(_sentMessage!, style: TextStyle(color: ZayloColors.ink))),
             ]),
           ),
           const SizedBox(height: 20),

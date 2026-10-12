@@ -78,7 +78,7 @@ class _VerificationFormState extends State<VerificationForm> {
                 value != null && RegExp(r'^\d{6}$').hasMatch(value) ? null : 'Enter the six-digit code from your email.',
           ),
           const SizedBox(height: 8),
-          const Align(
+          Align(
             alignment: Alignment.centerLeft,
             child: Text('Your code expires after 10 minutes.', style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
           ),

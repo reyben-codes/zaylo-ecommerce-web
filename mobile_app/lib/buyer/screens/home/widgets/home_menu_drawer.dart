@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/zaylo_theme.dart';
+import '../../../../core/widgets/appearance_picker.dart';
 
 class HomeMenuDrawer extends StatelessWidget {
   const HomeMenuDrawer({super.key, 
@@ -26,8 +27,13 @@ class HomeMenuDrawer extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.all(ZayloSpace.page),
             children: [
-              Image.asset('assets/images/ZAYLO_LOGO_DARK.png',
-                  width: 154, height: 44, fit: BoxFit.contain, alignment: Alignment.centerLeft),
+              Image.asset(ZayloAssets.logo,
+                  width: 154,
+                  height: 44,
+                  fit: BoxFit.contain,
+                  alignment: Alignment.centerLeft,
+                  color: ZayloAssets.logoTint,
+                  colorBlendMode: BlendMode.srcIn),
               const SizedBox(height: 30),
               ListTile(
                   leading: const Icon(Icons.storefront_outlined),
@@ -67,6 +73,8 @@ class HomeMenuDrawer extends StatelessWidget {
                     title: const Text('Login as a Rider'),
                     onTap: onRiderLogin),
               ],
+              const Divider(),
+              const AppearancePicker(),
             ],
           ),
         ),

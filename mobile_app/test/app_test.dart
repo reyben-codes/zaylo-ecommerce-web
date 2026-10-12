@@ -11,6 +11,8 @@ import 'package:zaylo_mobile/buyer/state/app_state.dart';
 import 'package:zaylo_mobile/buyer/state/token_store.dart';
 import 'package:zaylo_mobile/core/api/api_exception.dart';
 import 'package:zaylo_mobile/core/models/auth_models.dart';
+import 'package:zaylo_mobile/core/theme/theme_controller.dart';
+import 'package:zaylo_mobile/core/theme/zaylo_theme.dart';
 import 'package:zaylo_mobile/core/utils/formatters.dart';
 import 'package:zaylo_mobile/core/utils/validators.dart';
 import 'package:zaylo_mobile/main.dart';
@@ -22,6 +24,7 @@ import 'package:zaylo_mobile/rider/screens/rider_home_screen.dart';
 import 'package:zaylo_mobile/rider/screens/rider_registration_screen.dart';
 import 'package:zaylo_mobile/rider/utils/rider_input_formatters.dart';
 import 'package:zaylo_mobile/rider/widgets/rider_terms_dialog.dart';
+import 'package:zaylo_mobile/shared/chat/delivery_chat.dart';
 import 'package:zaylo_mobile/rider/utils/rider_validators.dart';
 
 /// JSON in the exact shape produced by app/Support/MobilePayload.php.
@@ -107,7 +110,28 @@ class FakeRiderApi extends RiderApi {
           {'name': 'Gardening Gloves', 'quantity': 1},
         ],
         'pickup': {'store_name': 'Happy Heels', 'phone': '09171110000', 'address': 'Halang, Calamba, Laguna'},
+        'chat_open': mine && status != 'delivered',
+        'unread_messages': mine && status == 'assigned' ? 1 : 0,
       };
+
+  final chatSent = <String>[];
+
+  @override
+  Future<DeliveryChat> deliveryChat(int id) async => DeliveryChat.fromJson({
+        'open': true,
+        'other_name': 'Maria',
+        'other_role': 'Buyer',
+        'order_number': 'ZAY-ORDER-$id',
+        'messages': [
+          {'id': 1, 'client_id': 'c1', 'body': 'The gate is blue.', 'mine': false, 'read': true, 'sent_at': '2026-10-12T08:00:00Z'},
+        ],
+      });
+
+  @override
+  Future<DeliveryChatMessage> sendDeliveryMessage(int id, String body, {required String clientId}) async {
+    chatSent.add(body);
+    return DeliveryChatMessage(id: 2, clientId: clientId, body: body, mine: true, sentAt: DateTime(2026, 10, 12));
+  }
 
   @override
   Future<RiderDashboard> dashboard() async => RiderDashboard.fromJson({
@@ -208,7 +232,8 @@ class FakeRiderApi extends RiderApi {
   }
 }
 
-Future<void> pumpApp(WidgetTester tester, {String? token, List<int> cart = const [], double width = 400}) async {
+Future<void> pumpApp(WidgetTester tester,
+    {String? token, List<int> cart = const [], double width = 400, ThemeController? theme}) async {
   final tokens = MemoryTokenStore();
   if (token != null) await tokens.write(token);
   final state = AppState(api: FakeApi(cartIds: cart), tokens: tokens);
@@ -217,7 +242,7 @@ Future<void> pumpApp(WidgetTester tester, {String? token, List<int> cart = const
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = Size(width, 4000);
   addTearDown(tester.view.reset);
-  await tester.pumpWidget(ZayloApp(state: state));
+  await tester.pumpWidget(ZayloApp(state: state, theme: theme));
   await state.restore();
   await tester.pumpAndSettle(const Duration(milliseconds: 100), EnginePhase.sendSemanticsUpdate, const Duration(seconds: 2));
 }
@@ -270,6 +295,52 @@ void main() {
       expect(find.text('CHECKOUT (1)'), findsOneWidget);
       expect(find.text('Selected items (1)'), findsOneWidget);
     });
+  });
+
+  testWidgets('home top bar hides while scrolling down and returns when the scroll stops', (tester) async {
+    await pumpApp(tester, width: 400);
+    tester.view.physicalSize = const Size(400, 800);
+    await tester.pumpAndSettle();
+    double topBarOffset() => tester
+        .widget<AnimatedSlide>(find.ancestor(of: find.byTooltip('Menu'), matching: find.byType(AnimatedSlide)))
+        .offset
+        .dy;
+    expect(topBarOffset(), 0);
+
+    final gesture = await tester.startGesture(const Offset(200, 500));
+    await gesture.moveBy(const Offset(0, -150));
+    await tester.pump();
+    await gesture.moveBy(const Offset(0, -150));
+    await tester.pump();
+    expect(topBarOffset(), -1);
+
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(topBarOffset(), 0);
+  });
+
+  testWidgets('appearance switches to dark mode, persists, and returns to the system setting', (tester) async {
+    addTearDown(() => ZayloColors.use(Brightness.light));
+    final store = MemoryThemeModeStore();
+    await pumpApp(tester, theme: ThemeController(store: store));
+    Color background() => tester.widget<Scaffold>(find.byType(Scaffold).first).backgroundColor ??
+        Theme.of(tester.element(find.byType(Scaffold).first)).scaffoldBackgroundColor;
+    expect(background(), ZayloPalette.light.cream);
+
+    await tester.tap(find.byTooltip('Menu'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Dark'));
+    await tester.pumpAndSettle();
+
+    expect(ZayloColors.isDark, isTrue);
+    expect(background(), ZayloPalette.dark.cream);
+    expect(await store.read(), ThemeMode.dark);
+
+    // The test platform reports light, so System goes back to the light palette.
+    await tester.tap(find.text('System'));
+    await tester.pumpAndSettle();
+    expect(ZayloColors.isDark, isFalse);
+    expect(background(), ZayloPalette.light.cream);
   });
 
   testWidgets('menu opens the rider login screen', (tester) async {
@@ -380,6 +451,33 @@ void main() {
     expect(find.text("Upload a photo or PDF of your driver's license."), findsOneWidget);
     expect(find.text('Upload a photo or PDF of your vehicle OR/CR.'), findsOneWidget);
     expect(find.text('Select your vehicle type.'), findsOneWidget);
+  });
+
+  testWidgets('rider chats with the buyer of an active delivery', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(400, 4000);
+    addTearDown(tester.view.reset);
+    final api = FakeRiderApi();
+    await tester.pumpWidget(MaterialApp(home: RiderHomeScreen(api: api)));
+    await tester.pumpAndSettle();
+
+    // Only the rider's own delivery offers the chat, with its unread badge.
+    expect(find.text('Chat with Maria'), findsOneWidget);
+    expect(find.text('Chat with buyer'), findsNothing);
+    await tester.tap(find.text('Chat with Maria'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('The gate is blue.'), findsOneWidget);
+    expect(find.text('Buyer · ZAY-ORDER-1'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), 'Arriving in 5 minutes');
+    await tester.tap(find.byTooltip('Send'));
+    await tester.pumpAndSettle();
+
+    expect(api.chatSent, ['Arriving in 5 minutes']);
+    expect(find.text('Arriving in 5 minutes'), findsOneWidget);
+    // Leave the screen so its polling timer stops before the test ends.
+    await tester.pageBack();
+    await tester.pumpAndSettle();
   });
 
   testWidgets('rider dashboard shows stats, deliveries, and accepts a delivery', (tester) async {

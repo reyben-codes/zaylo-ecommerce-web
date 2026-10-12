@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/zaylo_theme.dart';
+import '../../../core/widgets/appearance_picker.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/layout.dart';
 import '../../state/app_state.dart';
 import '../../widgets/shop_actions.dart';
 import '../../widgets/signed_out_prompt.dart';
+import '../../widgets/tab_header.dart';
 import '../address/addresses_screen.dart';
 import '../orders/orders_screen.dart';
 import 'notifications_screen.dart';
@@ -70,12 +72,14 @@ class _AccountScreenState extends State<AccountScreen> {
     if (user == null) {
       return const SignedOutPrompt(
         icon: Icons.person_outline,
-        title: 'Account',
+        heading: 'Account',
+        eyebrow: 'Your ZAYLO',
+        title: 'Welcome to ZAYLO',
         message: 'Sign in to track orders, manage addresses and update your profile.',
       );
     }
     return Scaffold(
-      appBar: AppBar(title: const Text('Account')),
+      appBar: const TabHeader(eyebrow: 'Your ZAYLO', title: 'Account'),
       body: ListView(
         padding: EdgeInsets.fromLTRB(ZayloSpace.page, ZayloSpace.page, ZayloSpace.page, ZayloSpace.page + MediaQuery.paddingOf(context).bottom),
         children: [
@@ -85,7 +89,7 @@ class _AccountScreenState extends State<AccountScreen> {
                 radius: 28,
                 backgroundColor: ZayloColors.ink,
                 child: Text(user.initials,
-                    style: const TextStyle(color: ZayloColors.white, fontWeight: FontWeight.w700, fontSize: 18)),
+                    style: TextStyle(color: ZayloColors.white, fontWeight: FontWeight.w700, fontSize: 18)),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -136,6 +140,8 @@ class _AccountScreenState extends State<AccountScreen> {
               ),
             ]),
           ),
+          const SizedBox(height: 12),
+          const SectionCard(padding: EdgeInsets.zero, child: AppearancePicker()),
           const SizedBox(height: 22),
           SizedBox(
             width: double.infinity,
@@ -147,7 +153,7 @@ class _AccountScreenState extends State<AccountScreen> {
             ),
           ),
           const SizedBox(height: 18),
-          const Center(
+          Center(
             child: Text('Driven by passion. Defined by your origin',
                 style: TextStyle(fontSize: 11, color: ZayloColors.taupe)),
           ),
@@ -174,7 +180,7 @@ class _OrderShortcut extends StatelessWidget {
             child: Column(children: [
               Icon(icon, color: ZayloColors.ink),
               const SizedBox(height: 6),
-              Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: ZayloColors.ink)),
+              Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: ZayloColors.ink)),
             ]),
           ),
         ),
@@ -194,13 +200,13 @@ class _MenuTile extends StatelessWidget {
   Widget build(BuildContext context) => Column(children: [
         ListTile(
           leading: Icon(icon, color: ZayloColors.ink),
-          title: Text(label, style: const TextStyle(fontWeight: FontWeight.w600, color: ZayloColors.ink, fontSize: 14)),
+          title: Text(label, style: TextStyle(fontWeight: FontWeight.w600, color: ZayloColors.ink, fontSize: 14)),
           trailing: Row(mainAxisSize: MainAxisSize.min, children: [
             if (trailing != null) ...[trailing!, const SizedBox(width: 8)],
-            const Icon(Icons.chevron_right, color: ZayloColors.muted),
+            Icon(Icons.chevron_right, color: ZayloColors.muted),
           ]),
           onTap: onTap,
         ),
-        if (!last) const Divider(height: 1, indent: 56, color: ZayloColors.line),
+        if (!last) Divider(height: 1, indent: 56, color: ZayloColors.line),
       ]);
 }

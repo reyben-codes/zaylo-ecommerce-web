@@ -18,7 +18,7 @@ class Loader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) =>
-      const Center(child: CircularProgressIndicator(color: ZayloColors.ink));
+      Center(child: CircularProgressIndicator(color: ZayloColors.ink));
 }
 
 class LoadError extends StatelessWidget {

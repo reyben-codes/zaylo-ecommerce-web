@@ -10,6 +10,7 @@ import '../../models/cart_models.dart';
 import '../../state/app_state.dart';
 import '../../widgets/shop_actions.dart';
 import '../../widgets/signed_out_prompt.dart';
+import '../../widgets/tab_header.dart';
 import '../checkout/checkout_screen.dart';
 
 /// The Bag tab. Mirrors the web cart: per-item selection, select all,
@@ -118,6 +119,8 @@ class _BagScreenState extends State<BagScreen> {
     if (!state.signedIn) {
       return const SignedOutPrompt(
         icon: Icons.shopping_bag_outlined,
+        heading: 'Bag',
+        eyebrow: 'Ready for checkout',
         title: 'Your bag',
         message: 'Sign in to add products to your bag and check out.',
       );
@@ -131,11 +134,11 @@ class _BagScreenState extends State<BagScreen> {
     final selectedTotal = selected.fold<double>(0, (sum, item) => sum + item.lineTotal);
 
     return Scaffold(
-      appBar: AppBar(title: Text(cart.count == 0 ? 'Bag' : 'Bag (${cart.count})')),
+      appBar: TabHeader(eyebrow: 'Ready for checkout', title: 'Bag', count: cart.count),
       bottomNavigationBar: cart.items.isEmpty
           ? null
           : Container(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: ZayloColors.paper,
                 border: Border(top: BorderSide(color: ZayloColors.line)),
               ),
@@ -148,10 +151,10 @@ class _BagScreenState extends State<BagScreen> {
                     child:
                         Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text('Selected items ($selectedQty)',
-                          style: const TextStyle(fontSize: 12, color: ZayloColors.muted)),
+                          style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
                       Text(peso(selectedTotal),
-                          style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: ZayloColors.ink)),
-                      const Text('Shipping calculated at checkout',
+                          style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: ZayloColors.ink)),
+                      Text('Shipping calculated at checkout',
                           style: TextStyle(fontSize: 10, color: ZayloColors.taupe)),
                     ]),
                   ),
@@ -195,7 +198,7 @@ class _BagScreenState extends State<BagScreen> {
                       child: Text('Select all (${cart.items.length})',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontWeight: FontWeight.w600, color: ZayloColors.ink)),
+                          style: TextStyle(fontWeight: FontWeight.w600, color: ZayloColors.ink)),
                     ),
                     TextButton.icon(
                       onPressed: selected.isEmpty || _removing ? null : () => _removeSelected(selected),
@@ -204,14 +207,14 @@ class _BagScreenState extends State<BagScreen> {
                       style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
                     ),
                   ]),
-                  if (_removing) const LinearProgressIndicator(color: ZayloColors.ink),
+                  if (_removing) LinearProgressIndicator(color: ZayloColors.ink),
                   for (final group in _bySeller(cart.items).entries) ...[
                     const SizedBox(height: 10),
                     Row(children: [
-                      const Icon(Icons.storefront_outlined, size: 16, color: ZayloColors.muted),
+                      Icon(Icons.storefront_outlined, size: 16, color: ZayloColors.muted),
                       const SizedBox(width: 6),
                       Text(group.key,
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: ZayloColors.ink)),
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: ZayloColors.ink)),
                     ]),
                     const SizedBox(height: 8),
                     for (final item in group.value)
@@ -274,7 +277,7 @@ class _BagItemTile extends StatelessWidget {
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 22),
         decoration: BoxDecoration(color: Colors.redAccent, borderRadius: BorderRadius.circular(14)),
-        child: const Icon(Icons.delete_outline, color: ZayloColors.white),
+        child: const Icon(Icons.delete_outline, color: Colors.white),
       ),
       confirmDismiss: (_) async {
         onRemove();
@@ -299,20 +302,20 @@ class _BagItemTile extends StatelessWidget {
                   child: Text(product?.name ?? 'Product',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w600, color: ZayloColors.ink, fontSize: 14)),
+                      style: TextStyle(fontWeight: FontWeight.w600, color: ZayloColors.ink, fontSize: 14)),
                 ),
                 InkWell(
                   onTap: busy ? null : onRemove,
-                  child: const Padding(
+                  child: Padding(
                     padding: EdgeInsets.only(left: 6),
                     child: Icon(Icons.close, size: 18, color: ZayloColors.muted, semanticLabel: 'Remove'),
                   ),
                 ),
               ]),
               if (item.variantName != null)
-                Text(item.variantName!, style: const TextStyle(fontSize: 12, color: ZayloColors.muted)),
+                Text(item.variantName!, style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
               const SizedBox(height: 4),
-              Text(peso(item.unitPrice), style: const TextStyle(fontWeight: FontWeight.w800, color: ZayloColors.ink)),
+              Text(peso(item.unitPrice), style: TextStyle(fontWeight: FontWeight.w800, color: ZayloColors.ink)),
               if (overStock)
                 Text('Only ${item.availableStock} left',
                     style: const TextStyle(fontSize: 12, color: Colors.redAccent, fontWeight: FontWeight.w600)),
@@ -326,11 +329,11 @@ class _BagItemTile extends StatelessWidget {
                   onChanged: onQuantity,
                 ),
                 if (busy)
-                  const SizedBox(
+                  SizedBox(
                       width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: ZayloColors.ink))
                 else
                   Text(peso(item.lineTotal),
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: ZayloColors.ink)),
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: ZayloColors.ink)),
               ]),
             ]),
           ),

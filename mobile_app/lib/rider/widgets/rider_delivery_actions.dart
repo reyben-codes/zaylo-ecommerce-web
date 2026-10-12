@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/api/api_exception.dart';
 import '../../core/widgets/feedback.dart';
+import '../../shared/chat/delivery_chat.dart';
 import '../api/rider_api.dart';
 import '../models/rider_dashboard_models.dart';
 
@@ -25,11 +26,26 @@ mixin RiderDeliveryActions<T extends StatefulWidget> on State<T> {
     final next = delivery.nextStatus;
     if (next == null) return;
     if (next == 'delivered' && !await _confirmDelivered(delivery)) return;
-    await _run(delivery, () => riderApi.updateDelivery(delivery.id, next), switch (next) {
-      'picked_up' => 'Marked as picked up.',
-      'in_transit' => 'Delivery started. Drive safely!',
-      _ => 'Delivered. Nice work!',
-    });
+    await _run(
+        delivery,
+        () => riderApi.updateDelivery(delivery.id, next),
+        switch (next) {
+          'picked_up' => 'Marked as picked up.',
+          'in_transit' => 'Delivery started. Drive safely!',
+          _ => 'Delivered. Nice work!',
+        });
+  }
+
+  /// Opens the chat with [delivery]'s buyer, then refreshes so its unread badge clears.
+  Future<void> openDeliveryChat(RiderDelivery delivery) async {
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => DeliveryChatScreen(
+        title: 'Chat with buyer',
+        load: () => riderApi.deliveryChat(delivery.id),
+        send: (body, clientId) => riderApi.sendDeliveryMessage(delivery.id, body, clientId: clientId),
+      ),
+    ));
+    if (mounted) await reloadDeliveries();
   }
 
   Future<bool> _confirmDelivered(RiderDelivery delivery) async =>

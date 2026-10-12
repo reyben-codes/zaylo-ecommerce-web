@@ -102,7 +102,7 @@ class _RiderChangePasswordScreenState extends State<RiderChangePasswordScreen> {
                 validator: (value) => value == _password.text ? null : 'Passwords do not match.',
               ),
               const SizedBox(height: 10),
-              const Text('Other phones signed in to your rider account will be signed out.',
+              Text('Other phones signed in to your rider account will be signed out.',
                   style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
               const SizedBox(height: 24),
               PrimaryButton(label: 'UPDATE PASSWORD', busy: _saving, onPressed: _save),

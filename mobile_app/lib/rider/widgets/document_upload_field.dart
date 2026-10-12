@@ -36,7 +36,8 @@ class DocumentUploadField extends FormField<File> {
 enum _Source { camera, gallery, file }
 
 class _DocumentUploadPicker extends StatelessWidget {
-  const _DocumentUploadPicker({required this.label, required this.file, required this.errorText, required this.onPicked});
+  const _DocumentUploadPicker(
+      {required this.label, required this.file, required this.errorText, required this.onPicked});
 
   final String label;
   final File? file;
@@ -83,10 +84,10 @@ class _DocumentUploadPicker extends StatelessWidget {
           ))
               ?.path,
         _Source.file => (await FilePicker.pickFile(
-          type: FileType.custom,
-          allowedExtensions: riderDocumentExtensions,
-        ))
-            ?.path,
+            type: FileType.custom,
+            allowedExtensions: riderDocumentExtensions,
+          ))
+              ?.path,
       };
       if (path != null) onPicked(File(path));
     } on Exception catch (error) {
@@ -148,11 +149,11 @@ class _EmptyPrompt extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          const Icon(Icons.add_a_photo_outlined, size: 30, color: ZayloColors.muted),
+          Icon(Icons.add_a_photo_outlined, size: 30, color: ZayloColors.muted),
           const SizedBox(height: 8),
           Text('Upload $label', style: const TextStyle(fontWeight: FontWeight.w600), textAlign: TextAlign.center),
           const SizedBox(height: 2),
-          const Text('JPG, PNG, or PDF up to 5.0 MB',
+          Text('JPG, PNG, or PDF up to 5.0 MB',
               style: TextStyle(fontSize: 12, color: ZayloColors.muted), textAlign: TextAlign.center),
         ]),
       );
@@ -172,12 +173,15 @@ class _PdfPreview extends StatelessWidget {
         const Icon(Icons.picture_as_pdf_outlined, size: 40, color: Colors.redAccent),
         const SizedBox(width: 12),
         Expanded(
-          child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(file.uri.pathSegments.last,
-                maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600)),
-            const SizedBox(height: 4),
-            Text('PDF · $megabytes MB', style: const TextStyle(fontSize: 12, color: ZayloColors.muted)),
-          ]),
+          child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(file.uri.pathSegments.last,
+                    maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Text('PDF · $megabytes MB', style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
+              ]),
         ),
         const _ChangeBadge(),
       ]),
@@ -191,7 +195,7 @@ class _ChangeBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) => DecoratedBox(
         decoration: BoxDecoration(color: ZayloColors.ink, borderRadius: BorderRadius.circular(20)),
-        child: const Padding(
+        child: Padding(
           padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           child: Text('Change', style: TextStyle(color: ZayloColors.white, fontSize: 12)),
         ),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/api/api_exception.dart';
 import '../../core/theme/zaylo_theme.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/widgets/appearance_picker.dart';
 import '../../core/widgets/buttons.dart';
 import '../../core/widgets/feedback.dart';
 import '../../core/widgets/layout.dart';
@@ -132,7 +133,7 @@ class _RiderAccountTabState extends State<RiderAccountTab> {
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text(rider.name, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-                      Text(rider.email, style: const TextStyle(color: ZayloColors.muted)),
+                      Text(rider.email, style: TextStyle(color: ZayloColors.muted)),
                     ]),
                   ),
                 ]),
@@ -202,6 +203,8 @@ class _RiderAccountTabState extends State<RiderAccountTab> {
                   ),
                 ),
                 const SizedBox(height: 16),
+                const SectionCard(padding: EdgeInsets.zero, child: AppearancePicker()),
+                const SizedBox(height: 16),
                 SectionCard(
                   padding: EdgeInsets.zero,
                   child: ListTile(
@@ -216,8 +219,8 @@ class _RiderAccountTabState extends State<RiderAccountTab> {
                 OutlinedButton.icon(
                   onPressed: _signingOut ? null : _confirmSignOut,
                   style: secondaryButtonStyle.copyWith(
-                    foregroundColor: const WidgetStatePropertyAll(Color(0xFFC0392B)),
-                    side: const WidgetStatePropertyAll(BorderSide(color: Color(0xFFC0392B))),
+                    foregroundColor: WidgetStatePropertyAll(ZayloColors.danger),
+                    side: WidgetStatePropertyAll(BorderSide(color: ZayloColors.danger)),
                   ),
                   icon: _signingOut
                       ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
@@ -261,8 +264,8 @@ class _Row extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ListTile(
         leading: Icon(icon),
-        title: Text(label, style: const TextStyle(fontSize: 12, color: ZayloColors.muted)),
-        subtitle: Text(value, style: const TextStyle(fontSize: 15, color: ZayloColors.ink, fontWeight: FontWeight.w600)),
+        title: Text(label, style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
+        subtitle: Text(value, style: TextStyle(fontSize: 15, color: ZayloColors.ink, fontWeight: FontWeight.w600)),
         trailing: action == null ? null : Text(action!, style: const TextStyle(fontWeight: FontWeight.w700)),
         onTap: onTap,
       );

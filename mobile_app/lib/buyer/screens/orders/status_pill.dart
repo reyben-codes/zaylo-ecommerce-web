@@ -4,9 +4,9 @@ import '../../../core/theme/zaylo_theme.dart';
 import '../../models/order_models.dart';
 
 Color orderStatusColor(String status) => switch (status) {
-      'completed' => const Color(0xFF2E7D32),
+      'completed' => ZayloColors.success,
       'cancelled' => Colors.redAccent,
-      'picked_up' || 'in_transit' => const Color(0xFF1565C0),
+      'picked_up' || 'in_transit' => ZayloColors.info,
       _ => ZayloColors.taupe,
     };
 

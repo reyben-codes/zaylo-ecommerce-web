@@ -65,9 +65,15 @@ class FloatingNavBar extends StatelessWidget {
           child: DecoratedBox(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(36),
-              boxShadow: const [
-                BoxShadow(color: Color(0x1F1A1714), blurRadius: 24, offset: Offset(0, 8)),
-                BoxShadow(color: Color(0x0F1A1714), blurRadius: 4, offset: Offset(0, 1)),
+              boxShadow: [
+                BoxShadow(
+                    color: ZayloColors.shadow.withValues(alpha: ZayloColors.isDark ? .5 : .12),
+                    blurRadius: 24,
+                    offset: const Offset(0, 8)),
+                BoxShadow(
+                    color: ZayloColors.shadow.withValues(alpha: ZayloColors.isDark ? .3 : .06),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1)),
               ],
             ),
             child: ClipRRect(
@@ -93,5 +99,30 @@ class FloatingNavBar extends StatelessWidget {
             ),
           ),
         ),
+      );
+}
+
+/// A top bar that slides up out of view on the same cue as [FloatingNavBar].
+/// Stack it over the page and pad the page's content by the bar's height.
+class AutoHideTopBar extends StatelessWidget {
+  const AutoHideTopBar({super.key, required this.visibility, required this.child});
+
+  final ValueListenable<bool> visibility;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<bool>(
+        valueListenable: visibility,
+        builder: (context, visible, child) => AnimatedSlide(
+          offset: visible ? Offset.zero : const Offset(0, -1),
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOutCubic,
+          child: AnimatedOpacity(
+            opacity: visible ? 1 : 0,
+            duration: const Duration(milliseconds: 200),
+            child: IgnorePointer(ignoring: !visible, child: child),
+          ),
+        ),
+        child: child,
       );
 }

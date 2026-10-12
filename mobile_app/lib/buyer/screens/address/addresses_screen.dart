@@ -150,7 +150,7 @@ class _AddressCard extends StatelessWidget {
   Widget build(BuildContext context) => SectionCard(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Wrap(spacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
-            Text(address.recipientName, style: const TextStyle(fontWeight: FontWeight.w700, color: ZayloColors.ink)),
+            Text(address.recipientName, style: TextStyle(fontWeight: FontWeight.w700, color: ZayloColors.ink)),
             AddressTag(address.label),
             if (address.isDefault) const AddressTag('Default', dark: true),
           ]),
@@ -165,7 +165,7 @@ class _AddressCard extends StatelessWidget {
             ),
           const SizedBox(height: 8),
           if (busy)
-            const LinearProgressIndicator(color: ZayloColors.ink)
+            LinearProgressIndicator(color: ZayloColors.ink)
           else
             Row(children: [
               TextButton.icon(

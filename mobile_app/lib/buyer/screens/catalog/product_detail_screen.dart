@@ -175,17 +175,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             Padding(
                               padding: const EdgeInsets.only(top: 4),
                               child: Text('You save ${product.discountPercent}%',
-                                  style: const TextStyle(
-                                      fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF2E7D32))),
+                                  style: TextStyle(
+                                      fontSize: 12, fontWeight: FontWeight.w700, color: ZayloColors.success)),
                             ),
                           if (product.sellerName != null) ...[
                             const SizedBox(height: 14),
                             Row(children: [
-                              const Icon(Icons.storefront_outlined, size: 17, color: ZayloColors.muted),
+                              Icon(Icons.storefront_outlined, size: 17, color: ZayloColors.muted),
                               const SizedBox(width: 6),
                               Expanded(
                                 child: Text('Sold by ${product.sellerName}',
-                                    style: const TextStyle(fontSize: 13, color: ZayloColors.muted)),
+                                    style: TextStyle(fontSize: 13, color: ZayloColors.muted)),
                               ),
                             ]),
                           ],
@@ -204,7 +204,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                     showCheckmark: false,
                                     selectedColor: ZayloColors.ink,
                                     backgroundColor: ZayloColors.white,
-                                    side: const BorderSide(color: ZayloColors.line),
+                                    side: BorderSide(color: ZayloColors.line),
                                     labelStyle: TextStyle(
                                       fontWeight: FontWeight.w600,
                                       color: _variant?.id == variant.id ? ZayloColors.white : ZayloColors.ink,
@@ -220,7 +220,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             ],
                             const SizedBox(height: 22),
                             Row(children: [
-                              const Text('Quantity',
+                              Text('Quantity',
                                   style: TextStyle(fontWeight: FontWeight.w700, color: ZayloColors.ink)),
                               const Spacer(),
                               QuantityStepper(
@@ -234,12 +234,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               alignment: Alignment.centerRight,
                               child: Text(
                                 '${_variant?.stock ?? product.stock ?? 0} available',
-                                style: const TextStyle(fontSize: 12, color: ZayloColors.muted),
+                                style: TextStyle(fontSize: 12, color: ZayloColors.muted),
                               ),
                             ),
                           ],
                           const SizedBox(height: 22),
-                          const Divider(color: ZayloColors.line),
+                          Divider(color: ZayloColors.line),
                           const SizedBox(height: 14),
                           const Eyebrow('About this item'),
                           const SizedBox(height: 8),
@@ -270,7 +270,7 @@ class _ActionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: ZayloColors.paper,
           border: Border(top: BorderSide(color: ZayloColors.line)),
         ),
@@ -291,7 +291,7 @@ class _ActionBar extends StatelessWidget {
                 onPressed: enabled && !busy ? onBuy : null,
                 style: primaryButtonStyle,
                 child: busy
-                    ? const SizedBox(
+                    ? SizedBox(
                         height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: ZayloColors.ink))
                     : const Text('BUY NOW'),
               ),
@@ -330,9 +330,9 @@ class _Assurance extends StatelessWidget {
         const SizedBox(width: 12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: ZayloColors.ink)),
+            Text(title, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: ZayloColors.ink)),
             const SizedBox(height: 2),
-            Text(message, style: const TextStyle(fontSize: 12, color: ZayloColors.muted)),
+            Text(message, style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
           ]),
         ),
       ]);

@@ -6,6 +6,7 @@ import '../models/address_models.dart';
 import '../models/cart_models.dart';
 import '../models/catalog_models.dart';
 import '../models/order_models.dart';
+import '../../shared/chat/delivery_chat.dart';
 
 /// Buyer endpoints: catalog, sign-in, bag, checkout, orders and account.
 /// The token is set by [AppState] after sign-in and cleared on sign-out.
@@ -14,8 +15,7 @@ class BuyerApi extends ApiClient {
 
   // ---------------------------------------------------------------- Catalog
 
-  Future<StorefrontHome> home() async =>
-      StorefrontHome.fromJson(await send('GET', '/mobile/home'));
+  Future<StorefrontHome> home() async => StorefrontHome.fromJson(await send('GET', '/mobile/home'));
 
   Future<ProductPage> products({
     String? category,
@@ -72,10 +72,9 @@ class BuyerApi extends ApiClient {
 
   // ---------------------------------------------------------- Saved & bag
 
-  Future<List<Product>> wishlist() async =>
-      ((await send('GET', '/mobile/wishlist'))['products'] as List<dynamic>)
-          .map((item) => Product.fromJson(item as Map<String, dynamic>))
-          .toList();
+  Future<List<Product>> wishlist() async => ((await send('GET', '/mobile/wishlist'))['products'] as List<dynamic>)
+      .map((item) => Product.fromJson(item as Map<String, dynamic>))
+      .toList();
 
   Future<bool> toggleWishlist(String slug) async =>
       (await send('POST', '/mobile/wishlist/${Uri.encodeComponent(slug)}'))['saved'] as bool;
@@ -121,9 +120,7 @@ class BuyerApi extends ApiClient {
       if (voucherCode != null && voucherCode.isNotEmpty) 'voucher_code': voucherCode,
       if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
     });
-    return (data['orders'] as List<dynamic>)
-        .map((item) => Order.fromJson(item as Map<String, dynamic>))
-        .toList();
+    return (data['orders'] as List<dynamic>).map((item) => Order.fromJson(item as Map<String, dynamic>)).toList();
   }
 
   // ----------------------------------------------------------------- Orders
@@ -136,6 +133,17 @@ class BuyerApi extends ApiClient {
 
   Future<Order> cancelOrder(int id) async =>
       Order.fromJson((await send('POST', '/mobile/orders/$id/cancel'))['order'] as Map<String, dynamic>);
+
+  /// Chat with the rider delivering order [id]. Opening it marks the rider's messages as read.
+  Future<DeliveryChat> orderChat(int id) async =>
+      DeliveryChat.fromJson((await send('GET', '/mobile/orders/$id/chat'))['chat'] as Map<String, dynamic>);
+
+  /// [clientId] makes a retried send safe: the server stores it only once.
+  Future<DeliveryChatMessage> sendOrderMessage(int id, String body, {required String clientId}) async =>
+      DeliveryChatMessage.fromJson((await send('POST', '/mobile/orders/$id/chat', body: {
+        'body': body,
+        'client_id': clientId,
+      }))['message'] as Map<String, dynamic>);
 
   // ---------------------------------------------------------------- Account
 
@@ -181,8 +189,7 @@ class BuyerApi extends ApiClient {
   Future<List<Address>> makeDefaultAddress(int id) async =>
       _addresses(await send('PATCH', '/mobile/addresses/$id/default'));
 
-  Future<List<Address>> deleteAddress(int id) async =>
-      _addresses(await send('DELETE', '/mobile/addresses/$id'));
+  Future<List<Address>> deleteAddress(int id) async => _addresses(await send('DELETE', '/mobile/addresses/$id'));
 
   Future<NotificationFeed> notifications() async =>
       NotificationFeed.fromJson(await send('GET', '/mobile/notifications'));
@@ -196,8 +203,6 @@ class BuyerApi extends ApiClient {
 
   static String newIdempotencyKey() => newUuidV4();
 
-  List<Address> _addresses(Map<String, dynamic> data) => (data['addresses'] as List<dynamic>)
-      .map((item) => Address.fromJson(item as Map<String, dynamic>))
-      .toList();
-
+  List<Address> _addresses(Map<String, dynamic> data) =>
+      (data['addresses'] as List<dynamic>).map((item) => Address.fromJson(item as Map<String, dynamic>)).toList();
 }

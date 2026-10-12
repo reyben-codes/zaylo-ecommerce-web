@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\MobileAccountController;
 use App\Http\Controllers\MobileAuthenticationController;
+use App\Http\Controllers\MobileDeliveryChatController;
 use App\Http\Controllers\MobileOrderController;
 use App\Http\Controllers\MobileRiderAccountController;
 use App\Http\Controllers\MobileRiderAuthenticationController;
@@ -48,6 +49,8 @@ Route::prefix('mobile')->middleware('throttle:60,1')->group(function () {
             Route::get('/dashboard', [MobileRiderDashboardController::class, 'dashboard']);
             Route::post('/deliveries/{shipment}/claim', [MobileRiderDashboardController::class, 'claim']);
             Route::patch('/deliveries/{shipment}', [MobileRiderDashboardController::class, 'update']);
+            Route::get('/deliveries/{shipment}/chat', [MobileDeliveryChatController::class, 'riderShow']);
+            Route::post('/deliveries/{shipment}/chat', [MobileDeliveryChatController::class, 'riderSend'])->middleware('throttle:20,1');
             Route::get('/history', [MobileRiderDashboardController::class, 'history']);
             Route::get('/earnings', [MobileRiderDashboardController::class, 'earnings']);
 
@@ -77,6 +80,8 @@ Route::prefix('mobile')->middleware('throttle:60,1')->group(function () {
             Route::get('/orders', [MobileOrderController::class, 'index']);
             Route::get('/orders/{order}', [MobileOrderController::class, 'show']);
             Route::post('/orders/{order}/cancel', [MobileOrderController::class, 'cancel']);
+            Route::get('/orders/{order}/chat', [MobileDeliveryChatController::class, 'buyerShow']);
+            Route::post('/orders/{order}/chat', [MobileDeliveryChatController::class, 'buyerSend'])->middleware('throttle:20,1');
 
             Route::patch('/account/profile', [MobileAccountController::class, 'updateProfile']);
             Route::put('/account/password', [MobileAccountController::class, 'updatePassword']);

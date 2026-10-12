@@ -60,7 +60,7 @@ class _RiderAddressScreenState extends State<RiderAddressScreen> {
           child: Form(
             key: _formKey,
             child: ListView(padding: const EdgeInsets.fromLTRB(24, 14, 24, 36), children: [
-              const Text('Choose your region first, then your province, city or municipality, and barangay.',
+              Text('Choose your region first, then your province, city or municipality, and barangay.',
                   style: TextStyle(color: ZayloColors.muted)),
               const SizedBox(height: 20),
               PhAddressSection(api: widget.api, controller: _address, errors: _errors),

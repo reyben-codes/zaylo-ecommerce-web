@@ -4,18 +4,30 @@ import '../../core/theme/zaylo_theme.dart';
 import '../../core/widgets/buttons.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/registration_screen.dart';
+import 'tab_header.dart';
 
 /// Shown in the Saved, Bag and Account tabs to guests.
 class SignedOutPrompt extends StatelessWidget {
-  const SignedOutPrompt({super.key, required this.icon, required this.title, required this.message});
+  const SignedOutPrompt({
+    super.key,
+    required this.icon,
+    required this.heading,
+    required this.eyebrow,
+    required this.title,
+    required this.message,
+  });
 
   final IconData icon;
+
+  /// The tab's name, shown in the header.
+  final String heading;
+  final String eyebrow;
   final String title;
   final String message;
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: Text(title)),
+        appBar: TabHeader(eyebrow: eyebrow, title: heading),
         body: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(36),

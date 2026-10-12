@@ -143,6 +143,6 @@ class _Total extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-        Text(label, style: const TextStyle(fontSize: 12, color: ZayloColors.muted)),
+        Text(label, style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
       ]);
 }

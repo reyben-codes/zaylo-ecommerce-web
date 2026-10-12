@@ -120,7 +120,7 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
           for (final entry in _sortOptions.entries)
             ListTile(
               title: Text(entry.value),
-              trailing: entry.key == _sort ? const Icon(Icons.check, color: ZayloColors.ink) : null,
+              trailing: entry.key == _sort ? Icon(Icons.check, color: ZayloColors.ink) : null,
               onTap: () => Navigator.pop(context, entry.key),
             ),
         ]),
@@ -158,7 +158,7 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
                       showCheckmark: false,
                       selectedColor: ZayloColors.ink,
                       backgroundColor: ZayloColors.white,
-                      side: const BorderSide(color: ZayloColors.line),
+                      side: BorderSide(color: ZayloColors.line),
                       labelStyle: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -180,7 +180,7 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
               Expanded(
                 child: Text(
                   _page == 0 ? '' : '$_total ${_total == 1 ? 'product' : 'products'}',
-                  style: const TextStyle(fontSize: 12, color: ZayloColors.muted),
+                  style: TextStyle(fontSize: 12, color: ZayloColors.muted),
                 ),
               ),
               PopupMenuButton<String?>(
@@ -200,10 +200,10 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    const Icon(Icons.tune, size: 17, color: ZayloColors.ink),
+                    Icon(Icons.tune, size: 17, color: ZayloColors.ink),
                     const SizedBox(width: 6),
                     Text(switch (_gender) { 'men' => 'Men', 'women' => 'Women', 'unisex' => 'Unisex', _ => 'Gender' },
-                        style: const TextStyle(fontWeight: FontWeight.w600, color: ZayloColors.ink, fontSize: 13)),
+                        style: TextStyle(fontWeight: FontWeight.w600, color: ZayloColors.ink, fontSize: 13)),
                   ]),
                 ),
               ),

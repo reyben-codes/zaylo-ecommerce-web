@@ -113,7 +113,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       showCheckmark: false,
                       selectedColor: ZayloColors.ink,
                       backgroundColor: ZayloColors.white,
-                      side: const BorderSide(color: ZayloColors.line),
+                      side: BorderSide(color: ZayloColors.line),
                       labelStyle: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -181,7 +181,7 @@ class _OrderCard extends StatelessWidget {
         color: ZayloColors.paper,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
-          side: const BorderSide(color: ZayloColors.line),
+          side: BorderSide(color: ZayloColors.line),
         ),
         child: InkWell(
           borderRadius: BorderRadius.circular(14),
@@ -192,7 +192,7 @@ class _OrderCard extends StatelessWidget {
               Row(children: [
                 Expanded(
                   child: Text(order.orderNumber,
-                      style: const TextStyle(fontWeight: FontWeight.w800, color: ZayloColors.ink)),
+                      style: TextStyle(fontWeight: FontWeight.w800, color: ZayloColors.ink)),
                 ),
                 StatusPill(order),
               ]),
@@ -216,17 +216,17 @@ class _OrderCard extends StatelessWidget {
                 Text(order.items.first.productName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 13, color: ZayloColors.ink)),
+                    style: TextStyle(fontSize: 13, color: ZayloColors.ink)),
               ],
               const SizedBox(height: 10),
               Text(order.statusMessage, style: const TextStyle(fontSize: 12)),
-              const Divider(color: ZayloColors.line, height: 22),
+              Divider(color: ZayloColors.line, height: 22),
               Row(children: [
                 Text('${order.itemCount} ${order.itemCount == 1 ? 'item' : 'items'}',
                     style: const TextStyle(fontSize: 12)),
                 const Spacer(),
                 const Text('Total  ', style: TextStyle(fontSize: 12)),
-                Text(peso(order.total), style: const TextStyle(fontWeight: FontWeight.w800, color: ZayloColors.ink)),
+                Text(peso(order.total), style: TextStyle(fontWeight: FontWeight.w800, color: ZayloColors.ink)),
               ]),
             ]),
           ),

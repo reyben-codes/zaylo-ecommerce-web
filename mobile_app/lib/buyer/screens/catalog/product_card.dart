@@ -84,13 +84,13 @@ class ProductCard extends StatelessWidget {
                 Text(product.categoryLabel.toUpperCase(),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 9, letterSpacing: .8, color: ZayloColors.taupe, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 4),
                 Text(product.name,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 14, height: 1.2, fontWeight: FontWeight.w600, color: ZayloColors.ink)),
                 const Spacer(),
                 PriceLine(product: product, size: 13),
@@ -101,7 +101,7 @@ class ProductCard extends StatelessWidget {
                     onPressed: () => ShopActions.quickAdd(context, product),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: ZayloColors.ink,
-                      side: const BorderSide(color: ZayloColors.ink),
+                      side: BorderSide(color: ZayloColors.ink),
                       padding: const EdgeInsets.symmetric(vertical: 7),
                       textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
                     ),
@@ -151,7 +151,7 @@ class ProductBadge extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
           child: Text(text.toUpperCase(),
-              style: const TextStyle(color: ZayloColors.white, fontSize: 8, fontWeight: FontWeight.w700)),
+              style: TextStyle(color: ZayloColors.white, fontSize: 8, fontWeight: FontWeight.w700)),
         ),
       );
 }

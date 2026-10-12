@@ -71,8 +71,7 @@ class _RiderTermsDialogState extends State<_RiderTermsDialog> {
                 shrinkWrap: true,
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
                 children: [
-                  Text('Version $riderTermsVersion',
-                      style: const TextStyle(fontSize: 12, color: ZayloColors.muted)),
+                  Text('Version $riderTermsVersion', style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
                   const SizedBox(height: 12),
                   for (final section in riderTermsSections) ...[
                     Text(section.heading, style: const TextStyle(fontWeight: FontWeight.w700)),
@@ -80,7 +79,7 @@ class _RiderTermsDialogState extends State<_RiderTermsDialog> {
                     Text(section.body, style: const TextStyle(height: 1.4)),
                     const SizedBox(height: 14),
                   ],
-                  const Text('End of terms.', style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
+                  Text('End of terms.', style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
                 ],
               ),
             ),
@@ -93,7 +92,7 @@ class _RiderTermsDialogState extends State<_RiderTermsDialog> {
                 Icon(
                   _reachedBottom ? Icons.check_circle : Icons.swipe_up_outlined,
                   size: 18,
-                  color: _reachedBottom ? const Color(0xFF2E7D32) : ZayloColors.muted,
+                  color: _reachedBottom ? ZayloColors.success : ZayloColors.muted,
                 ),
                 const SizedBox(width: 8),
                 Expanded(

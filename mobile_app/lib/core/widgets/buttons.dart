@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/zaylo_theme.dart';
 
-final primaryButtonStyle = FilledButton.styleFrom(
+ButtonStyle get primaryButtonStyle => FilledButton.styleFrom(
   backgroundColor: ZayloColors.ink,
   foregroundColor: ZayloColors.white,
   disabledBackgroundColor: ZayloColors.line,
@@ -11,9 +11,9 @@ final primaryButtonStyle = FilledButton.styleFrom(
   textStyle: const TextStyle(fontWeight: FontWeight.w700, letterSpacing: .5),
 );
 
-final secondaryButtonStyle = OutlinedButton.styleFrom(
+ButtonStyle get secondaryButtonStyle => OutlinedButton.styleFrom(
   foregroundColor: ZayloColors.ink,
-  side: const BorderSide(color: ZayloColors.ink),
+  side: BorderSide(color: ZayloColors.ink),
   padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
   textStyle: const TextStyle(fontWeight: FontWeight.w700, letterSpacing: .5),
@@ -35,7 +35,7 @@ class PrimaryButton extends StatelessWidget {
           onPressed: busy ? null : onPressed,
           style: primaryButtonStyle,
           child: busy
-              ? const SizedBox(
+              ? SizedBox(
                   height: 20,
                   width: 20,
                   child: CircularProgressIndicator(strokeWidth: 2, color: ZayloColors.ink),

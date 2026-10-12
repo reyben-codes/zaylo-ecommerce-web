@@ -146,7 +146,7 @@ class _RiderSupportChatTabState extends State<RiderSupportChatTab> {
         top: false,
         child: Container(
           padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
-          decoration: const BoxDecoration(border: Border(top: BorderSide(color: ZayloColors.line))),
+          decoration: BoxDecoration(border: Border(top: BorderSide(color: ZayloColors.line))),
           child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
             Expanded(
               child: TextField(
@@ -229,7 +229,7 @@ class _Bubble extends StatelessWidget {
             Text(status,
                 style: TextStyle(
                   fontSize: 11,
-                  color: message.failed ? Colors.redAccent : (mine ? const Color(0xFFD7CCC0) : ZayloColors.muted),
+                  color: message.failed ? Colors.redAccent : (mine ? ZayloColors.onInkMuted : ZayloColors.muted),
                 )),
           ]),
         ),

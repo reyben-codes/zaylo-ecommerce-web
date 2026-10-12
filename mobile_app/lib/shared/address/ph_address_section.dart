@@ -273,7 +273,7 @@ class _PhAddressSectionState extends State<PhAddressSection> {
         requiredMessage: 'Choose your barangay.',
       ),
       if (_loading)
-        const Padding(
+        Padding(
           padding: EdgeInsets.only(bottom: 12),
           child: LinearProgressIndicator(minHeight: 2, color: ZayloColors.ink),
         ),

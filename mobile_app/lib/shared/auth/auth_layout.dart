@@ -18,7 +18,7 @@ class AuthScaffold extends StatelessWidget {
             onPressed: onBack ?? () => Navigator.pop(context),
             icon: const Icon(Icons.arrow_back),
           ),
-          title: Image.asset('assets/images/ZAYLO_LOGO_DARK.png', height: 28),
+          title: Image.asset(ZayloAssets.logo, height: 28, color: ZayloAssets.logoTint, colorBlendMode: BlendMode.srcIn),
         ),
         body: SafeArea(
           top: false,
@@ -38,14 +38,14 @@ class AuthErrorBanner extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: const Color(0xFFFDECEA),
+          color: ZayloColors.dangerSoft,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFFF5C2BD)),
+          border: Border.all(color: ZayloColors.dangerBorder),
         ),
         child: Row(children: [
           const Icon(Icons.error_outline, color: Colors.redAccent, size: 20),
           const SizedBox(width: 10),
-          Expanded(child: Text(message, style: const TextStyle(color: Color(0xFF8A1C12), fontSize: 13))),
+          Expanded(child: Text(message, style: TextStyle(color: ZayloColors.dangerText, fontSize: 13))),
         ]),
       );
 }
@@ -59,7 +59,8 @@ class AuthMasthead extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         height: 170,
         decoration: BoxDecoration(
-          color: ZayloColors.ink,
+          // A photo under a dark scrim reads the same in light and dark mode.
+          color: ZayloPalette.light.ink,
           borderRadius: BorderRadius.circular(20),
           image: const DecorationImage(
             image: NetworkImage(
@@ -75,14 +76,14 @@ class AuthMasthead extends StatelessWidget {
             gradient: const LinearGradient(colors: [Color(0xB31A1714), Color(0x331A1714)]),
           ),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Image.asset('assets/images/ZAYLO_LOGO_LIGHT.png', height: 26),
+            Image.asset(ZayloAssets.logoOnPhoto, height: 26),
             const Spacer(),
             // Scales down instead of overflowing on narrow phones or large text settings.
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
               child: Text(registering ? 'Your next chapter starts here.' : 'Driven by passion.',
-                  style: const TextStyle(color: ZayloColors.white, fontSize: 21, fontWeight: FontWeight.w600)),
+                  style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w600)),
             ),
             const FittedBox(
               fit: BoxFit.scaleDown,

@@ -235,6 +235,9 @@ class MobileRiderDashboardController extends Controller
             'picked_up_at' => $shipment->picked_up_at?->toIso8601String(),
             'delivered_at' => $shipment->delivered_at?->toIso8601String(),
             'created_at' => $shipment->created_at?->toIso8601String(),
+            // The buyer chat is offered only on the rider's own deliveries in progress.
+            'chat_open' => $assignedToRider && $shipment->chatIsOpen(),
+            'unread_messages' => $assignedToRider && $shipment->chatIsOpen() ? $shipment->unreadMessagesFor(rider: true) : 0,
         ];
     }
 }

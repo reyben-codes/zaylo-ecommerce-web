@@ -83,6 +83,7 @@ class _RiderDeliveryListScreenState extends State<RiderDeliveryListScreen> with 
                             : () => widget.list == RiderDeliveryList.available
                                 ? acceptDelivery(delivery)
                                 : advanceDelivery(delivery),
+                        onChat: () => openDeliveryChat(delivery),
                       ),
                 ],
               ),

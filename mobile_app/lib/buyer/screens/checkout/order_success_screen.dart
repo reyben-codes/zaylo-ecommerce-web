@@ -23,7 +23,7 @@ class OrderSuccessScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(24, 48, 24, 24),
           children: [
-            const CircleAvatar(
+            CircleAvatar(
               radius: 40,
               backgroundColor: ZayloColors.ink,
               child: Icon(Icons.check_rounded, color: ZayloColors.white, size: 44),
@@ -44,7 +44,7 @@ class OrderSuccessScreen extends StatelessWidget {
                 child: Text(
                   'Your items come from ${orders.length} sellers, so they ship as ${orders.length} separate orders.',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 12, color: ZayloColors.muted),
+                  style: TextStyle(fontSize: 12, color: ZayloColors.muted),
                 ),
               ),
             const SizedBox(height: 26),
@@ -56,12 +56,12 @@ class OrderSuccessScreen extends StatelessWidget {
                     Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Text(order.orderNumber,
-                            style: const TextStyle(fontWeight: FontWeight.w800, color: ZayloColors.ink)),
+                            style: TextStyle(fontWeight: FontWeight.w800, color: ZayloColors.ink)),
                         Text('${order.itemCount} ${order.itemCount == 1 ? 'item' : 'items'}',
                             style: const TextStyle(fontSize: 12)),
                       ]),
                     ),
-                    Text(peso(order.total), style: const TextStyle(fontWeight: FontWeight.w800, color: ZayloColors.ink)),
+                    Text(peso(order.total), style: TextStyle(fontWeight: FontWeight.w800, color: ZayloColors.ink)),
                   ]),
                 ),
               ),

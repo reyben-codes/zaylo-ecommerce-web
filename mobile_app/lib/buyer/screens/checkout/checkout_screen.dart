@@ -161,7 +161,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       bottomNavigationBar: quote == null
           ? null
           : Container(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: ZayloColors.paper,
                 border: Border(top: BorderSide(color: ZayloColors.line)),
               ),
@@ -171,9 +171,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 child: Row(children: [
                   Expanded(
                     child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      const Text('Total', style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
+                      Text('Total', style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
                       Text(peso(quote.totals.total),
-                          style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: ZayloColors.ink)),
+                          style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: ZayloColors.ink)),
                     ]),
                   ),
                   SizedBox(
@@ -230,7 +230,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     if (quote.addresses.isEmpty) {
       return SectionCard(
         child: Column(children: [
-          const Text('Where should we deliver?',
+          Text('Where should we deliver?',
               style: TextStyle(fontWeight: FontWeight.w700, color: ZayloColors.ink)),
           const SizedBox(height: 4),
           const Text('Add an address to place your order.', style: TextStyle(fontSize: 13)),
@@ -277,11 +277,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         for (final entry in bySeller.entries) ...[
           Row(children: [
-            const Icon(Icons.storefront_outlined, size: 16, color: ZayloColors.muted),
+            Icon(Icons.storefront_outlined, size: 16, color: ZayloColors.muted),
             const SizedBox(width: 6),
             Expanded(
               child: Text(entry.key,
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: ZayloColors.ink)),
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: ZayloColors.ink)),
             ),
           ]),
           const SizedBox(height: 8),
@@ -299,14 +299,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     Text(item.product?.name ?? 'Product',
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w600, color: ZayloColors.ink, fontSize: 13)),
+                        style: TextStyle(fontWeight: FontWeight.w600, color: ZayloColors.ink, fontSize: 13)),
                     if (item.variantName != null)
-                      Text(item.variantName!, style: const TextStyle(fontSize: 12, color: ZayloColors.muted)),
+                      Text(item.variantName!, style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
                     Text('${item.quantity} × ${peso(item.unitPrice)}',
-                        style: const TextStyle(fontSize: 12, color: ZayloColors.muted)),
+                        style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
                   ]),
                 ),
-                Text(peso(item.lineTotal), style: const TextStyle(fontWeight: FontWeight.w700, color: ZayloColors.ink)),
+                Text(peso(item.lineTotal), style: TextStyle(fontWeight: FontWeight.w700, color: ZayloColors.ink)),
               ]),
             ),
         ],
@@ -314,11 +314,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: Row(children: [
-              const Icon(Icons.local_shipping_outlined, size: 16, color: ZayloColors.muted),
+              Icon(Icons.local_shipping_outlined, size: 16, color: ZayloColors.muted),
               const SizedBox(width: 6),
               Expanded(
                 child: Text('Estimated delivery ${shortDate(quote.deliveryFrom)} – ${shortDate(quote.deliveryTo)}',
-                    style: const TextStyle(fontSize: 12, color: ZayloColors.muted)),
+                    style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
               ),
             ]),
           ),
@@ -348,11 +348,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     if (_appliedVoucher != null) {
       return SectionCard(
         child: Row(children: [
-          const Icon(Icons.check_circle, color: Color(0xFF2E7D32)),
+          Icon(Icons.check_circle, color: ZayloColors.success),
           const SizedBox(width: 10),
           Expanded(
             child: Text('$_appliedVoucher applied: free shipping',
-                style: const TextStyle(fontWeight: FontWeight.w700, color: ZayloColors.ink)),
+                style: TextStyle(fontWeight: FontWeight.w700, color: ZayloColors.ink)),
           ),
           TextButton(onPressed: _quoting ? null : _removeVoucher, child: const Text('Remove')),
         ]),
@@ -388,10 +388,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           SummaryRow('Shipping', peso(quote.totals.shipping)),
           if (quote.totals.shippingDiscount > 0)
             SummaryRow('Shipping voucher', '-${peso(quote.totals.shippingDiscount)}',
-                valueColor: const Color(0xFF2E7D32)),
-          const Divider(color: ZayloColors.line, height: 20),
+                valueColor: ZayloColors.success),
+          Divider(color: ZayloColors.line, height: 20),
           SummaryRow('Total', peso(quote.totals.total), emphasize: true),
-          if (_quoting) const Padding(padding: EdgeInsets.only(top: 8), child: LinearProgressIndicator(color: ZayloColors.ink)),
+          if (_quoting) Padding(padding: EdgeInsets.only(top: 8), child: LinearProgressIndicator(color: ZayloColors.ink)),
         ]),
       );
 }
@@ -430,7 +430,7 @@ class _AddressOption extends StatelessWidget {
                   const SizedBox(height: 10),
                   Wrap(spacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
                     Text(address.recipientName,
-                        style: const TextStyle(fontWeight: FontWeight.w700, color: ZayloColors.ink)),
+                        style: TextStyle(fontWeight: FontWeight.w700, color: ZayloColors.ink)),
                     AddressTag(address.label),
                     if (address.isDefault) const AddressTag('Default', dark: true),
                   ]),
@@ -488,7 +488,7 @@ class _PaymentOption extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.w700, color: ZayloColors.ink)),
+                  Text(title, style: TextStyle(fontWeight: FontWeight.w700, color: ZayloColors.ink)),
                   Text(subtitle, style: const TextStyle(fontSize: 12)),
                 ]),
               ),

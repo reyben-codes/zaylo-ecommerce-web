@@ -5,9 +5,9 @@ import '../../core/utils/formatters.dart';
 import '../../core/widgets/layout.dart';
 import '../models/rider_dashboard_models.dart';
 
-const _green = Color(0xFF2E7D32);
-const _amber = Color(0xFFB26A00);
-const _red = Color(0xFFC0392B);
+Color get _green => ZayloColors.success;
+Color get _amber => ZayloColors.warning;
+Color get _red => ZayloColors.danger;
 
 /// Greeting, approval badge, and vehicle at the top of the dashboard.
 class RiderGreetingCard extends StatelessWidget {
@@ -23,21 +23,21 @@ class RiderGreetingCard extends StatelessWidget {
           Row(children: [
             Expanded(
               child: Text('Hi, ${rider.firstName}',
-                  style: const TextStyle(color: ZayloColors.white, fontSize: 22, fontWeight: FontWeight.w700)),
+                  style: TextStyle(color: ZayloColors.white, fontSize: 22, fontWeight: FontWeight.w700)),
             ),
-            const _Pill(label: 'Approved rider', color: _green, light: true),
+            _Pill(label: 'Approved rider', color: _green, light: true),
           ]),
           const SizedBox(height: 6),
-          const Text('Ready to deliver today?', style: TextStyle(color: Color(0xFFD7CCC0))),
+          Text('Ready to deliver today?', style: TextStyle(color: ZayloColors.onInkMuted)),
           if (rider.vehicleLabel != null || rider.plateNumber != null) ...[
             const SizedBox(height: 16),
             Row(children: [
-              const Icon(Icons.two_wheeler_outlined, color: ZayloColors.white, size: 20),
+              Icon(Icons.two_wheeler_outlined, color: ZayloColors.white, size: 20),
               const SizedBox(width: 8),
               Flexible(
                 child: Text([rider.vehicleLabel, rider.plateNumber].whereType<String>().join(' · '),
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: ZayloColors.white, fontWeight: FontWeight.w600)),
+                    style: TextStyle(color: ZayloColors.white, fontWeight: FontWeight.w600)),
               ),
             ]),
           ],
@@ -148,7 +148,7 @@ class _StatTile extends StatelessWidget {
           color: ZayloColors.paper,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
-            side: const BorderSide(color: ZayloColors.line),
+            side: BorderSide(color: ZayloColors.line),
           ),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
@@ -162,27 +162,25 @@ class _StatTile extends StatelessWidget {
       );
 
   Widget _tileContent() => Row(children: [
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: ZayloColors.sand,
-            child: Icon(icon, size: 20, color: ZayloColors.ink),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-              ),
-              Text(label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 12, color: ZayloColors.muted)),
-            ]),
-          ),
-          if (onTap != null) const Icon(Icons.chevron_right, size: 18, color: ZayloColors.muted),
-        ]);
+        CircleAvatar(
+          radius: 20,
+          backgroundColor: ZayloColors.sand,
+          child: Icon(icon, size: 20, color: ZayloColors.ink),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+            ),
+            Text(label,
+                maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
+          ]),
+        ),
+        if (onTap != null) Icon(Icons.chevron_right, size: 18, color: ZayloColors.muted),
+      ]);
 }
 
 /// A section title with an optional count.
@@ -212,12 +210,22 @@ class RiderSectionHeader extends StatelessWidget {
 /// One delivery: status, address, amounts, and the rider's next action.
 /// [busy] shows a spinner on the action while the request is in flight.
 class RiderDeliveryCard extends StatelessWidget {
-  const RiderDeliveryCard({super.key, required this.delivery, this.actionLabel, this.onAction, this.busy = false});
+  const RiderDeliveryCard({
+    super.key,
+    required this.delivery,
+    this.actionLabel,
+    this.onAction,
+    this.busy = false,
+    this.onChat,
+  });
 
   final RiderDelivery delivery;
   final String? actionLabel;
   final VoidCallback? onAction;
   final bool busy;
+
+  /// Opens the chat with the buyer; shown only while [RiderDelivery.chatOpen].
+  final VoidCallback? onChat;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -232,7 +240,7 @@ class RiderDeliveryCard extends StatelessWidget {
               _Pill(label: delivery.statusLabel, color: _statusColor(delivery.status)),
             ]),
             const SizedBox(height: 4),
-            Text('Tracking ${delivery.trackingNumber}', style: const TextStyle(fontSize: 12, color: ZayloColors.muted)),
+            Text('Tracking ${delivery.trackingNumber}', style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
             const SizedBox(height: 12),
             if (delivery.pickup != null)
               _Stop(
@@ -263,10 +271,34 @@ class RiderDeliveryCard extends StatelessWidget {
             if (delivery.deliveredAt != null) ...[
               const SizedBox(height: 8),
               Text('Delivered ${dateTimeLabel(delivery.deliveredAt)}',
-                  style: const TextStyle(fontSize: 12, color: ZayloColors.muted)),
+                  style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
+            ],
+            if (onChat != null && delivery.chatOpen) ...[
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: onChat,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: ZayloColors.ink,
+                    side: BorderSide(color: ZayloColors.ink),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  icon: Badge(
+                    isLabelVisible: delivery.unreadMessages > 0,
+                    label: Text('${delivery.unreadMessages}'),
+                    child: const Icon(Icons.chat_bubble_outline, size: 18),
+                  ),
+                  label: Text(
+                    'Chat with ${_firstName(delivery.recipientName) ?? 'buyer'}',
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
             ],
             if (actionLabel != null) ...[
-              const SizedBox(height: 14),
+              const SizedBox(height: 10),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
@@ -278,8 +310,10 @@ class RiderDeliveryCard extends StatelessWidget {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
                   child: busy
-                      ? const SizedBox(
-                          width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: ZayloColors.ink))
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: ZayloColors.ink))
                       : Text(actionLabel!.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.w700)),
                 ),
               ),
@@ -288,11 +322,16 @@ class RiderDeliveryCard extends StatelessWidget {
         ),
       );
 
+  static String? _firstName(String? name) {
+    final first = name?.trim().split(RegExp(r'\s+')).first;
+    return first == null || first.isEmpty ? null : first;
+  }
+
   static Color _statusColor(String status) => switch (status) {
         'ready' => _amber,
         'delivered' => _green,
         'cancelled' => _red,
-        _ => const Color(0xFF1565C0),
+        _ => ZayloColors.info,
       };
 }
 
@@ -308,7 +347,7 @@ class RiderEmptyCard extends StatelessWidget {
         child: Row(children: [
           Icon(icon, color: ZayloColors.muted),
           const SizedBox(width: 12),
-          Expanded(child: Text(message, style: const TextStyle(color: ZayloColors.muted))),
+          Expanded(child: Text(message, style: TextStyle(color: ZayloColors.muted))),
         ]),
       );
 }
@@ -345,7 +384,7 @@ class _DetailRow extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 5),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Expanded(child: Text(label, style: const TextStyle(color: ZayloColors.muted))),
+          Expanded(child: Text(label, style: TextStyle(color: ZayloColors.muted))),
           const SizedBox(width: 12),
           Flexible(child: Text(value, textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.w600))),
         ]),
@@ -370,7 +409,8 @@ class _Stop extends StatelessWidget {
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(label.toUpperCase(),
-                  style: const TextStyle(fontSize: 10, letterSpacing: .8, fontWeight: FontWeight.w700, color: ZayloColors.muted)),
+                  style: TextStyle(
+                      fontSize: 10, letterSpacing: .8, fontWeight: FontWeight.w700, color: ZayloColors.muted)),
               const SizedBox(height: 2),
               Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
               for (final line in lines.whereType<String>()) Text(line),
@@ -446,7 +486,7 @@ class _Amount extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: ZayloColors.muted)),
+        Text(label, style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
         const SizedBox(height: 2),
         Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
       ]);

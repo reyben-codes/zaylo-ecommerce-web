@@ -11,6 +11,7 @@ import '../../models/catalog_models.dart';
 import '../../models/order_models.dart';
 import '../../state/app_state.dart';
 import '../../widgets/shop_actions.dart';
+import '../../../shared/chat/delivery_chat.dart';
 import 'status_pill.dart';
 
 class OrderDetailScreen extends StatefulWidget {
@@ -50,6 +51,19 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     } on ApiException catch (error) {
       if (mounted) setState(() => _error = error);
     }
+  }
+
+  /// Opens the chat with the rider, then reloads so the unread badge clears.
+  Future<void> _openRiderChat(Order order) async {
+    final api = _api;
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => DeliveryChatScreen(
+        title: 'Chat with rider',
+        load: () => api.orderChat(order.id),
+        send: (body, clientId) => api.sendOrderMessage(order.id, body, clientId: clientId),
+      ),
+    ));
+    if (mounted) await _load();
   }
 
   Future<void> _cancel(Order order) async {
@@ -98,7 +112,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       child: Scaffold(
         appBar: AppBar(title: Text(order?.orderNumber ?? 'Order')),
         body: order == null
-            ? (_error != null ? LoadError(error: _error, onRetry: _load, title: 'Could not load order') : const Loader())
+            ? (_error != null
+                ? LoadError(error: _error, onRetry: _load, title: 'Could not load order')
+                : const Loader())
             : RefreshIndicator(
                 color: ZayloColors.ink,
                 onRefresh: _load,
@@ -113,7 +129,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                         ]),
                         const SizedBox(height: 8),
                         Text(order.statusMessage,
-                            style: const TextStyle(fontWeight: FontWeight.w600, color: ZayloColors.ink)),
+                            style: TextStyle(fontWeight: FontWeight.w600, color: ZayloColors.ink)),
                         if (order.trackingNumber != null) ...[
                           const SizedBox(height: 6),
                           Text('Tracking number: ${order.trackingNumber}', style: const TextStyle(fontSize: 12)),
@@ -124,6 +140,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                         ],
                       ]),
                     ),
+                    if (order.riderChat != null) ...[
+                      const SizedBox(height: 16),
+                      _RiderChatCard(chat: order.riderChat!, onOpen: () => _openRiderChat(order)),
+                    ],
                     const SizedBox(height: 16),
                     const Eyebrow('Items'),
                     const SizedBox(height: 9),
@@ -139,13 +159,14 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     SectionCard(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Text(order.recipientName ?? '',
-                            style: const TextStyle(fontWeight: FontWeight.w700, color: ZayloColors.ink)),
+                            style: TextStyle(fontWeight: FontWeight.w700, color: ZayloColors.ink)),
                         if (order.phone != null) Text(order.phone!, style: const TextStyle(fontSize: 13)),
                         if (order.shippingAddress != null)
                           Text(order.shippingAddress!, style: const TextStyle(fontSize: 13)),
                         if (order.notes != null && order.notes!.isNotEmpty) ...[
                           const SizedBox(height: 8),
-                          Text('Note: ${order.notes}', style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
+                          Text('Note: ${order.notes}',
+                              style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
                         ],
                       ]),
                     ),
@@ -156,15 +177,16 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                       child: Column(children: [
                         SummaryRow('Method', order.paymentLabel),
                         if (order.paymentStatus != null)
-                          SummaryRow('Payment status', order.paymentStatus![0].toUpperCase() + order.paymentStatus!.substring(1)),
+                          SummaryRow('Payment status',
+                              order.paymentStatus![0].toUpperCase() + order.paymentStatus!.substring(1)),
                         SummaryRow('Placed', dateTimeLabel(order.placedAt)),
-                        const Divider(color: ZayloColors.line, height: 20),
+                        Divider(color: ZayloColors.line, height: 20),
                         SummaryRow('Subtotal', peso(order.subtotal)),
                         SummaryRow('Shipping', peso(order.shippingFee + order.shippingDiscount)),
                         if (order.shippingDiscount > 0)
                           SummaryRow('Voucher ${order.voucherCode ?? ''}'.trim(), '-${peso(order.shippingDiscount)}',
-                              valueColor: const Color(0xFF2E7D32)),
-                        const Divider(color: ZayloColors.line, height: 20),
+                              valueColor: ZayloColors.success),
+                        Divider(color: ZayloColors.line, height: 20),
                         SummaryRow('Total', peso(order.total), emphasize: true),
                       ]),
                     ),
@@ -179,8 +201,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                             side: const WidgetStatePropertyAll(BorderSide(color: Colors.redAccent)),
                           ),
                           child: _cancelling
-                              ? const SizedBox(
-                                  height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                              ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
                               : const Text('CANCEL ORDER'),
                         ),
                       ),
@@ -233,11 +254,11 @@ class _ItemRow extends StatelessWidget {
                 Text(item.productName,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w600, color: ZayloColors.ink, fontSize: 13)),
+                    style: TextStyle(fontWeight: FontWeight.w600, color: ZayloColors.ink, fontSize: 13)),
                 Text('${item.quantity} × ${peso(item.unitPrice)}', style: const TextStyle(fontSize: 12)),
               ]),
             ),
-            Text(peso(item.lineTotal), style: const TextStyle(fontWeight: FontWeight.w700, color: ZayloColors.ink)),
+            Text(peso(item.lineTotal), style: TextStyle(fontWeight: FontWeight.w700, color: ZayloColors.ink)),
           ]),
         ),
       );
@@ -268,8 +289,7 @@ class _Timeline extends StatelessWidget {
                     color: index == 0 ? orderStatusColor(entries[index].status) : ZayloColors.line,
                   ),
                 ),
-                if (index < entries.length - 1)
-                  Expanded(child: Container(width: 2, color: ZayloColors.line)),
+                if (index < entries.length - 1) Expanded(child: Container(width: 2, color: ZayloColors.line)),
               ]),
             ),
             const SizedBox(width: 8),
@@ -282,10 +302,8 @@ class _Timeline extends StatelessWidget {
                           fontWeight: index == 0 ? FontWeight.w800 : FontWeight.w600,
                           color: ZayloColors.ink,
                           fontSize: 13)),
-                  if (entries[index].note != null)
-                    Text(entries[index].note!, style: const TextStyle(fontSize: 12)),
-                  Text(dateTimeLabel(entries[index].at),
-                      style: const TextStyle(fontSize: 11, color: ZayloColors.taupe)),
+                  if (entries[index].note != null) Text(entries[index].note!, style: const TextStyle(fontSize: 12)),
+                  Text(dateTimeLabel(entries[index].at), style: TextStyle(fontSize: 11, color: ZayloColors.taupe)),
                 ]),
               ),
             ),
@@ -293,4 +311,48 @@ class _Timeline extends StatelessWidget {
         ),
     ]);
   }
+}
+
+/// The rider delivering the order, with a button to message them.
+class _RiderChatCard extends StatelessWidget {
+  const _RiderChatCard({required this.chat, required this.onOpen});
+
+  final RiderChatSummary chat;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) => SectionCard(
+        child: Row(children: [
+          CircleAvatar(
+            radius: 22,
+            backgroundColor: ZayloColors.sand,
+            child: Icon(Icons.two_wheeler_outlined, color: ZayloColors.ink),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Eyebrow('Your rider'),
+              const SizedBox(height: 2),
+              Text(chat.riderName, style: TextStyle(fontWeight: FontWeight.w700, color: ZayloColors.ink)),
+              Text(chat.open ? 'Message them about your delivery' : 'Chat closed · view messages',
+                  style: const TextStyle(fontSize: 12)),
+            ]),
+          ),
+          const SizedBox(width: 8),
+          FilledButton.icon(
+            onPressed: onOpen,
+            style: FilledButton.styleFrom(
+              backgroundColor: ZayloColors.ink,
+              foregroundColor: ZayloColors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            icon: Badge(
+              isLabelVisible: chat.unread > 0,
+              label: Text('${chat.unread}'),
+              child: const Icon(Icons.chat_bubble_outline, size: 18),
+            ),
+            label: const Text('Chat'),
+          ),
+        ]),
+      );
 }

@@ -8,7 +8,7 @@ class NetworkImageBox extends StatelessWidget {
   final String? url;
   final BoxFit fit;
 
-  static const _placeholder = ColoredBox(
+  static Widget get _placeholder => ColoredBox(
     color: ZayloColors.sand,
     child: Center(child: Icon(Icons.image_outlined, color: ZayloColors.taupe)),
   );
@@ -21,7 +21,7 @@ class NetworkImageBox extends StatelessWidget {
           fit: fit,
           errorBuilder: (_, __, ___) => _placeholder,
           loadingBuilder: (context, child, progress) =>
-              progress == null ? child : const ColoredBox(color: ZayloColors.sand),
+              progress == null ? child : ColoredBox(color: ZayloColors.sand),
         );
 }
 
@@ -34,7 +34,7 @@ class Eyebrow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
         text.toUpperCase(),
-        style: const TextStyle(fontSize: 10, letterSpacing: 1.3, fontWeight: FontWeight.w800, color: ZayloColors.taupe),
+        style: TextStyle(fontSize: 10, letterSpacing: 1.3, fontWeight: FontWeight.w800, color: ZayloColors.taupe),
       );
 }
 
@@ -51,7 +51,7 @@ class SectionCard extends StatelessWidget {
         color: ZayloColors.paper,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
-          side: const BorderSide(color: ZayloColors.line),
+          side: BorderSide(color: ZayloColors.line),
         ),
         clipBehavior: Clip.antiAlias,
         child: Padding(

@@ -2,6 +2,7 @@ import '../../core/api/api_client.dart';
 import '../../core/models/auth_models.dart';
 import '../../core/utils/ids.dart';
 import '../../shared/address/ph_address_section.dart';
+import '../../shared/chat/delivery_chat.dart';
 import '../models/rider_activity_models.dart';
 import '../models/rider_dashboard_models.dart';
 import '../models/rider_models.dart';
@@ -34,14 +35,25 @@ class RiderApi extends ApiClient {
       (await send('POST', '/mobile/rider/deliveries/$id/claim'))['delivery'] as Map<String, dynamic>);
 
   /// Moves a delivery to its next status (picked_up, in_transit, delivered).
-  Future<RiderDelivery> updateDelivery(int id, String status) async => RiderDelivery.fromJson(
-      (await send('PATCH', '/mobile/rider/deliveries/$id', body: {'status': status}))['delivery']
+  Future<RiderDelivery> updateDelivery(int id, String status) async =>
+      RiderDelivery.fromJson((await send('PATCH', '/mobile/rider/deliveries/$id', body: {'status': status}))['delivery']
           as Map<String, dynamic>);
 
   /// Completed deliveries for [period], newest first; [page] starts at 1.
   Future<RiderHistoryPage> history({RiderPeriod period = RiderPeriod.all, int page = 1}) async =>
       RiderHistoryPage.fromJson(
           await send('GET', '/mobile/rider/history', query: {'period': period.value, 'page': '$page'}));
+
+  /// Chat with the buyer of delivery [id]. Opening it marks the buyer's messages as read.
+  Future<DeliveryChat> deliveryChat(int id) async =>
+      DeliveryChat.fromJson((await send('GET', '/mobile/rider/deliveries/$id/chat'))['chat'] as Map<String, dynamic>);
+
+  /// [clientId] makes a retried send safe: the server stores it only once.
+  Future<DeliveryChatMessage> sendDeliveryMessage(int id, String body, {required String clientId}) async =>
+      DeliveryChatMessage.fromJson((await send('POST', '/mobile/rider/deliveries/$id/chat', body: {
+        'body': body,
+        'client_id': clientId,
+      }))['message'] as Map<String, dynamic>);
 
   Future<RiderEarnings> earnings() async => RiderEarnings.fromJson(await send('GET', '/mobile/rider/earnings'));
 

@@ -198,7 +198,7 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
                     showCheckmark: false,
                     selectedColor: ZayloColors.ink,
                     backgroundColor: ZayloColors.white,
-                    side: const BorderSide(color: ZayloColors.line),
+                    side: BorderSide(color: ZayloColors.line),
                     labelStyle: TextStyle(
                         fontWeight: FontWeight.w600, color: _label == label ? ZayloColors.white : ZayloColors.ink),
                     onSelected: (_) => setState(() => _label = label),
@@ -276,7 +276,7 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
                 onSelected: (barangay) => setState(() => _barangay = barangay),
               ),
               if (_loadingLocations)
-                const Padding(
+                Padding(
                   padding: EdgeInsets.only(bottom: 12),
                   child: LinearProgressIndicator(color: ZayloColors.ink),
                 ),
@@ -311,7 +311,7 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
                 contentPadding: EdgeInsets.zero,
                 value: _isDefault,
                 activeThumbColor: ZayloColors.ink,
-                title: const Text('Use as my default address',
+                title: Text('Use as my default address',
                     style: TextStyle(fontWeight: FontWeight.w600, color: ZayloColors.ink, fontSize: 14)),
                 onChanged: widget.address?.isDefault == true ? null : (value) => setState(() => _isDefault = value),
               ),

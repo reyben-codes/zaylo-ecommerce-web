@@ -53,7 +53,7 @@ class LocationField extends StatelessWidget {
               ),
               child: value == null
                   ? null
-                  : Text(value!.name, style: const TextStyle(fontSize: 15, color: ZayloColors.ink)),
+                  : Text(value!.name, style: TextStyle(fontSize: 15, color: ZayloColors.ink)),
             ),
           ),
         ]),

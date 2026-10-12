@@ -103,6 +103,7 @@ class RiderDashboardTabState extends State<RiderDashboardTab> with RiderDelivery
                 actionLabel: delivery.nextActionLabel,
                 busy: busyDeliveryId == delivery.id,
                 onAction: busyDeliveryId == null ? () => advanceDelivery(delivery) : null,
+                onChat: () => openDeliveryChat(delivery),
               ),
 
           RiderSectionHeader(title: 'Available deliveries', count: data.available.length),

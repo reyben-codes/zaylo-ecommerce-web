@@ -100,7 +100,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   child: ListView.separated(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     itemCount: feed.notifications.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1, color: ZayloColors.line),
+                    separatorBuilder: (_, __) => Divider(height: 1, color: ZayloColors.line),
                     itemBuilder: (context, index) {
                       final item = feed.notifications[index];
                       return ListTile(
@@ -126,7 +126,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           Text(item.message, style: const TextStyle(fontSize: 12)),
                           const SizedBox(height: 4),
                           Text('${relativeTime(item.at)} · ${item.action}',
-                              style: const TextStyle(fontSize: 11, color: ZayloColors.taupe)),
+                              style: TextStyle(fontSize: 11, color: ZayloColors.taupe)),
                         ]),
                         trailing: item.read
                             ? null

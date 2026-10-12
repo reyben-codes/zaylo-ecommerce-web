@@ -35,7 +35,7 @@ class HomeCategoryStrip extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                    const Text('Explore', style: TextStyle(fontSize: 10, color: ZayloColors.muted)),
+                    Text('Explore', style: TextStyle(fontSize: 10, color: ZayloColors.muted)),
                   ]),
                 ),
               );
@@ -84,7 +84,7 @@ class HomeFlashHeader extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(color: red, borderRadius: BorderRadius.circular(20)),
             child: const Text('🔥 LIMITED TIME',
-                style: TextStyle(color: ZayloColors.white, fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: .6)),
+                style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: .6)),
           ),
         ]),
       );
@@ -142,7 +142,7 @@ class _TrustItem extends StatelessWidget {
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-            Text(message, style: const TextStyle(color: ZayloColors.muted, fontSize: 12)),
+            Text(message, style: TextStyle(color: ZayloColors.muted, fontSize: 12)),
           ]),
         ),
       ]);
@@ -157,14 +157,19 @@ class HomeFooter extends StatelessWidget {
         // Stretch the footer behind the floating nav bar.
         padding: EdgeInsets.fromLTRB(ZayloSpace.page, 29, ZayloSpace.page, 35 + MediaQuery.paddingOf(context).bottom),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Image.asset('assets/images/ZAYLO_LOGO_LIGHT.png',
-              width: 136, height: 38, fit: BoxFit.contain, alignment: Alignment.centerLeft),
+          Image.asset(ZayloAssets.logoOnInk,
+              width: 136,
+              height: 38,
+              fit: BoxFit.contain,
+              alignment: Alignment.centerLeft,
+              color: ZayloAssets.logoOnInkTint,
+              colorBlendMode: BlendMode.srcIn),
           const SizedBox(height: 8),
-          const Text('Everyday essentials, exciting finds, and trusted sellers—all together in one marketplace.',
-              style: TextStyle(color: Color(0xFFD7CCC0), height: 1.4)),
+          Text('Everyday essentials, exciting finds, and trusted sellers—all together in one marketplace.',
+              style: TextStyle(color: ZayloColors.onInkMuted, height: 1.4)),
           const SizedBox(height: 25),
-          const Text('Driven by passion. Defined by your origin',
-              style: TextStyle(color: Color(0xFFB9ACA0), fontSize: 11)),
+          Text('Driven by passion. Defined by your origin',
+              style: TextStyle(color: ZayloColors.onInkFaint, fontSize: 11)),
         ]),
       );
 }

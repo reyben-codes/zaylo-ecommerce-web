@@ -9,8 +9,13 @@ class HomeTopBar extends StatelessWidget {
   final int cartCount;
   final VoidCallback onBag;
 
+  /// The bar floats over the page, which reserves this much space for it.
+  static const height = 70.0;
+
   @override
-  Widget build(BuildContext context) => Padding(
+  Widget build(BuildContext context) => Container(
+        height: height,
+        color: ZayloColors.cream,
         padding: const EdgeInsets.fromLTRB(ZayloSpace.page, 10, ZayloSpace.page, 12),
         child: Row(children: [
           IconButton(
@@ -19,7 +24,8 @@ class HomeTopBar extends StatelessWidget {
             icon: const Icon(Icons.menu_rounded),
           ),
           const Spacer(),
-          Image.asset('assets/images/ZAYLO_LOGO_DARK.png', height: 38, fit: BoxFit.contain),
+          Image.asset(ZayloAssets.logo,
+              height: 38, fit: BoxFit.contain, color: ZayloAssets.logoTint, colorBlendMode: BlendMode.srcIn),
           const Spacer(),
           IconButton(
             tooltip: 'Bag',
@@ -36,7 +42,8 @@ class HomeTopBar extends StatelessWidget {
 }
 
 class HomeHeroCarousel extends StatelessWidget {
-  const HomeHeroCarousel({super.key, 
+  const HomeHeroCarousel({
+    super.key,
     required this.images,
     required this.controller,
     required this.activeIndex,
@@ -68,12 +75,16 @@ class HomeHeroCarousel extends StatelessWidget {
                   onPageChanged: onPageChanged,
                   itemBuilder: (_, index) => NetworkImageBox(url: images[index]),
                 ),
-                const DecoratedBox(
+                DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.centerLeft,
                       end: Alignment.centerRight,
-                      colors: [Color(0xF7FAF7F2), Color(0xBDFAF7F2), Color(0x0AFAF7F2)],
+                      colors: [
+                        ZayloColors.cream.withValues(alpha: .97),
+                        ZayloColors.cream.withValues(alpha: .74),
+                        ZayloColors.cream.withValues(alpha: .04),
+                      ],
                     ),
                   ),
                 ),

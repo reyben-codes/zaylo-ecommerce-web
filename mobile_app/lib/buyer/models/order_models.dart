@@ -70,6 +70,7 @@ class Order {
     this.paymentStatus,
     this.trackingNumber,
     this.history = const [],
+    this.riderChat,
   });
 
   final int id;
@@ -96,6 +97,9 @@ class Order {
   final String? paymentStatus;
   final String? trackingNumber;
   final List<OrderHistoryEntry> history;
+
+  /// Present once a rider has accepted the delivery.
+  final RiderChatSummary? riderChat;
 
   String get paymentLabel => switch (paymentMethod) {
         'gcash' => 'GCash',
@@ -131,6 +135,26 @@ class Order {
         history: (json['history'] as List<dynamic>? ?? const [])
             .map((item) => OrderHistoryEntry.fromJson(item as Map<String, dynamic>))
             .toList(),
+        riderChat: json['rider_chat'] is Map<String, dynamic>
+            ? RiderChatSummary.fromJson(json['rider_chat'] as Map<String, dynamic>)
+            : null,
+      );
+}
+
+/// The buyer's chat with the rider delivering an order.
+class RiderChatSummary {
+  const RiderChatSummary({required this.riderName, required this.open, this.unread = 0});
+
+  final String riderName;
+
+  /// False once the order is delivered or cancelled; the thread stays readable.
+  final bool open;
+  final int unread;
+
+  factory RiderChatSummary.fromJson(Map<String, dynamic> json) => RiderChatSummary(
+        riderName: json['rider_name'] as String? ?? 'Your rider',
+        open: json['open'] as bool? ?? false,
+        unread: json['unread'] as int? ?? 0,
       );
 }
 
@@ -152,11 +176,8 @@ class OrderPage {
   factory OrderPage.fromJson(Map<String, dynamic> json) {
     final page = json['orders'] as Map<String, dynamic>;
     return OrderPage(
-      orders: (page['data'] as List<dynamic>)
-          .map((item) => Order.fromJson(item as Map<String, dynamic>))
-          .toList(),
-      counts: (json['counts'] as Map<String, dynamic>)
-          .map((key, value) => MapEntry(key, (value as num).toInt())),
+      orders: (page['data'] as List<dynamic>).map((item) => Order.fromJson(item as Map<String, dynamic>)).toList(),
+      counts: (json['counts'] as Map<String, dynamic>).map((key, value) => MapEntry(key, (value as num).toInt())),
       currentPage: (page['current_page'] as num).toInt(),
       lastPage: (page['last_page'] as num).toInt(),
     );

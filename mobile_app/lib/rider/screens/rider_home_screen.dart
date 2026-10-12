@@ -123,8 +123,10 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
             backgroundColor: ZayloColors.white,
             automaticallyImplyLeading: false,
             centerTitle: _tab == _homeTab,
-            title:
-                _tab == _homeTab ? Image.asset('assets/images/ZAYLO_LOGO_DARK.png', height: 28) : Text(_titles[_tab]),
+            title: _tab == _homeTab
+                ? Image.asset(ZayloAssets.logo,
+                    height: 28, color: ZayloAssets.logoTint, colorBlendMode: BlendMode.srcIn)
+                : Text(_titles[_tab]),
           ),
           // The floating nav bar covers the bottom inset; each tab pads its own list.
           body: NotificationListener<ScrollNotification>(

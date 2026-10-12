@@ -7,6 +7,7 @@ import '../../models/catalog_models.dart';
 import '../../state/app_state.dart';
 import '../../widgets/shop_actions.dart';
 import '../../widgets/signed_out_prompt.dart';
+import '../../widgets/tab_header.dart';
 import '../catalog/product_card.dart';
 
 /// The Saved tab, matching the web wishlist.
@@ -57,6 +58,8 @@ class _SavedScreenState extends State<SavedScreen> {
     if (!state.signedIn) {
       return const SignedOutPrompt(
         icon: Icons.favorite_border,
+        heading: 'Saved',
+        eyebrow: 'Your favorites',
         title: 'Saved items',
         message: 'Sign in to save products you love and find them on any device.',
       );
@@ -64,7 +67,7 @@ class _SavedScreenState extends State<SavedScreen> {
     // Hide items unsaved elsewhere without waiting for the reload.
     final products = _products?.where(state.isSaved).toList();
     return Scaffold(
-      appBar: AppBar(title: Text(products == null || products.isEmpty ? 'Saved' : 'Saved (${products.length})')),
+      appBar: TabHeader(eyebrow: 'Your favorites', title: 'Saved', count: products?.length),
       body: products == null
           ? (_error != null ? LoadError(error: _error, onRetry: _load, title: 'Could not load saved items') : const Loader())
           : products.isEmpty

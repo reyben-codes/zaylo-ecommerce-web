@@ -535,10 +535,10 @@ class _ApplicationSubmitted extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Column(children: [
-        const CircleAvatar(
+        CircleAvatar(
           radius: 38,
-          backgroundColor: Color(0xFFE8F5E9),
-          child: Icon(Icons.check_rounded, size: 42, color: Color(0xFF2E7D32)),
+          backgroundColor: ZayloColors.successSoft,
+          child: Icon(Icons.check_rounded, size: 42, color: ZayloColors.success),
         ),
         const SizedBox(height: 20),
         Text('Application successful',

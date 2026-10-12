@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/zaylo_theme.dart';
 import '../../../core/widgets/feedback.dart';
+import '../../../core/widgets/floating_nav_bar.dart';
 import '../../../rider/screens/rider_login_screen.dart';
 import '../../models/catalog_models.dart';
 import '../../state/app_state.dart';
@@ -31,6 +32,7 @@ class _StorefrontScreenState extends State<StorefrontScreen> {
   Future<StorefrontHome>? _home;
   final _pageController = PageController();
   final _searchController = TextEditingController();
+  final _topBarVisibility = NavBarVisibility();
   Timer? _heroTimer;
   int _heroIndex = 0;
   int _heroCount = 0;
@@ -62,6 +64,7 @@ class _StorefrontScreenState extends State<StorefrontScreen> {
     _heroTimer?.cancel();
     _pageController.dispose();
     _searchController.dispose();
+    _topBarVisibility.dispose();
     super.dispose();
   }
 
@@ -122,77 +125,93 @@ class _StorefrontScreenState extends State<StorefrontScreen> {
                   }
                   final data = snapshot.requireData;
                   _heroCount = data.heroImages.length;
-                  return RefreshIndicator(
-                    color: ZayloColors.ink,
-                    onRefresh: _reload,
-                    child: CustomScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      slivers: [
-                        SliverToBoxAdapter(
-                          child: HomeTopBar(cartCount: state.cartCount, onBag: () => ShopActions.showTab(context, 2)),
-                        ),
-                        SliverToBoxAdapter(
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(ZayloSpace.page, 0, ZayloSpace.page, 18),
-                            child: SearchField(
-                              controller: _searchController,
-                              onSearch: () => _openCatalog(search: _searchController.text),
+                  // The top bar hides and returns with the bottom nav bar:
+                  // both follow the same scroll notifications, which still
+                  // bubble up to the app shell.
+                  return Stack(children: [
+                    NotificationListener<ScrollNotification>(
+                      onNotification: _topBarVisibility.handleScroll,
+                      child: RefreshIndicator(
+                        color: ZayloColors.ink,
+                        edgeOffset: HomeTopBar.height,
+                        onRefresh: _reload,
+                        child: CustomScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          slivers: [
+                            const SliverToBoxAdapter(child: SizedBox(height: HomeTopBar.height)),
+                            SliverToBoxAdapter(
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(ZayloSpace.page, 0, ZayloSpace.page, 18),
+                                child: SearchField(
+                                  controller: _searchController,
+                                  onSearch: () => _openCatalog(search: _searchController.text),
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                        if (state.user != null)
-                          SliverToBoxAdapter(
-                            child: Padding(
-                              padding: const EdgeInsets.fromLTRB(ZayloSpace.page, 0, ZayloSpace.page, 14),
-                              child: Text('Welcome back, ${state.user!.firstName}',
-                                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontSize: 22)),
+                            if (state.user != null)
+                              SliverToBoxAdapter(
+                                child: Padding(
+                                  padding: const EdgeInsets.fromLTRB(ZayloSpace.page, 0, ZayloSpace.page, 14),
+                                  child: Text('Welcome back, ${state.user!.firstName}',
+                                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontSize: 22)),
+                                ),
+                              ),
+                            SliverToBoxAdapter(
+                              child: HomeHeroCarousel(
+                                images: data.heroImages,
+                                controller: _pageController,
+                                activeIndex: _heroIndex,
+                                onPageChanged: (index) => setState(() => _heroIndex = index),
+                                onShop: () => _openCatalog(),
+                                onNew: () => _openCatalog(title: 'New arrivals'),
+                              ),
                             ),
-                          ),
-                        SliverToBoxAdapter(
-                          child: HomeHeroCarousel(
-                            images: data.heroImages,
-                            controller: _pageController,
-                            activeIndex: _heroIndex,
-                            onPageChanged: (index) => setState(() => _heroIndex = index),
-                            onShop: () => _openCatalog(),
-                            onNew: () => _openCatalog(title: 'New arrivals'),
-                          ),
-                        ),
-                        SliverToBoxAdapter(
-                          child: HomeCategoryStrip(
-                            categories: data.categories,
-                            onSelected: (category) => _openCatalog(category: category.id, title: category.label),
-                          ),
-                        ),
-                        if (data.flashSales.isNotEmpty) ...[
-                          const SliverToBoxAdapter(child: HomeFlashHeader()),
-                          SliverToBoxAdapter(child: HomeProductRail(products: data.flashSales)),
-                        ],
-                        if (data.suggested.isNotEmpty) ...[
-                          SliverToBoxAdapter(
-                            child: HomeSectionHeader(
-                              title: 'Suggested Products',
-                              eyebrow: 'RECOMMENDED FOR YOU',
-                              action: 'View all',
-                              onPressed: () => _openCatalog(),
+                            SliverToBoxAdapter(
+                              child: HomeCategoryStrip(
+                                categories: data.categories,
+                                onSelected: (category) => _openCatalog(category: category.id, title: category.label),
+                              ),
                             ),
-                          ),
-                          _grid(data.suggested),
-                        ],
-                        SliverToBoxAdapter(
-                          child: HomeSectionHeader(
-                            title: 'New Arrivals',
-                            eyebrow: 'FRESHLY CURATED',
-                            action: 'Shop all',
-                            onPressed: () => _openCatalog(title: 'New arrivals'),
-                          ),
+                            if (data.flashSales.isNotEmpty) ...[
+                              const SliverToBoxAdapter(child: HomeFlashHeader()),
+                              SliverToBoxAdapter(child: HomeProductRail(products: data.flashSales)),
+                            ],
+                            if (data.suggested.isNotEmpty) ...[
+                              SliverToBoxAdapter(
+                                child: HomeSectionHeader(
+                                  title: 'Suggested Products',
+                                  eyebrow: 'RECOMMENDED FOR YOU',
+                                  action: 'View all',
+                                  onPressed: () => _openCatalog(),
+                                ),
+                              ),
+                              _grid(data.suggested),
+                            ],
+                            SliverToBoxAdapter(
+                              child: HomeSectionHeader(
+                                title: 'New Arrivals',
+                                eyebrow: 'FRESHLY CURATED',
+                                action: 'Shop all',
+                                onPressed: () => _openCatalog(title: 'New arrivals'),
+                              ),
+                            ),
+                            _grid(data.newArrivals),
+                            const SliverToBoxAdapter(child: HomeTrustStrip()),
+                            const SliverToBoxAdapter(child: HomeFooter()),
+                          ],
                         ),
-                        _grid(data.newArrivals),
-                        const SliverToBoxAdapter(child: HomeTrustStrip()),
-                        const SliverToBoxAdapter(child: HomeFooter()),
-                      ],
+                      ),
                     ),
-                  );
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: AutoHideTopBar(
+                        visibility: _topBarVisibility,
+                        child: HomeTopBar(cartCount: state.cartCount, onBag: () => ShopActions.showTab(context, 2)),
+                      ),
+                    ),
+                  ]);
                 },
               ),
       ),

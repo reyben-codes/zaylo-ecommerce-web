@@ -140,6 +140,7 @@ class MobilePayload
                 'notes' => $order->notes,
                 'payment_status' => $order->payment?->status,
                 'tracking_number' => $order->shipment?->tracking_number,
+                'rider_chat' => self::riderChat($order),
                 'history' => $order->statusHistory->map(fn ($entry) => [
                     'status' => $entry->status,
                     'label' => Str::headline($entry->status),
@@ -150,6 +151,21 @@ class MobilePayload
         }
 
         return $data;
+    }
+
+    /** The buyer's chat with the rider, once one has accepted the delivery. */
+    private static function riderChat(Order $order): ?array
+    {
+        $shipment = $order->shipment;
+        if (! $shipment || $shipment->courier_id === null) {
+            return null;
+        }
+
+        return [
+            'rider_name' => Str::of($shipment->courier?->name ?? 'Your rider')->before(' ')->toString(),
+            'open' => $shipment->chatIsOpen(),
+            'unread' => $shipment->unreadMessagesFor(rider: false),
+        ];
     }
 
     public static function address(Address $address): array

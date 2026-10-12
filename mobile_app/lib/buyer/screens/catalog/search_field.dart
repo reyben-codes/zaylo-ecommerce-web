@@ -22,11 +22,11 @@ class SearchField extends StatelessWidget {
           fillColor: ZayloColors.white,
           contentPadding: const EdgeInsets.symmetric(vertical: 12),
           border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: ZayloColors.line)),
+              borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: ZayloColors.line)),
           enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: ZayloColors.line)),
+              borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: ZayloColors.line)),
           focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: ZayloColors.ink)),
+              borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: ZayloColors.ink)),
         ),
       );
 }

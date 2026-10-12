@@ -153,6 +153,8 @@ class RiderDelivery {
     this.deliveredAt,
     this.items = const [],
     this.pickup,
+    this.chatOpen = false,
+    this.unreadMessages = 0,
   });
 
   final int id;
@@ -178,6 +180,10 @@ class RiderDelivery {
   final List<RiderDeliveryItem> items;
   final RiderPickup? pickup;
 
+  /// The rider can message the buyer: the delivery is theirs and in progress.
+  final bool chatOpen;
+  final int unreadMessages;
+
   int get itemCount => items.fold(0, (sum, item) => sum + item.quantity);
 
   factory RiderDelivery.fromJson(Map<String, dynamic> json) => RiderDelivery(
@@ -200,7 +206,11 @@ class RiderDelivery {
         items: (json['items'] as List<dynamic>? ?? const [])
             .map((item) => RiderDeliveryItem.fromJson(item as Map<String, dynamic>))
             .toList(),
-        pickup: json['pickup'] is Map<String, dynamic> ? RiderPickup.fromJson(json['pickup'] as Map<String, dynamic>) : null,
+        pickup: json['pickup'] is Map<String, dynamic>
+            ? RiderPickup.fromJson(json['pickup'] as Map<String, dynamic>)
+            : null,
+        chatOpen: json['chat_open'] as bool? ?? false,
+        unreadMessages: json['unread_messages'] as int? ?? 0,
       );
 }
 
@@ -219,9 +229,8 @@ class RiderDashboard {
   final List<RiderDelivery> available;
   final List<RiderDelivery> recent;
 
-  static List<RiderDelivery> _deliveries(Object? list) => (list as List<dynamic>? ?? const [])
-      .map((item) => RiderDelivery.fromJson(item as Map<String, dynamic>))
-      .toList();
+  static List<RiderDelivery> _deliveries(Object? list) =>
+      (list as List<dynamic>? ?? const []).map((item) => RiderDelivery.fromJson(item as Map<String, dynamic>)).toList();
 
   factory RiderDashboard.fromJson(Map<String, dynamic> json) => RiderDashboard(
         rider: RiderProfile.fromJson(json['rider'] as Map<String, dynamic>? ?? const {}),
