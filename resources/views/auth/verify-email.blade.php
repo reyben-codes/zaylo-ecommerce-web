@@ -16,7 +16,7 @@
             <header class="auth-header">
                 <span class="auth-label">ONE LAST STEP</span>
                 <h1 id="verification-title">Verify your email</h1>
-                <p class="auth-subtitle">Enter the six-digit code sent to <span class="email-address">{{ auth()->user()->email }}</span>.</p>
+                <p class="auth-subtitle">Enter the six-digit code sent to <span class="email-address">{{ $email }}</span>.</p>
             </header>
 
             @include('auth.partials.registration-progress', ['activeStep' => 3])
@@ -31,12 +31,15 @@
                 <div class="form-group">
                     <label for="otp">Email verification code</label>
                     <input class="otp-input" id="otp" name="otp" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" placeholder="000000" required aria-describedby="otp-note{{ $errors->has('otp') ? ' verification-error' : '' }}" @if($errors->has('otp')) aria-invalid="true" @endif>
-                    <p class="field-note" id="otp-note">Your code expires after 10 minutes. You can paste all six digits here.</p>
+                    <p class="field-note" id="otp-note">Your code expires after 5 minutes. You can paste all six digits here.</p>
                 </div>
-                @if(auth()->user()->role !== 'buyer')
-                    <p class="partner-note">After email verification, your {{ auth()->user()->role }} application will still need administrator approval.</p>
+                @if($pending)
+                    <p class="field-note">Your account is created once you enter this code. Until then nothing is saved, and unfinished sign-ups are removed after 24 hours.</p>
                 @endif
-                <div class="step-actions"><button type="submit" class="btn-primary" id="verify-button">Verify email &amp; {{ auth()->user()->isActive() ? 'continue' : 'finish application' }}</button></div>
+                @if($role !== 'buyer')
+                    <p class="partner-note">After email verification, your {{ $role }} application will still need {{ $role === 'rider' ? 'your logistics partner' : 'administrator' }} approval.</p>
+                @endif
+                <div class="step-actions"><button type="submit" class="btn-primary" id="verify-button">Verify email &amp; {{ $pending ? 'create account' : ($active ? 'continue' : 'finish application') }}</button></div>
             </form>
 
             <form method="POST" action="{{ route('verification.send') }}" class="resend-form">
@@ -46,8 +49,13 @@
             </form>
 
             <footer class="auth-footer">
-                <p>Using the wrong account?</p>
-                <form method="POST" action="{{ route('logout') }}">@csrf<button type="submit" class="btn-back">Sign out</button></form>
+                @if($pending)
+                    <p>Wrong email address?</p>
+                    <form method="POST" action="{{ route('registration.cancel') }}">@csrf<button type="submit" class="btn-back">Start over</button></form>
+                @else
+                    <p>Using the wrong account?</p>
+                    <form method="POST" action="{{ route('logout') }}">@csrf<button type="submit" class="btn-back">Sign out</button></form>
+                @endif
             </footer>
         </div>
     </section>

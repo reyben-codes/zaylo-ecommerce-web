@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
     <link rel="stylesheet" href="{{ asset('css/style.css') }}?v={{ filemtime(public_path('css/style.css')) }}" />
     <link rel="stylesheet" href="{{ asset('css/home.css') }}?v={{ filemtime(public_path('css/home.css')) }}" />
+<link rel="stylesheet" href="{{ asset('css/product-rating.css') }}?v={{ filemtime(public_path('css/product-rating.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/product-card-description.css') }}?v={{ filemtime(public_path('css/product-card-description.css')) }}">
 </head>
 <body>
     <header class="navbar">
@@ -50,8 +52,10 @@
                 @php($dashboardRoute = auth()->user()->role.'.dashboard')
                 <a href="{{ Route::has($dashboardRoute) ? route($dashboardRoute) : route('home') }}" class="login-text">Dashboard</a>
             @else
-                <a href="{{ route('login') }}" class="login-text">Log in</a>
-                <a href="{{ route('register') }}" class="login-text">Create new account</a>
+                <div class="nav-auth-buttons">
+                    <a href="{{ route('login') }}" class="nav-auth-button">Log in</a>
+                    <a href="{{ route('register') }}" class="nav-auth-button nav-auth-button--primary">Create new account</a>
+                </div>
             @endauth
         </div>
     </header>
@@ -124,6 +128,8 @@
                         <div class="home-product-info">
                             <p class="home-product-category">{{ $product->category_label }}</p>
                             <h3><a href="{{ route('products.show', $product) }}">{{ $product->name }}</a></h3>
+                            @include('partials.product-card-description')
+                            @include('partials.product-rating')
                             <div class="home-product-price">
                                 <span>₱{{ number_format($product->price, 2) }}</span>
                                 @if($product->original_price)
@@ -135,7 +141,7 @@
                                 @if($product->active_variants_count)
                                     <a href="{{ route('products.show', $product) }}" class="home-add-button">Choose options</a>
                                 @else
-                                    <form method="POST" action="{{ route('buyer.cart.add', $product) }}">
+                                    <form data-cart-add method="POST" action="{{ route('buyer.cart.add', $product) }}">
                                         @csrf
                                         <input type="hidden" name="quantity" value="1" />
                                         <button type="submit" class="home-add-button"><i class="fas fa-shopping-bag" aria-hidden="true"></i> Add to bag</button>
@@ -184,5 +190,7 @@
 <script src="{{ asset('js/product-carousel.js') }}?v={{ filemtime(public_path('js/product-carousel.js')) }}" defer></script>
 <script src="{{ asset('js/home.js') }}?v={{ filemtime(public_path('js/home.js')) }}" defer></script>
 @include('partials.chat-widget')
+@include('partials.cart-animation')
 </body>
 </html>
+    

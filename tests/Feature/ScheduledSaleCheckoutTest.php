@@ -103,6 +103,20 @@ class ScheduledSaleCheckoutTest extends TestCase
         $this->assertSame(1000.0, $order->items()->first()->unit_price);
     }
 
+    public function test_delivered_legacy_order_exposes_review_action_and_accepts_rating(): void
+    {
+        Schema::table('shipments', fn (Blueprint $table) => $table->unsignedBigInteger('order_id')->nullable());
+        [, $buyer] = $this->setupPurchase();
+        $this->placeOrder($buyer);
+        $order = Order::firstOrFail();
+        $item = $order->items()->firstOrFail();
+        $this->post(route('buyer.reviews.store', $item), ['rating' => 4])->assertForbidden();
+        $order->update(['status' => 'completed']);
+        $this->get(route('buyer.orders'))->assertOk()->assertSee('Rate product')->assertDontSee('Rate product & add photos', false);
+        $this->post(route('buyer.reviews.store', $item), ['rating' => 4, 'comment' => 'As described'])->assertRedirect(route('buyer.orders'));
+        $this->get(route('buyer.orders'))->assertOk()->assertSee('Review submitted')->assertDontSee('Rate product');
+    }
+
     private function setupPurchase(): array
     {
         $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);

@@ -26,6 +26,27 @@ class ProductVariant extends Model
             : ((int) ($this->attributes['price_minor'] ?? 0)) / 100;
     }
 
+    /** The color this option belongs to: the deployed schema's color column, or options.color on the newer one. */
+    public function getColorLabelAttribute(): ?string
+    {
+        $color = $this->attributes['color'] ?? ($this->options['color'] ?? null);
+
+        return filled($color) ? trim((string) $color) : null;
+    }
+
+    public function getSizeLabelAttribute(): ?string
+    {
+        $size = $this->attributes['size'] ?? ($this->options['size'] ?? null);
+
+        return filled($size) ? trim((string) $size) : null;
+    }
+
+    /** Buyer-facing name, e.g. "Olive / US 8", "Olive" or "US 8". */
+    public static function nameFor(?string $color, ?string $size): string
+    {
+        return collect([$color, $size])->filter(fn ($part) => filled($part))->implode(' / ') ?: 'Default';
+    }
+
     public function product()
     {
         return $this->belongsTo(Product::class);

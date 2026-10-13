@@ -18,6 +18,10 @@
     <link rel="stylesheet" href="{{ asset('css/style.css') }}?v={{ filemtime(public_path('css/style.css')) }}" />
 
     @stack('styles')
+    <link rel="stylesheet" href="{{ asset('css/wishlist-animation.css') }}?v={{ filemtime(public_path('css/wishlist-animation.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/quantity-stepper.css') }}?v={{ filemtime(public_path('css/quantity-stepper.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/product-card-description.css') }}?v={{ filemtime(public_path('css/product-card-description.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/product-rating.css') }}?v={{ filemtime(public_path('css/product-rating.css')) }}">
 </head>
 <body class="@yield('body-class')">
     <!-- Navigation -->
@@ -74,8 +78,10 @@
                     </button>
                 </form>
                 @else
-                    <a href="{{ route('login') }}" class="login-text">Log in</a>
-                    <a href="{{ route('register') }}">Create new account</a>
+                    <div class="nav-auth-buttons">
+                        <a href="{{ route('login') }}" class="nav-auth-button">Log in</a>
+                        <a href="{{ route('register') }}" class="nav-auth-button nav-auth-button--primary">Create new account</a>
+                    </div>
                 @endauth
             </div>
         </div>
@@ -92,6 +98,12 @@
     <script src="{{ asset('js/notifications.js') }}?v={{ filemtime(public_path('js/notifications.js')) }}" defer></script>
     <script src="{{ asset('js/product-carousel.js') }}?v={{ filemtime(public_path('js/product-carousel.js')) }}" defer></script>
     @stack('scripts')
+    @if(auth()->user()?->role === 'buyer')
+        <div class="wishlist-feedback" data-wishlist-feedback role="status" aria-live="polite" hidden></div>
+        <script src="{{ asset('js/wishlist-animation.js') }}?v={{ filemtime(public_path('js/wishlist-animation.js')) }}" defer></script>
+    @endif
+    <script src="{{ asset('js/quantity-stepper.js') }}?v={{ filemtime(public_path('js/quantity-stepper.js')) }}" defer></script>
     @include('partials.chat-widget')
+    @include('partials.cart-animation')
 </body>
 </html>

@@ -1,11 +1,14 @@
 (() => {
-    document.querySelectorAll('[data-address-form]').forEach(form => {
-        const fields = Object.fromEntries(['region', 'province', 'city', 'barangay'].map(key => [key, form.querySelector('[data-location="' + key + '"]')]));
-        const status = form.querySelector('[data-location-status]');
-        const retry = form.querySelector('[data-location-retry]');
-        const save = form.querySelector('[data-address-save]');
-        const note = form.querySelector('[data-province-note]');
-        const base = form.dataset.locationsUrl;
+    // A saved-address form, or a pickup-address block inside a larger form (seller sign-up), which has no save button.
+    document.querySelectorAll('[data-address-form]').forEach(root => {
+        const form = root.tagName === 'FORM' ? root : root.closest('form');
+        const fields = Object.fromEntries(['region', 'province', 'city', 'barangay'].map(key => [key, root.querySelector('[data-location="' + key + '"]')]));
+        const status = root.querySelector('[data-location-status]');
+        const retry = root.querySelector('[data-location-retry]');
+        const save = root.querySelector('[data-address-save]');
+        const note = root.querySelector('[data-province-note]');
+        const base = root.dataset.locationsUrl;
+        const readyText = root.dataset.locationReadyText || 'Locations loaded. Choose your delivery location.';
         let generation = 0;
         let controller;
         let freeCities = [];
@@ -30,6 +33,7 @@
             return data;
         }
         function canSave() {
+            if (!save) return;
             save.disabled = !ready || !fields.region.value || !fields.city.value || !fields.barangay.value;
         }
         async function run(action) {
@@ -37,7 +41,7 @@
             controller = new AbortController();
             const current = ++generation;
             ready = false;
-            save.disabled = true;
+            if (save) save.disabled = true;
             retry.hidden = true;
             status.textContent = 'Loading locations…';
             retryAction = () => run(action);
@@ -45,7 +49,7 @@
                 await action(controller.signal);
                 if (current !== generation) return;
                 ready = true;
-                status.textContent = 'Locations loaded. Choose your delivery location.';
+                status.textContent = readyText;
                 canSave();
             } catch (error) {
                 if (current !== generation || error.name === 'AbortError') return;
@@ -109,7 +113,7 @@
         fields.barangay.addEventListener('change', canSave);
         retry.addEventListener('click', () => retryAction?.());
         form.addEventListener('submit', event => {
-            if (save.disabled) {
+            if (save?.disabled) {
                 event.preventDefault();
                 return;
             }

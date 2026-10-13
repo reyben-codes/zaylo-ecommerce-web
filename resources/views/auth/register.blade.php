@@ -7,29 +7,102 @@
 
     $selectedRole = in_array(
         $requestedRole,
-        ['buyer', 'seller', 'courier'],
+        ['buyer', 'seller', 'courier', 'logistics'],
         true
     ) ? $requestedRole : 'buyer';
 
     $isPartner = $selectedRole !== 'buyer';
+
+    $roleCopy = [
+        'buyer' => [
+            'title' => 'Create new account',
+            'subtitle' => 'Save your favorites, track your orders, and discover everyday finds in one place.',
+            'note' => null,
+        ],
+        'seller' => [
+            'title' => 'Sell on ZAYLO',
+            'subtitle' => 'Create your account to apply as a seller on ZAYLO.',
+            'note' => 'Seller accounts require email verification and administrator approval before you can start selling.',
+        ],
+        'courier' => [
+            'title' => 'Become a rider',
+            'subtitle' => "Apply to deliver for one of ZAYLO's logistics partners.",
+            'note' => 'The logistics partner you choose reviews your application. You can sign in and accept deliveries once they approve you.',
+        ],
+        'logistics' => [
+            'title' => 'Become a logistics partner',
+            'subtitle' => 'Register your delivery company and manage your own riders on ZAYLO.',
+            'note' => 'Logistics partner accounts require email verification and administrator approval. Once approved, riders can apply to your company.',
+        ],
+    ][$selectedRole];
+
+    // Riders must choose a partner and logistics partners must name their company, which Google sign-up cannot collect.
+    $allowsGoogle = in_array($selectedRole, ['buyer', 'seller'], true);
 
     $firstErrorStep = $errors->hasAny([
         'first_name',
         'last_name',
         'phone',
         'date_of_birth',
-        'role'
+        'role',
+        'company_name',
+        'service_area',
+        'logistics_provider_id',
+        'vehicle_type',
+        'plate_no',
+        'license_number',
+        'license_expires_on',
+        'license_document',
+        'or_cr_document',
+        'shop_name',
+        'shop_category',
+        'seller_type',
+        'tin',
+        'region_code',
+        'province_code',
+        'city_code',
+        'barangay_code',
+        'street_address',
+        'postal_code',
+        'government_id',
+        'dti_certificate',
+        'sec_certificate',
+        'bir_2303'
     ]) ? 1
         : (
             $errors->hasAny([
                 'email',
                 'password',
-                'password_confirmation'
+                'password_confirmation',
+                'terms'
             ]) ? 2 : 1
         );
 @endphp
 
 @include('auth.partials.registration-styles')
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/registration-terms.css') }}?v={{ filemtime(public_path('css/registration-terms.css')) }}">
+@if($selectedRole === 'seller')
+<link rel="stylesheet" href="{{ asset('css/seller-application.css') }}?v={{ filemtime(public_path('css/seller-application.css')) }}">
+@endif
+@if($selectedRole === 'courier')
+<link rel="stylesheet" href="{{ asset('css/rider-application.css') }}?v={{ filemtime(public_path('css/rider-application.css')) }}">
+@endif
+@endpush
+@if($selectedRole === 'courier')
+@push('scripts')
+<script src="{{ asset('js/rider-application.js') }}?v={{ filemtime(public_path('js/rider-application.js')) }}" defer></script>
+@endpush
+@endif
+@if($selectedRole === 'seller')
+@push('scripts')
+<script src="{{ asset('js/address-selector.js') }}?v={{ filemtime(public_path('js/address-selector.js')) }}" defer></script>
+<script src="{{ asset('js/seller-application.js') }}?v={{ filemtime(public_path('js/seller-application.js')) }}" defer></script>
+@endpush
+@endif
+@push('scripts')
+<script src="{{ asset('js/registration-password-entry.js') }}?v={{ filemtime(public_path('js/registration-password-entry.js')) }}" defer></script>
+@endpush
 
 @section('content')
 
@@ -82,36 +155,22 @@
                 </span>
 
 
-                <h1 id="register-title">
-                    {{
-                        $selectedRole === 'seller'
-                            ? 'Sell on ZAYLO'
-                            : (
-                                $selectedRole === 'courier'
-                                    ? 'Become a courier'
-                                    : 'Create new account'
-                            )
-                    }}
-                </h1>
+                <h1 id="register-title">{{ $roleCopy['title'] }}</h1>
 
 
                 <p
                     class="auth-subtitle"
                     id="register-subtitle"
                 >
-                    {{
-                        $isPartner
-                            ? 'Create your account to apply as a '
-                                . ($selectedRole === 'seller'
-                                    ? 'seller'
-                                    : 'courier')
-                                . ' on ZAYLO.'
-                            : 'Save your favorites, track your orders, and discover everyday finds in one place.'
-                    }}
+                    {{ $roleCopy['subtitle'] }}
                 </p>
 
             </header>
 
+
+            @if(session('status'))
+                <p class="alert-status" role="status">{{ session('status') }}</p>
+            @endif
 
             {{-- VALIDATION ERRORS --}}
             @if($errors->any())
@@ -142,9 +201,7 @@
                 id="partner-note"
                 @if(!$isPartner) hidden @endif
             >
-                Seller and courier accounts require email verification
-                and administrator approval before you can start selling
-                or accept deliveries.
+                {{ $roleCopy['note'] }}
             </p>
 
 
@@ -160,6 +217,7 @@
                 method="POST"
                 action="{{ route('register') }}"
                 id="registerForm"
+                @if(in_array($selectedRole, ['seller', 'courier'], true)) enctype="multipart/form-data" @endif
             >
 
                 @csrf
@@ -196,7 +254,8 @@
                                 name="first_name"
                                 value="{{ old('first_name') }}"
                                 autocomplete="given-name"
-                                maxlength="100"
+                                minlength="2"
+                                maxlength="50"
                                 data-person-name
                                 required
                             >
@@ -215,7 +274,8 @@
                                 name="last_name"
                                 value="{{ old('last_name') }}"
                                 autocomplete="family-name"
-                                maxlength="100"
+                                minlength="2"
+                                maxlength="50"
                                 data-person-name
                                 required
                             >
@@ -238,18 +298,22 @@
                             value="{{ old('phone') }}"
                             placeholder="09171234567"
                             autocomplete="tel"
-                            maxlength="11"
-                            inputmode="numeric"
-                            pattern="09[0-9]{9}"
-                            title="Enter 11 digits starting with 09"
-                            data-phone-number
+                            maxlength="13"
+                            inputmode="tel"
+                            pattern="09[0-9]{9}|\+639[0-9]{9}"
+                            title="Enter 09XXXXXXXXX or +639XXXXXXXXX"
+                            data-phone-number="international"
                             required
                         >
+
+                        <p class="field-note">
+                            09XXXXXXXXX or +639XXXXXXXXX. Each mobile number can only be used for one account.
+                        </p>
 
                     </div>
 
 
-                    @if($selectedRole === 'buyer')
+                    @if(in_array($selectedRole, ['buyer', 'courier'], true))
 
                         <div class="form-group">
 
@@ -262,19 +326,45 @@
                                 id="date_of_birth"
                                 name="date_of_birth"
                                 value="{{ old('date_of_birth') }}"
-                                max="{{ today()->toDateString() }}"
+                                max="{{ today()->subYears(18)->toDateString() }}"
                                 autocomplete="bday"
+                                data-adult-birthday
                                 required
                             >
 
                             <p class="field-note">
-                                Your age is calculated automatically from your birthday.
+                                {{ $selectedRole === 'courier' ? 'Riders must be at least 18 years old.' : 'You must be at least 18 years old to shop on ZAYLO.' }}
                             </p>
 
                         </div>
 
                     @endif
 
+
+
+                    @if($selectedRole === 'seller' && \Illuminate\Support\Facades\Schema::hasTable('seller_applications'))
+                        @include('seller.partials.application-fields')
+                    @endif
+
+                    @if($selectedRole === 'logistics')
+
+                        <div class="form-group">
+                            <label for="company_name">Company name</label>
+                            <input id="company_name" name="company_name" value="{{ old('company_name') }}" autocomplete="organization" minlength="2" maxlength="150" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="service_area">Service area (optional)</label>
+                            <input id="service_area" name="service_area" value="{{ old('service_area') }}" maxlength="150" placeholder="e.g. Metro Manila, Cavite">
+                            <p class="field-note">Riders see this when choosing a partner to apply to.</p>
+                        </div>
+
+                    @endif
+
+
+                    @if($selectedRole === 'courier')
+                        @include('auth.partials.rider-fields')
+                    @endif
 
                     <input type="hidden" name="role" id="selectedRole" value="{{ $selectedRole }}">
 
@@ -332,6 +422,8 @@
                             value="{{ old('email') }}"
                             placeholder="you@example.com"
                             autocomplete="email"
+                            pattern="[^@\s]+@[^@\s]+\.[^@\s]+"
+                            title="Enter an email address such as name@example.com"
                             required
                         >
 
@@ -351,11 +443,12 @@
                             <input
                                 type="password"
                                 id="password"
+                                data-manual-password
                                 name="password"
                                 placeholder="Create a password"
                                 autocomplete="new-password"
                                 minlength="8"
-                                aria-describedby="password-note"
+                                aria-describedby="password-note password-entry-note"
                                 data-new-password
                                 required
                             >
@@ -379,7 +472,7 @@
                             id="password-note"
                             class="field-note"
                         >
-                            Use at least 8 characters, one uppercase letter, one lowercase letter, and one symbol.
+                            Use at least 8 characters, one uppercase letter, one lowercase letter, one number, and one symbol.
                         </p>
 
                     </div>
@@ -398,6 +491,8 @@
                             <input
                                 type="password"
                                 id="password_confirmation"
+                                data-manual-password
+                                aria-describedby="password-entry-note"
                                 name="password_confirmation"
                                 placeholder="Repeat your password"
                                 autocomplete="new-password"
@@ -422,6 +517,15 @@
 
 
                     {{-- EMAIL OTP NOTICE --}}
+                    <p id="password-entry-note" class="field-note" role="status" aria-live="polite">Please type both passwords manually. Copying, cutting, pasting and dropping text are disabled in these fields.</p>
+                    <div class="terms-consent">
+                        <label class="terms-consent__label" for="terms">
+                            <input type="checkbox" id="terms" name="terms" value="1" @checked(old('terms')) required @if($errors->has('terms')) aria-invalid="true" @endif>
+                            <span>I have read and agree to the <a href="{{ route('terms') }}" target="_blank" rel="noopener">Terms and Privacy Policy</a>.</span>
+                        </label>
+                        @error('terms')<p class="terms-consent__error" role="alert">{{ $message }}</p>@enderror
+                    </div>
+
                     <p class="verification-note">
                         We'll send a six-digit verification code to this
                         email address. You'll need the code to finish
@@ -459,6 +563,8 @@
             {{-- ========================================= --}}
             {{-- GOOGLE REGISTRATION --}}
             {{-- ========================================= --}}
+
+            @if($allowsGoogle)
 
             <div class="auth-divider">
                 <span>OR</span>
@@ -556,13 +662,16 @@
             @endif
 
 
+
+            @endif
+
             {{-- FOOTER --}}
             <footer class="auth-footer">
 
                 <p>
                     Already have an account?
 
-                    <a href="{{ $selectedRole === 'seller' ? route('seller.login') : route('login') }}">
+                    <a href="{{ route(['seller' => 'seller.login', 'logistics' => 'logistics.login'][$selectedRole] ?? 'login') }}">
                         Sign in
                     </a>
                 </p>
@@ -595,13 +704,17 @@
 
                     @if($selectedRole !== 'courier')
 
-                        <a
-                            href="{{ route(
-                                'register',
-                                ['role' => 'courier']
-                            ) }}"
-                        >
-                            Become a courier
+                        <a href="{{ route('register', ['role' => 'courier']) }}">
+                            Become a rider
+                        </a>
+
+                    @endif
+
+
+                    @if($selectedRole !== 'logistics')
+
+                        <a href="{{ route('register', ['role' => 'logistics']) }}">
+                            Become a logistics partner
                         </a>
 
                     @endif
@@ -660,45 +773,7 @@
 
     function updateRole()
     {
-        const partner =
-            role.value !== 'buyer';
-
-
-        document
-            .getElementById('register-label')
-            .textContent =
-                partner
-                    ? 'ZAYLO PARTNERS'
-                    : 'JOIN ZAYLO';
-
-
-        document
-            .getElementById('register-title')
-            .textContent =
-                role.value === 'seller'
-                    ? 'Sell on ZAYLO'
-                    : (
-                        role.value === 'courier'
-                            ? 'Become a courier'
-                            : 'Create new account'
-                    );
-
-
-        document
-            .getElementById('register-subtitle')
-            .textContent =
-                partner
-                    ? 'Create your account to apply as a '
-                        + role.value
-                        + ' on ZAYLO.'
-                    : 'Save your favorites, track your orders, and discover everyday finds in one place.';
-
-
-        document
-            .getElementById('partner-note')
-            .hidden =
-                !partner;
-
+        // Headings and notes are rendered by the server for the selected role.
 
         createButton.textContent =
             'Send verification code';

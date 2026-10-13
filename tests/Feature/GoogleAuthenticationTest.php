@@ -156,7 +156,7 @@ class GoogleAuthenticationTest extends TestCase
     {
         $user = User::factory()->create(['email' => 'original@gmail.com', 'role' => 'buyer', 'status' => 'active']);
         $user->forceFill(['google_id' => 'google-sub-123', 'auth_provider' => 'google', 'password' => null])->save();
-        $state = $this->begin('courier');
+        $state = $this->begin('seller');
         $this->identity(['email' => 'changed@gmail.com']);
         $this->completeGoogle($state)->assertRedirect(route('buyer.dashboard'));
         $this->assertAuthenticatedAs($user);
@@ -277,7 +277,9 @@ class GoogleAuthenticationTest extends TestCase
         config(['services.google.client_id' => null]);
         $this->get(route('google.redirect'))->assertRedirect(route('login'))->assertSessionHasErrors('google');
         $this->get(route('login'))->assertOk()->assertSee('Continue with Google')->assertSee(route('google.redirect'));
-        $this->get(route('register', ['role' => 'courier']))->assertOk()->assertSee(route('google.redirect', ['role' => 'courier']));
+        $this->get(route('register', ['role' => 'seller']))->assertOk()->assertSee(route('google.redirect', ['role' => 'seller']));
+        // Riders must pick a logistics partner, which Google sign-up cannot collect.
+        $this->get(route('register', ['role' => 'courier']))->assertOk()->assertDontSee('Continue with Google');
         $this->assertGuest();
     }
 

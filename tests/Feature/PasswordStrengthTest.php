@@ -14,7 +14,7 @@ class PasswordStrengthTest extends TestCase
 
     public function test_registration_rejects_passwords_missing_any_required_part(): void
     {
-        foreach (['Aa!1234', 'lowercase!', 'UPPERCASE!', 'MixedCase8', 'Mixed Case8'] as $weakPassword) {
+        foreach (['Aa!1234', 'lowercase!', 'UPPERCASE!', 'MixedCase8', 'Mixed Case8', 'NoNumber!Pass'] as $weakPassword) {
             $this->post(route('register'), [
                 'first_name' => 'Test',
                 'last_name' => 'Shopper',
@@ -24,6 +24,7 @@ class PasswordStrengthTest extends TestCase
                 'role' => 'buyer',
                 'password' => $weakPassword,
                 'password_confirmation' => $weakPassword,
+                'terms' => '1',
             ])->assertSessionHasErrors('password');
         }
 
@@ -61,10 +62,10 @@ class PasswordStrengthTest extends TestCase
         $this->post(route('password.update'), [
             'token' => $token,
             'email' => $user->email,
-            'password' => 'NewSecure!',
-            'password_confirmation' => 'NewSecure!',
+            'password' => 'NewSecure1!',
+            'password_confirmation' => 'NewSecure1!',
         ])->assertRedirect(route('login'))->assertSessionHasNoErrors();
 
-        $this->assertTrue(Hash::check('NewSecure!', $user->fresh()->password));
+        $this->assertTrue(Hash::check('NewSecure1!', $user->fresh()->password));
     }
 }

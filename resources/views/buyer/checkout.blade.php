@@ -23,6 +23,28 @@
         @error('voucher_code')<p class="cart-validation" role="alert">{{ $message }}</p>@enderror
     </section>
 
+    @unless($identityVerified)
+        <section class="identity-notice" role="status">
+            <i class="fas fa-id-card" aria-hidden="true"></i>
+            <div>
+                @if($identityStatus === 'pending')
+                    <strong>Your ID is being reviewed</strong>
+                    <p>You can place this order as soon as an administrator approves your ID. Your cart is saved.</p>
+                @elseif($identityStatus === 'rejected')
+                    <strong>Your ID was not approved</strong>
+                    <p>Please upload a clearer photo of a valid ID to continue. Your cart is saved.</p>
+                @else
+                    <strong>Verify your ID to place orders</strong>
+                    <p>Upload a government-issued ID once. After an administrator approves it, you can check out anytime.</p>
+                @endif
+            </div>
+            @unless($identityStatus === 'pending')
+                <a class="market-button inline-button" href="{{ route('buyer.account') }}#identity-verification">Upload ID</a>
+            @endunless
+        </section>
+    @endunless
+    @error('identity')<p class="cart-validation" role="alert">{{ $message }}</p>@enderror
+
     <form method="POST" action="{{ route('buyer.checkout') }}" class="checkout-grid checkout-order-form">@csrf
         <input type="hidden" name="idempotency_key" value="{{ (string) Illuminate\Support\Str::uuid() }}">
         @foreach($items as $item)
@@ -84,7 +106,8 @@
             @if($shippingDiscount > 0)<p class="summary-row checkout-discount"><span>Free shipping voucher</span><strong>−&#8369;{{ number_format($shippingDiscount, 2) }}</strong></p>@endif
             <p class="summary-row checkout-total"><span>Total to pay</span><strong>&#8369;{{ number_format($subtotal + $shipping - $shippingDiscount, 2) }}</strong></p>
             <p class="checkout-summary-note">Your final total is recalculated when you place the order if prices or stock have changed.</p>
-            <button class="market-button" type="submit" @disabled($usableAddresses->isEmpty())>Place order</button>
+            <button class="market-button" type="submit" @disabled($usableAddresses->isEmpty() || ! $identityVerified)>Place order</button>
+            @unless($identityVerified)<p class="checkout-summary-note">Ordering unlocks once your ID is approved.</p>@endunless
             <p class="checkout-summary-secure"><i class="fas fa-lock" aria-hidden="true"></i> Your order details are saved securely.</p>
         </aside>
     </form>

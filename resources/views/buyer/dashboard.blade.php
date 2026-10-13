@@ -5,34 +5,10 @@
 
 
 @push('styles')
+<link rel="stylesheet" href="{{ asset('css/home.css') }}?v={{ filemtime(public_path('css/home.css')) }}">
 <style>
     .icon-group a { color: #1e1e1e; text-decoration: none; transition: 0.15s; position: relative; }
     .icon-group a:hover { color: #8a7a6b; }
-    .hero { position: relative; width: 100%; height: 580px; max-height: 620px; margin: 2px auto 0; overflow: hidden; background: #e8dfd6; }
-    .hero::after { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(90deg, rgba(250, 247, 242, .96), rgba(250, 247, 242, .83) 32%, rgba(250, 247, 242, .12) 72%); }
-    .hero-slides, .hero-slide { position: absolute; inset: 0; }
-    .hero-slide { opacity: 0; visibility: hidden; transition: opacity .7s ease, visibility .7s ease; }
-    .hero-slide.is-active { opacity: 1; visibility: visible; }
-    .hero-image { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .hero-text { position: absolute; z-index: 2; top: 50%; left: 6%; transform: translateY(-50%); max-width: 700px; color: #1e1e1e; pointer-events: none; }
-    .hero-carousel-controls { position: absolute; z-index: 3; right: 5%; bottom: 28px; display: flex; align-items: center; gap: 16px; }
-    .hero-carousel-arrow { display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid rgba(26, 23, 20, .18); border-radius: 50%; background: rgba(255, 255, 255, .88); color: #1a1714; cursor: pointer; }
-    .hero-carousel-arrow:hover { background: #fff; }
-    .hero-carousel-dots { display: flex; align-items: center; gap: 7px; }
-    .hero-carousel-dot { width: 24px; height: 24px; padding: 0; border: 0; background: transparent; cursor: pointer; display: grid; place-items: center; }
-    .hero-carousel-dot::before { content: ''; display: block; width: 8px; height: 8px; border-radius: 50%; background: rgba(26, 23, 20, .4); transition: width .2s ease, background-color .2s ease; }
-    .hero-carousel-dot[aria-pressed="true"]::before { width: 20px; border-radius: 999px; background: #1a1714; }
-    .hero-carousel-controls button:focus-visible { outline: 2px solid #1a1714; outline-offset: 3px; }
-    .hero-label { font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; color: #4a4037; margin-bottom: 16px; font-weight: 400; opacity: 0.8; }
-    .hero-headline { font-family: 'Playfair Display', serif; font-size: 4.25rem; font-weight: 600; line-height: 1.1; margin-bottom: 20px; letter-spacing: -0.02em; }
-    .hero-headline .line1 { color: #1a1714; display: block; }
-    .hero-headline .line2 { color: #b28b6f; display: block; font-style: italic; }
-    .hero-desc { font-size: 1rem; font-weight: 350; color: #2a241f; max-width: 420px; line-height: 1.6; margin-bottom: 32px; letter-spacing: 0.01em; opacity: 0.85; }
-    .hero-actions { display: flex; align-items: center; gap: 32px; pointer-events: auto; }
-    .btn-primary { background: #1a1714; color: white; border: none; border-radius: 8px; padding: 14px 36px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; font-family: 'Inter', sans-serif; transition: 0.1s; text-decoration: none; display: inline-block; }
-    .btn-primary:hover { background: #2f2721; color: white; }
-    .link-lookbook { font-size: 0.85rem; font-weight: 450; letter-spacing: 0.04em; color: #1a1714; text-decoration: none; border-bottom: 1px solid transparent; transition: 0.15s; }
-    .link-lookbook:hover { border-bottom-color: #1a1714; }
     .categories { background: #f5f0ea; padding: 60px 48px 72px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; border-top: 1px solid #ece4db; }
     .category-item { display: flex; flex-direction: column; align-items: center; flex: 0 1 auto; min-width: 90px; text-align: center; position: relative; padding: 0 12px; text-decoration: none; color: #1e1e1e; transition: 0.15s; }
     .category-item:hover { transform: translateY(-2px); }
@@ -90,17 +66,13 @@
     @keyframes spin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
     .end-message { text-align: center; padding: 48px 0; color: #6b5f54; font-size: 0.95rem; max-width: 1400px; margin: 0 auto; }
     .end-message .end-icon { display: block; font-size: 1.8rem; margin-bottom: 10px; }
-    @media (max-width: 820px) { .hero { height: 420px; } .hero-text { left: 5%; max-width: 460px; } .hero-headline { font-size: 3.6rem; } .hero-desc { max-width: 340px; font-size: .9rem; } }
     @media (max-width: 640px) { .flash-sales, .suggested-products { padding: 36px 16px; } .section-header { flex-wrap: wrap; gap: 12px; } .flash-header-left { flex-wrap: wrap; } .categories { flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; gap: 28px; padding: 28px 20px 36px; } .category-item { flex: 0 0 auto; } }
-    @media (max-width: 640px) { .hero { height: 390px; } .hero::after { background: linear-gradient(90deg, rgba(250, 247, 242, .94), rgba(250, 247, 242, .69) 65%, rgba(250, 247, 242, .25)); } .hero-text { max-width: 320px; } .hero-headline { font-size: 2.8rem; } .hero-desc { max-width: 260px; font-size: .8rem; } .hero-carousel-controls { right: 5%; bottom: 12px; gap: 8px; } .hero-carousel-arrow { width: 36px; height: 36px; } }
-    @media (max-width: 480px) { .hero-headline { font-size: 2.2rem; } .hero-desc { display: none; } .hero-actions { gap: 16px; } .hero-actions .btn-primary { padding: 10px 16px; } }
-    @media (prefers-reduced-motion: reduce) { .hero-slide, .hero-carousel-dot::before { transition: none; } }
 </style>
 @endpush
 
 @section('content')
     <!-- Hero -->
-    <div class="hero" id="buyer-hero" role="region" aria-roledescription="carousel" aria-label="Featured marketplace images">
+    <div class="hero home-hero" id="buyer-hero" role="region" aria-roledescription="carousel" aria-label="Featured marketplace images">
         <div class="hero-slides" aria-hidden="true">
             <div class="hero-slide is-active"><img class="hero-image" src="https://images.unsplash.com/photo-1583394838336-acd977736f90?w=1600&q=80&auto=format&fit=crop" alt="" fetchpriority="high" onerror="this.onerror=null;this.src='{{ asset('images/login-marketplace.png') }}'" /></div>
             <div class="hero-slide"><img class="hero-image" src="https://images.unsplash.com/photo-1445205170230-053b83016050?w=1600&q=80&auto=format&fit=crop" alt="" fetchpriority="low" onerror="this.onerror=null;this.src='{{ asset('images/login-marketplace.png') }}'" /></div>
@@ -157,11 +129,13 @@
                 <div class="product-image">
                     @include('partials.product-card-image', ['product' => $product])
                     <span class="flash-discount">{{ $discount }}</span>
-                    <form method="POST" action="{{ route('buyer.wishlist.toggle', $product) }}">@csrf<button class="product-wishlist" aria-label="Save {{ $product->name }}"><i class="far fa-heart"></i></button></form>
+                    <form data-wishlist-toggle method="POST" action="{{ route('buyer.wishlist.toggle', $product) }}">@csrf<button class="product-wishlist" aria-label="Save {{ $product->name }}"><i class="far fa-heart"></i></button></form>
                 </div>
                 <div class="product-info">
                     <h3 class="product-name"><a href="{{ route('products.show', $product) }}">{{ $product->name }}</a></h3>
+                    @include('partials.product-card-description')
                     <p class="product-category">{{ $product->category_label }}</p>
+                    @include('partials.product-rating')
                     <div class="product-price">
                         <span class="current-price">₱{{ number_format($product->price, 2) }}</span>
                         <span class="original-price">₱{{ number_format($product->original_price, 2) }}</span>
@@ -169,7 +143,7 @@
                     @if($product->active_variants_count)
                         <a class="btn-flash" href="{{ route('products.show', $product) }}">Choose options</a>
                     @else
-                        <form method="POST" action="{{ route('buyer.cart.add', $product) }}">@csrf<input type="hidden" name="quantity" value="1"><button class="btn-flash"><i class="fas fa-bolt"></i> Grab Now</button></form>
+                        <form data-cart-add method="POST" action="{{ route('buyer.cart.add', $product) }}">@csrf<input type="hidden" name="quantity" value="1"><button class="btn-flash"><i class="fas fa-bolt"></i> Grab Now</button></form>
                     @endif
                 </div>
             </div>
@@ -191,14 +165,16 @@
             <div class="product-card" data-product-url="{{ route('products.show', $product) }}">
                 <div class="product-image">
                     @include('partials.product-card-image', ['product' => $product])
-                    <form method="POST" action="{{ route('buyer.wishlist.toggle', $product) }}">@csrf<button class="product-wishlist" aria-label="Save {{ $product->name }}"><i class="far fa-heart"></i></button></form>
+                    <form data-wishlist-toggle method="POST" action="{{ route('buyer.wishlist.toggle', $product) }}">@csrf<button class="product-wishlist" aria-label="Save {{ $product->name }}"><i class="far fa-heart"></i></button></form>
                     @if($product->badge)
                         <span class="product-badge {{ $product->badge === 'Sale' ? 'sale' : ($product->badge === 'Best Seller' ? 'best' : '') }}">{{ $product->badge }}</span>
                     @endif
                 </div>
                 <div class="product-info">
                     <h3 class="product-name"><a href="{{ route('products.show', $product) }}">{{ $product->name }}</a></h3>
+                    @include('partials.product-card-description')
                     <p class="product-category">{{ $product->category_label }}</p>
+                    @include('partials.product-rating')
                     <div class="product-price">
                         <span class="current-price">₱{{ number_format($product->price, 2) }}</span>
                         @if($product->original_price)
@@ -208,7 +184,7 @@
                     @if($product->active_variants_count)
                         <a class="btn-add-cart" href="{{ route('products.show', $product) }}">Choose options</a>
                     @else
-                        <form method="POST" action="{{ route('buyer.cart.add', $product) }}">@csrf<input type="hidden" name="quantity" value="1"><button class="btn-add-cart"><i class="fas fa-shopping-bag"></i> Add to Cart</button></form>
+                        <form data-cart-add method="POST" action="{{ route('buyer.cart.add', $product) }}">@csrf<input type="hidden" name="quantity" value="1"><button class="btn-add-cart"><i class="fas fa-shopping-bag"></i> Add to Cart</button></form>
                     @endif
                 </div>
             </div>

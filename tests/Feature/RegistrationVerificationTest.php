@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\PendingRegistration;
 use App\Models\User;
 use App\Notifications\VerifyEmailCode;
 use Illuminate\Auth\Events\Verified;
@@ -10,11 +11,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
+use Tests\Support\CompletesSignUp;
 use Tests\TestCase;
 
 class RegistrationVerificationTest extends TestCase
 {
-    use RefreshDatabase;
+    use CompletesSignUp, RefreshDatabase;
 
     public function test_registration_hides_account_type_and_preserves_partner_signup(): void
     {
@@ -22,11 +24,12 @@ class RegistrationVerificationTest extends TestCase
             $parameters = $role === 'buyer' ? [] : ['role' => $role];
             $this->get(route('register', $parameters))
                 ->assertOk()
-                ->assertDontSee('<select', false)
+                ->assertDontSee('name="role" id="role"', false)
                 ->assertDontSee('Account type')
                 ->assertSee('type="hidden" name="role" id="selectedRole" value="'.$role.'"', false)
+                // Buyers and riders must be 18 or older, so both give their birthday.
                 ->when(
-                    $role === 'buyer',
+                    in_array($role, ['buyer', 'courier'], true),
                     fn ($response) => $response->assertSee('name="date_of_birth"', false),
                     fn ($response) => $response->assertDontSee('name="date_of_birth"', false),
                 );
@@ -110,40 +113,101 @@ class RegistrationVerificationTest extends TestCase
         $registration['last_name'] = "D'Angelo";
         $registration['phone'] = '09175550101';
 
-        $this->post(route('register'), $registration)
-            ->assertRedirect(route('verification.notice'))
-            ->assertSessionHasNoErrors();
-
-        $user = User::where('email', $registration['email'])->firstOrFail();
+        $user = $this->signUp($registration);
         $this->assertSame("María-Clara D'Angelo", $user->name);
         $this->assertSame('09175550101', $user->phone);
     }
 
-    public function test_buyer_registers_then_verifies_with_the_emailed_code_once(): void
+    public function test_buyer_account_is_only_created_after_the_emailed_code_is_entered(): void
     {
         Notification::fake();
         Event::fake([Verified::class]);
         $this->post(route('register'), $this->registration())->assertRedirect(route('verification.notice'));
-        $user = User::where('email', 'shopper@example.com')->firstOrFail();
-        $this->assertAuthenticatedAs($user);
-        $this->assertNull($user->email_verified_at);
-        $this->assertNull($user->address);
-        $this->assertSame('2000-09-15', $user->date_of_birth->toDateString());
-        $code = $this->codeFor($user);
+
+        // Submitting the form saves no account: the details wait, encrypted, for the code.
+        $this->assertGuest();
+        $this->assertDatabaseMissing('users', ['email' => 'shopper@example.com']);
+        $pending = PendingRegistration::where('email', 'shopper@example.com')->firstOrFail();
+        $this->assertStringNotContainsString('Strong-password1!', DB::table('pending_registrations')->value('payload'));
+        $this->assertStringNotContainsString('09170000000', DB::table('pending_registrations')->value('payload'));
+        $code = $this->signUpCode('shopper@example.com');
         $this->assertMatchesRegularExpression('/^[0-9]{6}$/', $code);
-        $this->assertTrue(Hash::check($code, DB::table('email_verification_codes')->where('user_id', $user->id)->value('code_hash')));
-        $this->get(route('verification.notice'))->assertOk()->assertSee('name="otp"', false)->assertSee($user->email)->assertDontSee($code)
-            ->assertSee('data-step="3"  aria-current="step"', false)
-            ->assertDontSee('data-step="4"', false);
-        $this->get(route('buyer.dashboard'))->assertRedirect(route('verification.notice'));
+        $this->assertTrue(Hash::check($code, $pending->code_hash));
+        $this->get(route('verification.notice'))->assertOk()->assertSee('name="otp"', false)->assertSee('shopper@example.com')->assertDontSee($code)
+            ->assertSee('Start over')->assertSee('data-step="3"  aria-current="step"', false);
+        $this->get(route('buyer.dashboard'))->assertRedirect(route('login'));
 
         $this->post(route('verification.verify'), ['otp' => $code])->assertRedirect(route('buyer.dashboard'));
-        $this->assertNotNull($user->fresh()->email_verified_at);
-        $this->assertDatabaseMissing('email_verification_codes', ['user_id' => $user->id]);
+        $user = User::where('email', 'shopper@example.com')->firstOrFail();
+        $this->assertAuthenticatedAs($user);
+        $this->assertNotNull($user->email_verified_at);
+        $this->assertTrue(Hash::check('Strong-password1!', $user->password));
+        $this->assertSame('2000-09-15', $user->date_of_birth->toDateString());
+        $this->assertDatabaseMissing('pending_registrations', ['email' => 'shopper@example.com']);
         $this->post(route('verification.verify'), ['otp' => $code])->assertRedirect(route('buyer.dashboard'));
         Event::assertDispatchedTimes(Verified::class, 1);
         $this->post(route('verification.send'))->assertRedirect(route('buyer.dashboard'));
-        Notification::assertSentToTimes($user, VerifyEmailCode::class, 1);
+        $this->assertSame(1, User::where('email', 'shopper@example.com')->count());
+    }
+
+    public function test_unfinished_sign_ups_reserve_nothing_and_expire(): void
+    {
+        Notification::fake();
+        $this->post(route('register'), $this->registration())->assertSessionHasNoErrors();
+
+        // Someone else can still sign up with the same email and number; the newer sign-up replaces the old one.
+        $this->post(route('registration.cancel'))->assertRedirect(route('register'));
+        $this->assertDatabaseCount('pending_registrations', 0);
+        $this->post(route('register'), $this->registration())->assertSessionHasNoErrors();
+        $this->assertDatabaseCount('pending_registrations', 1);
+
+        $this->travel(25)->hours();
+        $this->artisan('registrations:prune')->assertSuccessful();
+        $this->assertDatabaseCount('pending_registrations', 0);
+        $this->assertDatabaseCount('users', 0);
+        $this->get(route('verification.notice'))->assertRedirect(route('login'));
+    }
+
+    public function test_before_the_migration_sign_up_still_works_the_old_way(): void
+    {
+        Notification::fake();
+        \Illuminate\Support\Facades\Schema::drop('pending_registrations');
+
+        $this->post(route('register'), $this->registration())->assertRedirect(route('verification.notice'))->assertSessionHasNoErrors();
+        $user = User::where('email', 'shopper@example.com')->firstOrFail();
+        $this->assertAuthenticatedAs($user);
+        $this->assertNull($user->email_verified_at);
+        $this->post(route('verification.verify'), ['otp' => $this->codeFor($user)])->assertRedirect(route('buyer.dashboard'));
+    }
+
+    public function test_sign_up_codes_lock_after_five_wrong_attempts(): void
+    {
+        Notification::fake();
+        $this->post(route('register'), $this->registration())->assertSessionHasNoErrors();
+        $code = $this->signUpCode('shopper@example.com');
+        $wrong = $code === '000000' ? '111111' : '000000';
+        foreach (range(1, 5) as $attempt) {
+            $this->from(route('verification.notice'))->post(route('verification.verify'), ['otp' => $wrong])->assertSessionHasErrors('otp');
+        }
+        $this->travel(61)->seconds(); // past the 6-requests-a-minute limit, so the lock is what refuses the code
+        $this->post(route('verification.verify'), ['otp' => $code])->assertSessionHasErrors(['otp' => 'Too many incorrect attempts. Please request a new code.']);
+        $this->assertDatabaseMissing('users', ['email' => 'shopper@example.com']);
+
+        $this->travel(61)->seconds();
+        $this->post(route('verification.send'))->assertSessionHasNoErrors();
+        $this->post(route('verification.verify'), ['otp' => $this->signUpCode('shopper@example.com')])->assertRedirect(route('buyer.dashboard'));
+    }
+
+    public function test_an_email_taken_while_the_sign_up_waited_is_refused(): void
+    {
+        Notification::fake();
+        $this->post(route('register'), $this->registration())->assertSessionHasNoErrors();
+        User::factory()->create(['email' => 'shopper@example.com', 'phone' => '09179999999']);
+
+        $this->post(route('verification.verify'), ['otp' => $this->signUpCode('shopper@example.com')])
+            ->assertSessionHasErrors(['otp' => 'This email address was registered by another account in the meantime. Please sign up again.']);
+        $this->assertSame(1, User::where('email', 'shopper@example.com')->count());
+        $this->assertDatabaseCount('pending_registrations', 0);
     }
 
     public function test_incorrect_codes_are_counted_and_locked_after_five_attempts(): void
@@ -215,17 +279,19 @@ class RegistrationVerificationTest extends TestCase
         }
     }
 
-    public function test_mail_failure_keeps_the_account_and_allows_a_retry(): void
+    public function test_mail_failure_saves_no_account_and_allows_a_retry(): void
     {
         Notification::shouldReceive('send')->once()->andThrow(new \RuntimeException('Mail transport unavailable'));
-        $this->post(route('register'), $this->registration())->assertRedirect(route('verification.notice'))->assertSessionHasErrors('otp');
-        $user = User::where('email', 'shopper@example.com')->firstOrFail();
-        $this->assertAuthenticatedAs($user);
-        $this->assertNull($user->email_verified_at);
-        $this->assertDatabaseMissing('email_verification_codes', ['user_id' => $user->id]);
+        $this->post(route('register'), $this->registration())->assertRedirect(route('verification.notice'))
+            ->assertSessionHasErrors(['otp' => 'We could not send your code. Your account has not been created yet; tap Resend code to try again.']);
+        $this->assertGuest();
+        $this->assertDatabaseMissing('users', ['email' => 'shopper@example.com']);
+        $this->assertNull(PendingRegistration::firstOrFail()->code_hash);
+
         Notification::fake();
         $this->from(route('verification.notice'))->post(route('verification.send'))->assertSessionHasNoErrors();
-        Notification::assertSentTo($user, VerifyEmailCode::class);
+        $this->post(route('verification.verify'), ['otp' => $this->signUpCode('shopper@example.com')])->assertRedirect(route('buyer.dashboard'));
+        $this->assertDatabaseHas('users', ['email' => 'shopper@example.com']);
     }
 
     public function test_otp_requires_six_digits_and_preserves_leading_zeroes(): void
@@ -252,7 +318,7 @@ class RegistrationVerificationTest extends TestCase
         $this->assertSame(['mail'], $notification->via($user));
         $mail = $notification->toMail($user);
         $this->assertContains('012345', $mail->introLines);
-        $this->assertStringContainsString('10 minutes', implode(' ', $mail->introLines));
+        $this->assertStringContainsString('5 minutes', implode(' ', $mail->introLines));
         $this->assertNull($mail->actionUrl);
     }
 
@@ -261,9 +327,11 @@ class RegistrationVerificationTest extends TestCase
         return [
             'first_name' => 'Test', 'last_name' => 'Shopper', 'role' => $role,
             'email' => $role === 'buyer' ? 'shopper@example.com' : $role.'@example.com',
-            'password' => 'Strong-password!', 'password_confirmation' => 'Strong-password!',
-            'phone' => '09170000000',
+            'password' => 'Strong-password1!', 'password_confirmation' => 'Strong-password1!',
+            // Mobile numbers are unique, so each role gets its own.
+            'phone' => ['buyer' => '09170000000', 'seller' => '09170000001', 'courier' => '09170000002', 'logistics' => '09170000003'][$role] ?? '09170000009',
             'date_of_birth' => $role === 'buyer' ? '2000-09-15' : null,
+            'terms' => '1',
         ];
     }
 

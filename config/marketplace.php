@@ -56,5 +56,20 @@ return [
         ],
     ],
 
+    // Swatch colors for common color words in option names; options without a match show their photo or name only.
+    'color_swatches' => [
+        'black' => '#1f1d1b', 'white' => '#f7f5f2', 'gold' => '#c9a54b', 'silver' => '#c3c6c9', 'pink' => '#f0b6c6',
+        'olive' => '#6f7a3a', 'green' => '#4d8a4f', 'red' => '#b8392f', 'blue' => '#3d6fb6', 'navy' => '#24365c',
+        'gray' => '#9a9a9a', 'grey' => '#9a9a9a', 'brown' => '#7b5a3c', 'beige' => '#e3d3b5', 'cream' => '#efe6d2',
+        'yellow' => '#e6c84a', 'orange' => '#e07b39', 'purple' => '#7d5ba6',
+    ],
+
+    // Temporary standard sizes sellers can start from; they can rename, add or remove sizes per color.
+    'size_presets' => [
+        'shoes' => ['US 6', 'US 7', 'US 8', 'US 9', 'US 10', 'US 11'],
+        'clothing' => ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+        'fashion' => ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+    ],
+
     'fashion_categories' => ['fashion', 'clothing', 'bags', 'shoes', 'watches', 'accessories'],
 ];

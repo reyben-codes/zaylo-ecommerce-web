@@ -6,10 +6,14 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class ChatController extends Controller
 {
+    // A typing signal lasts a little longer than the client's ping interval so the indicator does not flicker.
+    private const TYPING_SECONDS = 6;
+
     public function index(Request $request)
     {
         $data = $request->validate(['conversation' => 'nullable|integer|min:1', 'compact' => 'sometimes|boolean']);
@@ -84,6 +88,7 @@ class ChatController extends Controller
         return response()->json([
             'messages' => $messages->map(fn ($message) => $this->messageData($message, (int) $request->user()->id)),
             'has_older' => $messages->isNotEmpty() && $chat->messages()->where('id', '<', $messages->first()->id)->exists(),
+            'typing' => Cache::has($this->typingKey($chat, $this->otherParticipantId($chat, (int) $request->user()->id))),
         ]);
     }
 
@@ -108,7 +113,22 @@ class ChatController extends Controller
             return $message;
         });
 
+        Cache::forget($this->typingKey($chat, (int) $request->user()->id));
+
         return response()->json(['message' => $this->messageData($message, (int) $request->user()->id)]);
+    }
+
+    /**
+     * Short-lived "is typing" signal, read by the other participant's message polling.
+     */
+    public function typing(Request $request, int $conversation)
+    {
+        $chat = $this->owned($request, $conversation);
+        $typing = $request->validate(['typing' => 'required|boolean'])['typing'];
+        $key = $this->typingKey($chat, (int) $request->user()->id);
+        $typing ? Cache::put($key, true, now()->addSeconds(self::TYPING_SECONDS)) : Cache::forget($key);
+
+        return response()->noContent();
     }
 
     public function read(Request $request, int $conversation)
@@ -120,6 +140,16 @@ class ChatController extends Controller
             ->where('sender_id', '!=', $request->user()->id)->whereNull('read_at')->update(['read_at' => now()]);
 
         return response()->noContent();
+    }
+
+    private function typingKey(Conversation $chat, int $userId): string
+    {
+        return "chat-typing:{$chat->id}:{$userId}";
+    }
+
+    private function otherParticipantId(Conversation $chat, int $userId): int
+    {
+        return (int) ((int) $chat->buyer_id === $userId ? $chat->seller_id : $chat->buyer_id);
     }
 
     private function owned(Request $request, int $id): Conversation

@@ -13,8 +13,9 @@ class StrongPassword implements ValidationRule
             || mb_strlen($value) < 8
             || preg_match('/\p{Lu}/u', $value) !== 1
             || preg_match('/\p{Ll}/u', $value) !== 1
+            || preg_match('/\p{Nd}/u', $value) !== 1
             || preg_match('/[\p{P}\p{S}]/u', $value) !== 1) {
-            $fail('The :attribute must have at least 8 characters, one uppercase letter, one lowercase letter, and one symbol.');
+            $fail('The :attribute must have at least 8 characters, one uppercase letter, one lowercase letter, one number, and one symbol.');
         }
     }
 }

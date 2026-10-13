@@ -14,9 +14,12 @@ return Application::configure(basePath: dirname(__DIR__))
         // The production site is served through Cloudflare. Trust the immediate
         // proxy so Laravel honors X-Forwarded-Proto and generates HTTPS URLs.
         $middleware->trustProxies(at: '*');
-        $middleware->redirectGuestsTo(fn (\Illuminate\Http\Request $request) =>
-            $request->is('seller', 'seller/*') ? route('seller.login') : route('login')
-        );
+        $middleware->redirectGuestsTo(fn (\Illuminate\Http\Request $request) => match (true) {
+            $request->is('seller', 'seller/*') => route('seller.login'),
+            $request->is('logistics', 'logistics/*') => route('logistics.login'),
+            $request->is('admin', 'admin/*') => route('admin.login'),
+            default => route('login'),
+        });
 
         $middleware->alias([
             'role'     => \App\Http\Middleware\RoleMiddleware::class,

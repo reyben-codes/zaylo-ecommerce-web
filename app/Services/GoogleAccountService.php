@@ -12,7 +12,8 @@ use Laravel\Socialite\Two\User as GoogleUser;
 
 class GoogleAccountService
 {
-    public const PUBLIC_ROLES = ['buyer', 'seller', 'courier'];
+    // Riders and logistics partners register with the form: they must name a partner or company.
+    public const PUBLIC_ROLES = ['buyer', 'seller'];
 
     public function resolve(GoogleUser $identity, string $role): User
     {
@@ -78,11 +79,7 @@ class GoogleAccountService
                     $user->save();
 
                     if ($new && $role === 'seller') {
-                        $user->sellers()->create([
-                            'name' => $user->name."'s Store",
-                            'slug' => Str::slug($user->name).'-'.Str::lower(Str::random(6)),
-                            'status' => 'pending',
-                        ]);
+                        $user->openSellerShop($user->name."'s Store");
                     }
 
                     return [$user, $newlyVerified];

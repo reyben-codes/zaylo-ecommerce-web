@@ -16,10 +16,14 @@
         @endphp
 
         @foreach($sellerNavigation as $item)
+            @php
+                // Sub-pages (e.g. seller.products.edit) keep their section highlighted.
+                $active = request()->routeIs($item['route'], $item['route'].'.*');
+            @endphp
             <a
                 href="{{ route($item['route']) }}"
-                class="seller-sidebar__link{{ request()->routeIs($item['route']) ? ' is-active' : '' }}"
-                @if(request()->routeIs($item['route'])) aria-current="page" @endif
+                class="seller-sidebar__link{{ $active ? ' is-active' : '' }}"
+                @if($active) aria-current="page" @endif
             >
                 <i class="fas {{ $item['icon'] }}" aria-hidden="true"></i>
                 <span>{{ $item['label'] }}</span>

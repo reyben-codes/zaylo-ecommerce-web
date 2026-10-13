@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -58,6 +59,7 @@ class User extends Authenticatable implements MustVerifyEmail
         return [
             'email_verified_at' => 'datetime',
             'date_of_birth' => 'date',
+            'identity_verified_at' => 'datetime',
             'approved_at' => 'datetime',
             'is_suspended' => 'boolean',
             'password' => 'hashed',
@@ -117,6 +119,60 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(Seller::class);
     }
 
+    /**
+     * The shop that owns this seller's products and orders, created on first use.
+     */
+    public function sellerShop(): Seller
+    {
+        return $this->sellers()->oldest('id')->firstOrCreate([], [
+            'name' => $this->name."'s Store",
+            'slug' => Str::slug($this->name).'-'.Str::lower(Str::random(6)),
+            'status' => $this->status === 'active' ? 'approved' : 'pending',
+        ]);
+    }
+
+    /**
+     * Create the shop record for a new seller, in whichever table this database uses.
+     */
+    public function openSellerShop(string $name, string $status = 'pending'): void
+    {
+        if (Product::usesLegacySchema()) {
+            SellerProfile::create(['user_id' => $this->id, 'store_name' => $name]);
+
+            return;
+        }
+
+        $this->sellers()->create([
+            'name' => $name,
+            'slug' => Str::slug($name).'-'.Str::lower(Str::random(6)),
+            'status' => $status,
+        ]);
+    }
+
+    /**
+     * The sign-in page for this account: partners have their own portals, everyone else uses the shop login.
+     */
+    public function portalLoginRoute(): string
+    {
+        return match (true) {
+            $this->hasRole('seller') => 'seller.login',
+            $this->hasRole('logistics') => 'logistics.login',
+            $this->hasRole('admin') => 'admin.login',
+            default => 'login',
+        };
+    }
+
+    public function sellerStoreName(): string
+    {
+        if (Product::usesLegacySchema()) {
+            $profile = $this->sellerProfile;
+
+            return $profile?->store_name ?? $profile?->name ?? 'My Shop';
+        }
+
+        return $this->sellerShop()->name;
+    }
+
     public function sellerProfile(): HasOne
     {
         return Schema::hasTable('seller_profiles')
@@ -127,6 +183,43 @@ class User extends Authenticatable implements MustVerifyEmail
     public function logisticsProviders(): HasMany
     {
         return $this->hasMany(LogisticsProvider::class);
+    }
+
+    /**
+     * A seller whose application is under review or was rejected; they may only use the application page.
+     */
+    public function awaitsSellerApproval(): bool
+    {
+        return $this->hasRole('seller') && in_array($this->status, ['pending', 'rejected'], true)
+            && Schema::hasTable('seller_applications');
+    }
+
+    public function sellerApplication(): HasOne
+    {
+        return $this->hasOne(SellerApplication::class);
+    }
+
+    public function identityVerifications(): HasMany
+    {
+        return $this->hasMany(IdentityVerification::class);
+    }
+
+    public function latestIdentityVerification(): HasOne
+    {
+        return $this->hasOne(IdentityVerification::class)->latestOfMany();
+    }
+
+    /**
+     * Buyers need an approved ID to check out. Before the feature's migration runs, nobody is blocked.
+     */
+    public function isIdentityVerified(): bool
+    {
+        return ! Schema::hasColumn('users', 'identity_verified_at') || $this->identity_verified_at !== null;
+    }
+
+    public function logisticsProvider(): HasOne
+    {
+        return $this->hasOne(LogisticsProvider::class)->oldestOfMany();
     }
 
     public function rider(): HasOne

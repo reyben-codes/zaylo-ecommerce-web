@@ -1,0 +1,21 @@
+.quantity-stepper { display: inline-flex; align-items: stretch; width: fit-content; max-width: 100%; border: 1px solid #decfc0; border-radius: 10px; background: #fffdfb; }
+.quantity-form [data-quantity-update] { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 72px; width: 72px; min-height: 44px; border-radius: 8px; }
+.quantity-form [data-quantity-update][hidden] { display: none; }
+.cart-product .cart-item-actions { grid-column: 2 / -1; grid-row: 2; display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 0; padding-top: 12px; border-top: 1px solid #eee7df; }
+.cart-product .cart-line-total { grid-column: 4; grid-row: 1; }
+.cart-item-actions .quantity-form { flex-wrap: nowrap; align-items: center; gap: 8px; max-width: 100%; margin: 0; }
+.cart-item-actions .cart-remove-form { margin: 0; }
+.cart-item-actions .quantity-stepper { flex-shrink: 0; }
+@media (max-width: 560px) {
+    .cart-product .cart-item-actions { grid-column: 1 / -1; grid-row: 3; }
+    .cart-product .cart-line-total { grid-column: 3; grid-row: 2; }
+}
+.quantity-stepper.quantity-stepper button { display: grid; place-items: center; flex: 0 0 44px; width: 44px; min-height: 44px; margin: 0; padding: 0; border: 0; border-radius: 9px; background: #f5eee6; color: #6b503d; font: 500 1.35rem/1 'Inter', sans-serif; cursor: pointer; transition: background-color .18s ease; }
+.quantity-stepper.quantity-stepper button[hidden] { display: none; }
+.quantity-stepper.quantity-stepper input { width: 54px; min-width: 0; min-height: 44px; margin: 0; padding: 8px 2px; border: 0; border-radius: 0; background: transparent; color: #1a1714; font: 600 16px/1.4 'Inter', sans-serif; text-align: center; }
+.quantity-stepper.is-enhanced input { appearance: textfield; -moz-appearance: textfield; }
+.quantity-stepper.is-enhanced input::-webkit-inner-spin-button, .quantity-stepper.is-enhanced input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.quantity-stepper.quantity-stepper button:hover:not(:disabled) { background: #e8d9c9; }
+.quantity-stepper.quantity-stepper button:disabled { opacity: .4; cursor: not-allowed; }
+.quantity-stepper :is(input, button):focus-visible { outline: 2px solid #795a43; outline-offset: 2px; z-index: 1; }
+@media (prefers-reduced-motion: reduce) { .quantity-stepper.quantity-stepper button { transition: none; } }

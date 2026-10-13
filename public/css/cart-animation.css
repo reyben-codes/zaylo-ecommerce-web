@@ -1,0 +1,4 @@
+.cart-animation-notice { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); z-index: 1600; max-width: calc(100vw - 32px); width: max-content; padding: 14px 20px; border-radius: 12px; background: #2b241f; color: #fffdfb; box-shadow: 0 8px 28px #241a1633; font: 500 .9rem/1.5 'Inter', sans-serif; }
+.cart-animation-notice[hidden] { display: none; }
+.cart-animation-flight { position: fixed; z-index: 1601; pointer-events: none; width: 48px; height: 48px; display: grid; place-items: center; border-radius: 50%; background: #795a43; color: white; box-shadow: 0 5px 18px #241a1633; font: bold 24px/1 sans-serif; }
+form[data-cart-add][aria-busy="true"] button { cursor: progress; opacity: .7; }

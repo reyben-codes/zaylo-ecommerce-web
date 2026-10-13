@@ -49,7 +49,7 @@ class ScheduledProductSaleTest extends TestCase
         $this->assertSame('1000.00', $product->price);
         $this->assertNull($product->original_price);
         $this->assertNull($product->badge);
-        $this->get(route('seller.products'))->assertOk()->assertSee('Manage sale')->assertSee('Regular price')->assertSee('data-price="1000.00"', false);
+        $this->get(route('seller.products.edit', $product))->assertOk()->assertSee('Manage sale')->assertSee('Regular price')->assertSee('value="1000.00"', false);
     }
 
     public function test_fixed_price_targets_only_selected_variation_and_cart_uses_it(): void

@@ -10,8 +10,12 @@ class EnsureAccountIsActive
 {
     public function handle(Request $request, Closure $next): Response
     {
+        if ($request->user()?->awaitsSellerApproval() && $request->user()->hasVerifiedEmail()) {
+            return redirect()->route('seller.application');
+        }
+
         if ($request->user() && ! $request->user()->isActive()) {
-            $redirectRoute = $request->user()->hasRole('seller') ? 'seller.login' : 'login';
+            $redirectRoute = $request->user()->portalLoginRoute();
             auth()->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();

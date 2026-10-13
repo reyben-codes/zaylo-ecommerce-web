@@ -1,0 +1,78 @@
+/* Seller account settings. Shared layout lives in seller-workspace.css. */
+.account-grid {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+}
+
+.account-column {
+    display: grid;
+    gap: 22px;
+    align-content: start;
+    min-width: 0;
+}
+
+.account-column > .seller-panel + .seller-panel {
+    margin-top: 0;
+}
+
+.shop-status {
+    align-self: flex-start;
+    padding: 8px 13px;
+    font-size: .66rem;
+}
+
+.account-address {
+    display: flex;
+    gap: 12px;
+}
+
+.account-address > i {
+    margin-top: 3px;
+    color: var(--zaylo-accent);
+}
+
+.account-address strong {
+    color: var(--zaylo-ink);
+    font-size: .8rem;
+}
+
+.account-address p,
+.account-muted {
+    margin: 5px 0 0;
+    color: var(--zaylo-muted);
+    font-size: .76rem;
+    line-height: 1.5;
+}
+
+.account-muted {
+    margin: 0 0 12px;
+}
+
+.account-summary {
+    display: grid;
+    gap: 12px;
+    margin: 0;
+}
+
+.account-summary div {
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    font-size: .76rem;
+}
+
+.account-summary dt {
+    color: var(--zaylo-muted);
+}
+
+.account-summary dd {
+    margin: 0;
+    color: var(--zaylo-ink);
+    font-weight: 600;
+    text-align: right;
+}
+
+@media (max-width: 1200px) {
+    .account-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

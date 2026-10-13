@@ -8,7 +8,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class LogisticsProvider extends Model
 {
-    protected $fillable = ['user_id', 'name', 'slug', 'status', 'rejection_reason', 'contact_phone'];
+    protected $fillable = ['user_id', 'name', 'slug', 'status', 'rejection_reason', 'contact_phone', 'service_area', 'approved_at'];
+
+    protected $casts = ['approved_at' => 'datetime'];
 
     public function owner(): BelongsTo
     {
@@ -28,5 +30,15 @@ class LogisticsProvider extends Model
     public function shipments(): HasMany
     {
         return $this->hasMany(Shipment::class);
+    }
+
+    /**
+     * Partners riders may apply to: approved by an administrator and owned by an active account.
+     */
+    public function scopeAcceptingRiders($query)
+    {
+        return $query->where('status', 'approved')
+            ->whereHas('owner', fn ($owner) => $owner->where('status', 'active'))
+            ->orderBy('name');
     }
 }

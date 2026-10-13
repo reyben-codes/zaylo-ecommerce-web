@@ -1,5 +1,5 @@
 (() => {
-    const message = 'Use at least 8 characters, one uppercase letter, one lowercase letter, and one symbol.';
+    const message = 'Use at least 8 characters, one uppercase letter, one lowercase letter, one number, and one symbol.';
 
     document.querySelectorAll('[data-new-password]').forEach((input) => {
         const validate = () => {
@@ -7,6 +7,7 @@
             const valid = [...value].length >= 8
                 && /\p{Lu}/u.test(value)
                 && /\p{Ll}/u.test(value)
+                && /\p{Nd}/u.test(value)
                 && /[\p{P}\p{S}]/u.test(value);
             input.setCustomValidity(valid || !value ? '' : message);
         };

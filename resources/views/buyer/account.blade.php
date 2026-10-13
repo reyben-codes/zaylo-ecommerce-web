@@ -32,6 +32,7 @@
         <nav>
             <a href="#personal-details"><i class="far fa-user"></i> Personal details</a>
             <a href="#delivery-addresses"><i class="fas fa-location-dot"></i> Delivery addresses</a>
+            @if($identityEnabled)<a href="#identity-verification"><i class="far fa-id-card"></i> ID verification</a>@endif
             <a href="#security"><i class="fas fa-lock"></i> Password</a>
         </nav>
     </aside>
@@ -40,7 +41,11 @@
         <section class="settings-card" id="personal-details">
             <div class="settings-card-heading">
                 <div><span class="eyebrow">Account</span><h2>Personal details</h2></div>
-                <span class="status-pill"><i class="fas fa-circle-check"></i> Verified buyer</span>
+                @if($identityVerified)
+                    <span class="status-pill"><i class="fas fa-circle-check"></i> Verified buyer</span>
+                @else
+                    <a class="status-pill status-pill--warning" href="#identity-verification"><i class="fas fa-id-card"></i> ID not verified yet</a>
+                @endif
             </div>
             <form method="POST" action="{{ route('buyer.account.profile') }}" class="market-form stacked-form">
                 @csrf
@@ -89,7 +94,7 @@
 
             <div class="settings-address-list">
                 @forelse($addresses as $address)
-                    @php($icon = $addressTypes[$address->label] ?? $addressTypes['Other'])
+                    @php $icon = $addressTypes[$address->label] ?? $addressTypes['Other']; @endphp
                     <article class="settings-address-card">
                         <div class="address-card-icon"><i class="fas {{ $icon }}" aria-hidden="true"></i></div>
                         <div class="address-card-copy">
@@ -112,6 +117,66 @@
             </div>
             @if($addresses->isNotEmpty())<a class="manage-address-link" href="{{ route('addresses.index') }}">Manage all saved addresses <i class="fas fa-arrow-right"></i></a>@endif
         </section>
+
+        @if($identityEnabled)
+            @php
+                $submission = $identitySubmission;
+                $showUpload = ! $identityVerified;
+            @endphp
+            <section class="settings-card" id="identity-verification">
+                <div class="settings-card-heading">
+                    <div>
+                        <span class="eyebrow">Verification</span>
+                        <h2>ID verification</h2>
+                        <p>We check a government-issued ID once before your first order to keep ZAYLO safe for buyers and sellers.</p>
+                    </div>
+                    @if($identityVerified)
+                        <span class="status-pill identity-status identity-status--approved"><i class="fas fa-circle-check"></i> Approved</span>
+                    @elseif($submission?->status === 'pending')
+                        <span class="status-pill identity-status identity-status--pending"><i class="fas fa-hourglass-half"></i> Under review</span>
+                    @elseif($submission?->status === 'rejected')
+                        <span class="status-pill identity-status identity-status--rejected"><i class="fas fa-circle-xmark"></i> Not approved</span>
+                    @else
+                        <span class="status-pill identity-status"><i class="far fa-id-card"></i> Not submitted</span>
+                    @endif
+                </div>
+
+                @if($identityVerified)
+                    <p class="identity-message">Your ID is verified. You can check out anytime.</p>
+                @elseif($submission?->status === 'pending')
+                    <p class="identity-message">We received your {{ $submission->id_type_label }} on {{ $submission->updated_at->timezone('Asia/Manila')->format('M j, Y g:i A') }}. An administrator will review it soon. You can keep shopping and adding to your cart meanwhile. Uploaded the wrong file? Send a new one below.</p>
+                @elseif($submission?->status === 'rejected')
+                    <div class="identity-rejection" role="alert">
+                        <strong>Your {{ $submission->id_type_label }} was not approved.</strong>
+                        <p>{{ $submission->rejection_reason }}</p>
+                        <p>Please upload a clear photo of a valid ID.</p>
+                    </div>
+                @endif
+
+                @if($showUpload)
+                    <form method="POST" action="{{ route('buyer.identity.store') }}" enctype="multipart/form-data" class="market-form stacked-form identity-form">
+                        @csrf
+                        <div class="form-row">
+                            <label for="id-type">ID type
+                                <select id="id-type" name="id_type" required>
+                                    <option value="">Choose your ID</option>
+                                    @foreach($idTypes as $value => $label)
+                                        <option value="{{ $value }}" @selected(old('id_type', $submission?->id_type) === $value)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                                @error('id_type')<span class="field-error">{{ $message }}</span>@enderror
+                            </label>
+                            <label for="id-document">Photo or scan of the front of your ID
+                                <input id="id-document" type="file" name="document" accept="image/jpeg,image/png,image/webp,application/pdf" required>
+                                @error('document')<span class="field-error">{{ $message }}</span>@enderror
+                            </label>
+                        </div>
+                        <p class="empty-note identity-privacy"><i class="fas fa-lock" aria-hidden="true"></i> JPG, PNG, WebP, or PDF up to 5 MB. Make sure your name and photo are readable. Only ZAYLO administrators can see this file.</p>
+                        <div><button class="market-button" type="submit">{{ $submission ? 'Upload new ID' : 'Submit ID for review' }}</button></div>
+                    </form>
+                @endif
+            </section>
+        @endif
 
         <section class="settings-card" id="security">
             <div class="settings-card-heading">
@@ -137,7 +202,7 @@
                         <input id="password-confirmation" type="password" name="password_confirmation" autocomplete="new-password" minlength="8" required>
                     </label>
                 </div>
-                <p id="profile-password-note" class="empty-note">Use at least 8 characters, one uppercase letter, one lowercase letter, and one symbol.</p>
+                <p id="profile-password-note" class="empty-note">Use at least 8 characters, one uppercase letter, one lowercase letter, one number, and one symbol.</p>
                 <div><button class="market-button" type="submit">{{ filled($user->getAuthPassword()) ? 'Update password' : 'Create password' }}</button></div>
             </form>
         </section>

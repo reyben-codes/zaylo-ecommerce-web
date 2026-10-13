@@ -55,6 +55,33 @@ class MessagingTest extends TestCase
         $this->getJson(route('messages.list', $chat))->assertJsonCount(2, 'messages')->assertJsonPath('messages.1.body', 'Yes, it is!');
     }
 
+    public function test_typing_signal_reaches_only_the_other_participant_and_clears_on_send(): void
+    {
+        [$buyer, $seller] = $this->accounts();
+        $chat = Conversation::create(['buyer_id' => $buyer->id, 'seller_id' => $seller->id]);
+
+        $this->actingAs($buyer)->get(route('buyer.chat', ['conversation' => $chat->id]))
+            ->assertOk()->assertSee('data-typing-indicator', false)->assertSee('is typing');
+        $this->postJson(route('messages.typing', $chat), ['typing' => true])->assertNoContent();
+        $this->getJson(route('messages.list', $chat))->assertJsonPath('typing', false);
+        $this->actingAs($seller)->getJson(route('messages.list', $chat))->assertJsonPath('typing', true);
+
+        // The signal expires on its own if the typist goes quiet.
+        $this->travel(7)->seconds();
+        $this->getJson(route('messages.list', $chat))->assertJsonPath('typing', false);
+
+        $this->actingAs($buyer)->postJson(route('messages.typing', $chat), ['typing' => true])->assertNoContent();
+        $this->postJson(route('messages.send', $chat), ['body' => 'Hello!', 'client_id' => (string) Str::uuid()])->assertOk();
+        $this->actingAs($seller)->getJson(route('messages.list', $chat))->assertJsonPath('typing', false);
+
+        $this->actingAs($buyer)->postJson(route('messages.typing', $chat), ['typing' => true]);
+        $this->postJson(route('messages.typing', $chat), ['typing' => false])->assertNoContent();
+        $this->actingAs($seller)->getJson(route('messages.list', $chat))->assertJsonPath('typing', false);
+
+        $outsider = User::factory()->create(['role' => 'buyer', 'status' => 'active']);
+        $this->actingAs($outsider)->postJson(route('messages.typing', $chat), ['typing' => true])->assertNotFound();
+    }
+
     public function test_outsiders_cannot_list_send_or_mark_messages_read(): void
     {
         [$buyer, $seller] = $this->accounts();

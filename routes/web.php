@@ -9,7 +9,10 @@ use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ProductSaleController;
 use App\Http\Controllers\CourierController;
 use App\Http\Controllers\GoogleAuthController;
+use App\Http\Controllers\IdentityVerificationController;
 use App\Http\Controllers\LocationController;
+use App\Http\Controllers\LogisticsController;
+use App\Http\Controllers\SellerApplicationController;
 use App\Http\Controllers\SellerController;
 use App\Models\Product;
 use Illuminate\Support\Facades\Route;
@@ -19,7 +22,7 @@ Route::get('/', function () {
     $newArrivals = collect();
 
     if (Schema::hasTable('products')) {
-        $query = Product::query()->where('is_active', true);
+        $query = Product::withReviewSummary()->where('is_active', true);
 
         if (Schema::hasColumn('products', 'stock')) {
             $query->where('stock', '>', 0)
@@ -36,6 +39,7 @@ Route::get('/', function () {
 
     return view('index', compact('newArrivals'));
 })->name('home');
+Route::view('/terms', 'legal.terms')->name('terms');
 Route::get('/products', [BuyerController::class, 'products'])->name('products.index');
 Route::get('/products/{product}', [BuyerController::class, 'showProduct'])->name('products.show');
 
@@ -66,6 +70,10 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
     Route::get('/seller/login', [AuthController::class, 'showSellerLogin'])->name('seller.login');
     Route::post('/seller/login', [AuthController::class, 'sellerLogin'])->middleware('throttle:login')->name('seller.login.submit');
+    Route::get('/logistics/login', [AuthController::class, 'showLogisticsLogin'])->name('logistics.login');
+    Route::post('/logistics/login', [AuthController::class, 'logisticsLogin'])->middleware('throttle:login')->name('logistics.login.submit');
+    Route::get('/admin/login', [AuthController::class, 'showAdminLogin'])->name('admin.login');
+    Route::post('/admin/login', [AuthController::class, 'adminLogin'])->middleware('throttle:login')->name('admin.login.submit');
     Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
     Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:6,1');
     Route::get('/forgot-password', [AuthController::class, 'showForgotPassword'])->name('password.request');
@@ -76,10 +84,13 @@ Route::middleware('guest')->group(function () {
 
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
-    Route::get('/email/verify', [AuthController::class, 'verificationNotice'])->name('verification.notice');
-    Route::post('/email/verify', [AuthController::class, 'verifyEmail'])->middleware('throttle:6,1')->name('verification.verify');
-    Route::post('/email/verification-notification', [AuthController::class, 'resendVerification'])->middleware('throttle:6,1')->name('verification.send');
 });
+
+// Email codes: for a sign-up still waiting for its code (no account yet) or an older unverified account.
+Route::get('/email/verify', [AuthController::class, 'verificationNotice'])->name('verification.notice');
+Route::post('/email/verify', [AuthController::class, 'verifyEmail'])->middleware('throttle:6,1')->name('verification.verify');
+Route::post('/email/verification-notification', [AuthController::class, 'resendVerification'])->middleware('throttle:6,1')->name('verification.send');
+Route::post('/register/cancel', [AuthController::class, 'cancelRegistration'])->name('registration.cancel');
 
 Route::middleware(['auth', 'active', 'verified', 'role:buyer', 'nocache'])->prefix('buyer')->name('buyer.')->group(function () {
     Route::get('/dashboard', [BuyerController::class, 'dashboard'])->name('dashboard');
@@ -88,10 +99,13 @@ Route::middleware(['auth', 'active', 'verified', 'role:buyer', 'nocache'])->pref
     Route::post('/notifications/read-all', [BuyerNotificationController::class, 'markAllRead'])->name('notifications.read-all');
     Route::get('/products', fn () => redirect()->route('products.index'))->name('products');
     Route::get('/orders', [BuyerController::class, 'orders'])->name('orders');
+    Route::get('/order-items/{orderItem}/review', [\App\Http\Controllers\ProductReviewController::class, 'create'])->name('reviews.create');
+    Route::post('/order-items/{orderItem}/review', [\App\Http\Controllers\ProductReviewController::class, 'store'])->middleware('throttle:10,1')->name('reviews.store');
     Route::post('/orders/{order}/cancel', [BuyerController::class, 'cancelOrder'])->name('orders.cancel');
     Route::get('/cart', [BuyerController::class, 'cart'])->name('cart');
     Route::post('/cart/selection', [BuyerController::class, 'cartSelection'])->name('cart.selection');
     Route::post('/cart/{product}', [BuyerController::class, 'addToCart'])->name('cart.add');
+    Route::patch('/cart/items', [BuyerController::class, 'updateCartItems'])->name('cart.update-all');
     Route::patch('/cart/items/{cartItem}', [BuyerController::class, 'updateCart'])->name('cart.update');
     Route::delete('/cart/items/{cartItem}', [BuyerController::class, 'removeCartItem'])->name('cart.remove');
     Route::get('/checkout', [BuyerController::class, 'showCheckout'])->name('checkout.show');
@@ -101,14 +115,24 @@ Route::middleware(['auth', 'active', 'verified', 'role:buyer', 'nocache'])->pref
     Route::get('/account', [BuyerController::class, 'account'])->name('account');
     Route::patch('/account/profile', [BuyerController::class, 'updateProfile'])->name('account.profile');
     Route::put('/account/password', [BuyerController::class, 'updatePassword'])->name('account.password');
+    Route::post('/account/identity', [IdentityVerificationController::class, 'store'])->middleware('throttle:10,1')->name('identity.store');
     Route::get('/chat', [ChatController::class, 'index'])->name('chat');
     Route::post('/chat/products/{product}', [ChatController::class, 'start'])->middleware('throttle:20,1')->name('chat.start');
+});
+
+// Pending and rejected sellers can still reach their application, so this group skips the active check.
+Route::middleware(['auth', 'verified', 'role:seller', 'nocache'])->prefix('seller')->name('seller.')->group(function () {
+    Route::get('/application', [SellerApplicationController::class, 'show'])->name('application');
+    Route::post('/application', [SellerApplicationController::class, 'update'])->middleware('throttle:10,1')->name('application.update');
 });
 
 Route::middleware(['auth', 'active', 'verified', 'role:seller', 'nocache'])->prefix('seller')->name('seller.')->group(function () {
     Route::get('/dashboard', [SellerController::class, 'dashboard'])->name('dashboard');
     Route::get('/products', [SellerController::class, 'products'])->name('products');
     Route::post('/products', [SellerController::class, 'storeProduct'])->name('products.store');
+    Route::get('/products/create', [SellerController::class, 'createProduct'])->name('products.create');
+    Route::get('/products/{product}/edit', [SellerController::class, 'editProduct'])->name('products.edit');
+    Route::patch('/products/{product}/stock', [SellerController::class, 'updateStock'])->name('products.stock');
     Route::put('/products/{product}/sale', [ProductSaleController::class, 'update'])->name('products.sale');
     Route::put('/products/{product}', [SellerController::class, 'updateProduct'])->name('products.update');
     Route::delete('/products/{product}', [SellerController::class, 'deleteProduct'])->name('products.destroy');
@@ -118,6 +142,9 @@ Route::middleware(['auth', 'active', 'verified', 'role:seller', 'nocache'])->pre
     Route::get('/handover', [SellerController::class, 'handover'])->name('handover');
     Route::get('/reports', [SellerController::class, 'reports'])->name('reports');
     Route::get('/account', [SellerController::class, 'account'])->name('account');
+    Route::patch('/account/profile', [SellerController::class, 'updateProfile'])->name('account.profile');
+    Route::patch('/account/store', [SellerController::class, 'updateStore'])->name('account.store');
+    Route::put('/account/password', [SellerController::class, 'updatePassword'])->name('account.password');
     Route::get('/chat', [ChatController::class, 'index'])->name('chat');
 });
 
@@ -125,6 +152,7 @@ Route::middleware(['auth', 'active', 'verified', 'role:buyer,seller', 'nocache']
     Route::get('/inbox', [ChatController::class, 'inbox'])->middleware('throttle:120,1')->name('inbox');
     Route::get('/{conversation}', [ChatController::class, 'messages'])->whereNumber('conversation')->middleware('throttle:120,1')->name('list');
     Route::post('/{conversation}', [ChatController::class, 'send'])->whereNumber('conversation')->middleware('throttle:30,1')->name('send');
+    Route::post('/{conversation}/typing', [ChatController::class, 'typing'])->whereNumber('conversation')->middleware('throttle:60,1')->name('typing');
     Route::post('/{conversation}/read', [ChatController::class, 'read'])->whereNumber('conversation')->middleware('throttle:120,1')->name('read');
 });
 
@@ -144,11 +172,28 @@ Route::middleware(['auth', 'active', 'verified', 'role:admin', 'nocache'])->pref
     Route::get('/users', [AdminController::class, 'users'])->name('users');
     Route::patch('/users/{user}/status', [AdminController::class, 'updateUserStatus'])->name('users.status');
     Route::get('/registrations', [AdminController::class, 'registrations'])->name('registrations');
-    Route::get('/disputes', [AdminController::class, 'disputes'])->name('disputes');
-    Route::get('/compliance', [AdminController::class, 'compliance'])->name('compliance');
-    Route::get('/commissions', [AdminController::class, 'commissions'])->name('commissions');
-    Route::get('/reports', [AdminController::class, 'reports'])->name('reports');
-    Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
+    Route::get('/applications/{user}', [AdminController::class, 'sellerApplication'])->name('seller-applications.show');
+    Route::get('/applications/{user}/documents/{document}', [AdminController::class, 'sellerApplicationDocument'])->name('seller-applications.document');
+    Route::get('/logistics', [AdminController::class, 'logistics'])->name('logistics');
+    Route::get('/identity', [AdminController::class, 'identity'])->name('identity');
+    Route::get('/identity/{verification}/document', [AdminController::class, 'identityDocument'])->name('identity.document');
+    Route::patch('/identity/{verification}', [AdminController::class, 'reviewIdentity'])->name('identity.review');
     Route::get('/account', [AdminController::class, 'account'])->name('account');
-    Route::get('/chat', [AdminController::class, 'chat'])->name('chat');
+    Route::patch('/account/profile', [AdminController::class, 'updateProfile'])->name('account.profile');
+    Route::put('/account/password', [AdminController::class, 'updatePassword'])->name('account.password');
+    // Not built yet: these show a placeholder rather than the earlier sample-data mockups.
+    foreach (['disputes', 'compliance', 'commissions', 'reports', 'settings', 'chat'] as $section) {
+        Route::get("/{$section}", [AdminController::class, 'comingSoon'])->name($section);
+    }
+});
+
+Route::middleware(['auth', 'active', 'verified', 'role:logistics', 'nocache'])->prefix('logistics')->name('logistics.')->group(function () {
+    Route::get('/dashboard', [LogisticsController::class, 'dashboard'])->name('dashboard');
+    Route::get('/riders', [LogisticsController::class, 'riders'])->name('riders');
+    Route::get('/riders/{rider}/documents/{document}', [LogisticsController::class, 'riderDocument'])->name('riders.document');
+    Route::patch('/riders/{rider}', [LogisticsController::class, 'updateRider'])->middleware('throttle:60,1')->name('riders.update');
+    Route::get('/account', [LogisticsController::class, 'account'])->name('account');
+    Route::patch('/account/company', [LogisticsController::class, 'updateCompany'])->name('account.company');
+    Route::patch('/account/profile', [LogisticsController::class, 'updateProfile'])->name('account.profile');
+    Route::put('/account/password', [LogisticsController::class, 'updatePassword'])->name('account.password');
 });

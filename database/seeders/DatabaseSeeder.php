@@ -73,6 +73,7 @@ class DatabaseSeeder extends Seeder
             'logistics_provider_id' => $provider->id,
             'vehicle_type' => 'Motorcycle',
             'plate_no' => 'TEST-001',
+            'status' => 'approved',
         ]);
 
         User::create([

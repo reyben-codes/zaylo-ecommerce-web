@@ -119,6 +119,101 @@
     }
 }
 
+/* Phones and small tablets: the text sits in normal flow so the hero grows with it, the actions stack, and the carousel controls get their own space below. */
+@media (max-width: 640px) {
+    .home-hero {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        height: auto;
+        min-height: 420px;
+        max-height: none;
+        padding: 40px 20px 84px;
+    }
+
+    .home-hero .hero-text {
+        position: relative;
+        top: auto;
+        left: auto;
+        max-width: none;
+        transform: none;
+    }
+
+    .home-hero .hero-label {
+        margin-bottom: 12px;
+        font-size: .68rem;
+        letter-spacing: .16em;
+    }
+
+    .home-hero .hero-headline {
+        margin-bottom: 14px;
+        font-size: 2.6rem;
+    }
+
+    .home-hero .hero-desc {
+        display: block;
+        max-width: 340px;
+        margin-bottom: 24px;
+        font-size: .84rem;
+        line-height: 1.55;
+    }
+
+    .home-hero .hero-actions {
+        flex-direction: column;
+        gap: 14px;
+        align-items: flex-start;
+    }
+
+    .home-hero .hero-actions .btn-primary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 46px;
+        padding: 12px 24px;
+        font-size: .72rem;
+        white-space: nowrap;
+    }
+
+    .home-hero .hero-actions .link-lookbook {
+        display: inline-flex;
+        align-items: center;
+        min-height: 32px;
+        font-size: .84rem;
+        font-weight: 500;
+        white-space: nowrap;
+    }
+
+    .home-hero .hero-carousel-controls {
+        right: auto;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+}
+
+@media (max-width: 640px) {
+    /* The category row still swipes sideways; the partly visible last item hints at more. */
+    .categories {
+        scrollbar-width: none;
+    }
+
+    .categories::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .home-hero .hero-headline {
+        font-size: 2.3rem;
+    }
+}
+
+@media (max-width: 340px) {
+    .home-hero .hero-headline {
+        font-size: 2rem;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .home-hero .hero-slide,
     .home-hero .hero-carousel-dot::before {

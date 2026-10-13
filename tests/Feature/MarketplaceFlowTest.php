@@ -85,9 +85,12 @@ class MarketplaceFlowTest extends TestCase
 
     public function test_pending_marketplace_accounts_cannot_open_dashboards(): void
     {
+        // Pending sellers are kept on their application page; other pending partners are signed out.
         $seller = User::factory()->create(['role' => 'seller', 'status' => 'pending']);
+        $this->actingAs($seller)->get(route('seller.dashboard'))->assertRedirect(route('seller.application'));
 
-        $this->actingAs($seller)->get(route('seller.dashboard'))->assertRedirect(route('seller.login'));
+        $partner = User::factory()->create(['role' => 'logistics', 'status' => 'pending']);
+        $this->actingAs($partner)->get(route('logistics.dashboard'))->assertRedirect(route('logistics.login'));
         $this->assertGuest();
     }
 
@@ -97,8 +100,8 @@ class MarketplaceFlowTest extends TestCase
 
         $this->post(route('register'), [
             'first_name' => 'New', 'last_name' => 'Seller', 'email' => 'new-seller@example.com',
-            'password' => 'Strong-password!', 'password_confirmation' => 'Strong-password!',
-            'role' => 'seller', 'phone' => '09170000000',
+            'password' => 'Strong-password1!', 'password_confirmation' => 'Strong-password1!',
+            'role' => 'seller', 'phone' => '09170000000', 'terms' => '1',
         ])->assertRedirect(route('verification.notice'));
 
         $seller = User::where('email', 'new-seller@example.com')->firstOrFail();

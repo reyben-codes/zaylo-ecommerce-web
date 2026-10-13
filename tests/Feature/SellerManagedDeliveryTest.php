@@ -108,7 +108,8 @@ class SellerManagedDeliveryTest extends TestCase
             'payment_status' => 'pending',
             'order_number' => 'ZAY-'.strtoupper(uniqid()),
             'user_id' => $buyer->id,
-            'seller_id' => $seller->id,
+            // Checkout copies products.seller_id (the shop id) onto each order.
+            'seller_id' => $seller->sellerShop()->id,
             'status' => $status,
             'subtotal' => 250,
             'shipping_fee' => 50,

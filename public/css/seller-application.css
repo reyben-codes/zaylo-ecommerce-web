@@ -1,0 +1,323 @@
+/* Seller shop, pickup address and documents (sign-up and the seller application page). */
+.seller-application {
+    display: grid;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.seller-application__group {
+    min-width: 0;
+    margin: 0;
+    padding: 18px 0 0;
+    border: 0;
+    border-top: 1px solid #e8e0d7;
+}
+
+.seller-application__group legend {
+    padding: 0 0 12px;
+    color: #1a1714;
+    font-size: .95rem;
+    font-weight: 600;
+}
+
+.seller-application input[type=file] {
+    padding: 10px 12px;
+    font-size: .82rem;
+    cursor: pointer;
+}
+
+.seller-application input[type=file]::file-selector-button {
+    margin-right: 12px;
+    padding: 7px 12px;
+    border: 1px solid #1a1714;
+    border-radius: 7px;
+    background: #fff;
+    color: #1a1714;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.seller-application select:disabled {
+    background: #f4f0eb;
+    color: #8c7c6d;
+    cursor: not-allowed;
+}
+
+.seller-application__retry {
+    margin: 0 0 12px;
+    padding: 6px 12px;
+    border: 1px solid #1a1714;
+    border-radius: 7px;
+    background: #fff;
+    color: #1a1714;
+    font: inherit;
+    font-size: .8rem;
+    cursor: pointer;
+}
+
+.seller-application__retry[hidden] {
+    display: none;
+}
+
+.seller-application__postal {
+    max-width: 180px;
+}
+
+/* Documents for other seller types fold away, and unfold smoothly when the type changes. */
+.seller-document {
+    display: grid;
+    grid-template-rows: 1fr;
+    opacity: 1;
+    transition: grid-template-rows .3s ease-out, opacity .3s ease-out;
+}
+
+.seller-document.is-collapsed {
+    grid-template-rows: 0fr;
+    opacity: 0;
+}
+
+.seller-document__inner {
+    min-height: 0;
+    overflow: hidden;
+}
+
+@media (max-width: 560px) {
+    .seller-application__postal {
+        max-width: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .seller-document {
+        transition: none;
+    }
+}
+
+/* Seller application page (pending, rejected or not yet submitted). */
+.seller-application-page {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 40px 20px 72px;
+    color: #2a241f;
+}
+
+.seller-application-page__eyebrow {
+    margin-bottom: 6px;
+    color: #806f61;
+    font-size: .72rem;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+}
+
+.seller-application-page h1 {
+    margin-bottom: 20px;
+    color: #1a1714;
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+}
+
+.application-status {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    padding: 18px 20px;
+    border: 1px solid #e3d9cf;
+    border-radius: 12px;
+    background: #fff;
+}
+
+.application-status > i {
+    margin-top: 3px;
+    color: #9a755e;
+    font-size: 1.2rem;
+}
+
+.application-status h2 {
+    margin-bottom: 6px;
+    color: #1a1714;
+    font-size: 1.02rem;
+}
+
+.application-status p {
+    font-size: .86rem;
+    line-height: 1.6;
+}
+
+.application-status--rejected {
+    border-color: #e5b8b4;
+    background: #fdf5f4;
+}
+
+.application-status--rejected > i {
+    color: #a4413b;
+}
+
+.application-status__reason {
+    margin-bottom: 6px;
+    color: #7c2f2a;
+}
+
+.application-summary {
+    margin-bottom: 24px;
+    padding: 18px 20px;
+    border: 1px solid #e3d9cf;
+    border-radius: 12px;
+    background: #fff;
+}
+
+.application-summary h2 {
+    margin-bottom: 12px;
+    color: #1a1714;
+    font-size: .98rem;
+}
+
+.application-summary dl {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+}
+
+.application-summary dl > div {
+    display: grid;
+    grid-template-columns: 140px minmax(0, 1fr);
+    gap: 12px;
+    font-size: .86rem;
+}
+
+.application-summary dt {
+    color: #806f61;
+}
+
+.application-summary dd {
+    margin: 0;
+    color: #1a1714;
+}
+
+.application-form {
+    padding: 4px 20px 20px;
+    border: 1px solid #e3d9cf;
+    border-radius: 12px;
+    background: #fff;
+}
+
+.application-form .alert-error {
+    margin-top: 16px;
+    padding: 12px 16px;
+    border: 1px solid #e5b8b4;
+    border-radius: 10px;
+    background: #fdf5f4;
+    color: #7c2f2a;
+    font-size: .84rem;
+}
+
+.application-form .alert-error ul {
+    padding-left: 18px;
+}
+
+.seller-application-page .form-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.seller-application-page .form-group {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+    margin-bottom: 16px;
+}
+
+.seller-application-page .form-group label {
+    color: #1a1714;
+    font-size: .82rem;
+    font-weight: 600;
+}
+
+.seller-application-page .form-group input,
+.seller-application-page .form-group select {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 14px;
+    border: 1px solid #dcd2c8;
+    border-radius: 10px;
+    background: #fff;
+    color: #1a1714;
+    font: inherit;
+    font-size: .9rem;
+}
+
+.seller-application-page .form-group input:focus,
+.seller-application-page .form-group select:focus {
+    outline: 2px solid #9a755e;
+    outline-offset: 1px;
+}
+
+.seller-application-page .field-note {
+    color: #806f61;
+    font-size: .75rem;
+    line-height: 1.5;
+}
+
+.application-form__submit {
+    width: 100%;
+    min-height: 48px;
+    margin-top: 8px;
+    border: 0;
+    border-radius: 10px;
+    background: #1a1714;
+    color: #fff;
+    font: inherit;
+    font-size: .85rem;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background-color .18s ease;
+}
+
+.application-form__submit:hover {
+    background: #3a322b;
+}
+
+.seller-application-page__signout {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.seller-application-page__signout button {
+    border: 0;
+    background: none;
+    color: #6b5f54;
+    font: inherit;
+    font-size: .84rem;
+    cursor: pointer;
+}
+
+.seller-application-page__signout button:hover {
+    color: #1a1714;
+    text-decoration: underline;
+}
+
+@media (max-width: 560px) {
+    .seller-application-page .form-row {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+
+    .application-summary dl > div {
+        grid-template-columns: 1fr;
+        gap: 2px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .application-form__submit {
+        transition: none;
+    }
+}
+
+.seller-application__group > .field-note {
+    margin: 0 0 14px;
+}

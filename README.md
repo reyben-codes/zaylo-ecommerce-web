@@ -48,6 +48,12 @@ With `MAIL_MAILER=log`, messages are written to the configured application log, 
 
 `php artisan migrate --seed` creates development-only accounts for each role. Their password is `password`. Never run `DatabaseSeeder` against production data.
 
+To create an administrator on a deployed database, run `php artisan admin:provision admin@example.com --name="Full Name"`; it behaves like the seller command below and signs in at `/login`.
+
+Logistics partners register from `/register?role=logistics` and need administrator approval (Admin Center → Approvals), then sign in at `/logistics/login`. Create an approved partner directly with `php artisan logistics:provision dispatch@example.com --company="Company Name"`. Riders register from `/register?role=courier`, choose an approved partner, and are approved by that partner in its Logistics Center.
+
+To create a real seller login on a deployed database, run `php artisan seller:provision seller@example.com --name="Full Name" --store="Store Name"`. The account is created verified, active, and approved, and a strong password is printed once. Re-running the command repairs the account without changing its password; add `--reset-password` to issue a new one. It refuses to convert existing buyer, courier, or admin accounts.
+
 ## Verification
 
 ```bash

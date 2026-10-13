@@ -1,8 +1,37 @@
 @extends('layouts.auth')
 
-@php($sellerPortal = $sellerPortal ?? false)
+@php
+    $portal ??= 'shop';
+    $copy = [
+        'shop' => [
+            'title' => 'ZAYLO · Log In', 'tagline' => ['Driven by passion.', 'Defined by your origin'],
+            'back' => [route('products.index'), 'Continue shopping'], 'label' => 'ZAYLO ACCOUNT', 'heading' => 'Welcome Back',
+            'subtitle' => 'Sign in to track orders, save favorites, and shop your everyday essentials.',
+            'action' => route('login'), 'button' => 'Sign In',
+        ],
+        'seller' => [
+            'title' => 'ZAYLO · Seller Sign In', 'tagline' => ['Build your business.', 'Grow with ZAYLO'],
+            'back' => [route('home'), 'Back to ZAYLO'], 'label' => 'ZAYLO SELLER CENTER', 'heading' => 'Welcome, Seller',
+            'subtitle' => 'Sign in to manage products, inventory, orders, and sales.',
+            'action' => route('seller.login.submit'), 'button' => 'Enter Seller Center',
+        ],
+        'logistics' => [
+            'title' => 'ZAYLO · Logistics Sign In', 'tagline' => ['Deliver with confidence.', 'Move with ZAYLO'],
+            'back' => [route('home'), 'Back to ZAYLO'], 'label' => 'ZAYLO LOGISTICS CENTER', 'heading' => 'Welcome, Partner',
+            'subtitle' => 'Sign in to review rider applications and manage your delivery team.',
+            'action' => route('logistics.login.submit'), 'button' => 'Enter Logistics Center',
+        ],
+        'admin' => [
+            'title' => 'ZAYLO · Admin Sign In', 'tagline' => ['Keep the marketplace running.', 'Lead with ZAYLO'],
+            'back' => [route('home'), 'Back to ZAYLO'], 'label' => 'ZAYLO ADMIN CENTER', 'heading' => 'Welcome, Admin',
+            'subtitle' => 'Sign in to review applications and manage marketplace accounts.',
+            'action' => route('admin.login.submit'), 'button' => 'Enter Admin Center',
+        ],
+    ][$portal];
+    $partnerPortal = $portal !== 'shop';
+@endphp
 
-@section('title', $sellerPortal ? 'ZAYLO · Seller Sign In' : 'ZAYLO · Log In')
+@section('title', $copy['title'])
 
 @push('styles')
 <style>
@@ -96,7 +125,7 @@
 @endpush
 
 @section('content')
-<div class="auth-container{{ $sellerPortal ? ' seller-auth' : '' }}">
+<div class="auth-container{{ $partnerPortal ? ' seller-auth' : '' }}">
     <!-- Left Side - Image -->
     <div class="auth-image">
         <div class="auth-image-content">
@@ -107,8 +136,8 @@
                 </span>
             </div>
             <div class="auth-image-text">
-                <p>{{ $sellerPortal ? 'Build your business.' : 'Driven by passion.' }}</p>
-                <p>{{ $sellerPortal ? 'Grow with ZAYLO' : 'Defined by your origin' }}</p>
+                <p>{{ $copy['tagline'][0] }}</p>
+                <p>{{ $copy['tagline'][1] }}</p>
             </div>
         </div>
         <div class="auth-image-overlay"></div>
@@ -116,15 +145,15 @@
 
     <!-- Right Side - Form -->
     <div class="auth-form">
-        <a href="{{ $sellerPortal ? route('home') : route('products.index') }}" class="continue-shopping">
-            <span aria-hidden="true">&larr;</span> {{ $sellerPortal ? 'Back to ZAYLO' : 'Continue shopping' }}
+        <a href="{{ $copy['back'][0] }}" class="continue-shopping">
+            <span aria-hidden="true">&larr;</span> {{ $copy['back'][1] }}
         </a>
 
         <div class="auth-form-content">
             <div class="auth-header">
-                <span class="auth-label">{{ $sellerPortal ? 'ZAYLO SELLER CENTER' : 'ZAYLO ACCOUNT' }}</span>
-                <h1 id="welcomeHeading">{{ $sellerPortal ? 'Welcome, Seller' : 'Welcome Back' }}</h1>
-                <p class="auth-subtitle">{{ $sellerPortal ? 'Sign in to manage products, inventory, orders, and sales.' : 'Sign in to track orders, save favorites, and shop your everyday essentials.' }}</p>
+                <span class="auth-label">{{ $copy['label'] }}</span>
+                <h1 id="welcomeHeading">{{ $copy['heading'] }}</h1>
+                <p class="auth-subtitle">{{ $copy['subtitle'] }}</p>
             </div>
 
             @if ($errors->any())
@@ -144,7 +173,7 @@
             @endif
 
             <!-- Login Form -->
-            <form method="POST" action="{{ $sellerPortal ? route('seller.login.submit') : route('login') }}" id="loginForm">
+            <form method="POST" action="{{ $copy['action'] }}" id="loginForm">
                 @csrf
 
                 <div class="form-group">
@@ -172,10 +201,10 @@
                     <a href="{{ route('password.request') }}" class="forgot-password">Forgot Password?</a>
                 </div>
 
-                <button type="submit" class="btn-auth-primary">{{ $sellerPortal ? 'Enter Seller Center' : 'Sign In' }}</button>
+                <button type="submit" class="btn-auth-primary">{{ $copy['button'] }}</button>
             </form>
 
-            @unless($sellerPortal)
+            @unless($partnerPortal)
             <div class="auth-divider"><span>or</span></div>
             <div class="social-login">
                 <a href="{{ route('google.redirect') }}" class="btn-social btn-google">
@@ -213,12 +242,18 @@
             @endunless
 
             <div class="auth-footer">
-                @if($sellerPortal)
+                @if($portal === 'seller')
                     <p>New to ZAYLO? <a href="{{ route('register', ['role' => 'seller']) }}">Apply to become a seller</a></p>
+                    <p style="margin-top:8px;">Shopping on ZAYLO? <a href="{{ route('login') }}">Use the shop sign in</a></p>
+                @elseif($portal === 'admin')
+                    <p>Not an administrator? <a href="{{ route('login') }}">Use the shop sign in</a></p>
+                @elseif($portal === 'logistics')
+                    <p>New partner? <a href="{{ route('register', ['role' => 'logistics']) }}">Apply to become a logistics partner</a></p>
                     <p style="margin-top:8px;">Shopping on ZAYLO? <a href="{{ route('login') }}">Use the shop sign in</a></p>
                 @else
                     <p>Don't have an account? <a href="{{ route('register') }}">Create new account</a></p>
                     <p style="margin-top:8px;">Selling on ZAYLO? <a href="{{ route('seller.login') }}">Sign in to Seller Center</a></p>
+                    <p style="margin-top:4px;">Delivery partner? <a href="{{ route('logistics.login') }}">Sign in to Logistics Center</a></p>
                 @endif
             </div>
         </div>

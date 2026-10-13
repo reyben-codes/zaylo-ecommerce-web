@@ -55,17 +55,25 @@ class Product extends Model
 
             if ($product->variantInput !== []) {
                 $variant = $product->variants()->oldest('id')->first() ?? new ProductVariant(['product_id' => $product->id]);
-                $variant->fill([
-                    'sku' => $product->variantInput['sku'] ?? 'ZAY-'.Str::upper(Str::random(8)),
-                    'name' => $product->variantInput['variant_name'] ?? 'Default',
-                    'options' => $product->variantInput['options'] ?? null,
-                    'price_minor' => $product->variantInput['price_minor'] ?? 0,
-                    'original_price_minor' => $product->variantInput['original_price_minor'] ?? null,
-                    'stock' => $product->variantInput['stock'] ?? 0,
-                    'low_stock_threshold' => $product->variantInput['low_stock_threshold'] ?? 5,
-                    'weight_grams' => $product->variantInput['weight_grams'] ?? null,
-                    'is_active' => $product->is_active ?? true,
-                ])->save();
+                // Only submitted fields change on an existing variant; defaults apply to a brand-new one.
+                $columns = [
+                    'sku' => 'sku', 'variant_name' => 'name', 'options' => 'options', 'price_minor' => 'price_minor',
+                    'original_price_minor' => 'original_price_minor', 'stock' => 'stock',
+                    'low_stock_threshold' => 'low_stock_threshold', 'weight_grams' => 'weight_grams',
+                ];
+                $attributes = ['is_active' => $product->is_active ?? true];
+                foreach ($columns as $input => $column) {
+                    if (array_key_exists($input, $product->variantInput)) {
+                        $attributes[$column] = $product->variantInput[$input];
+                    }
+                }
+                if (! $variant->exists) {
+                    $attributes += [
+                        'sku' => 'ZAY-'.Str::upper(Str::random(8)), 'name' => 'Default',
+                        'price_minor' => 0, 'stock' => 0, 'low_stock_threshold' => 5,
+                    ];
+                }
+                $variant->fill($attributes)->save();
                 $product->variantInput = [];
                 $product->unsetRelation('defaultVariant');
             }
@@ -99,12 +107,7 @@ class Product extends Model
 
         $user = User::find($value);
         if ($user?->hasRole('seller')) {
-            $shop = $user->sellers()->firstOrCreate([], [
-                'name' => $user->name."'s Store",
-                'slug' => Str::slug($user->name).'-'.Str::lower(Str::random(6)),
-                'status' => $user->status === 'active' ? 'approved' : 'pending',
-            ]);
-            $this->attributes['seller_id'] = $shop->id;
+            $this->attributes['seller_id'] = $user->sellerShop()->id;
             return;
         }
 
@@ -219,6 +222,16 @@ class Product extends Model
         return $this->hasMany(ProductVariant::class);
     }
 
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(ProductReview::class);
+    }
+
+    public function scopeWithReviewSummary($query)
+    {
+        return $query->withCount('reviews')->withAvg('reviews', 'rating');
+    }
+
     public function defaultVariant(): HasOne
     {
         return $this->hasOne(ProductVariant::class)->oldestOfMany();
@@ -227,6 +240,37 @@ class Product extends Model
     public function images(): HasMany
     {
         return $this->hasMany(ProductImage::class)->orderBy(static::usesLegacySchema() ? 'sort_order' : 'position');
+    }
+
+    /**
+     * True when nothing can be bought. Uses the catalog's preloaded variant totals when present to avoid extra queries.
+     */
+    public function getIsSoldOutAttribute(): bool
+    {
+        if (array_key_exists('catalog_variant_stock', $this->attributes) && (int) ($this->attributes['active_variants_count'] ?? 0) > 0) {
+            return (int) $this->attributes['catalog_variant_stock'] <= 0;
+        }
+        if (static::usesLegacySchema()) {
+            // Kept equal to the variant total by syncStockFromVariants().
+            return (int) ($this->attributes['stock'] ?? 0) <= 0;
+        }
+
+        return (int) $this->variants->where('is_active', true)->sum('stock') <= 0;
+    }
+
+    /**
+     * On the deployed schema products.stock drives catalog listings; keep it equal to the sum of its variants.
+     */
+    public static function syncStockFromVariants(int $productId): void
+    {
+        if (! static::usesLegacySchema()) {
+            return;
+        }
+
+        $variants = ProductVariant::where('product_id', $productId)->where('is_active', true);
+        if ((clone $variants)->exists()) {
+            static::whereKey($productId)->update(['stock' => (int) (clone $variants)->sum('stock')]);
+        }
     }
 
     public static function usesLegacySchema(): bool

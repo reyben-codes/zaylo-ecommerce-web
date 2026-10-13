@@ -21,7 +21,7 @@ class VerifyEmailCode extends Notification
             ->greeting('Welcome to ZAYLO!')
             ->line('Enter this six-digit code in the verification step to confirm your email address:')
             ->line($this->code)
-            ->line('This code expires in 10 minutes. Do not share it with anyone.')
+            ->line('This code expires in 5 minutes. Do not share it with anyone.')
             ->line('If you did not request this code, you can ignore this email.');
     }
 }

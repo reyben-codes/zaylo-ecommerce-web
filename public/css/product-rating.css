@@ -1,0 +1,5 @@
+.catalog-review-summary { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; width: fit-content; max-width: 100%; margin: 8px 0; color: #6b5f54; font-size: .75rem; line-height: 1.6; text-decoration: none; }
+.catalog-review-summary .catalog-review-stars { color: #9a6810; font-size: .95rem; letter-spacing: 1px; white-space: nowrap; }
+.catalog-review-summary strong { color: #514439; font-weight: 600; }
+.catalog-review-summary:hover { text-decoration: underline; text-underline-offset: 3px; }
+.catalog-review-summary:focus-visible { outline: 2px solid #795a43; outline-offset: 3px; border-radius: 4px; }

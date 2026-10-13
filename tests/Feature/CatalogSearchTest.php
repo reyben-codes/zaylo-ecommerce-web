@@ -71,7 +71,9 @@ class CatalogSearchTest extends TestCase
     {
         $available = $this->product();
         $sold = $this->product(['stock' => 0]);
-        $this->get(route('products.index'))->assertOk()->assertViewHas('products', fn ($products) => $products->pluck('id')->all() === [$available->id]);
+        // Everything is listed by default, available products first even though the sold-out one is newer.
+        $this->get(route('products.index'))->assertOk()->assertViewHas('products', fn ($products) => $products->pluck('id')->all() === [$available->id, $sold->id]);
+        $this->get(route('products.index', ['availability' => 'in_stock']))->assertOk()->assertViewHas('products', fn ($products) => $products->pluck('id')->all() === [$available->id]);
         $this->get(route('products.index', ['availability' => 'out_of_stock']))->assertOk()
             ->assertViewHas('products', fn ($products) => $products->pluck('id')->all() === [$sold->id])->assertSee('Currently sold out');
         $this->get(route('products.index', ['availability' => 'all']))->assertOk()->assertViewHas('products', fn ($products) => $products->total() === 2);
@@ -106,10 +108,35 @@ class CatalogSearchTest extends TestCase
         $this->get($pagination->nextPageUrl())->assertOk()->assertViewHas('products', fn ($products) => $products->count() === 1);
     }
 
+    public function test_unisex_products_appear_under_men_and_women(): void
+    {
+        $this->product(['name' => 'Unisex sneaker', 'gender' => 'unisex']);
+        $this->product(['name' => 'Mens loafer', 'gender' => 'men']);
+        $this->product(['name' => 'Womens heel', 'gender' => 'women']);
+
+        $this->get(route('products.index', ['gender' => 'men']))->assertOk()
+            ->assertSee('Unisex sneaker')->assertSee('Mens loafer')->assertDontSee('Womens heel');
+        $this->get(route('products.index', ['gender' => 'women']))->assertOk()
+            ->assertSee('Unisex sneaker')->assertSee('Womens heel')->assertDontSee('Mens loafer');
+        $this->get(route('products.index', ['gender' => 'unisex']))->assertOk()
+            ->assertSee('Unisex sneaker')->assertDontSee('Mens loafer')->assertDontSee('Womens heel');
+    }
+
     public function test_invalid_filter_inputs_are_rejected(): void
     {
         foreach ([['min_price' => -1], ['min_price' => 500, 'max_price' => 100], ['availability' => 'invalid'], ['sort' => 'invalid'], ['search' => ['invalid']], ['on_sale' => 'invalid']] as $filters) {
             $this->getJson(route('products.index', $filters))->assertUnprocessable();
+        }
+    }
+
+    public function test_buyer_cards_show_escaped_descriptions_on_all_browsing_pages(): void
+    {
+        $description = 'Comfortable shoes <script>alert(1)</script> '.str_repeat('Everyday comfort. ', 30);
+        $this->product(['description' => $description]);
+        $this->actingAs(User::factory()->create(['role' => 'buyer', 'status' => 'active']));
+        foreach (['home', 'products.index', 'buyer.dashboard'] as $route) {
+            $this->get(route($route))->assertOk()->assertSee('class="product-card-description"', false)
+                ->assertSee($description)->assertDontSee('<script>alert(1)</script>', false);
         }
     }
 
@@ -120,5 +147,18 @@ class CatalogSearchTest extends TestCase
             ->assertSeeText('3 active')->assertSee('Remove From ₱0.00')
             ->assertSee('Remove Women')->assertSee('Remove On sale')->assertSeeText('Show products');
         $this->get(route('products.index'))->assertOk()->assertDontSee('class="catalog-filter-count"', false);
+    }
+
+    public function test_cards_reserve_description_space_even_when_description_is_missing(): void
+    {
+        foreach ([null, '', 'Short description', str_repeat('Long description. ', 40)] as $description) {
+            $this->product(['description' => $description]);
+        }
+        $this->actingAs(User::factory()->create(['role' => 'buyer', 'status' => 'active']));
+        foreach (['home', 'products.index', 'buyer.dashboard'] as $route) {
+            $response = $this->get(route($route))->assertOk();
+            $this->assertSame(4, substr_count($response->getContent(), 'class="product-card-description"'));
+            $this->assertSame(2, substr_count($response->getContent(), 'class="product-card-description">No Description</p>'));
+        }
     }
 }

@@ -1,0 +1,41 @@
+/* Terms and Privacy Policy consent on the sign-up form. */
+.terms-consent {
+    margin: 18px 0 4px;
+}
+
+.terms-consent__label {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    color: #2a241f;
+    font-size: .8rem;
+    line-height: 1.5;
+    cursor: pointer;
+}
+
+.terms-consent__label input {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    margin-top: 1px;
+    accent-color: #1a1714;
+    cursor: pointer;
+}
+
+.terms-consent__label input:focus-visible {
+    outline: 2px solid #9a755e;
+    outline-offset: 2px;
+}
+
+.terms-consent__label a {
+    color: #1a1714;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.terms-consent__error {
+    margin-top: 6px;
+    color: #a4413b;
+    font-size: .75rem;
+}

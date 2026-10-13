@@ -1,0 +1,66 @@
+/* Seller dashboard lists. Shared layout lives in seller-workspace.css. */
+.dashboard-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.dashboard-list__item {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid #f1ebe5;
+}
+
+.dashboard-list__item:last-child {
+    border-bottom: 0;
+}
+
+.dashboard-list__main {
+    flex: 1;
+    min-width: 0;
+}
+
+.dashboard-list__main strong,
+.dashboard-list__main span {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dashboard-list__main strong {
+    color: var(--zaylo-ink);
+    font-size: .8rem;
+}
+
+.dashboard-list__main span {
+    margin-top: 4px;
+    color: var(--zaylo-muted);
+    font-size: .7rem;
+}
+
+.dashboard-list__amount {
+    flex: 0 0 auto;
+    min-width: 92px;
+    color: var(--zaylo-ink);
+    font-size: .8rem;
+    text-align: right;
+}
+
+@media (max-width: 560px) {
+    .dashboard-list__item {
+        flex-wrap: wrap;
+        padding: 14px 16px;
+    }
+
+    .dashboard-list__main {
+        flex-basis: 100%;
+    }
+
+    .dashboard-list__amount {
+        min-width: 0;
+        margin-left: auto;
+    }
+}

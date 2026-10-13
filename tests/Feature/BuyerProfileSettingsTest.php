@@ -115,17 +115,17 @@ class BuyerProfileSettingsTest extends TestCase
 
         $this->put(route('buyer.account.password'), [
             'current_password' => 'incorrect',
-            'password' => 'New-password!',
-            'password_confirmation' => 'New-password!',
+            'password' => 'New-password1!',
+            'password_confirmation' => 'New-password1!',
         ])->assertSessionHasErrors('current_password');
         $this->assertTrue(Hash::check('password', $buyer->fresh()->password));
 
         $this->put(route('buyer.account.password'), [
             'current_password' => 'password',
-            'password' => 'New-password!',
-            'password_confirmation' => 'New-password!',
+            'password' => 'New-password1!',
+            'password_confirmation' => 'New-password1!',
         ])->assertRedirect()->assertSessionHasNoErrors()->assertSessionHas('status', 'Password updated.');
-        $this->assertTrue(Hash::check('New-password!', $buyer->fresh()->password));
+        $this->assertTrue(Hash::check('New-password1!', $buyer->fresh()->password));
     }
 
     public function test_google_linked_buyer_can_create_a_password_but_not_change_google_email(): void
@@ -148,10 +148,10 @@ class BuyerProfileSettingsTest extends TestCase
         ])->assertSessionHasErrors('email');
 
         $this->put(route('buyer.account.password'), [
-            'password' => 'Local-password!',
-            'password_confirmation' => 'Local-password!',
+            'password' => 'Local-password1!',
+            'password_confirmation' => 'Local-password1!',
         ])->assertRedirect()->assertSessionHasNoErrors();
-        $this->assertTrue(Hash::check('Local-password!', $buyer->fresh()->password));
+        $this->assertTrue(Hash::check('Local-password1!', $buyer->fresh()->password));
     }
 
     public function test_address_type_shortcut_preselects_the_requested_type(): void

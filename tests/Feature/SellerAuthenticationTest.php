@@ -67,10 +67,12 @@ class SellerAuthenticationTest extends TestCase
             'password' => 'SellerPass123!',
         ]);
 
+        // Pending sellers sign in to their application page, never the Seller Center.
         $this->from(route('seller.login'))->post(route('seller.login.submit'), [
             'email' => $seller->email,
             'password' => 'SellerPass123!',
-        ])->assertRedirect(route('seller.login'))->assertSessionHasErrors('email');
-        $this->assertGuest();
+        ])->assertRedirect(route('seller.application'));
+        $this->get(route('seller.dashboard'))->assertRedirect(route('seller.application'));
+        $this->get(route('seller.products'))->assertRedirect(route('seller.application'));
     }
 }

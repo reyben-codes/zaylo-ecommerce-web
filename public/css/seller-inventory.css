@@ -1,0 +1,236 @@
+/* Seller inventory: stock table and quick restocking. Shared layout lives in seller-workspace.css. */
+.inventory-filter-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.inventory-filter-actions .seller-button {
+    min-height: 40px;
+}
+
+.inventory-table {
+    min-width: 900px;
+}
+
+.stock-count {
+    display: block;
+    color: var(--zaylo-ink);
+    font-size: .9rem;
+}
+
+/* Stock per option: a one-line summary that opens to each color and its sizes. */
+.stock-breakdown {
+    min-width: 180px;
+    max-width: 320px;
+    margin-top: 8px;
+    border-top: 1px solid #f1ebe5;
+}
+
+.stock-breakdown__summary {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 0 2px;
+    color: var(--zaylo-muted);
+    font-size: .7rem;
+    list-style: none;
+    cursor: pointer;
+}
+
+.stock-breakdown__summary::-webkit-details-marker {
+    display: none;
+}
+
+.stock-breakdown__summary:hover {
+    color: var(--zaylo-ink);
+}
+
+.stock-breakdown__summary:focus-visible {
+    outline: 2px solid var(--zaylo-accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+.stock-breakdown__flag {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    font-size: .6rem;
+    font-weight: 700;
+}
+
+.stock-breakdown__flag.is-out {
+    background: #f9e5e3;
+    color: #a4413b;
+}
+
+.stock-breakdown__flag.is-low {
+    background: #fbf0dc;
+    color: #8f5b17;
+}
+
+.stock-breakdown__chevron {
+    flex: none;
+    font-size: .62rem;
+    transition: transform .28s ease-out;
+}
+
+.stock-breakdown[open] > .stock-breakdown__summary:not([aria-expanded="false"]) .stock-breakdown__chevron {
+    transform: rotate(180deg);
+}
+
+.stock-breakdown__body {
+    display: grid;
+    gap: 10px;
+    padding: 8px 0 2px;
+}
+
+.stock-breakdown__color {
+    display: grid;
+    gap: 5px;
+}
+
+.stock-breakdown__color-head {
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    color: var(--zaylo-ink);
+    font-size: .72rem;
+    font-weight: 600;
+}
+
+.stock-breakdown__color-head > .is-low {
+    color: #8f5b17;
+}
+
+.stock-breakdown__color-head > .is-out {
+    color: #a4413b;
+}
+
+.stock-breakdown__sizes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.stock-breakdown__sizes li {
+    display: inline-flex;
+    gap: 4px;
+    align-items: baseline;
+    padding: 2px 7px;
+    border: 1px solid #ebe3da;
+    border-radius: 6px;
+    background: #fbf9f6;
+    color: var(--zaylo-muted);
+    font-size: .64rem;
+}
+
+.stock-breakdown__sizes li strong {
+    color: var(--zaylo-ink);
+}
+
+.stock-breakdown__sizes li.is-low {
+    border-color: #f0dcb8;
+    background: #fdf7ec;
+}
+
+.stock-breakdown__sizes li.is-low strong {
+    color: #8f5b17;
+}
+
+.stock-breakdown__sizes li.is-out {
+    border-style: dashed;
+    background: #fdf5f4;
+    color: #b18a86;
+}
+
+.stock-breakdown__sizes li.is-out strong {
+    color: #a4413b;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .stock-breakdown__chevron {
+        transition: none;
+    }
+}
+
+.visibility {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    color: var(--zaylo-muted);
+    font-size: .72rem;
+}
+
+.visibility.is-visible {
+    color: #2d6d3e;
+}
+
+.inventory-table .seller-product-cell {
+    min-width: 260px;
+}
+
+/* While a row's stock breakdown is open, its photo and name grow into the taller row. */
+.inventory-table .seller-product-cell img,
+.inventory-table .seller-product-cell strong,
+.inventory-table .seller-product-cell .seller-cell-note,
+.inventory-table .inventory-price strong {
+    transition: width .3s ease-out, height .3s ease-out, flex-basis .3s ease-out, font-size .3s ease-out, border-radius .3s ease-out, box-shadow .3s ease-out;
+}
+
+.inventory-table tr:has(.stock-breakdown__summary[aria-expanded="true"]) .seller-product-cell,
+.inventory-table tr:has(.stock-breakdown[open] > .stock-breakdown__summary:not([aria-expanded])) .seller-product-cell {
+    gap: 18px;
+}
+
+.inventory-table tr:has(.stock-breakdown__summary[aria-expanded="true"]) .seller-product-cell img,
+.inventory-table tr:has(.stock-breakdown[open] > .stock-breakdown__summary:not([aria-expanded])) .seller-product-cell img {
+    flex-basis: 128px;
+    width: 128px;
+    height: 128px;
+    border-radius: 12px;
+    box-shadow: 0 0 0 1px #ece4db;
+}
+
+.inventory-table tr:has(.stock-breakdown__summary[aria-expanded="true"]) .seller-product-cell strong,
+.inventory-table tr:has(.stock-breakdown[open] > .stock-breakdown__summary:not([aria-expanded])) .seller-product-cell strong {
+    font-size: 1.05rem;
+}
+
+.inventory-table tr:has(.stock-breakdown__summary[aria-expanded="true"]) .seller-product-cell .seller-cell-note,
+.inventory-table tr:has(.stock-breakdown[open] > .stock-breakdown__summary:not([aria-expanded])) .seller-product-cell .seller-cell-note {
+    font-size: .78rem;
+}
+
+.inventory-table tr:has(.stock-breakdown__summary[aria-expanded="true"]) .inventory-price strong,
+.inventory-table tr:has(.stock-breakdown[open] > .stock-breakdown__summary:not([aria-expanded])) .inventory-price strong {
+    font-size: 1.05rem;
+}
+
+@media (max-width: 720px) {
+    .inventory-table tr:has(.stock-breakdown__summary[aria-expanded="true"]) .seller-product-cell img,
+    .inventory-table tr:has(.stock-breakdown[open] > .stock-breakdown__summary:not([aria-expanded])) .seller-product-cell img {
+        flex-basis: 84px;
+        width: 84px;
+        height: 84px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .inventory-table .seller-product-cell img,
+    .inventory-table .seller-product-cell strong,
+    .inventory-table .seller-product-cell .seller-cell-note,
+    .inventory-table .inventory-price strong {
+        transition: none;
+    }
+}
+
+.inventory-table .visibility {
+    display: flex;
+    margin-top: 7px;
+}

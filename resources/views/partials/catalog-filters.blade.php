@@ -14,7 +14,7 @@
     </div>
     @php
         $extraFilterCount = collect(['gender', 'min_price', 'max_price'])->filter(fn ($key) => isset($filters[$key]) && $filters[$key] !== '')->count()
-            + ($filters['availability'] !== 'in_stock' ? 1 : 0) + (!empty($filters['on_sale']) ? 1 : 0);
+            + ($filters['availability'] !== 'all' ? 1 : 0) + (!empty($filters['on_sale']) ? 1 : 0);
     @endphp
     <details class="catalog-more-filters" data-smooth-disclosure>
         <summary>More filters @if($extraFilterCount)<span class="catalog-filter-count">{{ $extraFilterCount }} active</span>@endif<span class="catalog-disclosure-icon" aria-hidden="true">+</span></summary>
@@ -26,7 +26,7 @@
         <label>Minimum price (₱)<input type="number" name="min_price" min="0" max="99999999.99" step="0.01" inputmode="decimal" placeholder="0" value="{{ $filters['min_price'] ?? '' }}"></label>
         <label>Maximum price (₱)<input type="number" name="max_price" min="0" max="99999999.99" step="0.01" inputmode="decimal" placeholder="No limit" value="{{ $filters['max_price'] ?? '' }}"></label>
         <label>Availability<select name="availability">
-            @foreach(['in_stock' => 'In stock', 'all' => 'All products', 'out_of_stock' => 'Sold out'] as $key => $label)<option value="{{ $key }}" @selected($filters['availability'] === $key)>{{ $label }}</option>@endforeach
+            @foreach(['all' => 'All products', 'in_stock' => 'In stock only', 'out_of_stock' => 'Sold out'] as $key => $label)<option value="{{ $key }}" @selected($filters['availability'] === $key)>{{ $label }}</option>@endforeach
         </select></label>
     </div>
     <div class="catalog-filter-footer">

@@ -1,0 +1,68 @@
+/* Desktop rider application on the sign-up form. */
+.rider-application {
+    display: grid;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.rider-application__group {
+    min-width: 0;
+    margin: 0;
+    padding: 16px 0 0;
+    border: 0;
+    border-top: 1px solid #e8e0d7;
+}
+
+.rider-application__group legend {
+    padding: 0 0 12px;
+    color: #1a1714;
+    font-size: .95rem;
+    font-weight: 600;
+}
+
+.rider-application__group > .field-note {
+    margin: 0 0 14px;
+}
+
+.rider-application input[type=file] {
+    padding: 10px 12px;
+    font-size: .82rem;
+    cursor: pointer;
+}
+
+.rider-application input[type=file]::file-selector-button {
+    margin-right: 12px;
+    padding: 7px 12px;
+    border: 1px solid #1a1714;
+    border-radius: 7px;
+    background: #fff;
+    color: #1a1714;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* License, plate and document fields fold away for bicycles and unfold smoothly. */
+.rider-licensed {
+    display: grid;
+    grid-template-rows: 1fr;
+    min-width: 0;
+    opacity: 1;
+    transition: grid-template-rows .3s ease-out, opacity .3s ease-out;
+}
+
+.rider-licensed.is-collapsed {
+    grid-template-rows: 0fr;
+    opacity: 0;
+}
+
+.rider-licensed__inner {
+    min-height: 0;
+    overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rider-licensed {
+        transition: none;
+    }
+}

@@ -6,6 +6,7 @@
          data-messages-url="{{ route('messages.list', $conversation) }}"
          data-send-url="{{ route('messages.send', $conversation) }}"
          data-read-url="{{ route('messages.read', $conversation) }}"
+         data-typing-url="{{ route('messages.typing', $conversation) }}"
          @endif>
     <div class="messaging-heading">
         <div><p class="messaging-eyebrow">Stay connected</p><h1>Messages</h1></div>
@@ -41,6 +42,10 @@
                 <div class="messaging-messages" data-message-list role="log" aria-label="Messages" aria-live="polite" aria-relevant="additions" tabindex="0">
                     <p class="messaging-empty" data-message-empty>Loading messages…</p>
                 </div>
+                <div class="messaging-typing" data-typing-indicator role="status" hidden>
+                    <span class="messaging-typing-bubble" aria-hidden="true"><span></span><span></span><span></span></span>
+                    <span class="messaging-typing-label">{{ $otherName }} is typing…</span>
+                </div>
                 <form class="messaging-composer" method="POST" action="{{ route('messages.send', $conversation) }}" data-message-form>
                     @csrf
                     <label class="messaging-label" for="message-body">Your message</label>
@@ -48,7 +53,7 @@
                         <textarea id="message-body" name="body" rows="2" maxlength="2000" placeholder="Write a message…" required disabled></textarea>
                         <button type="submit" disabled><i class="fas fa-paper-plane" aria-hidden="true"></i><span>Send</span></button>
                     </div>
-                    <p>Up to 2,000 characters. Keep your conversation about shopping and orders.</p>
+                    <p>Press Enter to send, Shift + Enter for a new line. Up to 2,000 characters; keep it about shopping and orders.</p>
                 </form>
             @else
                 <div class="messaging-welcome"><i class="far fa-comments" aria-hidden="true"></i><h2>A little conversation goes a long way.</h2><p>Select a conversation{{ $sellerView ? ' to reply to a buyer.' : ' or use “Chat with seller” on a product page.' }}</p></div>

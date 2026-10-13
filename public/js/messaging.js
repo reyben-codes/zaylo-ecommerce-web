@@ -10,6 +10,7 @@
     const feedback = find('[data-chat-feedback]');
     const inboxScroll = find('[data-inbox-scroll]');
     const inboxStatus = find('[data-inbox-status]');
+    const typingIndicator = find('[data-typing-indicator]');
     const conversations = new Map();
     const ids = new Set();
     const csrf = document.querySelector('meta[name="csrf-token"]').content;
@@ -19,6 +20,9 @@
     let inboxRetryAt = 0;
     let initialized = false, refreshing = false, sending = false, reading = false, stopped = false;
     let retry = null;
+    // Typing signals: re-sent at most every TYPING_PING_MS while typing; the server keeps each for a few seconds.
+    const TYPING_PING_MS = 2500;
+    let typingActive = false, typingSentAt = 0;
     const showError = (text, source = 'action') => { feedback.textContent = text; feedback.dataset.source = source; feedback.hidden = false; };
     const clearError = () => { feedback.hidden = true; };
     const request = async (url, data) => {
@@ -143,6 +147,18 @@
         else if (follow) list.scrollTop = list.scrollHeight;
         if (!ids.size) find('[data-message-empty]').textContent = 'Say hello and ask your first question.';
     };
+    const showTyping = typing => {
+        if (!typingIndicator || typingIndicator.hidden === !typing) return;
+        const follow = atBottom();
+        typingIndicator.hidden = !typing;
+        if (follow) list.scrollTop = list.scrollHeight;
+    };
+    const sendTyping = typing => {
+        if (!root.dataset.typingUrl || stopped) return;
+        typingActive = typing;
+        typingSentAt = typing ? Date.now() : 0;
+        request(root.dataset.typingUrl, { typing }).catch(() => {});
+    };
     const refresh = async () => {
         if (refreshing || stopped || !visible()) return;
         refreshing = true;
@@ -150,6 +166,7 @@
             if (list) {
                 const data = await request(root.dataset.messagesUrl + (initialized ? `?after=${newest}` : ''));
                 addMessages(data.messages);
+                showTyping(Boolean(data.typing));
                 if (!initialized) olderButton.hidden = !data.has_older;
                 initialized = true;
                 if (!sending) { input.disabled = false; sendButton.disabled = false; }
@@ -171,6 +188,7 @@
         try {
             await request(root.dataset.sendUrl, retry);
             retry = null; input.value = '';
+            typingActive = false; typingSentAt = 0;
             list.scrollTop = list.scrollHeight;
             // Fetch from the previous cursor so simultaneous incoming messages are not skipped.
             await refresh();
@@ -179,6 +197,20 @@
             sending = false; input.disabled = stopped; sendButton.disabled = stopped;
             if (!stopped) input.focus();
         }
+    });
+    input?.addEventListener('input', () => {
+        if (!input.value.trim()) {
+            if (typingActive) sendTyping(false);
+            return;
+        }
+        if (!typingActive || Date.now() - typingSentAt > TYPING_PING_MS) sendTyping(true);
+    });
+    input?.addEventListener('blur', () => { if (typingActive) sendTyping(false); });
+    // Enter sends; Shift+Enter keeps the newline. Ignore Enter while an IME is composing text.
+    input?.addEventListener('keydown', event => {
+        if (event.key !== 'Enter' || event.shiftKey || event.isComposing || event.keyCode === 229) return;
+        event.preventDefault();
+        form.requestSubmit();
     });
     olderButton?.addEventListener('click', async () => {
         olderButton.disabled = true;
@@ -200,10 +232,12 @@
     if (root.dataset.compact) document.addEventListener('keydown', event => {
         if (event.key === 'Escape' && !event.isComposing) window.parent.postMessage({ type: 'zaylo-chat-minimize' }, location.origin);
     });
-    let timer = setInterval(refresh, 5000);
+    // An open conversation polls faster so typing and new messages appear promptly.
+    const pollMs = list ? 2500 : 5000;
+    let timer = setInterval(refresh, pollMs);
     window.addEventListener('pagehide', () => clearInterval(timer));
     window.addEventListener('pageshow', event => {
-        if (event.persisted) { timer = setInterval(refresh, 5000); refresh(); }
+        if (event.persisted) { timer = setInterval(refresh, pollMs); refresh(); }
     });
     refresh();
 })();

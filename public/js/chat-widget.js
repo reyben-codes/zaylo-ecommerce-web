@@ -134,13 +134,20 @@
     document.addEventListener('keydown', event => {
         if (event.key === 'Escape' && !event.isComposing && !panel.hidden) minimize();
     });
+    // On the full Messages page itself, conversation links open in the page, not in the bubble.
+    const onMessagesPage = location.origin === chatUrl.origin && location.pathname === chatUrl.pathname;
     // Keep ordinary links as a working fallback and preserve Ctrl/Cmd-click for a full page.
     document.addEventListener('click', event => {
         const link = event.target.closest('a[href]');
-        if (!link || root.contains(link) || event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+        if (onMessagesPage || !link || root.contains(link) || event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
         const url = new URL(link.href);
         if (url.origin !== chatUrl.origin || url.pathname !== chatUrl.pathname || url.searchParams.has('compact')) return;
         event.preventDefault();
+        // A double click goes to the full Messages page, like the expand icon, keeping the open conversation.
+        if (event.detail >= 2) {
+            location.assign(url.searchParams.has('conversation') ? url.href : expand.href);
+            return;
+        }
         open(url.searchParams.has('conversation') ? url.href : undefined);
     });
     window.addEventListener('message', event => {

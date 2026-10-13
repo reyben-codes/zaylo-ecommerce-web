@@ -94,6 +94,8 @@
 
     document.querySelectorAll('[data-product-gallery]').forEach((gallery) => {
         const mainImage = gallery.querySelector('[data-gallery-main]');
+        const frame = gallery.querySelector('[data-gallery-frame]');
+        const soldOutLabel = gallery.querySelector('[data-sold-out-label]');
         const thumbnails = [...gallery.querySelectorAll('[data-gallery-thumbnail]')];
         if (thumbnails.length < 2) return;
 
@@ -109,6 +111,10 @@
             const selected = thumbnails[current];
             mainImage.src = selected.dataset.imageSrc;
             mainImage.alt = selected.dataset.imageAlt;
+            // Photos of a sold-out option (or a fully sold-out product) are shown grayed with a label.
+            const soldOut = frame?.hasAttribute('data-all-sold-out') || selected.hasAttribute('data-sold-out');
+            frame?.classList.toggle('is-sold-out', soldOut);
+            if (soldOutLabel) soldOutLabel.hidden = !soldOut;
 
             thumbnails.forEach((thumbnail, position) => {
                 const active = position === current;

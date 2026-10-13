@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\UpdatesAccountSettings;
 use App\Models\Address;
 use App\Models\Cart;
 use App\Models\CartItem;
@@ -11,9 +12,6 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\User;
 use App\Models\Voucher;
-use App\Rules\PersonName;
-use App\Rules\PhoneNumber;
-use App\Rules\StrongPassword;
 use App\Models\Wishlist;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -24,11 +22,13 @@ use Illuminate\Validation\ValidationException;
 
 class BuyerController extends Controller
 {
+    use UpdatesAccountSettings;
+
     private const SHIPPING_PER_SELLER = 120.00;
 
     public function dashboard()
     {
-        $base = Product::where('is_active', true);
+        $base = Product::withReviewSummary()->where('is_active', true);
         if (Product::usesLegacySchema()) {
             $base->where('stock', '>', 0)->with('images')
                 ->withCount(['variants as active_variants_count' => fn ($query) => $query->where('is_active', true)]);
@@ -68,8 +68,9 @@ class BuyerController extends Controller
         }
         $validated['search'] = trim(preg_replace('/\s+/u', ' ', $validated['search'] ?? ''));
         $validated['sort'] = $validated['sort'] ?? ($validated['search'] !== '' ? 'relevance' : 'newest');
-        $validated['availability'] = $validated['availability'] ?? 'in_stock';
-        $query = Product::with(['seller', 'images'])
+        // Show everything by default; sold-out products are grayed out and listed after available ones.
+        $validated['availability'] = $validated['availability'] ?? 'all';
+        $query = Product::withReviewSummary()->with(['seller', 'images'])
             ->withCount(['variants as active_variants_count' => fn ($builder) => $builder->where('is_active', true)])
             ->withSum(['variants as catalog_variant_stock' => fn ($builder) => $builder->where('is_active', true)], 'stock')
             ->where('is_active', true);
@@ -95,7 +96,10 @@ class BuyerController extends Controller
             }
         }
         if (! empty($validated['gender'])) {
-            $query->where('gender', $validated['gender']);
+            // Unisex items are for everyone, so they also appear under Men and Women.
+            $validated['gender'] === 'unisex'
+                ? $query->where('gender', 'unisex')
+                : $query->whereIn('gender', [$validated['gender'], 'unisex']);
         }
         $escapeLike = fn ($text) => str_replace(['!', '%', '_'], ['!!', '!%', '!_'], mb_strtolower($text));
         if ($validated['search'] !== '') {
@@ -132,6 +136,13 @@ class BuyerController extends Controller
             });
         }
 
+        if ($validated['availability'] === 'all') {
+            $inStockSql = 'EXISTS (SELECT 1 FROM product_variants pv WHERE pv.product_id = products.id AND pv.is_active = 1 AND pv.stock > 0)';
+            if (Product::usesLegacySchema()) {
+                $inStockSql .= ' OR (NOT EXISTS (SELECT 1 FROM product_variants pv2 WHERE pv2.product_id = products.id AND pv2.is_active = 1) AND products.stock > 0)';
+            }
+            $query->orderByRaw("CASE WHEN {$inStockSql} THEN 0 ELSE 1 END");
+        }
         if (in_array($validated['sort'] ?? '', ['price_low', 'price_high'], true)) {
             $direction = $validated['sort'] === 'price_high' ? 'DESC' : 'ASC';
             $query->orderByRaw(Product::sellingPriceSql()." {$direction}", [now(), now()]);
@@ -144,14 +155,14 @@ class BuyerController extends Controller
 
         $chips = [];
         foreach (['search', 'category', 'gender', 'min_price', 'max_price', 'availability', 'on_sale'] as $key) {
-            if (! isset($validated[$key]) || $validated[$key] === '' || ($key === 'availability' && $validated[$key] === 'in_stock') || ($key === 'on_sale' && ! $validated[$key])) continue;
+            if (! isset($validated[$key]) || $validated[$key] === '' || ($key === 'availability' && $validated[$key] === 'all') || ($key === 'on_sale' && ! $validated[$key])) continue;
             $label = match ($key) {
                 'search' => 'Search: '.$validated[$key],
                 'category' => config('marketplace.categories')[$validated[$key]],
                 'gender' => ucfirst($validated[$key]),
                 'min_price' => 'From ₱'.number_format($validated[$key], 2),
                 'max_price' => 'Up to ₱'.number_format($validated[$key], 2),
-                'availability' => $validated[$key] === 'all' ? 'All availability' : 'Sold out',
+                'availability' => $validated[$key] === 'in_stock' ? 'In stock only' : 'Sold out',
                 'on_sale' => 'On sale',
             };
             $remaining = $validated;
@@ -176,6 +187,33 @@ class BuyerController extends Controller
         }
         $product->load($relations);
 
+        // Name the picker after what actually varies, and link each color to its photos ("<product> — <color>" alt text).
+        $variants = $product->variants;
+        $colors = $variants->map->color_label->filter()->unique();
+        $sized = $variants->filter(fn ($variant) => $variant->size_label !== null);
+        $optionLabel = $sized->isNotEmpty()
+            ? ($sized->count() === $variants->count() ? 'Size' : 'Option')
+            : ($variants->count() > 1 && $colors->count() === $variants->count() ? 'Color' : 'Option');
+        $photoKey = fn ($variant) => $variant->color_label ?? $variant->name;
+        $photoFor = fn (string $key) => $product->images->first(fn ($image) => Str::endsWith((string) $image->alt_text, ' — '.$key))?->path;
+        $variantImages = $variants->mapWithKeys(fn ($variant) => [$variant->id => $photoFor($photoKey($variant))]);
+
+        // Products sold in several colors that each come in sizes get a color step, then that color's own sizes.
+        $colorGroups = $sized->isNotEmpty() && $colors->count() > 1
+            ? $variants->groupBy(fn ($variant) => $variant->color_label ?? '')->map(fn ($group, $color) => [
+                'name' => $color !== '' ? $color : 'Other',
+                'photo' => $photoFor((string) $color),
+                'stock' => (int) $group->sum('stock'),
+                'variants' => $group->values(),
+            ])->values()
+            : null;
+
+        // Photos of a sold-out color (every size gone) are grayed out in the gallery.
+        $soldOutKeys = $variants->groupBy($photoKey)->filter(fn ($group) => $group->sum('stock') < 1)->keys();
+        $soldOutPaths = $product->images->filter(fn ($image) => $soldOutKeys->contains(
+            fn ($key) => Str::endsWith((string) $image->alt_text, ' — '.$key)
+        ))->pluck('path');
+
         $galleryImages = collect([
             ['path' => $product->image_url, 'alt_text' => $product->name],
         ])->concat($product->images->map(fn ($image) => [
@@ -183,9 +221,14 @@ class BuyerController extends Controller
             'alt_text' => $image->alt_text ?: $product->name,
         ]))->filter(fn ($image) => filled($image['path']))
             ->unique('path')
+            ->map(fn ($image) => $image + ['sold_out' => $soldOutPaths->contains($image['path'])])
             ->values();
 
-        return view('buyer.product-show', compact('product', 'galleryImages'));
+        $reviewQuery = \App\Models\ProductReview::where('product_id', $product->id);
+        $reviewCount = (clone $reviewQuery)->count();
+        $reviewAverage = (clone $reviewQuery)->avg('rating');
+        $reviews = $reviewQuery->with('buyer')->latest()->paginate(5, ['*'], 'reviews_page');
+        return view('buyer.product-show', compact('product', 'galleryImages', 'reviews', 'reviewCount', 'reviewAverage', 'optionLabel', 'variantImages', 'colorGroups'));
     }
 
     public function orders(Request $request)
@@ -210,7 +253,7 @@ class BuyerController extends Controller
         }
 
         $orders = auth()->user()->orders()
-            ->with(['items', 'payment', 'shipment', 'statusHistory' => fn ($query) => $query->oldest()])
+            ->with(['items.review', 'payment', 'shipment', 'statusHistory' => fn ($query) => $query->oldest()])
             ->when($filter !== 'all', fn ($query) => $query->whereIn('status', $statusGroups[$filter]))
             ->orderByDesc('placed_at')
             ->paginate(10)
@@ -232,6 +275,7 @@ class BuyerController extends Controller
             foreach ($lockedOrder->items as $item) {
                 if ($item->product_variant_id) {
                     ProductVariant::whereKey($item->product_variant_id)->increment('stock', $item->quantity);
+                    Product::syncStockFromVariants((int) $item->product_id);
                 } elseif ($item->product_id) {
                     Product::whereKey($item->product_id)->increment('stock', $item->quantity);
                 }
@@ -305,6 +349,8 @@ class BuyerController extends Controller
         $shipping = $items->pluck('product.seller_id')->unique()->count() * self::SHIPPING_PER_SELLER;
 
         return view('buyer.checkout', [
+            'identityVerified' => $request->user()->isIdentityVerified(),
+            'identityStatus' => Schema::hasTable('identity_verifications') ? $request->user()->latestIdentityVerification()->value('status') : null,
             'items' => $items,
             'subtotal' => $subtotal,
             'shipping' => $shipping,
@@ -371,7 +417,11 @@ class BuyerController extends Controller
             return redirect()->route('buyer.checkout.show');
         }
 
-        return redirect()->route('buyer.cart')->with('status', 'Product added to your cart.');
+        if ($request->expectsJson()) {
+            return response()->json(['message' => 'Product added to your cart.', 'cart_url' => route('buyer.cart'), 'cart_quantity' => (int) $cart->items()->sum('quantity')]);
+        }
+
+        return back()->with('status', 'Product added to your cart.');
     }
 
     public function updateCart(Request $request, CartItem $cartItem)
@@ -387,6 +437,45 @@ class BuyerController extends Controller
         return back()->with('status', 'Cart updated.');
     }
 
+    /**
+     * Saves every changed quantity at once. All-or-nothing: if any item exceeds its stock, nothing is saved.
+     */
+    public function updateCartItems(Request $request)
+    {
+        $cart = Cart::firstOrCreate(['user_id' => $request->user()->id]);
+        $validated = $request->validate([
+            'quantities' => 'required|array|min:1|max:200',
+            'quantities.*' => 'required|integer|min:1|max:99',
+        ], [
+            'quantities.required' => 'Change a quantity first, then choose Update all.',
+            'quantities.*.min' => 'Quantities must be at least 1. Use Remove to take an item out of your cart.',
+            'quantities.*.max' => 'You can add up to 99 of each item.',
+        ]);
+
+        $items = $cart->items()->with(['product', 'variant'])->whereIn('id', array_keys($validated['quantities']))->get()->keyBy('id');
+        if ($items->count() !== count($validated['quantities'])) {
+            throw ValidationException::withMessages(['quantities' => 'Your cart changed. Refresh the page and try again.']);
+        }
+
+        $problems = [];
+        foreach ($items as $id => $item) {
+            $available = $item->availableStock();
+            if (! $item->product->is_active) {
+                $problems["quantities.{$id}"] = "{$item->product->name} is no longer available.";
+            } elseif ($validated['quantities'][$id] > $available) {
+                $problems["quantities.{$id}"] = "{$item->product->name}: only {$available} left in stock.";
+            }
+        }
+        if ($problems) {
+            throw ValidationException::withMessages($problems);
+        }
+
+        DB::transaction(fn () => $items->each(fn (CartItem $item, $id) => $item->update(['quantity' => (int) $validated['quantities'][$id]])));
+        $count = $items->count();
+
+        return back()->with('status', $count === 1 ? 'Cart updated.' : "{$count} items updated.");
+    }
+
     public function removeCartItem(CartItem $cartItem)
     {
         abort_unless($cartItem->cart->user_id === auth()->id(), 403);
@@ -397,6 +486,12 @@ class BuyerController extends Controller
 
     public function checkout(Request $request)
     {
+        if (! $request->user()->isIdentityVerified()) {
+            throw ValidationException::withMessages([
+                'identity' => 'Your ID needs to be approved before you can place an order. Upload it in Profile Settings.',
+            ]);
+        }
+
         $validated = $request->validate([
             'address_id' => ['required', 'integer', Rule::exists('addresses', 'id')->where('user_id', $request->user()->id)],
             'notes' => 'nullable|string|max:500',
@@ -486,6 +581,9 @@ class BuyerController extends Controller
                         'quantity' => $item->quantity, 'line_total' => $unitPrice * $item->quantity,
                     ]);
                     $variant ? $variant->decrement('stock', $item->quantity) : $product->decrement('stock', $item->quantity);
+                    if ($variant) {
+                        Product::syncStockFromVariants($product->id);
+                    }
                 }
 
                 $order->payment()->create([
@@ -512,76 +610,33 @@ class BuyerController extends Controller
         return view('buyer.wishlist', compact('items'));
     }
 
-    public function toggleWishlist(Product $product)
+    public function toggleWishlist(Request $request, Product $product)
     {
         $item = Wishlist::where('user_id', auth()->id())->where('product_id', $product->id)->first();
         $item ? $item->delete() : Wishlist::create(['user_id' => auth()->id(), 'product_id' => $product->id]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'saved' => ! $item,
+                'count' => Wishlist::where('user_id', auth()->id())->count(),
+            ]);
+        }
 
         return back()->with('status', $item ? 'Removed from wishlist.' : 'Saved to wishlist.');
     }
 
     public function account(Request $request)
     {
+        $verificationEnabled = Schema::hasTable('identity_verifications');
+
         return view('buyer.account', [
             'user' => $request->user(),
+            'identityEnabled' => $verificationEnabled,
+            'identityVerified' => $request->user()->isIdentityVerified(),
+            'identitySubmission' => $verificationEnabled ? $request->user()->latestIdentityVerification()->first() : null,
+            'idTypes' => \App\Models\IdentityVerification::ID_TYPES,
             'addresses' => $request->user()->addresses()->orderByDesc('is_default')->orderBy('label')->orderBy('id')->get(),
         ]);
-    }
-
-    public function updateProfile(Request $request)
-    {
-        $user = $request->user();
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255', new PersonName],
-            'email' => ['required', 'string', 'email:rfc', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
-            'phone' => ['required', 'string', 'max:11', new PhoneNumber],
-            'date_of_birth' => ['required', 'date', 'before_or_equal:today'],
-        ]);
-
-        if ($user->google_id && $validated['email'] !== $user->email) {
-            throw ValidationException::withMessages([
-                'email' => 'The email address linked to Google cannot be changed here.',
-            ]);
-        }
-
-        $emailChanged = $validated['email'] !== $user->email;
-        $user->fill($validated);
-        if ($emailChanged) {
-            $user->email_verified_at = null;
-        }
-        $user->save();
-
-        if (! $emailChanged) {
-            return back()->with('status', 'Profile settings updated.');
-        }
-
-        try {
-            $user->sendEmailVerificationNotification();
-        } catch (\Throwable $exception) {
-            report($exception);
-
-            return redirect()->route('verification.notice')
-                ->withErrors(['otp' => 'Your email was updated, but we could not send a verification code. Please use Resend code.']);
-        }
-
-        return redirect()->route('verification.notice')->with('status', 'Profile updated. Verify your new email address to continue.');
-    }
-
-    public function updatePassword(Request $request)
-    {
-        $user = $request->user();
-        $hasPassword = filled($user->getAuthPassword());
-        $validated = $request->validate([
-            'current_password' => $hasPassword ? ['required', 'current_password'] : ['nullable'],
-            'password' => ['required', 'string', 'confirmed', new StrongPassword],
-        ]);
-
-        $user->forceFill([
-            'password' => $validated['password'],
-            'remember_token' => Str::random(60),
-        ])->save();
-
-        return back()->with('status', $hasPassword ? 'Password updated.' : 'Password created. You can now also sign in with email.');
     }
 
     private function cartSubtotal(Cart $cart): float

@@ -15,7 +15,7 @@ class GoogleAuthController extends Controller
         $request->session()->forget(['google_oauth', 'state']);
         $role = $request->query('role', 'buyer');
         if (! is_string($role) || ! in_array($role, GoogleAccountService::PUBLIC_ROLES, true)) {
-            return redirect()->route('login')->withErrors(['google' => 'Please choose a buyer, seller, or courier account.']);
+            return redirect()->route('login')->withErrors(['google' => 'Google sign-up is available for buyer and seller accounts. Riders and logistics partners can register with email.']);
         }
         if (! $this->configured()) {
             return $this->unconfigured();
@@ -68,7 +68,8 @@ class GoogleAuthController extends Controller
             return redirect()->route(match ($user->role) {
                 'buyer' => 'buyer.dashboard',
                 'seller' => 'seller.dashboard',
-                'courier' => 'courier.dashboard',
+                'courier', 'rider' => 'courier.dashboard',
+                'logistics' => 'logistics.dashboard',
                 'admin' => 'admin.dashboard',
                 default => 'home',
             });

@@ -108,3 +108,17 @@
 .messaging-compact .messaging-compose-row textarea { font-size: 16px; }
 .messaging-compact .messaging-compose-row button span { display: inline; }
 .messaging-compact .messaging-compose-row button i { display: none; }
+
+/* Typing indicator: three dots in a reply bubble, like other chat apps. */
+.messaging-typing { display: flex; gap: 10px; align-items: center; padding: 0 24px 12px; color: #8c7c6d; font-size: .7rem; }
+.messaging-typing[hidden] { display: none; }
+.messaging-typing-bubble { display: inline-flex; gap: 4px; align-items: center; padding: 11px 14px; border-radius: 14px 14px 14px 3px; background: #f1eae2; }
+.messaging-typing-bubble span { width: 7px; height: 7px; border-radius: 50%; background: #9a8676; animation: messaging-typing-bounce 1.2s ease-in-out infinite; }
+.messaging-typing-bubble span:nth-child(2) { animation-delay: .15s; }
+.messaging-typing-bubble span:nth-child(3) { animation-delay: .3s; }
+@keyframes messaging-typing-bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: .45; }
+    30% { transform: translateY(-4px); opacity: 1; }
+}
+@media (max-width: 640px) { .messaging-typing { padding: 0 16px 10px; } }
+@media (prefers-reduced-motion: reduce) { .messaging-typing-bubble span { animation: none; opacity: .7; } }

@@ -1,6 +1,9 @@
 @extends('layouts.app')
 
 @section('title', 'My Orders · ZAYLO')
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/product-reviews.css') }}?v={{ filemtime(public_path('css/product-reviews.css')) }}">
+@endpush
 
 @section('content')
 <div class="page-hero">
@@ -64,6 +67,14 @@
                         <span>{{ $item->quantity }} &times; {{ $item->product_name }}</span>
                         <span>&#8369;{{ number_format($item->line_total, 2) }}</span>
                     </div>
+                    @if($item->review)
+                        <p class="review-meta">Your rating: {{ $item->review->rating }}/5 ★ · Review submitted</p>
+                    @elseif($order->status === 'completed' && $item->product_id)
+                        <a class="order-review-link" href="{{ route('buyer.reviews.create', $item) }}" aria-label="Rate {{ $item->product_name }}">
+                            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m12 3 2.78 5.63L21 9.54l-4.5 4.39 1.06 6.2L12 17.2l-5.56 2.93 1.06-6.2L3 9.54l6.22-.91Z"/></svg>
+                            Rate product
+                        </a>
+                    @endif
                 @endforeach
             </div>
 
