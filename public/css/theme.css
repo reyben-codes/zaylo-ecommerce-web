@@ -9,7 +9,7 @@
  *
  * Generated: to add a color, use var(--c-<hex>) in the CSS and add both values
  * here, light first. Keep the brand values in sync with
- * mobile_app/lib/core/theme/zaylo_theme.dart.
+ * mobile_app/lib/theme/zaylo_theme.dart.
  */
 
 :root {

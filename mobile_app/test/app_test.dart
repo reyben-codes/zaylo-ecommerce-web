@@ -1,31 +1,33 @@
 import 'dart:io';
+import 'dart:ui' show Tristate;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:zaylo_mobile/buyer/api/buyer_api.dart';
-import 'package:zaylo_mobile/buyer/models/cart_models.dart';
-import 'package:zaylo_mobile/buyer/models/catalog_models.dart';
-import 'package:zaylo_mobile/buyer/models/order_models.dart';
-import 'package:zaylo_mobile/buyer/state/app_state.dart';
-import 'package:zaylo_mobile/buyer/state/token_store.dart';
-import 'package:zaylo_mobile/core/api/api_exception.dart';
-import 'package:zaylo_mobile/core/models/auth_models.dart';
-import 'package:zaylo_mobile/core/theme/theme_controller.dart';
-import 'package:zaylo_mobile/core/theme/zaylo_theme.dart';
-import 'package:zaylo_mobile/core/utils/formatters.dart';
-import 'package:zaylo_mobile/core/utils/validators.dart';
-import 'package:zaylo_mobile/main.dart';
-import 'package:zaylo_mobile/rider/api/rider_api.dart';
-import 'package:zaylo_mobile/rider/models/rider_activity_models.dart';
-import 'package:zaylo_mobile/rider/models/rider_dashboard_models.dart';
-import 'package:zaylo_mobile/core/models/location.dart';
-import 'package:zaylo_mobile/rider/screens/rider_home_screen.dart';
-import 'package:zaylo_mobile/rider/screens/rider_registration_screen.dart';
-import 'package:zaylo_mobile/rider/utils/rider_input_formatters.dart';
-import 'package:zaylo_mobile/rider/widgets/rider_terms_dialog.dart';
-import 'package:zaylo_mobile/shared/chat/delivery_chat.dart';
-import 'package:zaylo_mobile/rider/utils/rider_validators.dart';
+import 'package:zaylo_mobile/api/api_exception.dart';
+import 'package:zaylo_mobile/api/buyer_api.dart';
+import 'package:zaylo_mobile/api/rider_api.dart';
+import 'package:zaylo_mobile/app.dart';
+import 'package:zaylo_mobile/auth/rider/rider_registration_screen.dart';
+import 'package:zaylo_mobile/auth/rider/widgets/rider_terms_dialog.dart';
+import 'package:zaylo_mobile/auth/token_store.dart';
+import 'package:zaylo_mobile/components/chat/delivery_chat.dart';
+import 'package:zaylo_mobile/features/buyer/home/widgets/home_header.dart';
+import 'package:zaylo_mobile/models/auth_models.dart';
+import 'package:zaylo_mobile/models/buyer/cart_models.dart';
+import 'package:zaylo_mobile/models/buyer/catalog_models.dart';
+import 'package:zaylo_mobile/models/buyer/order_models.dart';
+import 'package:zaylo_mobile/models/location.dart';
+import 'package:zaylo_mobile/models/rider/rider_activity_models.dart';
+import 'package:zaylo_mobile/models/rider/rider_dashboard_models.dart';
+import 'package:zaylo_mobile/navigation/rider_shell.dart';
+import 'package:zaylo_mobile/state/app_state.dart';
+import 'package:zaylo_mobile/theme/theme_controller.dart';
+import 'package:zaylo_mobile/theme/zaylo_theme.dart';
+import 'package:zaylo_mobile/utils/formatters.dart';
+import 'package:zaylo_mobile/utils/rider_input_formatters.dart';
+import 'package:zaylo_mobile/utils/rider_validators.dart';
+import 'package:zaylo_mobile/utils/validators.dart';
 
 /// JSON in the exact shape produced by app/Support/MobilePayload.php.
 Map<String, dynamic> productJson(int id, {String name = 'Watering Can', double price = 499, double? original}) => {
@@ -319,7 +321,7 @@ void main() {
     expect(topBarOffset(), 0);
   });
 
-  testWidgets('appearance switches to dark mode, persists, and returns to the system setting', (tester) async {
+  testWidgets('theme toggle switches to dark mode, persists, and returns to the system setting', (tester) async {
     addTearDown(() => ZayloColors.use(Brightness.light));
     final store = MemoryThemeModeStore();
     await pumpApp(tester, theme: ThemeController(store: store));
@@ -327,20 +329,22 @@ void main() {
         Theme.of(tester.element(find.byType(Scaffold).first)).scaffoldBackgroundColor;
     expect(background(), ZayloPalette.light.cream);
 
-    await tester.tap(find.byTooltip('Menu'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Dark'));
+    await tester.tap(find.byTooltip('Switch to dark mode'));
     await tester.pumpAndSettle();
 
     expect(ZayloColors.isDark, isTrue);
     expect(background(), ZayloPalette.dark.cream);
     expect(await store.read(), ThemeMode.dark);
 
-    // The test platform reports light, so System goes back to the light palette.
-    await tester.tap(find.text('System'));
+    // The menu has the labelled toggle. The test platform reports light, so
+    // switching back follows the system again, as on the web.
+    await tester.tap(find.byTooltip('Menu'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Light mode'));
     await tester.pumpAndSettle();
     expect(ZayloColors.isDark, isFalse);
     expect(background(), ZayloPalette.light.cream);
+    expect(await store.read(), ThemeMode.system);
   });
 
   testWidgets('menu opens the rider login screen', (tester) async {
@@ -458,7 +462,7 @@ void main() {
     tester.view.physicalSize = const Size(400, 4000);
     addTearDown(tester.view.reset);
     final api = FakeRiderApi();
-    await tester.pumpWidget(MaterialApp(home: RiderHomeScreen(api: api)));
+    await tester.pumpWidget(MaterialApp(home: RiderShell(api: api)));
     await tester.pumpAndSettle();
 
     // Only the rider's own delivery offers the chat, with its unread badge.
@@ -485,7 +489,7 @@ void main() {
     tester.view.physicalSize = const Size(320, 4000);
     addTearDown(tester.view.reset);
     final api = FakeRiderApi();
-    await tester.pumpWidget(MaterialApp(home: RiderHomeScreen(api: api)));
+    await tester.pumpWidget(MaterialApp(home: RiderShell(api: api)));
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull, reason: 'fits a 320px phone');
@@ -518,7 +522,7 @@ void main() {
       tester.view.physicalSize = const Size(400, 2400);
       addTearDown(tester.view.reset);
       final api = FakeRiderApi();
-      await tester.pumpWidget(MaterialApp(home: RiderHomeScreen(api: api)));
+      await tester.pumpWidget(MaterialApp(home: RiderShell(api: api)));
       await tester.pumpAndSettle();
       return api;
     }
@@ -826,5 +830,58 @@ void main() {
       expect(RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$').hasMatch(key), isTrue);
       expect(BuyerApi.newIdempotencyKey(), isNot(key));
     });
+  });
+
+  test('dark mode buttons use the web storefront colors', () {
+    ZayloColors.use(Brightness.dark);
+    addTearDown(() => ZayloColors.use(Brightness.light));
+    const idle = <WidgetState>{};
+    const pressed = {WidgetState.pressed};
+    const disabled = {WidgetState.disabled};
+
+    final primary = ZayloButtons.primary;
+    expect(primary.backgroundColor!.resolve(idle), const Color(0xFFF2ECE4));
+    expect(primary.foregroundColor!.resolve(idle), const Color(0xFF221E1A));
+    expect(primary.backgroundColor!.resolve(pressed), const Color(0xFFC9A088));
+    expect(primary.backgroundColor!.resolve(disabled)!.a, closeTo(.48, .01));
+
+    final secondary = ZayloButtons.secondary;
+    expect(secondary.backgroundColor!.resolve(idle), Colors.transparent);
+    expect(secondary.side!.resolve(idle)!.color, const Color(0xFFF2ECE4));
+    expect(secondary.backgroundColor!.resolve(pressed), const Color(0xFFF2ECE4));
+    expect(secondary.foregroundColor!.resolve(pressed), const Color(0xFF221E1A));
+  });
+
+  testWidgets('home hero swipes, wraps around, and rotates on its own', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        // The home tab scrolls, so the hero never gets a height cap.
+        body: ListView(children: [
+          HomeHeroCarousel(images: const ['http://fake.test/1.jpg', 'http://fake.test/2.jpg', 'http://fake.test/3.jpg'], onShop: () {}, onNew: () {}),
+        ]),
+      ),
+    ));
+    bool showing(int image) => tester.getSemantics(find.bySemanticsLabel('Show image $image of 3')).flagsCollection.isSelected == Tristate.isTrue;
+
+    expect(find.byTooltip('Next image'), findsNothing, reason: 'no arrow buttons');
+    expect(showing(1), isTrue);
+
+    await tester.fling(find.byType(PageView), const Offset(-300, 0), 1000);
+    await tester.pumpAndSettle();
+    expect(showing(2), isTrue);
+
+    await tester.fling(find.byType(PageView), const Offset(300, 0), 1000);
+    await tester.pumpAndSettle();
+    await tester.fling(find.byType(PageView), const Offset(300, 0), 1000);
+    await tester.pumpAndSettle();
+    expect(showing(3), isTrue, reason: 'swiping back from the first image wraps to the last');
+
+    await tester.pump(HomeHeroCarousel.interval);
+    await tester.pumpAndSettle();
+    expect(showing(1), isTrue, reason: 'rotates on its own');
+
+    await tester.tap(find.bySemanticsLabel('Show image 2 of 3'));
+    await tester.pumpAndSettle();
+    expect(showing(2), isTrue);
   });
 }
