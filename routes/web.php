@@ -131,6 +131,18 @@ Route::middleware(['auth', 'active', 'verified', 'role:courier', 'nocache'])->pr
 
 Route::middleware(['auth', 'active', 'verified', 'role:sorting_center', 'nocache'])->prefix('sorting-center')->name('sorting-center.')->group(function () {
     Route::get('/dashboard', [SortingCenterController::class, 'dashboard'])->name('dashboard');
+    Route::get('/riders', [SortingCenterController::class, 'riders'])->name('riders');
+    Route::post('/riders/applications/{user}', [SortingCenterController::class, 'updateApplication'])->name('riders.applications.update');
+    Route::patch('/riders/{rider}/status', [SortingCenterController::class, 'updateRiderStatus'])->name('riders.status');
+    Route::get('/pickups', [SortingCenterController::class, 'pickups'])->name('pickups');
+    Route::get('/incoming', [SortingCenterController::class, 'incoming'])->name('incoming');
+    Route::get('/sorting', [SortingCenterController::class, 'sorting'])->name('sorting');
+    Route::get('/assignments', [SortingCenterController::class, 'assignments'])->name('assignments');
+    Route::post('/assignments/{shipment}', [SortingCenterController::class, 'assignRider'])->name('assignments.store');
+    Route::get('/monitoring', [SortingCenterController::class, 'monitoring'])->name('monitoring');
+    Route::get('/reports', [SortingCenterController::class, 'reports'])->name('reports');
+    Route::get('/chat', [SortingCenterController::class, 'chat'])->name('chat');
+    Route::get('/account', [SortingCenterController::class, 'account'])->name('account');
     Route::patch('/shipments/{shipment}/status', [SortingCenterController::class, 'updateStatus'])->name('shipments.status');
 });
 
