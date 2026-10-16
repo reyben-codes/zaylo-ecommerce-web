@@ -457,6 +457,19 @@ a.seller-stat.is-active {
     color: #644c37;
 }
 
+.seller-notice--danger {
+    border-color: #f1c7c2;
+    background: #fdf1ef;
+}
+
+.seller-notice--danger > i {
+    color: #a4413b;
+}
+
+.seller-notice form {
+    margin-top: 10px;
+}
+
 .seller-notice > i {
     margin-top: 2px;
 }

@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\QueriesLogisticsParcels;
 use App\Http\Controllers\Concerns\UpdatesAccountSettings;
 use App\Models\LogisticsProvider;
 use App\Models\Rider;
+use App\Services\ShipmentWorkflow;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -13,7 +15,7 @@ use Illuminate\Validation\ValidationException;
 
 class LogisticsController extends Controller
 {
-    use UpdatesAccountSettings;
+    use QueriesLogisticsParcels, UpdatesAccountSettings;
 
     public const RIDER_STATUS_LABELS = [
         'pending' => 'Pending review',
@@ -30,17 +32,33 @@ class LogisticsController extends Controller
         'reinstate' => ['from' => ['suspended'], 'to' => 'approved', 'account' => 'active'],
     ];
 
+    /** The sorting center at a glance: parcels at each step, riders, and what needs attention. */
     public function dashboard()
     {
         $provider = $this->provider();
-        $counts = $this->riderCounts($provider);
 
         return view('logistics.dashboard', [
             'user' => auth()->user(),
             'provider' => $provider,
-            'counts' => $counts,
+            'counts' => $this->riderCounts($provider),
+            'parcels' => $this->parcelStageCounts(),
+            'availableRiders' => $provider->riders()->where('status', 'approved')->where('is_active', true)->count(),
             'recentApplications' => $provider->riders()->where('status', 'pending')->with('user')->oldest()->limit(5)->get(),
+            'recentParcels' => $this->withParcelDetails($this->parcels())
+                ->where(fn ($query) => ShipmentWorkflow::whereStage($query, ShipmentWorkflow::ACTIVE))
+                ->latest('updated_at')->limit(6)->get(),
         ]);
+    }
+
+    /** Pause or resume an approved rider for new assignments without suspending their account. */
+    public function riderAvailability(Request $request, Rider $rider)
+    {
+        abort_unless((int) $rider->logistics_provider_id === (int) $this->provider()->id, 403);
+        $data = $request->validate(['available' => ['required', 'boolean']]);
+        abort_unless($rider->status === 'approved', 422, 'Only approved riders can be paused or resumed.');
+        $rider->update(['is_active' => $data['available']]);
+
+        return back()->with('status', $rider->user->name.($data['available'] ? ' can take new deliveries again.' : ' is paused and will not get new deliveries.'));
     }
 
     public function riders(Request $request)

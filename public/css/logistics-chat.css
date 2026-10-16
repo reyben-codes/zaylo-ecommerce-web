@@ -1,0 +1,342 @@
+/* Logistics chat: sorting center <-> sellers and riders. Uses the Zaylo workspace tokens, with fallbacks for the rider portal. */
+
+.logistics-chat {
+    display: grid;
+    grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+    height: min(72vh, 680px);
+    min-height: 460px;
+    overflow: hidden;
+}
+
+.logistics-chat--single {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+/* Conversation list */
+.logistics-chat__list {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border-right: 1px solid var(--zaylo-border, #ece4db);
+    background: var(--zaylo-background, #faf7f2);
+}
+
+.logistics-chat__start {
+    padding: 16px;
+    border-bottom: 1px solid var(--zaylo-border, #ece4db);
+}
+
+.logistics-chat__start-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.logistics-chat__start select {
+    flex: 1;
+    min-width: 0;
+    min-height: 36px;
+    padding: 6px 10px;
+    border: 1px solid #dcd2c8;
+    border-radius: 8px;
+    background: #fff;
+    color: var(--zaylo-ink, #1a1714);
+    font: inherit;
+    font-size: .8rem;
+}
+
+.logistics-chat__threads {
+    flex: 1;
+    margin: 0;
+    padding: 8px;
+    overflow-y: auto;
+    list-style: none;
+}
+
+.logistics-chat__thread {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 10px;
+    border-radius: 10px;
+    color: var(--zaylo-ink, #1a1714);
+    text-decoration: none;
+    transition: background-color .2s ease;
+}
+
+.logistics-chat__thread:hover,
+.logistics-chat__thread:focus-visible {
+    background: var(--zaylo-hover, #f5f0ea);
+}
+
+.logistics-chat__thread.is-active {
+    background: var(--zaylo-surface, #fff);
+    box-shadow: 0 0 0 1px var(--zaylo-border, #ece4db);
+}
+
+.logistics-chat__thread-text {
+    display: grid;
+    flex: 1;
+    min-width: 0;
+    gap: 2px;
+}
+
+.logistics-chat__thread-text strong,
+.logistics-chat__thread-text span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.logistics-chat__thread-text strong {
+    font-size: .84rem;
+}
+
+.logistics-chat__thread-text span {
+    color: var(--zaylo-muted, #6b5f54);
+    font-size: .74rem;
+}
+
+.logistics-chat__avatar {
+    display: inline-grid;
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--zaylo-accent-soft, #eee6de);
+    color: var(--zaylo-accent, #9a755e);
+    font-size: .8rem;
+    font-weight: 700;
+}
+
+.logistics-chat__unread {
+    min-width: 20px;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: var(--zaylo-ink, #1a1714);
+    color: #fff;
+    font-size: .66rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+.logistics-chat__none {
+    padding: 18px 10px;
+    color: var(--zaylo-muted, #6b5f54);
+    font-size: .8rem;
+}
+
+/* Open conversation */
+.logistics-chat__conversation {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+}
+
+.logistics-chat__head {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--zaylo-border, #ece4db);
+}
+
+.logistics-chat__back {
+    display: none;
+    color: var(--zaylo-ink, #1a1714);
+}
+
+.logistics-chat__messages {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 10px;
+    margin: 0;
+    padding: 20px;
+    overflow-y: auto;
+    list-style: none;
+}
+
+.logistics-chat__message {
+    display: grid;
+    gap: 4px;
+    max-width: min(75%, 520px);
+    align-self: flex-start;
+}
+
+.logistics-chat__message p {
+    margin: 0;
+    padding: 10px 14px;
+    border-radius: 14px 14px 14px 4px;
+    background: var(--zaylo-hover, #f5f0ea);
+    color: var(--zaylo-ink, #1a1714);
+    font-size: .86rem;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.logistics-chat__message span {
+    color: var(--zaylo-muted, #6b5f54);
+    font-size: .68rem;
+}
+
+.logistics-chat__message.is-mine {
+    align-self: flex-end;
+    text-align: right;
+}
+
+.logistics-chat__message.is-mine p {
+    border-radius: 14px 14px 4px 14px;
+    background: var(--zaylo-ink, #1a1714);
+    color: #fff;
+    text-align: left;
+}
+
+.logistics-chat__hint {
+    margin: auto;
+    color: var(--zaylo-muted, #6b5f54);
+    font-size: .82rem;
+}
+
+.logistics-chat__composer {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    padding: 14px 20px;
+    border-top: 1px solid var(--zaylo-border, #ece4db);
+}
+
+.logistics-chat__composer textarea {
+    flex: 1;
+    min-width: 0;
+    min-height: 42px;
+    max-height: 160px;
+    padding: 10px 14px;
+    border: 1px solid #dcd2c8;
+    border-radius: 10px;
+    color: var(--zaylo-ink, #1a1714);
+    font: inherit;
+    font-size: .86rem;
+    resize: none;
+}
+
+.logistics-chat__composer textarea:focus,
+.logistics-chat__start select:focus {
+    border-color: var(--zaylo-accent, #9a755e);
+    outline: 0;
+    box-shadow: 0 0 0 3px rgba(154, 117, 94, .14);
+}
+
+.logistics-chat__error {
+    margin: 0;
+    padding: 0 20px 12px;
+    color: #a4413b;
+    font-size: .78rem;
+}
+
+.logistics-chat__placeholder {
+    margin: auto;
+}
+
+/* Rider portal: the page has no workspace stylesheet, so give the chat its own frame and buttons. */
+.logistics-chat-standalone {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+    color: var(--zaylo-ink, #1a1714);
+}
+
+.logistics-chat-standalone .seller-panel {
+    border: 1px solid var(--zaylo-border, #ece4db);
+    border-radius: 12px;
+    background: #fff;
+}
+
+.logistics-chat-standalone .seller-button {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    min-height: 42px;
+    padding: 10px 16px;
+    border: 0;
+    border-radius: 9px;
+    background: var(--zaylo-ink, #1a1714);
+    color: #fff;
+    font: inherit;
+    font-size: .82rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.logistics-chat-standalone .seller-button:disabled {
+    opacity: .6;
+}
+
+.logistics-chat-standalone .seller-empty {
+    display: grid;
+    gap: 6px;
+    justify-items: center;
+    padding: 40px 20px;
+    color: var(--zaylo-muted, #6b5f54);
+    text-align: center;
+}
+
+.logistics-chat-standalone .seller-empty i {
+    color: var(--zaylo-accent, #9a755e);
+    font-size: 1.6rem;
+}
+
+.logistics-chat-standalone .seller-empty strong {
+    color: var(--zaylo-ink, #1a1714);
+}
+
+.logistics-chat-standalone__heading h1 {
+    margin: 0 0 4px;
+    font-family: 'Playfair Display', Georgia, serif;
+}
+
+.logistics-chat-standalone__heading p {
+    margin: 0 0 18px;
+    color: var(--zaylo-muted, #6b5f54);
+}
+
+@media (max-width: 760px) {
+    .logistics-chat {
+        grid-template-columns: minmax(0, 1fr);
+        height: auto;
+        min-height: 0;
+    }
+
+    /* One column on phones: the list, or the open conversation. */
+    .logistics-chat.has-thread .logistics-chat__list,
+    .logistics-chat:not(.has-thread):not(.logistics-chat--single) .logistics-chat__conversation {
+        display: none;
+    }
+
+    .logistics-chat__list {
+        border-right: 0;
+    }
+
+    .logistics-chat__conversation {
+        height: 70vh;
+    }
+
+    .logistics-chat__back {
+        display: inline-flex;
+    }
+
+    .logistics-chat__message {
+        max-width: 85%;
+    }
+
+    .logistics-chat__composer {
+        padding: 12px;
+    }
+
+    .logistics-chat__composer .seller-button {
+        padding-inline: 12px;
+    }
+}

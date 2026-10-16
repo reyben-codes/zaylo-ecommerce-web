@@ -33,6 +33,8 @@
             <a href="#personal-details"><i class="far fa-user"></i> Personal details</a>
             <a href="#delivery-addresses"><i class="fas fa-location-dot"></i> Delivery addresses</a>
             @if($identityEnabled)<a href="#identity-verification"><i class="far fa-id-card"></i> ID verification</a>@endif
+            <a href="{{ route('disputes.index') }}"><i class="far fa-flag"></i> My complaints</a>
+            <a href="{{ route('support') }}"><i class="far fa-life-ring"></i> Help &amp; support</a>
             <a href="#security"><i class="fas fa-lock"></i> Password</a>
         </nav>
     </aside>

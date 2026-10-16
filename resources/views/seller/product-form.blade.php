@@ -78,6 +78,22 @@
                         </select>
                         <p class="seller-field__help">"Sale" is added automatically during a scheduled sale.</p>
                     </div>
+                    @unless($product)
+                        <div class="seller-field seller-field--full" data-color-labels>
+                            <label for="productColors">Colors <span class="seller-field__optional">Optional</span></label>
+                            <input id="productColors" name="colors" value="{{ $value('colors') }}" maxlength="600" placeholder="e.g. Black, White, Olive" autocomplete="off" aria-describedby="productColorsHelp" @if($fieldError('colors')) aria-invalid="true" @endif>
+                            <div class="color-labels" data-color-chips hidden>
+                                @foreach(config('marketplace.color_presets') as $preset)
+                                    <button type="button" class="color-label" data-color-chip="{{ $preset }}" aria-pressed="false">
+                                        <span class="color-label__swatch" style="--swatch: {{ \App\Models\ProductVariant::swatchFor($preset) }}" aria-hidden="true"></span>
+                                        {{ $preset }}
+                                    </button>
+                                @endforeach
+                            </div>
+                            <p class="seller-field__help" id="productColorsHelp">Separate colors with commas. Each color starts with the price and stock above, and you can add sizes per color after saving.</p>
+                            @if($fieldError('colors'))<p class="seller-field__error">{{ $errors->first('colors') }}</p>@endif
+                        </div>
+                    @endunless
                     <div class="seller-field seller-field--full">
                         <label for="productDescription">Description</label>
                         <textarea id="productDescription" name="description" maxlength="2000" rows="6" @if($fieldError('description')) aria-invalid="true" @endif>{{ $value('description', $product?->description) }}</textarea>
@@ -194,7 +210,7 @@
                 <section class="seller-panel">
                     <header class="seller-panel__header"><h2>After you create it</h2></header>
                     <ul class="seller-panel__body product-form__tips">
-                        <li>Add sizes, like shoe or shirt sizes, each with its own stock.</li>
+                        <li>Add more colors, and sizes per color, each with its own price and stock.</li>
                         <li>Schedule sales with a start and end time.</li>
                         <li>Restock anytime from Inventory.</li>
                         <li>Hide it from buyers without deleting it.</li>

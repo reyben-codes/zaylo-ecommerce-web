@@ -54,7 +54,7 @@
                     <form method="POST" action="{{ route('registration.cancel') }}">@csrf<button type="submit" class="btn-back">Start over</button></form>
                 @else
                     <p>Using the wrong account?</p>
-                    <form method="POST" action="{{ route('logout') }}">@csrf<button type="submit" class="btn-back">Sign out</button></form>
+                    <form method="POST" action="{{ route('logout') }}" data-logout-confirm>@csrf<button type="submit" class="btn-back">Sign out</button></form>
                 @endif
             </footer>
         </div>

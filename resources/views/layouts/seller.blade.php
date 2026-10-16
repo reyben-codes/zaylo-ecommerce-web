@@ -13,10 +13,12 @@
         <link rel="stylesheet" href="{{ asset("css/{$stylesheet}.css") }}?v={{ filemtime(public_path("css/{$stylesheet}.css")) }}">
     @endforeach
     @stack('styles')
+    <link rel="stylesheet" href="{{ asset('css/logout-confirm.css') }}?v={{ filemtime(public_path('css/logout-confirm.css')) }}">
 </head>
 <body class="seller-workspace">
     @include('partials.seller-header')
     @include('partials.notifications')
+    @include('partials.announcements')
 
     <div class="seller-shell">
         @include('partials.seller-sidebar')
@@ -32,5 +34,6 @@
     <script src="{{ asset('js/smooth-disclosure.js') }}?v={{ filemtime(public_path('js/smooth-disclosure.js')) }}" defer></script>
     <script src="{{ asset('js/seller-workspace.js') }}?v={{ filemtime(public_path('js/seller-workspace.js')) }}" defer></script>
     @stack('scripts')
+    <script src="{{ asset('js/logout-confirm.js') }}?v={{ filemtime(public_path('js/logout-confirm.js')) }}" defer></script>
 </body>
 </html>

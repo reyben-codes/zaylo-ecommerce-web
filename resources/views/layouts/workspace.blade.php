@@ -11,10 +11,19 @@
             'icon' => 'fa-shield-halved',
             'nav' => [
                 ['route' => 'admin.dashboard', 'label' => 'Dashboard', 'icon' => 'fa-home'],
+                ['heading' => 'Accounts'],
                 ['route' => 'admin.registrations', 'label' => 'Approvals', 'icon' => 'fa-user-check'],
                 ['route' => 'admin.identity', 'label' => 'ID checks', 'icon' => 'fa-id-card'],
                 ['route' => 'admin.users', 'label' => 'Users', 'icon' => 'fa-users'],
                 ['route' => 'admin.logistics', 'label' => 'Logistics', 'icon' => 'fa-truck-fast'],
+                ['heading' => 'Marketplace'],
+                ['route' => 'admin.compliance', 'label' => 'Compliance', 'icon' => 'fa-shield-halved'],
+                ['route' => 'admin.disputes', 'label' => 'Disputes', 'icon' => 'fa-scale-balanced'],
+                ['route' => 'admin.commissions', 'label' => 'Commission', 'icon' => 'fa-percent'],
+                ['route' => 'admin.reports', 'label' => 'Reports', 'icon' => 'fa-chart-column'],
+                ['heading' => 'Platform'],
+                ['route' => 'admin.settings', 'label' => 'Settings', 'icon' => 'fa-sliders'],
+                ['route' => 'admin.chat', 'label' => 'Messages', 'icon' => 'fa-comments'],
                 ['route' => 'admin.account', 'label' => 'Account', 'icon' => 'fa-user'],
             ],
         ],
@@ -26,7 +35,19 @@
             'icon' => 'fa-truck-fast',
             'nav' => [
                 ['route' => 'logistics.dashboard', 'label' => 'Dashboard', 'icon' => 'fa-home'],
+                ['heading' => 'Sorting center'],
+                ['route' => 'logistics.pickups', 'label' => 'Pickups', 'icon' => 'fa-box-open'],
+                ['route' => 'logistics.incoming', 'label' => 'Incoming', 'icon' => 'fa-arrow-down'],
+                ['route' => 'logistics.sorting', 'label' => 'Sorting', 'icon' => 'fa-layer-group'],
+                ['route' => 'logistics.scan', 'label' => 'Scan parcel', 'icon' => 'fa-barcode'],
+                ['route' => 'logistics.assignments', 'label' => 'Assign riders', 'icon' => 'fa-people-arrows'],
+                ['route' => 'logistics.deliveries', 'label' => 'Deliveries', 'icon' => 'fa-route'],
+                ['route' => 'logistics.monitoring', 'label' => 'Monitoring', 'icon' => 'fa-satellite-dish'],
+                ['heading' => 'Team'],
                 ['route' => 'logistics.riders', 'label' => 'Riders', 'icon' => 'fa-motorcycle'],
+                ['route' => 'logistics.messages', 'label' => 'Messages', 'icon' => 'fa-comments'],
+                ['route' => 'support', 'label' => 'ZAYLO support', 'icon' => 'fa-life-ring'],
+                ['route' => 'logistics.reports', 'label' => 'Reports', 'icon' => 'fa-chart-column'],
                 ['route' => 'logistics.account', 'label' => 'Account', 'icon' => 'fa-user'],
             ],
         ],
@@ -48,6 +69,7 @@
         <link rel="stylesheet" href="{{ asset("css/{$stylesheet}.css") }}?v={{ filemtime(public_path("css/{$stylesheet}.css")) }}">
     @endforeach
     @stack('styles')
+    <link rel="stylesheet" href="{{ asset('css/logout-confirm.css') }}?v={{ filemtime(public_path('css/logout-confirm.css')) }}">
 </head>
 <body class="seller-workspace workspace-{{ $workspace }}">
     <header class="seller-site-header">
@@ -62,7 +84,7 @@
             <a href="{{ route($portal['account']) }}" class="seller-site-header__button" aria-label="Account">
                 <i class="fa-regular fa-user" aria-hidden="true"></i>
             </a>
-            <form method="POST" action="{{ route('logout') }}" class="seller-site-header__logout">
+            <form method="POST" action="{{ route('logout') }}" data-logout-confirm class="seller-site-header__logout">
                 @csrf
                 <button type="submit" class="seller-site-header__button" aria-label="Log out">
                     <i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i>
@@ -72,12 +94,17 @@
     </header>
 
     @include('partials.notifications')
+    @include('partials.announcements')
 
     <div class="seller-shell">
         <aside class="sidebar seller-sidebar" id="sidebar" aria-label="{{ $portal['title'] }} navigation">
             <p class="seller-sidebar__title">{{ $portal['title'] }}</p>
             <nav class="seller-sidebar__nav">
                 @foreach($portal['nav'] as $item)
+                    @if(isset($item['heading']))
+                        <p class="seller-sidebar__group">{{ $item['heading'] }}</p>
+                        @continue
+                    @endif
                     @php $active = request()->routeIs($item['route'], $item['route'].'.*'); @endphp
                     <a href="{{ route($item['route']) }}" class="seller-sidebar__link{{ $active ? ' is-active' : '' }}" @if($active) aria-current="page" @endif>
                         <i class="fas {{ $item['icon'] }}" aria-hidden="true"></i>
@@ -85,7 +112,7 @@
                     </a>
                 @endforeach
                 <div class="seller-sidebar__divider" aria-hidden="true"></div>
-                <form method="POST" action="{{ route('logout') }}" class="seller-sidebar__logout-form">
+                <form method="POST" action="{{ route('logout') }}" data-logout-confirm class="seller-sidebar__logout-form">
                     @csrf
                     <button type="submit" class="seller-sidebar__link seller-sidebar__logout">
                         <i class="fas fa-sign-out-alt" aria-hidden="true"></i>
@@ -104,5 +131,6 @@
     <script src="{{ asset('js/smooth-disclosure.js') }}?v={{ filemtime(public_path('js/smooth-disclosure.js')) }}" defer></script>
     <script src="{{ asset('js/seller-workspace.js') }}?v={{ filemtime(public_path('js/seller-workspace.js')) }}" defer></script>
     @stack('scripts')
+    <script src="{{ asset('js/logout-confirm.js') }}?v={{ filemtime(public_path('js/logout-confirm.js')) }}" defer></script>
 </body>
 </html>

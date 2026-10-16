@@ -96,5 +96,4 @@ class CourierController extends Controller
 
     public function history() { return $this->deliveries(); }
     public function account() { return view('courier.account'); }
-    public function chat() { return view('courier.chat'); }
 }

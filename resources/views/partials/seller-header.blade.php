@@ -10,7 +10,7 @@
         <a href="{{ route('seller.account') }}" class="seller-site-header__button" aria-label="Seller account">
             <i class="fa-regular fa-user" aria-hidden="true"></i>
         </a>
-        <form method="POST" action="{{ route('logout') }}" class="seller-site-header__logout">
+        <form method="POST" action="{{ route('logout') }}" data-logout-confirm class="seller-site-header__logout">
             @csrf
             <button type="submit" class="seller-site-header__button" aria-label="Log out">
                 <i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i>

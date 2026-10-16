@@ -1,0 +1,390 @@
+/* Logistics sorting center: parcel steps, scanning and reports. Builds on seller-workspace.css tokens. */
+
+.parcel-tracking {
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: .78rem;
+    letter-spacing: .02em;
+}
+
+.parcel-destination {
+    max-width: 260px;
+}
+
+.parcel-destination .seller-cell-note {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+/* Step pills */
+.parcel-stage {
+    display: inline-flex;
+    width: max-content;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: #f1ebe5;
+    color: #5b4d41;
+    font-size: .64rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.parcel-stage--ready {
+    background: #fbf0dc;
+    color: #8f5b17;
+}
+
+.parcel-stage--picked_up,
+.parcel-stage--in_transit {
+    background: #e9eef8;
+    color: #35558a;
+}
+
+.parcel-stage--assigned,
+.parcel-stage--out_for_delivery {
+    background: #efe7f6;
+    color: #6a4592;
+}
+
+.parcel-stage--delivered {
+    background: #eaf4eb;
+    color: #2f6b38;
+}
+
+.parcel-stage--failed,
+.parcel-stage--returned,
+.parcel-stage--cancelled {
+    background: #f9e5e3;
+    color: #a4413b;
+}
+
+/* Next-step buttons */
+.parcel-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.parcel-actions form {
+    margin: 0;
+}
+
+.parcel-inline-form {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.parcel-inline-form select,
+.parcel-inline-form input {
+    min-width: 150px;
+    min-height: 34px;
+    padding: 6px 10px;
+    border: 1px solid #dcd2c8;
+    border-radius: 7px;
+    background: #fff;
+    color: var(--zaylo-ink);
+    font: inherit;
+    font-size: .76rem;
+}
+
+.parcel-inline-form input[type="date"] {
+    min-width: 0;
+}
+
+.parcel-inline-form select:focus,
+.parcel-inline-form input:focus {
+    border-color: var(--zaylo-accent);
+    outline: 0;
+    box-shadow: 0 0 0 3px rgba(154, 117, 94, .14);
+}
+
+.parcel-decline .review-reason__form {
+    text-align: left;
+}
+
+.parcel-note {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    color: var(--zaylo-ink);
+    font-weight: 600;
+}
+
+.parcel-note i {
+    color: var(--zaylo-accent);
+}
+
+/* Sorting bins (delivery areas) */
+.parcel-bins {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 12px;
+    padding: 18px 20px;
+}
+
+.parcel-bin {
+    display: grid;
+    gap: 10px;
+    padding: 14px;
+    border: 1px solid var(--zaylo-border);
+    border-radius: 10px;
+    background: #fcfaf8;
+}
+
+.parcel-bin.is-active {
+    border-color: var(--zaylo-accent);
+    box-shadow: 0 0 0 3px rgba(154, 117, 94, .12);
+}
+
+.parcel-bin__head {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    justify-content: space-between;
+}
+
+.parcel-bin__head a {
+    min-width: 0;
+    color: var(--zaylo-ink);
+    font-weight: 700;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+}
+
+.parcel-bin__head a:hover {
+    text-decoration: underline;
+}
+
+.parcel-bin__count {
+    flex: 0 0 auto;
+    color: var(--zaylo-muted);
+    font-size: .74rem;
+}
+
+.parcel-bin .parcel-inline-form select {
+    flex: 1;
+    min-width: 0;
+}
+
+.parcel-empty-inline {
+    margin: 0;
+    padding: 18px 20px;
+    color: var(--zaylo-muted);
+    font-size: .82rem;
+}
+
+/* Rider workload */
+.rider-load {
+    display: inline-flex;
+    min-width: 28px;
+    justify-content: center;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: #f1ebe5;
+    color: #5b4d41;
+    font-size: .74rem;
+    font-weight: 700;
+}
+
+.rider-load--busy {
+    background: #efe7f6;
+    color: #6a4592;
+}
+
+.rider-load--warn {
+    background: #f9e5e3;
+    color: #a4413b;
+}
+
+/* Scan */
+.parcel-scan {
+    padding: 20px;
+    border-bottom: 1px solid var(--zaylo-border);
+}
+
+.parcel-scan__row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-top: 6px;
+}
+
+.parcel-scan__row > i {
+    color: var(--zaylo-accent);
+    font-size: 1.3rem;
+}
+
+.parcel-scan__row input {
+    flex: 1;
+    min-width: 0;
+    min-height: 46px;
+    padding: 10px 14px;
+    border: 1px solid #dcd2c8;
+    border-radius: 9px;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: .95rem;
+    letter-spacing: .04em;
+}
+
+.parcel-scan__row input:focus {
+    border-color: var(--zaylo-accent);
+    outline: 0;
+    box-shadow: 0 0 0 3px rgba(154, 117, 94, .14);
+}
+
+.parcel-result {
+    display: grid;
+    gap: 16px;
+    padding: 20px;
+}
+
+.parcel-result__head {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.parcel-result__head .parcel-tracking {
+    display: block;
+    font-size: 1.05rem;
+}
+
+.parcel-result__details dd {
+    max-width: 60%;
+}
+
+.parcel-result__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 14px;
+    border-top: 1px solid var(--zaylo-border);
+}
+
+/* Reports */
+.parcel-report-grid {
+    margin-top: 22px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+}
+
+.parcel-report-grid .seller-panel + .seller-panel {
+    margin-top: 0;
+}
+
+.parcel-report-filter {
+    margin-bottom: 22px;
+}
+
+.parcel-report-error {
+    margin: 0;
+    padding: 0 20px 14px;
+}
+
+.parcel-breakdown {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 18px 20px;
+    list-style: none;
+}
+
+.parcel-breakdown li {
+    display: grid;
+    grid-template-columns: 170px minmax(0, 1fr) 48px;
+    gap: 12px;
+    align-items: center;
+    font-size: .8rem;
+}
+
+.parcel-breakdown li strong {
+    color: var(--zaylo-ink);
+    text-align: right;
+}
+
+.parcel-breakdown__bar {
+    height: 8px;
+    border-radius: 999px;
+    background: #f1ebe5;
+    overflow: hidden;
+}
+
+.parcel-breakdown__bar span {
+    display: block;
+    width: var(--share);
+    height: 100%;
+    border-radius: inherit;
+    background: var(--zaylo-accent);
+}
+
+/* Dashboard */
+.parcel-pipeline {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.logistics-dashboard-grid {
+    grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+    align-items: start;
+}
+
+.rider-paused {
+    color: #8f5b17;
+    font-weight: 600;
+}
+
+/* The parcel table needs the full width until the screen is wide enough for the riders panel beside it. */
+@media (max-width: 1500px) {
+    .logistics-dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 1100px) {
+    .parcel-report-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .parcel-pipeline {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+    .parcel-pipeline {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .parcel-scan__row {
+        flex-wrap: wrap;
+    }
+
+    .parcel-scan__row .seller-button {
+        width: 100%;
+    }
+
+    .parcel-breakdown li {
+        grid-template-columns: 1fr 48px;
+    }
+
+    .parcel-breakdown__bar {
+        grid-column: 1 / -1;
+        grid-row: 2;
+    }
+
+    .parcel-actions {
+        justify-content: flex-start;
+    }
+
+    .parcel-inline-form {
+        flex-wrap: wrap;
+    }
+}

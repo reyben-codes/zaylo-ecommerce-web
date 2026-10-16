@@ -12,9 +12,13 @@ class Shipment extends Model
         'order_id', 'courier_id', 'tracking_number', 'picked_up_at', 'delivered_at',
         'seller_order_id', 'logistics_provider_id', 'rider_id', 'tracking_code',
         'status', 'fee_minor', 'cod_amount_minor', 'cod_collected', 'attempts',
+        'pickup_confirmed_at', 'pickup_scheduled_for', 'sorted_at', 'sort_area',
     ];
 
-    protected $casts = ['cod_collected' => 'boolean', 'picked_up_at' => 'datetime', 'delivered_at' => 'datetime'];
+    protected $casts = [
+        'cod_collected' => 'boolean', 'picked_up_at' => 'datetime', 'delivered_at' => 'datetime',
+        'pickup_confirmed_at' => 'datetime', 'pickup_scheduled_for' => 'date', 'sorted_at' => 'datetime',
+    ];
 
     public function order(): BelongsTo
     {

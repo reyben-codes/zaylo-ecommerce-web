@@ -1,0 +1,172 @@
+/* Logistics report PDF (dompdf). Table layout only: dompdf has no flexbox or grid. */
+
+@page {
+    margin: 28px 32px 36px;
+}
+
+body {
+    color: #1a1714;
+    font-family: 'DejaVu Sans', sans-serif;
+    font-size: 9px;
+    line-height: 1.4;
+}
+
+h1 {
+    margin: 2px 0 0;
+    font-size: 20px;
+}
+
+h2 {
+    margin: 14px 0 6px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: #6b5f54;
+}
+
+p {
+    margin: 0;
+}
+
+.muted {
+    color: #6b5f54;
+}
+
+.mono {
+    font-family: 'DejaVu Sans Mono', monospace;
+    font-size: 8px;
+}
+
+/* Header */
+.report-head {
+    padding-bottom: 10px;
+    border-bottom: 2px solid #1a1714;
+}
+
+.report-head__table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.report-head__table td {
+    vertical-align: bottom;
+}
+
+.report-logo-image {
+    height: 30px;
+}
+
+.report-logo {
+    font-size: 16px;
+    font-weight: bold;
+    letter-spacing: .18em;
+}
+
+.report-eyebrow {
+    margin-top: 8px;
+    color: #9a755e;
+    font-size: 8px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+}
+
+.report-meta {
+    text-align: right;
+    color: #6b5f54;
+}
+
+/* Summary */
+.report-stats {
+    width: 100%;
+    margin-top: 14px;
+    border-collapse: separate;
+    border-spacing: 8px 0;
+}
+
+.report-stats td {
+    width: 25%;
+    padding: 10px 12px;
+    border: 1px solid #ece4db;
+    border-radius: 6px;
+    background: #faf7f2;
+}
+
+.report-stats span {
+    display: block;
+    color: #6b5f54;
+    font-size: 7.5px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+}
+
+.report-stats strong {
+    display: block;
+    margin: 3px 0;
+    font-size: 18px;
+}
+
+.report-stats em {
+    color: #6b5f54;
+    font-style: normal;
+}
+
+/* Two columns: steps | riders and areas */
+.report-columns {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.report-columns > tbody > tr > td,
+.report-columns > tr > td {
+    width: 50%;
+    padding-right: 14px;
+    vertical-align: top;
+}
+
+.report-columns > tbody > tr > td + td,
+.report-columns > tr > td + td {
+    padding-right: 0;
+    padding-left: 14px;
+}
+
+/* Tables */
+.report-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.report-table th {
+    padding: 5px 6px;
+    border-bottom: 1px solid #d8cdc1;
+    background: #f5f0ea;
+    color: #6b5f54;
+    font-size: 7.5px;
+    text-align: left;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+
+.report-table td {
+    padding: 5px 6px;
+    border-bottom: 1px solid #ece4db;
+    vertical-align: top;
+}
+
+.report-table .num {
+    text-align: right;
+}
+
+.report-section {
+    margin-top: 18px;
+    page-break-after: avoid;
+}
+
+.report-table--parcels thead {
+    display: table-header-group;
+}
+
+.report-table--parcels tr {
+    page-break-inside: avoid;
+}

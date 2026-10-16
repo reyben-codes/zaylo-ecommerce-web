@@ -22,6 +22,7 @@
     <link rel="stylesheet" href="{{ asset('css/quantity-stepper.css') }}?v={{ filemtime(public_path('css/quantity-stepper.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/product-card-description.css') }}?v={{ filemtime(public_path('css/product-card-description.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/product-rating.css') }}?v={{ filemtime(public_path('css/product-rating.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/logout-confirm.css') }}?v={{ filemtime(public_path('css/logout-confirm.css')) }}">
 </head>
 <body class="@yield('body-class')">
     <!-- Navigation -->
@@ -66,7 +67,7 @@
                 @endif
 
                 @auth
-                <form method="POST" action="{{ route('logout') }}" style="display:inline;margin-left:4px;">
+                <form method="POST" action="{{ route('logout') }}" data-logout-confirm style="display:inline;margin-left:4px;">
                     @csrf
                     @if(auth()->user()->role !== 'buyer')
                     <span style="font-size:0.8rem;font-weight:500;color:#6b5f54;border-left:1px solid #d8d0c8;padding-left:20px;margin-right:10px;">
@@ -88,6 +89,7 @@
     </header>
 
     @include('partials.notifications')
+    @include('partials.announcements')
 
     <div class="container">
         <!-- Page Content -->
@@ -105,5 +107,6 @@
     <script src="{{ asset('js/quantity-stepper.js') }}?v={{ filemtime(public_path('js/quantity-stepper.js')) }}" defer></script>
     @include('partials.chat-widget')
     @include('partials.cart-animation')
+    <script src="{{ asset('js/logout-confirm.js') }}?v={{ filemtime(public_path('js/logout-confirm.js')) }}" defer></script>
 </body>
 </html>

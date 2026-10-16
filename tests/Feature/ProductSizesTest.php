@@ -99,7 +99,7 @@ class ProductSizesTest extends TestCase
         $shirt = Product::create(['seller_id' => $seller->id, 'name' => 'Linen Shirt', 'category' => 'clothing', 'price' => 899, 'stock' => 7, 'is_active' => true]);
 
         $this->actingAs($seller)->get(route('seller.products.edit', $shirt))->assertOk()
-            ->assertSee('Sell this in sizes', false)->assertSee('value="XL"', false);
+            ->assertSee('Label this product with colors', false)->assertSee('value="XL"', false);
         $this->patch(route('seller.products.stock', $shirt), ['new' => [
             ['color' => '', 'size' => 'S', 'price' => 899, 'stock' => 3],
             ['color' => '', 'size' => 'M', 'price' => 899, 'stock' => 4],

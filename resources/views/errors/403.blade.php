@@ -23,6 +23,7 @@
         .btn-secondary:hover { background: #1a1714; color: white; }
         .divider { width: 48px; height: 2px; background: #ece4db; margin: 24px auto; }
     </style>
+    <link rel="stylesheet" href="{{ asset('css/logout-confirm.css') }}?v={{ filemtime(public_path('css/logout-confirm.css')) }}">
 </head>
 <body>
     <div class="error-container">
@@ -34,12 +35,13 @@
         <div class="error-actions">
             <a href="{{ url('/') }}" class="btn-primary">Go Home</a>
             @auth
-                <form method="POST" action="{{ route('logout') }}" style="display:inline;">
+                <form method="POST" action="{{ route('logout') }}" data-logout-confirm style="display:inline;">
                     @csrf
                     <button type="submit" class="btn-secondary">Switch Account</button>
                 </form>
             @endauth
         </div>
     </div>
+    <script src="{{ asset('js/logout-confirm.js') }}?v={{ filemtime(public_path('js/logout-confirm.js')) }}" defer></script>
 </body>
 </html>

@@ -9,6 +9,18 @@
         </form>
     @endif
 
+    @if($rider->status === 'approved')
+        {{-- Pausing keeps the account but stops new parcel assignments. --}}
+        <form method="POST" action="{{ route('logistics.riders.availability', $rider) }}">
+            @csrf
+            @method('PATCH')
+            <input type="hidden" name="available" value="{{ $rider->is_active ? 0 : 1 }}">
+            <button type="submit" class="seller-button seller-button--small seller-button--secondary">
+                <i class="fas {{ $rider->is_active ? 'fa-pause' : 'fa-play' }}" aria-hidden="true"></i> {{ $rider->is_active ? 'Pause' : 'Resume' }}
+            </button>
+        </form>
+    @endif
+
     @if(in_array($rider->status, ['pending', 'approved'], true))
         @php $action = $rider->status === 'pending' ? 'reject' : 'suspend'; @endphp
         <details class="review-reason" data-smooth-disclosure>

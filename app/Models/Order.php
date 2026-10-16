@@ -60,6 +60,12 @@ class Order extends Model
         return $this->hasMany(SellerOrder::class);
     }
 
+    /** Complaints filed about this order. */
+    public function disputes(): HasMany
+    {
+        return $this->hasMany(Dispute::class)->latest();
+    }
+
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);

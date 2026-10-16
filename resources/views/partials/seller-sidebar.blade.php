@@ -11,6 +11,8 @@
                 ['route' => 'seller.products', 'label' => 'Products', 'icon' => 'fa-shopping-bag'],
                 ['route' => 'seller.reports', 'label' => 'Reports', 'icon' => 'fa-chart-bar'],
                 ['route' => 'seller.chat', 'label' => 'Messages', 'icon' => 'fa-comment'],
+                ['route' => 'seller.logistics-messages', 'label' => 'Logistics chat', 'icon' => 'fa-truck-fast'],
+                ['route' => 'support', 'label' => 'Help & support', 'icon' => 'fa-life-ring'],
                 ['route' => 'seller.account', 'label' => 'Account', 'icon' => 'fa-user'],
             ];
         @endphp
@@ -32,7 +34,7 @@
 
         <div class="seller-sidebar__divider" aria-hidden="true"></div>
 
-        <form method="POST" action="{{ route('logout') }}" class="seller-sidebar__logout-form">
+        <form method="POST" action="{{ route('logout') }}" data-logout-confirm class="seller-sidebar__logout-form">
             @csrf
             <button type="submit" class="seller-sidebar__link seller-sidebar__logout">
                 <i class="fas fa-sign-out-alt" aria-hidden="true"></i>

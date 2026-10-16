@@ -1,0 +1,395 @@
+/* Admin Center modules: dashboard attention list, compliance, commission, reports, settings and user pages.
+   Builds on seller-workspace.css tokens and components. */
+
+.admin-stack {
+    display: grid;
+    gap: 22px;
+    min-width: 0;
+}
+
+.admin-stack > .seller-panel + .seller-panel {
+    margin-top: 0;
+}
+
+.admin-pad {
+    padding: 18px 20px;
+}
+
+.admin-filter-panel {
+    margin-bottom: 22px;
+}
+
+.admin-two-col {
+    margin-top: 22px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-two-col > .seller-panel + .seller-panel {
+    margin-top: 0;
+}
+
+.admin-empty-inline {
+    margin: 0;
+    padding: 16px 20px;
+    color: var(--zaylo-muted);
+    font-size: .82rem;
+    list-style: none;
+}
+
+.admin-error {
+    margin: 0;
+    padding: 0 20px 14px;
+}
+
+/* Dashboard: needs your attention */
+.admin-attention {
+    margin-bottom: 22px;
+}
+
+.admin-attention__list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 10px;
+    margin: 0;
+    padding: 16px 20px 20px;
+    list-style: none;
+}
+
+.admin-attention__list a {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    height: 100%;
+    padding: 14px 16px;
+    border: 1px solid #f0d9b6;
+    border-radius: 10px;
+    background: #fffaf2;
+    color: var(--zaylo-ink);
+    text-decoration: none;
+    transition: border-color .2s ease, background-color .2s ease;
+}
+
+.admin-attention__list a:hover,
+.admin-attention__list a:focus-visible {
+    border-color: var(--zaylo-accent);
+    background: #fff;
+    outline: none;
+}
+
+.admin-attention__list i:first-child {
+    color: #a26a1f;
+}
+
+.admin-attention__list strong {
+    font-size: 1.15rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.admin-attention__list span {
+    flex: 1;
+    color: var(--zaylo-muted);
+    font-size: .82rem;
+}
+
+.admin-attention__go {
+    color: var(--zaylo-muted);
+    font-size: .75rem;
+}
+
+/* Forms */
+.admin-form {
+    display: grid;
+    gap: 14px;
+    padding: 18px 20px 20px;
+}
+
+.admin-form h3 {
+    margin: 0;
+    font-size: .95rem;
+}
+
+.admin-form textarea,
+.admin-form input[type="text"],
+.admin-form input[type="datetime-local"],
+.admin-form select {
+    width: 100%;
+}
+
+.admin-form__row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.admin-check {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-size: .84rem;
+}
+
+.admin-form-footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: flex-end;
+    padding: 14px 20px;
+    border-top: 1px solid var(--zaylo-border);
+}
+
+.admin-form .admin-form-footer {
+    padding: 14px 0 0;
+}
+
+.policy-editor {
+    min-height: 420px;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: .84rem;
+    line-height: 1.6;
+}
+
+/* User profile */
+.admin-profile {
+    padding: 16px 20px 20px;
+}
+
+.admin-profile dd {
+    max-width: 65%;
+    overflow-wrap: anywhere;
+}
+
+/* Compliance */
+.compliance-product {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    min-width: 220px;
+}
+
+.compliance-product img {
+    flex: 0 0 auto;
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    object-fit: cover;
+    background: var(--zaylo-hover);
+}
+
+.compliance-product .case-pill {
+    margin-top: 4px;
+}
+
+.flag {
+    display: flex;
+    gap: 6px;
+    align-items: baseline;
+    max-width: 320px;
+    margin-bottom: 6px;
+    padding: 6px 9px;
+    border-radius: 7px;
+    font-size: .76rem;
+    line-height: 1.4;
+}
+
+.flag--prohibited {
+    background: #fde4e1;
+    color: #8f342e;
+}
+
+.flag--wrong_category {
+    background: #fff0d5;
+    color: #7c4f12;
+}
+
+.compliance-table .review-reason__form select {
+    width: 100%;
+    min-height: 34px;
+    padding: 6px 8px;
+    border: 1px solid #dcd2c8;
+    border-radius: 7px;
+    font-size: .76rem;
+}
+
+/* Money tables */
+.admin-money td {
+    font-variant-numeric: tabular-nums;
+}
+
+.commission-state {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: #f1ebe5;
+    color: #5b4d41;
+    font-size: .68rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.commission-state--earned {
+    background: #e6f2e7;
+    color: #2f6b3a;
+}
+
+.commission-state--settled {
+    background: #e9eef8;
+    color: #35558a;
+}
+
+.commission-state--unrecorded,
+.commission-state--pending {
+    background: #fff0d5;
+    color: #7c4f12;
+}
+
+/* Reports chart: one bar per day or month, heights to scale with the highest value. */
+.admin-chart {
+    display: flex;
+    gap: 3px;
+    align-items: flex-end;
+    height: 220px;
+    margin: 0 20px;
+    padding: 20px 0 26px;
+    border-bottom: 1px solid var(--zaylo-border);
+    overflow-x: auto;
+}
+
+.admin-chart__bar {
+    position: relative;
+    display: flex;
+    flex: 1 0 10px;
+    align-items: flex-end;
+    height: 100%;
+}
+
+.admin-chart__bar span {
+    display: block;
+    width: 100%;
+    height: var(--height);
+    border-radius: 4px 4px 0 0;
+    background: var(--zaylo-accent);
+}
+
+.admin-chart__bar:hover span {
+    background: var(--zaylo-ink);
+}
+
+.admin-chart__bar em {
+    position: absolute;
+    bottom: -22px;
+    left: 50%;
+    color: var(--zaylo-muted);
+    font-size: .64rem;
+    font-style: normal;
+    white-space: nowrap;
+    transform: translateX(-50%);
+}
+
+/* Keep the first and last labels inside the chart. */
+.admin-chart__bar:first-child em {
+    left: 0;
+    transform: none;
+}
+
+.admin-chart__bar:last-child em {
+    right: 0;
+    left: auto;
+    transform: none;
+}
+
+.admin-chart__scale {
+    margin: 0;
+    padding: 12px 20px 18px;
+    color: var(--zaylo-muted);
+    font-size: .76rem;
+}
+
+.admin-status-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
+    margin: 0;
+    padding: 16px 20px 20px;
+    list-style: none;
+}
+
+.admin-status-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border: 1px solid var(--zaylo-border);
+    border-radius: 8px;
+    font-size: .84rem;
+}
+
+/* Settings: announcements */
+.announcement-list {
+    display: grid;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.announcement-item {
+    display: grid;
+    gap: 6px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--zaylo-border);
+}
+
+.announcement-item p {
+    margin: 0;
+    color: var(--zaylo-ink);
+    font-size: .86rem;
+    white-space: pre-line;
+}
+
+.announcement-item__head {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.announcement-state {
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: #f1ebe5;
+    color: #5b4d41;
+    font-size: .64rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.announcement-state--live {
+    background: #e6f2e7;
+    color: #2f6b3a;
+}
+
+.announcement-state--scheduled {
+    background: #e9eef8;
+    color: #35558a;
+}
+
+.announcement-form {
+    border-top: 1px solid var(--zaylo-border);
+    background: #fcfaf8;
+}
+
+@media (max-width: 1100px) {
+    .admin-two-col {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .admin-form__row {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-chart {
+        margin: 0 12px;
+    }
+}

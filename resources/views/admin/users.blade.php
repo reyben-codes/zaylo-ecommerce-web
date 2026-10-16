@@ -58,7 +58,7 @@
                     @forelse($users as $account)
                         <tr>
                             <td>
-                                <strong>{{ $account->name }}</strong>
+                                <a href="{{ route('admin.users.show', $account) }}" class="workspace-link"><strong>{{ $account->name }}</strong></a>
                                 <span class="seller-cell-note">{{ $account->email }}</span>
                             </td>
                             <td>

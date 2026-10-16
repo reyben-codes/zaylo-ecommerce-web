@@ -653,6 +653,99 @@
     font-size: .68rem;
 }
 
+/* A color card's name, and the "Add a color" card. */
+.size-group__color {
+    display: grid;
+    gap: 5px;
+    padding-top: 10px;
+}
+
+.size-group__color label {
+    color: #806f61;
+    font-size: .62rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.size-group__color input {
+    font-weight: 600;
+}
+
+.size-group__color input[aria-invalid="true"] {
+    border-color: #c4645c;
+}
+
+.size-group--new {
+    border-style: dashed;
+    background: #fdfbf8;
+}
+
+.size-group--new > .size-group__summary .size-group__title strong {
+    color: var(--zaylo-accent);
+}
+
+/* Add product: one-tap color labels under the Colors field. */
+.seller-field__optional {
+    margin-left: 4px;
+    color: #9b8d80;
+    font-size: .66rem;
+    font-weight: 500;
+}
+
+.color-labels {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.color-labels[hidden] {
+    display: none;
+}
+
+.color-label {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    min-height: 30px;
+    padding: 4px 10px 4px 6px;
+    border: 1px solid #dcd2c8;
+    border-radius: 999px;
+    background: #fff;
+    color: var(--zaylo-ink);
+    font: inherit;
+    font-size: .72rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color .18s ease, background-color .18s ease;
+}
+
+.color-label:hover {
+    border-color: var(--zaylo-accent);
+}
+
+.color-label:focus-visible {
+    outline: 2px solid var(--zaylo-accent);
+    outline-offset: 2px;
+}
+
+.color-label[aria-pressed="true"] {
+    border-color: var(--zaylo-ink);
+    background: #f4efe9;
+}
+
+.color-label__swatch {
+    width: 18px;
+    height: 18px;
+    border: 1px solid rgba(26, 23, 20, .15);
+    border-radius: 50%;
+    background: var(--swatch, #eee8e1);
+}
+
+.color-label[aria-pressed="true"] .color-label__swatch {
+    box-shadow: 0 0 0 2px #fff, 0 0 0 3px var(--zaylo-ink);
+}
+
 .product-form__note--plain {
     align-self: start;
     margin: 0;
@@ -712,7 +805,8 @@
     .size-group,
     .size-group__chevron,
     .product-form__remove,
-    .product-form__size-button {
+    .product-form__size-button,
+    .color-label {
         transition: none;
     }
 

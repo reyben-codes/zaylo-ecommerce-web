@@ -67,6 +67,16 @@
     text-transform: uppercase;
 }
 
+/* Section heading inside a portal's menu (e.g. "Sorting center"). */
+.seller-sidebar__group {
+    margin: 14px 14px 4px;
+    color: var(--zaylo-muted, #6b5f54);
+    font-size: .6rem;
+    font-weight: 700;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+}
+
 .seller-sidebar__nav {
     display: flex;
     flex-direction: column;
@@ -168,6 +178,7 @@
     }
 
     .seller-sidebar__title,
+    .seller-sidebar__group,
     .seller-sidebar__divider {
         display: none;
     }

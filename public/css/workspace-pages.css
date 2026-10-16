@@ -112,6 +112,7 @@
 }
 
 .account-status--suspended,
+.account-status--deactivated,
 .account-status--rejected {
     background: #fde4e1;
     color: #a4413b;

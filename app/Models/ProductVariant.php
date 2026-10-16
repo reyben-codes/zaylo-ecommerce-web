@@ -47,6 +47,18 @@ class ProductVariant extends Model
         return collect([$color, $size])->filter(fn ($part) => filled($part))->implode(' / ') ?: 'Default';
     }
 
+    /** A swatch color for names containing a common color word ("Navy Blue" → navy), or null. */
+    public static function swatchFor(string $color): ?string
+    {
+        foreach (config('marketplace.color_swatches') as $word => $hex) {
+            if (preg_match('/\b'.$word.'\b/i', $color)) {
+                return $hex;
+            }
+        }
+
+        return null;
+    }
+
     public function product()
     {
         return $this->belongsTo(Product::class);

@@ -115,10 +115,18 @@ class SellerController extends Controller
     public function storeProduct(Request $request)
     {
         $data = $this->validatedProduct($request);
+        $colors = $this->colorList($request);
         $data = $this->storeProductImage($request, $data);
-        $product = Product::create($data + ['seller_id' => $this->shopId(), 'is_active' => $request->boolean('is_active', true)]);
+        $product = DB::transaction(function () use ($data, $colors, $request) {
+            $product = Product::create($data + ['seller_id' => $this->shopId(), 'is_active' => $request->boolean('is_active', true)]);
+            $this->createColorOptions($product, $colors);
 
-        return redirect()->route('seller.products.edit', $product)->with('status', 'Product created. You can schedule a sale or add variation stock below.');
+            return $product;
+        });
+
+        return redirect()->route('seller.products.edit', $product)->with('status', $colors
+            ? 'Product created in '.count($colors).' '.Str::plural('color', count($colors)).'. Set each color\'s sizes, price and stock below.'
+            : 'Product created. You can schedule a sale or add variation stock below.');
     }
 
     public function updateProduct(Request $request, Product $product)
@@ -331,15 +339,16 @@ class SellerController extends Controller
     {
         $this->authorize('update', $product);
 
-        // A product without options only has a stock count, until the seller gives it sizes.
-        if (Product::usesLegacySchema() && ! $product->variants()->where('is_active', true)->exists() && ! $request->filled('new')) {
+        // A product without options only has a stock count, until the seller gives it sizes or colors.
+        if (Product::usesLegacySchema() && ! $product->variants()->where('is_active', true)->exists()
+            && ! $request->filled('new') && ! $request->filled('added_color') && ! $request->filled('colors')) {
             $data = $request->validate(['stock' => 'required|integer|min:0|max:1000000']);
             $product->update(['stock' => $data['stock']]);
 
             return back()->with('status', "Stock updated for {$product->name}.");
         }
 
-        // Stock, price and size per variation, plus sizes added to or removed from a color.
+        // Stock, price and size per variation, sizes added to or removed from a color, and colors named or added.
         $data = $request->validate([
             'variants' => 'sometimes|array',
             'variants.*' => 'required|integer|min:0|max:1000000',
@@ -354,6 +363,14 @@ class SellerController extends Controller
             'new.*.size' => 'nullable|string|max:40',
             'new.*.price' => 'nullable|required_with:new.*.size|numeric|min:0|max:99999999.99',
             'new.*.stock' => 'nullable|required_with:new.*.size|integer|min:0|max:1000000',
+            'colors' => 'sometimes|array|max:50',
+            'colors.*.from' => 'nullable|string|max:80',
+            'colors.*.to' => 'nullable|string|max:40',
+            'added_color' => 'nullable|string|max:40',
+            'added' => 'sometimes|array|max:50',
+            'added.*.size' => 'nullable|string|max:40',
+            'added.*.price' => 'nullable|numeric|min:0|max:99999999.99',
+            'added.*.stock' => 'nullable|integer|min:0|max:1000000',
         ]);
         $legacy = Product::usesLegacySchema();
         $active = $this->forSale($product->variants())->orderBy('id')->get()->keyBy('id');
@@ -363,30 +380,80 @@ class SellerController extends Controller
         if (array_diff($ids, $active->keys()->all())) {
             throw ValidationException::withMessages(['variants' => 'One of those variations no longer belongs to this product.']);
         }
-        $additions = collect($data['new'] ?? [])->filter(fn ($row) => filled(trim((string) ($row['size'] ?? ''))))
-            ->map(fn ($row) => ['color' => filled($row['color'] ?? null) ? trim($row['color']) : null, 'size' => trim($row['size']),
-                'price' => (float) $row['price'], 'stock' => (int) $row['stock']])->values();
-        if ($ids === [] && $additions->isEmpty()) {
-            throw ValidationException::withMessages(['variants' => 'Add a size or change a variation before saving.']);
-        }
         $colors = $active->map->color_label->filter()->unique();
-        if ($additions->contains(fn ($row) => $row['color'] !== null && ! $colors->contains($row['color']))) {
+
+        // Each color card can be renamed; the unnamed list ('') can be given its first color. Only real changes are kept.
+        $renames = collect($data['colors'] ?? [])
+            ->mapWithKeys(fn ($row) => [trim((string) ($row['from'] ?? '')) => filled($row['to'] ?? null) ? Str::squish($row['to']) : null])
+            ->filter(fn ($to, $from) => $to !== ($from === '' ? null : $from));
+        if ($renames->keys()->contains(fn ($from) => $from !== '' && ! $colors->contains($from))) {
+            throw ValidationException::withMessages(['variants' => 'One of those colors no longer belongs to this product.']);
+        }
+        $colorFor = fn (?string $color) => $renames->has($color ?? '') ? $renames->get($color ?? '') : $color;
+
+        $additions = collect($data['new'] ?? [])->filter(fn ($row) => filled(trim((string) ($row['size'] ?? ''))))
+            ->map(fn ($row) => ['from' => filled($row['color'] ?? null) ? trim($row['color']) : null, 'size' => trim($row['size']),
+                'price' => (float) $row['price'], 'stock' => (int) $row['stock']])->values();
+        if ($additions->contains(fn ($row) => $row['from'] !== null && ! $colors->contains($row['from']))) {
             throw ValidationException::withMessages(['variants' => 'Sizes can only be added to this product\'s existing colors.']);
         }
+        $additions = $additions->map(fn ($row) => ['color' => $colorFor($row['from'])] + $row);
 
         // Work out the result first so a bad combination saves nothing.
         $removed = collect($data['remove'] ?? [])->map(fn ($id) => (int) $id);
         $remaining = $active->reject(fn ($variant) => $removed->contains($variant->id));
-        // A simple product's single unnamed option becomes its first size instead of sitting beside it.
-        $placeholder = ! $legacy && $active->count() === 1 && $additions->isNotEmpty()
-            && $active->first()->color_label === null && $active->first()->size_label === null && blank($data['sizes'][$active->first()->id] ?? null)
-            ? $active->first() : null;
+
+        // A brand-new color starts with the sizes typed for it, or as a single option when it has none.
+        $addedColor = filled($data['added_color'] ?? null) ? Str::squish($data['added_color']) : null;
+        $addedRows = collect($data['added'] ?? [])->values();
+        $addedSized = $addedRows->filter(fn ($row) => filled(trim((string) ($row['size'] ?? ''))));
+        if ($addedColor === null && $addedSized->isNotEmpty()) {
+            throw ValidationException::withMessages(['added_color' => 'Name the new color before adding its sizes.']);
+        }
+        if ($addedColor !== null) {
+            $taken = $remaining->map(fn ($variant) => $colorFor($variant->color_label))->concat($additions->pluck('color'))->filter();
+            if ($taken->contains(fn ($color) => Str::lower($color) === Str::lower($addedColor))) {
+                throw ValidationException::withMessages(['added_color' => "{$addedColor} is already one of this product's colors. Add its sizes in that color's card."]);
+            }
+            $startRows = $addedSized->isNotEmpty() ? $addedSized : collect([$addedRows->first() ?? []]);
+            $additions = $additions->concat($startRows->map(fn ($row) => [
+                'from' => null, 'color' => $addedColor, 'size' => filled(trim((string) ($row['size'] ?? ''))) ? trim($row['size']) : null,
+                'price' => filled($row['price'] ?? null) ? (float) $row['price'] : (float) $product->regular_price,
+                'stock' => (int) ($row['stock'] ?? 0),
+            ])->values());
+        }
+        // On the deployed schema a product without options keeps its stock on the product; naming its color turns that into an option.
+        if ($legacy && $active->isEmpty() && $colorFor(null) !== null && ! $additions->contains('color', $colorFor(null))) {
+            $additions->push(['from' => null, 'color' => $colorFor(null), 'size' => null, 'price' => (float) $product->regular_price, 'stock' => (int) $product->stock]);
+        }
+        if ($legacy && $active->isEmpty() && (int) $product->stock > 0 && $colorFor(null) === null && $additions->contains(fn ($row) => $row['color'] !== null)) {
+            throw ValidationException::withMessages(['colors' => 'Name this product\'s current color first, so its existing stock keeps a color.']);
+        }
+        if ($ids === [] && $additions->isEmpty() && $renames->isEmpty()) {
+            throw ValidationException::withMessages(['variants' => 'Add a size or color, or change a variation before saving.']);
+        }
+
+        // A simple product's single unnamed option becomes its first size (in the color it was given) instead of sitting beside it.
+        $first = $active->first();
+        $placeholderIndex = ! $legacy && $active->count() === 1 && $first->color_label === null && $first->size_label === null
+            && blank($data['sizes'][$first->id] ?? null) && ! $removed->contains($first->id)
+            ? $additions->search(fn ($row) => $row['color'] === $colorFor(null) && $row['size'] !== null) : false;
+        $placeholder = $placeholderIndex === false ? null : $first;
         $rows = $remaining->reject(fn ($variant) => $variant->is($placeholder))->map(fn ($variant) => [
-            'color' => $variant->color_label,
+            'color' => $colorFor($variant->color_label),
             'size' => array_key_exists($variant->id, $data['sizes'] ?? []) ? (filled($data['sizes'][$variant->id]) ? trim($data['sizes'][$variant->id]) : null) : $variant->size_label,
         ])->values()->concat($additions->map(fn ($row) => ['color' => $row['color'], 'size' => $row['size']]));
         if ($rows->isEmpty()) {
             throw ValidationException::withMessages(['variants' => 'Keep at least one size or option for sale. Hide the product instead to stop selling it.']);
+        }
+        $names = $rows->pluck('color')->filter()->unique();
+        if ($names->groupBy(fn ($color) => Str::lower($color))->contains(fn ($same) => $same->count() > 1)) {
+            throw ValidationException::withMessages(['colors' => 'Two colors differ only in capital letters. Spell them the same to combine them, or give them different names.']);
+        }
+        // Buyers can't pick an unnamed option beside named colors, so a newly colored product needs every option named.
+        $alreadyMixed = $colors->isNotEmpty() && $active->contains(fn ($variant) => $variant->color_label === null);
+        if (! $alreadyMixed && $names->isNotEmpty() && $rows->contains(fn ($row) => $row['color'] === null)) {
+            throw ValidationException::withMessages(['colors' => 'Name the color of the options you already have too, so buyers can tell the colors apart.']);
         }
         foreach ($rows->groupBy(fn ($row) => $row['color'] ?? '') as $color => $group) {
             $label = $color !== '' ? $color : 'this product';
@@ -398,12 +465,12 @@ class SellerController extends Controller
             }
         }
 
-        DB::transaction(function () use ($product, $active, $data, $additions, $removed, $placeholder, $legacy) {
+        DB::transaction(function () use ($product, $active, $data, $additions, $removed, $placeholder, $placeholderIndex, $renames, $colorFor, $legacy) {
             $priceColumn = fn (float $price) => $legacy ? ['price' => round($price, 2)] : ['price_minor' => (int) round($price * 100)];
-            $sizeColumns = fn (ProductVariant $variant, ?string $size) => ($legacy
-                ? ['size' => $size]
-                : ['options' => array_filter(['color' => $variant->color_label, 'size' => $size], fn ($value) => filled($value))])
-                + ['name' => ProductVariant::nameFor($variant->color_label, $size)];
+            $optionColumns = fn (?ProductVariant $variant, ?string $color, ?string $size) => ($legacy
+                ? ['color' => $color, 'size' => $size]
+                : ['options' => array_filter(array_merge($variant?->options ?? [], ['color' => $color, 'size' => $size]), fn ($value) => filled($value))])
+                + ['name' => ProductVariant::nameFor($color, $size)];
 
             foreach ($active as $variant) {
                 if ($removed->contains($variant->id)) {
@@ -418,28 +485,36 @@ class SellerController extends Controller
                 if (isset($data['prices'][$variant->id])) {
                     $changes += $priceColumn((float) $data['prices'][$variant->id]);
                 }
-                if (array_key_exists($variant->id, $data['sizes'] ?? [])) {
-                    $size = filled($data['sizes'][$variant->id]) ? trim($data['sizes'][$variant->id]) : null;
-                    if ($size !== $variant->size_label) {
-                        $changes += $sizeColumns($variant, $size);
-                    }
+                $size = array_key_exists($variant->id, $data['sizes'] ?? [])
+                    ? (filled($data['sizes'][$variant->id]) ? trim($data['sizes'][$variant->id]) : null)
+                    : $variant->size_label;
+                $color = $colorFor($variant->color_label);
+                if ($size !== $variant->size_label || $color !== $variant->color_label) {
+                    $changes += $optionColumns($variant, $color, $size);
                 }
                 $variant->update($changes);
             }
 
             foreach ($additions as $index => $row) {
-                if ($index === 0 && $placeholder) {
-                    $placeholder->update($sizeColumns($placeholder, $row['size']) + $priceColumn($row['price']) + ['stock' => $row['stock']]);
+                if ($placeholder && $index === $placeholderIndex) {
+                    $placeholder->update($optionColumns($placeholder, $row['color'], $row['size']) + $priceColumn($row['price']) + ['stock' => $row['stock']]);
                     continue;
                 }
-                $base = $active->first(fn ($variant) => $variant->color_label === $row['color']);
+                $base = $active->first(fn ($variant) => $colorFor($variant->color_label) === $row['color']);
                 $variant = new ProductVariant(['product_id' => $product->id, 'is_active' => true, 'stock' => $row['stock']]
-                    + $priceColumn($row['price']) + ['sku' => $this->variantSku($base?->sku ?? $product->sku, $row['size'])]);
-                $variant->fill($legacy
-                    ? ['color' => $row['color'], 'size' => $row['size'], 'name' => ProductVariant::nameFor($row['color'], $row['size'])]
-                    : ['options' => array_filter(['color' => $row['color'], 'size' => $row['size']]), 'name' => ProductVariant::nameFor($row['color'], $row['size'])]
-                        + ['low_stock_threshold' => $base?->low_stock_threshold ?? 5]);
+                    + $priceColumn($row['price']) + ['sku' => $this->variantSku($base?->sku ?? $product->sku, $row['size'] ?? (string) $row['color'])]);
+                $variant->fill($optionColumns(null, $row['color'], $row['size'])
+                    + ($legacy ? [] : ['low_stock_threshold' => $base?->low_stock_threshold ?? $product->low_stock_threshold]));
                 $variant->save();
+            }
+
+            // Color photos are linked by "<product> — <color>" alt text, so they follow a renamed color.
+            foreach ($renames as $from => $to) {
+                if ($from === '') {
+                    continue;
+                }
+                $product->images()->get()->filter(fn ($image) => Str::endsWith((string) $image->alt_text, ' — '.$from))
+                    ->each(fn ($image) => $image->update(['alt_text' => $to === null ? $product->name : Str::beforeLast($image->alt_text, ' — '.$from).' — '.$to]));
             }
 
             Product::syncStockFromVariants($product->id);
@@ -449,7 +524,57 @@ class SellerController extends Controller
             }
         });
 
-        return back()->with('status', "Stock and sizes updated for {$product->name}.");
+        return back()->with('status', "Colors, sizes and stock updated for {$product->name}.");
+    }
+
+    /**
+     * Colors typed on the add-product form ("Black, White, Olive"): trimmed, de-duplicated ignoring case.
+     */
+    private function colorList(Request $request): array
+    {
+        $request->validate(['colors' => 'nullable|string|max:600']);
+        $colors = collect(explode(',', (string) $request->input('colors')))
+            ->map(fn ($color) => Str::squish($color))->filter()
+            ->unique(fn ($color) => Str::lower($color))->values();
+
+        if ($colors->contains(fn ($color) => mb_strlen($color) > 40)) {
+            throw ValidationException::withMessages(['colors' => 'Keep each color name to 40 characters or fewer.']);
+        }
+        if ($colors->count() > 20) {
+            throw ValidationException::withMessages(['colors' => 'Add up to 20 colors. You can add more after saving.']);
+        }
+
+        return $colors->all();
+    }
+
+    /**
+     * A new product listed in colors gets one option per color, each starting at the product's price and stock.
+     */
+    private function createColorOptions(Product $product, array $colors): void
+    {
+        if ($colors === []) {
+            return;
+        }
+
+        $legacy = Product::usesLegacySchema();
+        $default = $legacy ? null : $product->variants()->oldest('id')->first();
+        foreach ($colors as $index => $color) {
+            $name = ProductVariant::nameFor($color, null);
+            if ($index === 0 && $default) {
+                // The default option the product was created with becomes its first color.
+                $default->update(['options' => ['color' => $color], 'name' => $name]);
+                continue;
+            }
+            $variant = new ProductVariant([
+                'product_id' => $product->id, 'is_active' => true, 'name' => $name, 'stock' => $product->stock,
+                'sku' => $this->variantSku($product->sku, $color),
+            ]);
+            $variant->fill($legacy
+                ? ['color' => $color, 'price' => $product->regular_price]
+                : ['options' => ['color' => $color], 'price_minor' => $default->price_minor, 'low_stock_threshold' => $default->low_stock_threshold, 'weight_grams' => $default->weight_grams]);
+            $variant->save();
+        }
+        Product::syncStockFromVariants($product->id);
     }
 
     private function variantSku(?string $base, string $size): string

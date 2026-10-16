@@ -3,14 +3,19 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\UpdatesAccountSettings;
+use App\Models\ComplianceWarning;
+use App\Models\Dispute;
 use App\Models\IdentityVerification;
 use App\Models\LogisticsProvider;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Rider;
 use App\Models\SellerApplication;
-use App\Notifications\SellerApplicationReviewed;
+use App\Models\SupportMessage;
 use App\Models\User;
+use App\Notifications\AccountReviewed;
+use App\Notifications\SellerApplicationReviewed;
+use App\Services\MarketplaceLedger;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -35,6 +40,7 @@ class AdminController extends Controller
         'active' => 'Active',
         'pending' => 'Pending',
         'suspended' => 'Suspended',
+        'deactivated' => 'Deactivated',
         'rejected' => 'Rejected',
     ];
 
@@ -43,10 +49,11 @@ class AdminController extends Controller
         'active' => 'approved',
         'pending' => 'pending',
         'suspended' => 'suspended',
+        'deactivated' => 'suspended',
         'rejected' => 'rejected',
     ];
 
-    public function dashboard()
+    public function dashboard(MarketplaceLedger $ledger)
     {
         $roleCounts = collect(array_keys(self::ROLE_LABELS))
             ->mapWithKeys(fn (string $role) => [$role => $this->whereRole(User::query(), $role)->count()]);
@@ -61,7 +68,67 @@ class AdminController extends Controller
             'pendingApplications' => $this->pendingApplications()->latest()->limit(6)->get(),
             'pendingIdCount' => Schema::hasTable('identity_verifications') ? IdentityVerification::where('status', 'pending')->count() : 0,
             'roleLabels' => self::ROLE_LABELS,
+            'attention' => $this->attention(),
+            'sales' => $ledger->summary($ledger->rows(now(MarketplaceLedger::TIMEZONE)->subDays(29)->startOfDay()->utc(), now()->utc())),
+            'openDisputes' => Schema::hasTable('dispute_messages')
+                ? Dispute::with('order')->whereIn('status', ['open', 'in_review'])->latest()->limit(5)->get()
+                : collect(),
         ]);
+    }
+
+    /** One account: details, role information, activity, cases and warnings, with the status actions. */
+    public function showUser(User $user)
+    {
+        $legacy = Order::usesLegacySchema();
+        $buyerOrders = $user->hasRole('buyer') ? Order::where($legacy ? 'user_id' : 'buyer_id', $user->id) : null;
+
+        return view('admin.user', [
+            'account' => $user->load($this->partnerRelations()),
+            'roleLabels' => self::ROLE_LABELS,
+            'statusLabels' => self::STATUS_LABELS,
+            'buyerStats' => $buyerOrders ? [
+                'orders' => (clone $buyerOrders)->count(),
+                'spent' => $legacy ? (float) (clone $buyerOrders)->where('status', 'completed')->sum('total') : (clone $buyerOrders)->sum('total_minor') / 100,
+                'recent' => (clone $buyerOrders)->latest()->limit(5)->get(),
+            ] : null,
+            'sellerStats' => $user->hasRole('seller') ? (function () use ($user) {
+                $ledger = app(MarketplaceLedger::class);
+                $row = $ledger->bySeller($ledger->rows()->where('seller_id', $user->id))->first();
+
+                return [
+                    'shop' => MarketplaceLedger::sellerName($user),
+                    'products' => Product::usesLegacySchema() ? Product::where('seller_id', $user->id)->count() : Product::whereIn('seller_id', $user->sellers()->pluck('id'))->count(),
+                    'row' => $row,
+                ];
+            })() : null,
+            'disputes' => Schema::hasTable('dispute_messages') ? Dispute::involving($user)->with('order')->latest()->limit(10)->get() : collect(),
+            'warnings' => Schema::hasTable('compliance_warnings') ? ComplianceWarning::with('product')->where('seller_id', $user->id)->latest()->get() : collect(),
+        ]);
+    }
+
+    /** What is waiting for the admin, most urgent first. */
+    private function attention(): array
+    {
+        $items = [];
+        $add = function (int $count, string $label, string $route, string $icon) use (&$items) {
+            if ($count > 0) {
+                $items[] = compact('count', 'label', 'route', 'icon');
+            }
+        };
+        $add($this->pendingApplications()->count(), 'applications to review', route('admin.registrations'), 'fa-user-check');
+        if (Schema::hasTable('dispute_messages')) {
+            $add(Dispute::where('status', 'open')->count(), 'new complaints', route('admin.disputes', ['status' => 'open']), 'fa-scale-balanced');
+        }
+        if (Schema::hasTable('support_messages')) {
+            $add(SupportMessage::whereNull('read_at')->whereHas('thread', fn (Builder $thread) => $thread->whereColumn('support_threads.user_id', 'support_messages.sender_id'))->count(), 'unread support messages', route('admin.chat'), 'fa-comments');
+        }
+        if (Schema::hasTable('identity_verifications')) {
+            $add(IdentityVerification::where('status', 'pending')->count(), 'buyer IDs to check', route('admin.identity'), 'fa-id-card');
+        }
+        $unrecorded = app(MarketplaceLedger::class)->rows()->where('commission_status', 'unrecorded')->count();
+        $add($unrecorded, 'completed orders without a recorded commission', route('admin.commissions', ['state' => 'unrecorded']), 'fa-percent');
+
+        return $items;
     }
 
     /**
@@ -142,6 +209,7 @@ class AdminController extends Controller
             'reason' => [$application ? 'required_if:status,rejected' : 'nullable', 'nullable', 'string', 'max:500'],
         ], ['reason.required_if' => 'Give the reason for rejecting this application. The seller sees it.']);
         $deciding = in_array($user->status, ['pending', 'rejected'], true) && in_array($data['status'], ['active', 'rejected'], true);
+        $previous = $user->status;
 
         DB::transaction(function () use ($user, $data, $application) {
             $user->update([
@@ -170,17 +238,25 @@ class AdminController extends Controller
             }
         });
 
-        if ($user->hasRole('seller') && $deciding) {
+        // Email the decision: sellers get their application result; everyone else a general account notice.
+        $notice = match (true) {
+            $user->hasRole('seller') && $deciding => new SellerApplicationReviewed($data['status'] === 'active', $data['reason'] ?? null),
+            $deciding, in_array($data['status'], ['suspended', 'deactivated'], true),
+            $data['status'] === 'active' && in_array($previous, ['suspended', 'deactivated'], true) => new AccountReviewed($data['status'], $data['reason'] ?? null),
+            default => null,
+        };
+        if ($notice) {
             try {
-                $user->notify(new SellerApplicationReviewed($data['status'] === 'active', $data['reason'] ?? null));
+                $user->notify($notice);
             } catch (\Throwable $exception) {
                 report($exception);
             }
         }
 
         $message = match ($data['status']) {
-            'active' => "{$user->name} is approved and can now sign in.",
+            'active' => in_array($previous, ['suspended', 'deactivated'], true) ? "{$user->name} is active again." : "{$user->name} is approved and can now sign in.",
             'suspended' => "{$user->name} has been suspended.",
+            'deactivated' => "{$user->name} has been deactivated.",
             'rejected' => "{$user->name}'s application was rejected.",
             default => "{$user->name} is back to pending review.",
         };
@@ -291,11 +367,6 @@ class AdminController extends Controller
     /**
      * Admin sections that are still design mockups show a placeholder instead of sample data.
      */
-    public function comingSoon()
-    {
-        return view('admin.coming-soon');
-    }
-
     private function pendingApplications(): Builder
     {
         return User::where('status', 'pending')->where(fn (Builder $query) => $this->whereRole($query, 'seller')

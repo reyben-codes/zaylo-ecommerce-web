@@ -94,6 +94,14 @@
                         <button class="text-button danger" type="submit">Cancel order</button>
                     </form>
                 @endif
+                @if($order->relationLoaded('disputes'))
+                    @php $complaint = $order->disputes->first(); @endphp
+                    @if($complaint)
+                        <a class="text-button" href="{{ route('disputes.show', $complaint) }}"><i class="fas fa-flag" aria-hidden="true"></i> Complaint: {{ $complaint->status_label }}</a>
+                    @elseif($order->status !== 'cancelled' && ! in_array($order->status, ['placed', 'confirmed'], true))
+                        <a class="text-button" href="{{ route('buyer.disputes.create', $order) }}"><i class="fas fa-flag" aria-hidden="true"></i> Report a problem</a>
+                    @endif
+                @endif
             </footer>
 
             <details class="order-details">

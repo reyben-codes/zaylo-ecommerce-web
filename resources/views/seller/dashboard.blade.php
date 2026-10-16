@@ -23,6 +23,8 @@
         </div>
     </section>
 
+    @include('seller.partials.compliance-warnings')
+
     <section class="seller-stat-grid" aria-label="Shop summary">
         <a href="{{ route('seller.orders') }}" class="seller-stat">
             <span class="seller-stat__label"><i class="fas fa-box" aria-hidden="true"></i> Open orders</span>

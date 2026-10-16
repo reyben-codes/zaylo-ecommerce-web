@@ -25,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role'     => \App\Http\Middleware\RoleMiddleware::class,
             'nocache'  => \App\Http\Middleware\NoCacheHeaders::class,
             'active'   => \App\Http\Middleware\EnsureAccountIsActive::class,
+            'throttle' => \App\Http\Middleware\ThrottleRequests::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

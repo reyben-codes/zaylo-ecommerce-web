@@ -1,4 +1,4 @@
-﻿@extends('layouts.app')
+@extends('layouts.app')
 
 @section('title', 'ZAYLO · Courier Chat')
 
@@ -16,21 +16,20 @@
 @endsection
 
 
+@push('styles')
+    <link rel="stylesheet" href="{{ asset('css/logistics-chat.css') }}?v={{ filemtime(public_path('css/logistics-chat.css')) }}">
+@endpush
+
 @section('content')
-<div class="page-hero">
-    <div class="page-hero-inner">
-        <i class="fas fa-comment-dots"></i>
-        <div>
-            <h1></h1>
-            <p></p>
-        </div>
+<div class="logistics-chat-standalone">
+    <div class="logistics-chat-standalone__heading">
+        <h1>Messages</h1>
+        <p>{{ $rider?->provider ? 'Your conversation with '.$rider->provider->name.', your logistics partner.' : 'Messages open once a logistics partner approves your rider application.' }}</p>
     </div>
-</div>
-<div class="page-content">
-    <div class="placeholder-card">
-        <i class="fas fa-comment-dots"></i>
-        <h2>Messages</h2>
-        <p>Chat with buyers and sellers.</p>
-    </div>
+    @if($rider?->provider)
+        @include('partials.logistics-chat', ['pageRoute' => 'courier.chat', 'showList' => false, 'emptyText' => 'Your logistics partner has not been set up for messages yet.'])
+    @else
+        <div class="seller-panel"><div class="seller-empty"><i class="fas fa-hourglass-half" aria-hidden="true"></i><strong>Waiting for approval</strong><span>You can message your logistics partner after they approve you.</span></div></div>
+    @endif
 </div>
 @endsection

@@ -254,6 +254,7 @@ class BuyerController extends Controller
 
         $orders = auth()->user()->orders()
             ->with(['items.review', 'payment', 'shipment', 'statusHistory' => fn ($query) => $query->oldest()])
+            ->when(Schema::hasTable('dispute_messages'), fn ($query) => $query->with('disputes'))
             ->when($filter !== 'all', fn ($query) => $query->whereIn('status', $statusGroups[$filter]))
             ->orderByDesc('placed_at')
             ->paginate(10)

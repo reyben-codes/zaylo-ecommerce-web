@@ -1,0 +1,328 @@
+/* Complaints and disputes: case pages for buyers, sellers, couriers and admins, plus Help & support pages.
+   Uses the workspace tokens, with fallbacks for storefront pages. */
+
+.case-page {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 28px 16px 56px;
+    color: var(--zaylo-ink, #1a1714);
+}
+
+.seller-main .case-page {
+    max-width: none;
+    padding: 0;
+}
+
+.case-page .seller-panel + .seller-panel {
+    margin-top: 18px;
+}
+
+.case-pill {
+    display: inline-flex;
+    width: max-content;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #f1ebe5;
+    color: #5b4d41;
+    font-size: .66rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.case-pill--large {
+    padding: 8px 14px;
+    font-size: .74rem;
+}
+
+.case-pill--open {
+    background: #fff0d5;
+    color: #8f5b17;
+}
+
+.case-pill--in_review {
+    background: #e9eef8;
+    color: #35558a;
+}
+
+.case-pill--resolved {
+    background: #e6f2e7;
+    color: #2f6b3a;
+}
+
+.case-pill--rejected {
+    background: #fde4e1;
+    color: #a4413b;
+}
+
+.case-flash {
+    margin: 0 0 18px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    background: #e6f2e7;
+    color: #2f6b3a;
+    font-size: .86rem;
+}
+
+.case-body {
+    display: grid;
+    gap: 12px;
+    padding: 18px 20px 20px;
+}
+
+.case-body h3 {
+    margin: 4px 0 0;
+    font-size: .86rem;
+}
+
+.case-text {
+    margin: 0;
+    font-size: .9rem;
+    line-height: 1.6;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+}
+
+.case-files {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: .84rem;
+}
+
+.case-decision {
+    padding: 18px 20px;
+    border-color: #cfe3d1;
+    background: #f3faf3;
+}
+
+.case-decision h2 {
+    margin: 0 0 6px;
+    font-size: 1rem;
+}
+
+.case-decision p {
+    margin: 0;
+    white-space: pre-line;
+}
+
+/* Thread */
+.case-thread {
+    display: grid;
+    gap: 12px;
+    margin: 0;
+    padding: 18px 20px;
+    list-style: none;
+}
+
+.case-message {
+    display: grid;
+    gap: 4px;
+    max-width: min(80%, 560px);
+    padding: 12px 14px;
+    border-radius: 12px 12px 12px 4px;
+    background: var(--zaylo-hover, #f5f0ea);
+}
+
+.case-message.is-admin {
+    border: 1px solid #d9cbbd;
+    background: #fff;
+}
+
+.case-message.is-mine {
+    justify-self: end;
+    border-radius: 12px 12px 4px 12px;
+    background: var(--zaylo-ink, #1a1714);
+    color: #fff;
+}
+
+.case-message p {
+    margin: 0;
+    font-size: .88rem;
+    line-height: 1.5;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+}
+
+.case-message__who,
+.case-message time {
+    color: var(--zaylo-muted, #6b5f54);
+    font-size: .7rem;
+}
+
+.case-message.is-mine .case-message__who,
+.case-message.is-mine time,
+.case-message.is-mine .case-message__file {
+    color: #e8dfd6;
+}
+
+.case-message__file {
+    font-size: .78rem;
+}
+
+.case-thread__empty {
+    color: var(--zaylo-muted, #6b5f54);
+    font-size: .84rem;
+}
+
+.case-closed {
+    margin: 0;
+    padding: 14px 20px 18px;
+    border-top: 1px solid var(--zaylo-border, #ece4db);
+    color: var(--zaylo-muted, #6b5f54);
+    font-size: .84rem;
+}
+
+.case-reply {
+    display: grid;
+    gap: 10px;
+    padding: 14px 20px 18px;
+    border-top: 1px solid var(--zaylo-border, #ece4db);
+}
+
+.case-reply textarea,
+.case-form textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #dcd2c8;
+    border-radius: 10px;
+    color: var(--zaylo-ink, #1a1714);
+    font: inherit;
+    font-size: .88rem;
+    resize: vertical;
+}
+
+.case-reply textarea:focus,
+.case-form textarea:focus {
+    border-color: var(--zaylo-accent, #9a755e);
+    outline: 0;
+    box-shadow: 0 0 0 3px rgba(154, 117, 94, .14);
+}
+
+.case-reply__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.case-reply__file {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    color: var(--zaylo-muted, #6b5f54);
+    font-size: .8rem;
+    cursor: pointer;
+}
+
+.case-reply__file input {
+    max-width: 220px;
+    font-size: .76rem;
+}
+
+/* Filing a complaint */
+.case-form {
+    display: grid;
+    gap: 18px;
+    padding: 20px;
+}
+
+.case-choices {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.case-choices legend {
+    margin-bottom: 8px;
+}
+
+.case-choice {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 12px 14px;
+    border: 1px solid #dcd2c8;
+    border-radius: 10px;
+    font-size: .86rem;
+    cursor: pointer;
+}
+
+.case-choice:has(input:checked) {
+    border-color: var(--zaylo-ink, #1a1714);
+    box-shadow: 0 0 0 1px var(--zaylo-ink, #1a1714);
+}
+
+.case-choice input {
+    accent-color: var(--zaylo-ink, #1a1714);
+}
+
+.case-order {
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: var(--zaylo-background, #faf7f2);
+    font-size: .84rem;
+}
+
+.case-order ul {
+    margin: 6px 0 0;
+    padding-left: 18px;
+}
+
+/* Admin case page: order and people */
+.case-items {
+    display: grid;
+    gap: 0;
+    margin: 0;
+    padding: 0 20px;
+    list-style: none;
+}
+
+.case-items li {
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--zaylo-border, #ece4db);
+    font-size: .84rem;
+}
+
+.case-items__total {
+    font-weight: 700;
+}
+
+.case-history {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding: 14px 20px 20px 38px;
+    font-size: .8rem;
+}
+
+.case-history span {
+    color: var(--zaylo-muted, #6b5f54);
+}
+
+.case-people {
+    margin: 0;
+    padding: 6px 20px 16px;
+}
+
+.case-people dd {
+    display: grid;
+    justify-items: end;
+}
+
+@media (max-width: 640px) {
+    .case-message {
+        max-width: 92%;
+    }
+}

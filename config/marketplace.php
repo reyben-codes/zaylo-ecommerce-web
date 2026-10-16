@@ -56,13 +56,28 @@ return [
         ],
     ],
 
+    // Words that flag a product for the admin's compliance review (items that cannot be sold on ZAYLO).
+    'prohibited_keywords' => [
+        'gun', 'firearm', 'ammunition', 'ammo', 'bullet', 'explosive', 'firecracker', 'pyrotechnic',
+        'shabu', 'marijuana', 'cannabis', 'weed', 'drugs', 'vape juice', 'e-cigarette', 'cigarette', 'tobacco',
+        'alcohol', 'liquor', 'prescription', 'antibiotic', 'counterfeit', 'replica', 'fake', 'class a', 'pirated',
+        'ivory', 'endangered', 'wildlife', 'adult toy', 'pornographic', 'gambling', 'lottery',
+    ],
+    // Seller categories that cover more than one product category.
+    'category_groups' => [
+        'fashion' => ['fashion', 'clothing', 'bags', 'shoes', 'watches', 'accessories'],
+    ],
     // Swatch colors for common color words in option names; options without a match show their photo or name only.
     'color_swatches' => [
         'black' => '#1f1d1b', 'white' => '#f7f5f2', 'gold' => '#c9a54b', 'silver' => '#c3c6c9', 'pink' => '#f0b6c6',
         'olive' => '#6f7a3a', 'green' => '#4d8a4f', 'red' => '#b8392f', 'blue' => '#3d6fb6', 'navy' => '#24365c',
         'gray' => '#9a9a9a', 'grey' => '#9a9a9a', 'brown' => '#7b5a3c', 'beige' => '#e3d3b5', 'cream' => '#efe6d2',
-        'yellow' => '#e6c84a', 'orange' => '#e07b39', 'purple' => '#7d5ba6',
+        'yellow' => '#e6c84a', 'orange' => '#e07b39', 'purple' => '#7d5ba6', 'maroon' => '#6e2430', 'khaki' => '#b8a77a',
+        'teal' => '#2f7f7c', 'lavender' => '#b9a7d6', 'tan' => '#c19a6b', 'charcoal' => '#3b3b3d', 'ivory' => '#f6f1e3',
     ],
+
+    // Colors offered as one-tap labels when a seller adds a product; any other color name can be typed.
+    'color_presets' => ['Black', 'White', 'Gray', 'Navy', 'Blue', 'Red', 'Green', 'Pink', 'Beige', 'Brown', 'Yellow', 'Purple'],
 
     // Temporary standard sizes sellers can start from; they can rename, add or remove sizes per color.
     'size_presets' => [

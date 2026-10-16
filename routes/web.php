@@ -1,19 +1,29 @@
 <?php
 
 use App\Http\Controllers\AddressController;
+use App\Http\Controllers\AdminComplianceController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AdminDisputeController;
+use App\Http\Controllers\AdminFinanceController;
+use App\Http\Controllers\AdminSettingsController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BuyerController;
 use App\Http\Controllers\BuyerNotificationController;
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\PolicyController;
 use App\Http\Controllers\ProductSaleController;
+use App\Http\Controllers\ComplianceWarningController;
 use App\Http\Controllers\CourierController;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\IdentityVerificationController;
 use App\Http\Controllers\LocationController;
+use App\Http\Controllers\DisputeController;
+use App\Http\Controllers\LogisticsChatController;
 use App\Http\Controllers\LogisticsController;
+use App\Http\Controllers\LogisticsOperationsController;
 use App\Http\Controllers\SellerApplicationController;
 use App\Http\Controllers\SellerController;
+use App\Http\Controllers\SupportChatController;
 use App\Models\Product;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
@@ -39,7 +49,8 @@ Route::get('/', function () {
 
     return view('index', compact('newArrivals'));
 })->name('home');
-Route::view('/terms', 'legal.terms')->name('terms');
+Route::get('/terms', [PolicyController::class, 'show'])->name('terms');
+Route::get('/policies/{slug}', [PolicyController::class, 'show'])->name('policies.show');
 Route::get('/products', [BuyerController::class, 'products'])->name('products.index');
 Route::get('/products/{product}', [BuyerController::class, 'showProduct'])->name('products.show');
 
@@ -146,6 +157,9 @@ Route::middleware(['auth', 'active', 'verified', 'role:seller', 'nocache'])->pre
     Route::patch('/account/store', [SellerController::class, 'updateStore'])->name('account.store');
     Route::put('/account/password', [SellerController::class, 'updatePassword'])->name('account.password');
     Route::get('/chat', [ChatController::class, 'index'])->name('chat');
+    Route::get('/logistics-messages', [LogisticsChatController::class, 'seller'])->name('logistics-messages');
+    Route::post('/warnings/{warning}/acknowledge', [ComplianceWarningController::class, 'acknowledge'])->name('warnings.acknowledge');
+    Route::post('/logistics-messages', [LogisticsChatController::class, 'startFromSeller'])->middleware('throttle:20,1')->name('logistics-messages.start');
 });
 
 Route::middleware(['auth', 'active', 'verified', 'role:buyer,seller', 'nocache'])->prefix('messages')->name('messages.')->group(function () {
@@ -164,7 +178,7 @@ Route::middleware(['auth', 'active', 'verified', 'role:courier', 'nocache'])->pr
     Route::get('/earnings', [CourierController::class, 'earnings'])->name('earnings');
     Route::get('/history', [CourierController::class, 'history'])->name('history');
     Route::get('/account', [CourierController::class, 'account'])->name('account');
-    Route::get('/chat', [CourierController::class, 'chat'])->name('chat');
+    Route::get('/chat', [LogisticsChatController::class, 'rider'])->name('chat');
 });
 
 Route::middleware(['auth', 'active', 'verified', 'role:admin', 'nocache'])->prefix('admin')->name('admin.')->group(function () {
@@ -181,10 +195,52 @@ Route::middleware(['auth', 'active', 'verified', 'role:admin', 'nocache'])->pref
     Route::get('/account', [AdminController::class, 'account'])->name('account');
     Route::patch('/account/profile', [AdminController::class, 'updateProfile'])->name('account.profile');
     Route::put('/account/password', [AdminController::class, 'updatePassword'])->name('account.password');
-    // Not built yet: these show a placeholder rather than the earlier sample-data mockups.
-    foreach (['disputes', 'compliance', 'commissions', 'reports', 'settings', 'chat'] as $section) {
-        Route::get("/{$section}", [AdminController::class, 'comingSoon'])->name($section);
-    }
+    Route::get('/users/{user}', [AdminController::class, 'showUser'])->name('users.show');
+
+    Route::get('/disputes', [AdminDisputeController::class, 'index'])->name('disputes');
+    Route::get('/disputes/{dispute}', [AdminDisputeController::class, 'show'])->name('disputes.show');
+    Route::patch('/disputes/{dispute}', [AdminDisputeController::class, 'update'])->name('disputes.update');
+    Route::post('/disputes/{dispute}/messages', [AdminDisputeController::class, 'reply'])->middleware('throttle:30,1')->name('disputes.reply');
+
+    Route::get('/compliance', [AdminComplianceController::class, 'index'])->name('compliance');
+    Route::post('/compliance/products/{product}/warnings', [AdminComplianceController::class, 'warn'])->middleware('throttle:30,1')->name('compliance.warn');
+    Route::patch('/compliance/products/{product}/visibility', [AdminComplianceController::class, 'toggle'])->name('compliance.toggle');
+
+    Route::get('/commissions', [AdminFinanceController::class, 'commissions'])->name('commissions');
+    Route::post('/commissions/record', [AdminFinanceController::class, 'recordCommissions'])->name('commissions.record');
+    Route::post('/commissions/settle', [AdminFinanceController::class, 'settleCommissions'])->name('commissions.settle');
+    Route::get('/reports', [AdminFinanceController::class, 'reports'])->name('reports');
+    Route::get('/reports/{report}.pdf', [AdminFinanceController::class, 'reportPdf'])->whereIn('report', ['sales', 'commission'])->name('reports.pdf');
+
+    Route::get('/settings', [AdminSettingsController::class, 'index'])->name('settings');
+    Route::post('/settings/announcements', [AdminSettingsController::class, 'storeAnnouncement'])->name('announcements.store');
+    Route::patch('/settings/announcements/{announcement}', [AdminSettingsController::class, 'updateAnnouncement'])->name('announcements.update');
+    Route::delete('/settings/announcements/{announcement}', [AdminSettingsController::class, 'destroyAnnouncement'])->name('announcements.destroy');
+    Route::get('/settings/policies/{slug}', [AdminSettingsController::class, 'editPolicy'])->name('policies.edit');
+    Route::put('/settings/policies/{slug}', [AdminSettingsController::class, 'updatePolicy'])->name('policies.update');
+
+    Route::get('/chat', [SupportChatController::class, 'admin'])->name('chat');
+    Route::post('/chat', [SupportChatController::class, 'startFromAdmin'])->middleware('throttle:30,1')->name('chat.start');
+});
+
+// Complaints: the buyer files one about an order; the buyer, seller and courier follow the case.
+Route::middleware(['auth', 'active', 'verified', 'role:buyer', 'nocache'])->group(function () {
+    Route::get('/buyer/orders/{order}/complaint', [DisputeController::class, 'create'])->name('buyer.disputes.create');
+    Route::post('/buyer/orders/{order}/complaint', [DisputeController::class, 'store'])->middleware('throttle:10,1')->name('buyer.disputes.store');
+});
+Route::middleware(['auth', 'active', 'verified', 'role:buyer,seller,rider,admin', 'nocache'])->prefix('complaints')->name('disputes.')->group(function () {
+    Route::get('/', [DisputeController::class, 'index'])->name('index');
+    Route::get('/{dispute}', [DisputeController::class, 'show'])->name('show');
+    Route::post('/{dispute}/messages', [DisputeController::class, 'reply'])->middleware('throttle:30,1')->name('reply');
+    Route::get('/{dispute}/evidence/{index}', [DisputeController::class, 'file'])->whereNumber('index')->name('evidence');
+    Route::get('/messages/{message}/attachment', [DisputeController::class, 'attachment'])->name('attachment');
+});
+
+// Help & support: every account can message the ZAYLO admin team.
+Route::middleware(['auth', 'active', 'verified', 'nocache'])->group(function () {
+    Route::get('/support', [SupportChatController::class, 'user'])->middleware('role:buyer,seller,rider,logistics')->name('support');
+    Route::get('/support/{thread}/messages', [SupportChatController::class, 'messages'])->middleware('throttle:120,1')->name('support.messages');
+    Route::post('/support/{thread}', [SupportChatController::class, 'send'])->middleware('throttle:30,1')->name('support.send');
 });
 
 Route::middleware(['auth', 'active', 'verified', 'role:logistics', 'nocache'])->prefix('logistics')->name('logistics.')->group(function () {
@@ -192,8 +248,33 @@ Route::middleware(['auth', 'active', 'verified', 'role:logistics', 'nocache'])->
     Route::get('/riders', [LogisticsController::class, 'riders'])->name('riders');
     Route::get('/riders/{rider}/documents/{document}', [LogisticsController::class, 'riderDocument'])->name('riders.document');
     Route::patch('/riders/{rider}', [LogisticsController::class, 'updateRider'])->middleware('throttle:60,1')->name('riders.update');
+    Route::patch('/riders/{rider}/availability', [LogisticsController::class, 'riderAvailability'])->name('riders.availability');
+
+    // Sorting center: the logistics partner moves parcels from seller pickup to delivery.
+    Route::get('/pickups', [LogisticsOperationsController::class, 'pickups'])->name('pickups');
+    Route::get('/incoming', [LogisticsOperationsController::class, 'incoming'])->name('incoming');
+    Route::get('/scan', [LogisticsOperationsController::class, 'scan'])->name('scan');
+    Route::get('/assignments', [LogisticsOperationsController::class, 'assignments'])->name('assignments');
+    Route::get('/deliveries', [LogisticsOperationsController::class, 'deliveries'])->name('deliveries');
+    Route::get('/sorting', [LogisticsOperationsController::class, 'sorting'])->name('sorting');
+    Route::get('/monitoring', [LogisticsOperationsController::class, 'monitoring'])->name('monitoring');
+    Route::get('/reports', [LogisticsOperationsController::class, 'reports'])->name('reports');
+    Route::get('/reports/export', [LogisticsOperationsController::class, 'exportReport'])->name('reports.export');
+    Route::patch('/parcels/{shipment}/pickup', [LogisticsOperationsController::class, 'pickup'])->middleware('throttle:120,1')->name('parcels.pickup');
+    Route::patch('/parcels/{shipment}/sort', [LogisticsOperationsController::class, 'sort'])->middleware('throttle:120,1')->name('parcels.sort');
+    Route::patch('/parcels/{shipment}/status', [LogisticsOperationsController::class, 'advance'])->middleware('throttle:120,1')->name('parcels.advance');
+    Route::post('/parcels/{shipment}/rider', [LogisticsOperationsController::class, 'assign'])->middleware('throttle:120,1')->name('parcels.assign');
+    Route::post('/areas/rider', [LogisticsOperationsController::class, 'assignArea'])->middleware('throttle:60,1')->name('areas.assign');
+    Route::get('/messages', [LogisticsChatController::class, 'logistics'])->name('messages');
+    Route::post('/messages', [LogisticsChatController::class, 'startFromLogistics'])->middleware('throttle:20,1')->name('messages.start');
     Route::get('/account', [LogisticsController::class, 'account'])->name('account');
     Route::patch('/account/company', [LogisticsController::class, 'updateCompany'])->name('account.company');
     Route::patch('/account/profile', [LogisticsController::class, 'updateProfile'])->name('account.profile');
     Route::put('/account/password', [LogisticsController::class, 'updatePassword'])->name('account.password');
+});
+
+// Logistics chat, shared by the logistics partner, its sellers and its riders (each thread checks who may open it).
+Route::middleware(['auth', 'active', 'verified', 'role:logistics,seller,rider', 'nocache'])->prefix('logistics-chat')->name('logistics-chat.')->group(function () {
+    Route::get('/{thread}/messages', [LogisticsChatController::class, 'messages'])->middleware('throttle:120,1')->name('messages');
+    Route::post('/{thread}', [LogisticsChatController::class, 'send'])->middleware('throttle:30,1')->name('send');
 });

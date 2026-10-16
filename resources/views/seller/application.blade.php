@@ -75,7 +75,7 @@
         </form>
     @endif
 
-    <form method="POST" action="{{ route('logout') }}" class="seller-application-page__signout">
+    <form method="POST" action="{{ route('logout') }}" data-logout-confirm class="seller-application-page__signout">
         @csrf
         <button type="submit"><i class="fas fa-arrow-right-from-bracket" aria-hidden="true"></i> Sign out</button>
     </form>
