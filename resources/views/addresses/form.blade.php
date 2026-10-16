@@ -11,7 +11,7 @@
     .address-form [hidden] { display: none !important; }
     .address-form .check-label input { width: auto; }
     .address-form button:disabled { opacity: .55; cursor: not-allowed; }
-    .address-form [role="status"] { color: #6b5f54; font-size: .85rem; }
+    .address-form [role="status"] { color: var(--c-6b5f54); font-size: .85rem; }
     @media (max-width: 560px) {
         .address-page { padding: 24px 20px; }
         .address-form .form-row { grid-template-columns: 1fr; }

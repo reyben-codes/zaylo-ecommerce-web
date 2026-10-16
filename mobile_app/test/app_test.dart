@@ -1,28 +1,34 @@
 import 'dart:io';
+import 'dart:ui' show Tristate;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:zaylo_mobile/buyer/api/buyer_api.dart';
-import 'package:zaylo_mobile/buyer/models/cart_models.dart';
-import 'package:zaylo_mobile/buyer/models/catalog_models.dart';
-import 'package:zaylo_mobile/buyer/models/order_models.dart';
-import 'package:zaylo_mobile/buyer/state/app_state.dart';
-import 'package:zaylo_mobile/buyer/state/token_store.dart';
-import 'package:zaylo_mobile/core/api/api_exception.dart';
-import 'package:zaylo_mobile/core/models/auth_models.dart';
-import 'package:zaylo_mobile/core/utils/formatters.dart';
-import 'package:zaylo_mobile/core/utils/validators.dart';
-import 'package:zaylo_mobile/main.dart';
-import 'package:zaylo_mobile/rider/api/rider_api.dart';
-import 'package:zaylo_mobile/rider/models/rider_activity_models.dart';
-import 'package:zaylo_mobile/rider/models/rider_dashboard_models.dart';
-import 'package:zaylo_mobile/core/models/location.dart';
-import 'package:zaylo_mobile/rider/screens/rider_home_screen.dart';
-import 'package:zaylo_mobile/rider/screens/rider_registration_screen.dart';
-import 'package:zaylo_mobile/rider/utils/rider_input_formatters.dart';
-import 'package:zaylo_mobile/rider/widgets/rider_terms_dialog.dart';
-import 'package:zaylo_mobile/rider/utils/rider_validators.dart';
+import 'package:zaylo_mobile/api/api_exception.dart';
+import 'package:zaylo_mobile/api/buyer_api.dart';
+import 'package:zaylo_mobile/api/rider_api.dart';
+import 'package:zaylo_mobile/app.dart';
+import 'package:zaylo_mobile/auth/rider/rider_registration_screen.dart';
+import 'package:zaylo_mobile/auth/rider/widgets/rider_terms_dialog.dart';
+import 'package:zaylo_mobile/auth/token_store.dart';
+import 'package:zaylo_mobile/components/chat/delivery_chat.dart';
+import 'package:zaylo_mobile/features/buyer/home/widgets/home_header.dart';
+import 'package:zaylo_mobile/models/auth_models.dart';
+import 'package:zaylo_mobile/models/buyer/cart_models.dart';
+import 'package:zaylo_mobile/models/buyer/catalog_models.dart';
+import 'package:zaylo_mobile/models/buyer/order_models.dart';
+import 'package:zaylo_mobile/models/location.dart';
+import 'package:zaylo_mobile/models/rider/rider_activity_models.dart';
+import 'package:zaylo_mobile/models/rider/rider_dashboard_models.dart';
+import 'package:zaylo_mobile/models/rider/rider_models.dart';
+import 'package:zaylo_mobile/navigation/rider_shell.dart';
+import 'package:zaylo_mobile/state/app_state.dart';
+import 'package:zaylo_mobile/theme/theme_controller.dart';
+import 'package:zaylo_mobile/theme/zaylo_theme.dart';
+import 'package:zaylo_mobile/utils/formatters.dart';
+import 'package:zaylo_mobile/utils/rider_input_formatters.dart';
+import 'package:zaylo_mobile/utils/rider_validators.dart';
+import 'package:zaylo_mobile/utils/validators.dart';
 
 /// JSON in the exact shape produced by app/Support/MobilePayload.php.
 Map<String, dynamic> productJson(int id, {String name = 'Watering Can', double price = 499, double? original}) => {
@@ -86,19 +92,36 @@ class FakeApi extends BuyerApi {
 class FakeRiderApi extends RiderApi {
   FakeRiderApi() : super(baseUrl: 'http://fake.test/api');
 
-  final accepted = <int>[];
+  /// Steps sent to [updateDelivery], as "id:status".
+  final updates = <String>[];
 
-  static Map<String, dynamic> delivery(int id, String status, {bool mine = false}) => {
+  /// The steps the rider can take at each status, as the server sends them.
+  static const _steps = {
+    'assigned': [
+      {'status': 'out_for_delivery', 'label': 'Start delivery'},
+    ],
+    'out_for_delivery': [
+      {'status': 'delivered', 'label': 'Mark as delivered'},
+      {'status': 'failed', 'label': 'Could not deliver'},
+    ],
+  };
+
+  static Map<String, dynamic> delivery(int id, String status) => {
         'id': id,
         'tracking_number': 'TRK-$id',
         'status': status,
-        'status_label': status == 'ready' ? 'Ready for pickup' : 'Accepted',
-        'next_status': mine ? 'picked_up' : null,
-        'next_action_label': mine ? 'Mark as picked up' : null,
+        'status_label': switch (status) {
+          'assigned' => 'Rider assigned',
+          'out_for_delivery' => 'Out for delivery',
+          _ => 'Delivered',
+        },
+        'next_status': _steps[status]?.first['status'],
+        'next_action_label': _steps[status]?.first['label'],
+        'actions': _steps[status] ?? const [],
         'order_number': 'ZAY-ORDER-$id',
         'shipping_address': '12 Rizal St, Calamba, Laguna',
-        'recipient_name': mine ? 'Maria Santos' : null,
-        'recipient_phone': mine ? '09170000000' : null,
+        'recipient_name': 'Maria Santos',
+        'recipient_phone': '09170000000',
         'payment_method': 'cod',
         'cash_to_collect': 549.0,
         'delivery_fee': 49.0,
@@ -107,7 +130,28 @@ class FakeRiderApi extends RiderApi {
           {'name': 'Gardening Gloves', 'quantity': 1},
         ],
         'pickup': {'store_name': 'Happy Heels', 'phone': '09171110000', 'address': 'Halang, Calamba, Laguna'},
+        'chat_open': status != 'delivered',
+        'unread_messages': status == 'assigned' ? 1 : 0,
       };
+
+  final chatSent = <String>[];
+
+  @override
+  Future<DeliveryChat> deliveryChat(int id) async => DeliveryChat.fromJson({
+        'open': true,
+        'other_name': 'Maria',
+        'other_role': 'Buyer',
+        'order_number': 'ZAY-ORDER-$id',
+        'messages': [
+          {'id': 1, 'client_id': 'c1', 'body': 'The gate is blue.', 'mine': false, 'read': true, 'sent_at': '2026-10-12T08:00:00Z'},
+        ],
+      });
+
+  @override
+  Future<DeliveryChatMessage> sendDeliveryMessage(int id, String body, {required String clientId}) async {
+    chatSent.add(body);
+    return DeliveryChatMessage(id: 2, clientId: clientId, body: body, mine: true, sentAt: DateTime(2026, 10, 12));
+  }
 
   @override
   Future<RiderDashboard> dashboard() async => RiderDashboard.fromJson({
@@ -126,24 +170,35 @@ class FakeRiderApi extends RiderApi {
             'postal_code': '4027',
             'formatted': '12 Rizal St., Halang, City of Calamba, Laguna, CALABARZON, 4027',
           },
-          'vehicle_label': 'Tricycle',
-          'plate_number': 'U7U778',
+          'logistics_partner': 'Express Delivery',
+          'vehicle_label': 'Motorcycle',
+          'plate_number': 'NBC1234',
           'license_number': 'S33-45-666666',
           'license_expires_on': '2026-10-20',
           'license_days_left': 9,
           'license_expiring_soon': true,
         },
-        'stats': {'available': 1, 'active': 1, 'completed': 3, 'completed_today': 1, 'earnings_today': 49, 'earnings_total': 147},
-        'active': [delivery(1, 'assigned', mine: true)],
-        'available': [delivery(2, 'ready')],
+        'delivery_mode': 'logistics',
+        'stats': {'available': 0, 'active': 2, 'completed': 3, 'completed_today': 1, 'earnings_today': 49, 'earnings_total': 147},
+        'active': [delivery(1, 'assigned'), delivery(2, 'out_for_delivery')],
+        'available': [],
         'recent': [],
       });
 
   @override
-  Future<RiderDelivery> acceptDelivery(int id) async {
-    accepted.add(id);
-    return RiderDelivery.fromJson(delivery(id, 'assigned', mine: true));
+  Future<RiderDelivery> updateDelivery(int id, String status) async {
+    updates.add('$id:$status');
+    return RiderDelivery.fromJson(delivery(id, status));
   }
+
+  @override
+  Future<RiderSignUpOptions> signUpOptions() async => RiderSignUpOptions.fromJson({
+        'partners': [
+          {'id': 7, 'name': 'Express Delivery', 'service_area': 'Laguna'},
+        ],
+        'vehicle_types': ['Motorcycle', 'Bicycle', 'Car', 'Van', 'Truck'],
+        'unlicensed_vehicle_types': ['Bicycle'],
+      });
 
   final historyRequests = <RiderPeriod>[];
 
@@ -152,7 +207,7 @@ class FakeRiderApi extends RiderApi {
     historyRequests.add(period);
     return RiderHistoryPage.fromJson({
       'summary': {'deliveries': 1, 'earnings': 49},
-      'deliveries': [delivery(9, 'delivered', mine: true)..['status_label'] = 'Delivered'],
+      'deliveries': [delivery(9, 'delivered')],
       'next_page': null,
     });
   }
@@ -208,7 +263,8 @@ class FakeRiderApi extends RiderApi {
   }
 }
 
-Future<void> pumpApp(WidgetTester tester, {String? token, List<int> cart = const [], double width = 400}) async {
+Future<void> pumpApp(WidgetTester tester,
+    {String? token, List<int> cart = const [], double width = 400, ThemeController? theme}) async {
   final tokens = MemoryTokenStore();
   if (token != null) await tokens.write(token);
   final state = AppState(api: FakeApi(cartIds: cart), tokens: tokens);
@@ -217,7 +273,7 @@ Future<void> pumpApp(WidgetTester tester, {String? token, List<int> cart = const
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = Size(width, 4000);
   addTearDown(tester.view.reset);
-  await tester.pumpWidget(ZayloApp(state: state));
+  await tester.pumpWidget(ZayloApp(state: state, theme: theme));
   await state.restore();
   await tester.pumpAndSettle(const Duration(milliseconds: 100), EnginePhase.sendSemanticsUpdate, const Duration(seconds: 2));
 }
@@ -272,6 +328,54 @@ void main() {
     });
   });
 
+  testWidgets('home top bar hides while scrolling down and returns when the scroll stops', (tester) async {
+    await pumpApp(tester, width: 400);
+    tester.view.physicalSize = const Size(400, 800);
+    await tester.pumpAndSettle();
+    double topBarOffset() => tester
+        .widget<AnimatedSlide>(find.ancestor(of: find.byTooltip('Menu'), matching: find.byType(AnimatedSlide)))
+        .offset
+        .dy;
+    expect(topBarOffset(), 0);
+
+    final gesture = await tester.startGesture(const Offset(200, 500));
+    await gesture.moveBy(const Offset(0, -150));
+    await tester.pump();
+    await gesture.moveBy(const Offset(0, -150));
+    await tester.pump();
+    expect(topBarOffset(), -1);
+
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(topBarOffset(), 0);
+  });
+
+  testWidgets('theme toggle switches to dark mode, persists, and returns to the system setting', (tester) async {
+    addTearDown(() => ZayloColors.use(Brightness.light));
+    final store = MemoryThemeModeStore();
+    await pumpApp(tester, theme: ThemeController(store: store));
+    Color background() => tester.widget<Scaffold>(find.byType(Scaffold).first).backgroundColor ??
+        Theme.of(tester.element(find.byType(Scaffold).first)).scaffoldBackgroundColor;
+    expect(background(), ZayloPalette.light.cream);
+
+    await tester.tap(find.byTooltip('Switch to dark mode'));
+    await tester.pumpAndSettle();
+
+    expect(ZayloColors.isDark, isTrue);
+    expect(background(), ZayloPalette.dark.cream);
+    expect(await store.read(), ThemeMode.dark);
+
+    // The menu has the labelled toggle. The test platform reports light, so
+    // switching back follows the system again, as on the web.
+    await tester.tap(find.byTooltip('Menu'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Light mode'));
+    await tester.pumpAndSettle();
+    expect(ZayloColors.isDark, isFalse);
+    expect(background(), ZayloPalette.light.cream);
+    expect(await store.read(), ThemeMode.system);
+  });
+
   testWidgets('menu opens the rider login screen', (tester) async {
     // Widget tests answer every HTTP request with 400, so the masthead's
     // network photo fails to load. That is expected here; anything else is not.
@@ -291,7 +395,7 @@ void main() {
     expect(find.text('SIGN IN AS RIDER'), findsOneWidget);
   });
 
-  testWidgets('rider registration collects personal details, then license and vehicle documents', (tester) async {
+  testWidgets('rider registration collects personal details, then partner, vehicle and documents', (tester) async {
     final reportError = FlutterError.onError;
     FlutterError.onError = (details) {
       if (details.exception is! NetworkImageLoadException) reportError?.call(details);
@@ -349,11 +453,12 @@ void main() {
     await tester.tap(find.text('CONTINUE TO RIDER DETAILS'));
     await tester.pumpAndSettle();
 
-    // Step 2: contact details, license, and vehicle documents.
+    // Step 2: contact details, the logistics partner, vehicle, and license documents.
     expect(find.text('Your rider details'), findsOneWidget);
     for (final label in [
       'Email address',
       'Mobile number',
+      'Who will you ride for?',
       "Driver's license number",
       "Driver's license (photo or PDF)",
       'License expiry date',
@@ -379,39 +484,83 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text("Upload a photo or PDF of your driver's license."), findsOneWidget);
     expect(find.text('Upload a photo or PDF of your vehicle OR/CR.'), findsOneWidget);
+    expect(find.text('Choose the logistics partner you are applying to.'), findsOneWidget);
     expect(find.text('Select your vehicle type.'), findsOneWidget);
+
+    // Bicycles need no license, plate or OR/CR, so those fields go away.
+    await tester.ensureVisible(find.text('Select your vehicle type'));
+    await tester.tap(find.text('Select your vehicle type'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Bicycle').last);
+    await tester.pumpAndSettle();
+    expect(find.text("Driver's license number"), findsNothing);
+    expect(find.text('Plate number'), findsNothing);
+    expect(find.text("Bicycles need no driver's license, plate number or OR/CR."), findsOneWidget);
   });
 
-  testWidgets('rider dashboard shows stats, deliveries, and accepts a delivery', (tester) async {
+  testWidgets('rider chats with the buyer of an active delivery', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(400, 4000);
+    addTearDown(tester.view.reset);
+    final api = FakeRiderApi();
+    await tester.pumpWidget(MaterialApp(home: RiderShell(api: api)));
+    await tester.pumpAndSettle();
+
+    // Each delivery in progress offers a chat with its buyer.
+    expect(find.text('Chat with Maria'), findsNWidgets(2));
+    expect(find.text('Chat with buyer'), findsNothing);
+    await tester.tap(find.text('Chat with Maria').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('The gate is blue.'), findsOneWidget);
+    expect(find.text('Buyer · ZAY-ORDER-1'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), 'Arriving in 5 minutes');
+    await tester.tap(find.byTooltip('Send'));
+    await tester.pumpAndSettle();
+
+    expect(api.chatSent, ['Arriving in 5 minutes']);
+    expect(find.text('Arriving in 5 minutes'), findsOneWidget);
+    // Leave the screen so its polling timer stops before the test ends.
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('rider dashboard shows assigned parcels and moves them to the next step', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(320, 4000);
     addTearDown(tester.view.reset);
     final api = FakeRiderApi();
-    await tester.pumpWidget(MaterialApp(home: RiderHomeScreen(api: api)));
+    await tester.pumpWidget(MaterialApp(home: RiderShell(api: api)));
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull, reason: 'fits a 320px phone');
     expect(find.text('Hi, Juan'), findsOneWidget);
-    expect(find.text('Tricycle · U7U778'), findsOneWidget);
+    expect(find.text('Motorcycle · NBC1234'), findsOneWidget);
     // Sign out moved to the Account tab: no button on Home or in the top bar.
     expect(find.text('SIGN OUT'), findsNothing);
     expect(find.byTooltip('Sign out'), findsNothing);
     expect(find.textContaining('expires in 9 days'), findsOneWidget);
     expect(find.text('Earned today'), findsOneWidget);
     expect(find.text('Your active deliveries'), findsOneWidget);
-    expect(find.text('MARK AS PICKED UP'), findsOneWidget);
-    // The recipient is shown only on the delivery the rider accepted.
-    expect(find.text('Maria Santos'), findsOneWidget);
-    expect(find.text('Recipient shown after you accept'), findsOneWidget);
+    // Riders no longer claim parcels; the logistics partner assigns them.
+    expect(find.text('Available deliveries'), findsNothing);
+    expect(find.text('ACCEPT DELIVERY'), findsNothing);
     // Each card says where to collect the parcel and what is in it.
     expect(find.text('Happy Heels'), findsNWidgets(2));
     expect(find.text('Items to pick up (3)'), findsNWidgets(2));
-    expect(find.text('Watering Can'), findsNWidgets(2));
 
-    await tester.tap(find.text('ACCEPT DELIVERY'));
+    await tester.tap(find.text('START DELIVERY'));
     await tester.pumpAndSettle();
-    expect(api.accepted, [2]);
-    expect(find.text('Delivery accepted. Head to the pickup point.'), findsOneWidget);
+    expect(api.updates, ['1:out_for_delivery']);
+    expect(find.text('Out for delivery. Drive safely!'), findsOneWidget);
+
+    // Out for delivery: deliver it, or report that it could not be delivered.
+    await tester.ensureVisible(find.text('COULD NOT DELIVER'));
+    await tester.tap(find.text('COULD NOT DELIVER'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, 'Could not deliver'));
+    await tester.pumpAndSettle();
+    expect(api.updates, ['1:out_for_delivery', '2:failed']);
   });
 
   group('rider app tabs', () {
@@ -420,25 +569,19 @@ void main() {
       tester.view.physicalSize = const Size(400, 2400);
       addTearDown(tester.view.reset);
       final api = FakeRiderApi();
-      await tester.pumpWidget(MaterialApp(home: RiderHomeScreen(api: api)));
+      await tester.pumpWidget(MaterialApp(home: RiderShell(api: api)));
       await tester.pumpAndSettle();
       return api;
     }
 
-    testWidgets('Available and Active tiles open their full lists', (tester) async {
+    testWidgets('the Active tile opens every delivery in progress', (tester) async {
       await pumpRider(tester);
-
-      await tester.tap(find.text('Available'));
-      await tester.pumpAndSettle();
-      expect(find.text('Available deliveries'), findsOneWidget);
-      expect(find.text('ACCEPT DELIVERY'), findsOneWidget);
-      await tester.pageBack();
-      await tester.pumpAndSettle();
 
       await tester.tap(find.text('Active'));
       await tester.pumpAndSettle();
       expect(find.text('Active deliveries'), findsOneWidget);
-      expect(find.text('MARK AS PICKED UP'), findsOneWidget);
+      expect(find.text('START DELIVERY'), findsOneWidget);
+      expect(find.text('MARK AS DELIVERED'), findsOneWidget);
     });
 
     testWidgets('Delivered today opens history filtered to today', (tester) async {
@@ -618,12 +761,14 @@ void main() {
       }
     });
 
-    test('rider plate number is 6 letters and numbers, mixed', () {
+    test('rider plate number is 5 to 7 letters and numbers, mixed', () {
       expect(riderPlateNumberError('ABC123'), isNull);
-      expect(riderPlateNumberError('1AB234'), isNull);
-      expect(riderPlateNumberError('ABC12'), contains('exactly 6'));
-      expect(riderPlateNumberError('ABCDEF'), contains('at least one of each'));
-      expect(riderPlateNumberError('123456'), contains('at least one of each'));
+      expect(riderPlateNumberError('123AB'), isNull);
+      expect(riderPlateNumberError('NBC1234'), isNull);
+      expect(riderPlateNumberError('AB12'), contains('5 to 7'));
+      expect(riderPlateNumberError('NBC12345'), contains('5 to 7'));
+      expect(riderPlateNumberError('ABCDEF'), contains('5 to 7'));
+      expect(riderPlateNumberError('123456'), contains('5 to 7'));
     });
 
     test('rider documents must be JPG, PNG, or PDF up to 5.0 MB', () {
@@ -648,7 +793,7 @@ void main() {
       expect(type(riderLicenseInputFormatters, 'n01'), 'N01');
       expect(type(riderLicenseInputFormatters, 'n0123'), 'N01-23');
       expect(type(riderLicenseInputFormatters, 'N01-23-4567890000'), 'N01-23-456789', reason: 'stops at 11 characters');
-      expect(type(riderPlateInputFormatters, 'abc-1234'), 'ABC123');
+      expect(type(riderPlateInputFormatters, 'nbc-12345'), 'NBC1234', reason: 'stops at 7 characters');
       expect(type(riderEmailInputFormatters, 'ju an@example.com'), 'juan@example.com');
       expect(type(riderPhoneInputFormatters, '0917-123-4567'), '09171234567');
       expect(type(riderPhoneInputFormatters, '091712345678'), '09171234567', reason: 'stops at 11 digits');
@@ -728,5 +873,58 @@ void main() {
       expect(RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$').hasMatch(key), isTrue);
       expect(BuyerApi.newIdempotencyKey(), isNot(key));
     });
+  });
+
+  test('dark mode buttons use the web storefront colors', () {
+    ZayloColors.use(Brightness.dark);
+    addTearDown(() => ZayloColors.use(Brightness.light));
+    const idle = <WidgetState>{};
+    const pressed = {WidgetState.pressed};
+    const disabled = {WidgetState.disabled};
+
+    final primary = ZayloButtons.primary;
+    expect(primary.backgroundColor!.resolve(idle), const Color(0xFFF2ECE4));
+    expect(primary.foregroundColor!.resolve(idle), const Color(0xFF221E1A));
+    expect(primary.backgroundColor!.resolve(pressed), const Color(0xFFC9A088));
+    expect(primary.backgroundColor!.resolve(disabled)!.a, closeTo(.48, .01));
+
+    final secondary = ZayloButtons.secondary;
+    expect(secondary.backgroundColor!.resolve(idle), Colors.transparent);
+    expect(secondary.side!.resolve(idle)!.color, const Color(0xFFF2ECE4));
+    expect(secondary.backgroundColor!.resolve(pressed), const Color(0xFFF2ECE4));
+    expect(secondary.foregroundColor!.resolve(pressed), const Color(0xFF221E1A));
+  });
+
+  testWidgets('home hero swipes, wraps around, and rotates on its own', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        // The home tab scrolls, so the hero never gets a height cap.
+        body: ListView(children: [
+          HomeHeroCarousel(images: const ['http://fake.test/1.jpg', 'http://fake.test/2.jpg', 'http://fake.test/3.jpg'], onShop: () {}, onNew: () {}),
+        ]),
+      ),
+    ));
+    bool showing(int image) => tester.getSemantics(find.bySemanticsLabel('Show image $image of 3')).flagsCollection.isSelected == Tristate.isTrue;
+
+    expect(find.byTooltip('Next image'), findsNothing, reason: 'no arrow buttons');
+    expect(showing(1), isTrue);
+
+    await tester.fling(find.byType(PageView), const Offset(-300, 0), 1000);
+    await tester.pumpAndSettle();
+    expect(showing(2), isTrue);
+
+    await tester.fling(find.byType(PageView), const Offset(300, 0), 1000);
+    await tester.pumpAndSettle();
+    await tester.fling(find.byType(PageView), const Offset(300, 0), 1000);
+    await tester.pumpAndSettle();
+    expect(showing(3), isTrue, reason: 'swiping back from the first image wraps to the last');
+
+    await tester.pump(HomeHeroCarousel.interval);
+    await tester.pumpAndSettle();
+    expect(showing(1), isTrue, reason: 'rotates on its own');
+
+    await tester.tap(find.bySemanticsLabel('Show image 2 of 3'));
+    await tester.pumpAndSettle();
+    expect(showing(2), isTrue);
   });
 }

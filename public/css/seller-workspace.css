@@ -114,7 +114,7 @@ body.seller-workspace {
     border: 1px solid var(--zaylo-ink);
     border-radius: 8px;
     background: var(--zaylo-ink);
-    color: #fff;
+    color: var(--c-ffffff);
     font-size: .78rem;
     font-weight: 600;
     text-decoration: none;
@@ -125,19 +125,19 @@ body.seller-workspace {
 .seller-button:hover {
     border-color: var(--zaylo-accent);
     background: var(--zaylo-accent);
-    color: #fff;
+    color: var(--c-ffffff);
 }
 
 .seller-button--secondary {
-    border-color: #d8cec4;
+    border-color: var(--c-d8cec4);
     background: var(--zaylo-surface);
-    color: #403830;
+    color: var(--c-403830);
 }
 
 .seller-button--secondary:hover {
     border-color: var(--zaylo-accent);
     background: var(--zaylo-surface);
-    color: #8a634d;
+    color: var(--c-8a634d);
 }
 
 .seller-button--small {
@@ -228,11 +228,11 @@ a.seller-stat.is-active {
 }
 
 .seller-stat__note--warning {
-    color: #8f5b17;
+    color: var(--c-8f5b17);
 }
 
 .seller-stat__note--danger {
-    color: #a4413b;
+    color: var(--c-a4413b);
 }
 
 /* Panels */
@@ -299,8 +299,8 @@ a.seller-stat.is-active {
 .seller-table th {
     padding: 13px 16px;
     border-bottom: 1px solid var(--zaylo-border);
-    background: #fcfaf8;
-    color: #806f61;
+    background: var(--c-fcfaf8);
+    color: var(--c-806f61);
     font-size: .63rem;
     font-weight: 700;
     letter-spacing: .08em;
@@ -311,7 +311,7 @@ a.seller-stat.is-active {
 
 .seller-table td {
     padding: 15px 16px;
-    border-bottom: 1px solid #f1ebe5;
+    border-bottom: 1px solid var(--c-f1ebe5);
     color: var(--zaylo-text);
     font-size: .76rem;
     vertical-align: middle;
@@ -349,7 +349,7 @@ a.seller-stat.is-active {
     width: 44px;
     height: 44px;
     border-radius: 8px;
-    background: #eee8e1;
+    background: var(--c-eee8e1);
     object-fit: cover;
 }
 
@@ -373,8 +373,8 @@ a.seller-stat.is-active {
     width: max-content;
     padding: 6px 10px;
     border-radius: 999px;
-    background: #f3eee9;
-    color: #6b5f54;
+    background: var(--c-f3eee9);
+    color: var(--c-6b5f54);
     font-size: .62rem;
     font-weight: 700;
     letter-spacing: .03em;
@@ -390,8 +390,8 @@ a.seller-stat.is-active {
 .order-status--packed,
 .stock-pill--low,
 .shop-status--pending {
-    background: #fff0d5;
-    color: #8f5b17;
+    background: var(--c-fff0d5);
+    color: var(--c-8f5b17);
 }
 
 .order-status--ready-for-pickup,
@@ -400,24 +400,24 @@ a.seller-stat.is-active {
 .order-status--out-for-delivery,
 .order-status--ready-to-ship,
 .order-status--shipped {
-    background: #e8edf5;
-    color: #3e5878;
+    background: var(--c-e8edf5);
+    color: var(--c-3e5878);
 }
 
 .order-status--completed,
 .order-status--delivered,
 .stock-pill--in,
 .shop-status--approved {
-    background: #dcebd8;
-    color: #2d6d3e;
+    background: var(--c-dcebd8);
+    color: var(--c-2d6d3e);
 }
 
 .order-status--cancelled,
 .stock-pill--out,
 .shop-status--suspended,
 .shop-status--rejected {
-    background: #fde4e1;
-    color: #a4413b;
+    background: var(--c-fde4e1);
+    color: var(--c-a4413b);
 }
 
 /* Empty states and notices */
@@ -451,19 +451,19 @@ a.seller-stat.is-active {
     gap: 14px;
     margin-bottom: 26px;
     padding: 17px 20px;
-    border: 1px solid #e5d8c9;
+    border: 1px solid var(--c-e5d8c9);
     border-radius: 10px;
-    background: #fffaf3;
-    color: #644c37;
+    background: var(--c-fffaf3);
+    color: var(--c-644c37);
 }
 
 .seller-notice--danger {
-    border-color: #f1c7c2;
-    background: #fdf1ef;
+    border-color: var(--c-f1c7c2);
+    background: var(--c-fdf1ef);
 }
 
 .seller-notice--danger > i {
-    color: #a4413b;
+    color: var(--c-a4413b);
 }
 
 .seller-notice form {
@@ -481,7 +481,7 @@ a.seller-stat.is-active {
 
 .seller-notice p {
     margin: 5px 0 0;
-    color: #796653;
+    color: var(--c-796653);
     font-size: .76rem;
     line-height: 1.55;
 }
@@ -511,7 +511,7 @@ a.seller-stat.is-active {
 
 .seller-field > label,
 .seller-field__label {
-    color: #4f453c;
+    color: var(--c-4f453c);
     font-size: .74rem;
     font-weight: 700;
 }
@@ -520,10 +520,10 @@ a.seller-stat.is-active {
     width: 100%;
     min-height: 43px;
     padding: 10px 12px;
-    border: 1px solid #dcd2c8;
+    border: 1px solid var(--c-dcd2c8);
     border-radius: 7px;
     outline: 0;
-    background: #fff;
+    background: var(--c-ffffff);
     color: var(--zaylo-text);
     font-size: .82rem;
 }
@@ -535,28 +535,28 @@ a.seller-stat.is-active {
 
 .seller-field :is(input, select, textarea):focus {
     border-color: var(--zaylo-accent);
-    box-shadow: 0 0 0 3px rgba(154, 117, 94, .12);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-9a755e) 12%, transparent);
 }
 
 .seller-field :is(input[readonly], input:disabled) {
-    background: #f8f5f1;
+    background: var(--c-f8f5f1);
     color: var(--zaylo-muted);
 }
 
 .seller-field :is(input, select, textarea)[aria-invalid="true"] {
-    border-color: #c4645c;
+    border-color: var(--c-c4645c);
 }
 
 .seller-field__help {
     margin: 0;
-    color: #81756b;
+    color: var(--c-81756b);
     font-size: .7rem;
     line-height: 1.45;
 }
 
 .seller-field__error {
     margin: 0;
-    color: #a4413b;
+    color: var(--c-a4413b);
     font-size: .7rem;
     font-weight: 600;
 }
@@ -636,11 +636,11 @@ a.seller-stat.is-active {
     align-items: start;
     padding: 17px 14px 17px 17px;
     overflow: hidden;
-    border: 1px solid #d9d0c7;
-    border-left: 3px solid #9a755e;
+    border: 1px solid var(--c-d9d0c7);
+    border-left: 3px solid var(--c-9a755e);
     border-radius: 4px;
-    background: rgba(255, 253, 250, .98);
-    color: #1a1714;
+    background: color-mix(in srgb, var(--c-fffdfa) 98%, transparent);
+    color: var(--c-1a1714);
     box-shadow: 0 16px 40px rgba(42, 32, 25, .16), 0 3px 10px rgba(42, 32, 25, .08);
     pointer-events: auto;
     transition: opacity 420ms ease, transform 420ms cubic-bezier(.22, 1, .36, 1);
@@ -652,7 +652,7 @@ a.seller-stat.is-active {
     bottom: 0;
     left: 0;
     height: 2px;
-    background: #9a755e;
+    background: var(--c-9a755e);
     content: '';
     opacity: .3;
 }
@@ -668,8 +668,8 @@ a.seller-stat.is-active {
     width: 38px;
     height: 38px;
     border-radius: 50%;
-    background: #eee6de;
-    color: #6d5140;
+    background: var(--c-eee6de);
+    color: var(--c-6d5140);
     font-size: .82rem;
 }
 
@@ -680,7 +680,7 @@ a.seller-stat.is-active {
 
 .toast-notification__title {
     margin: 0 0 3px;
-    color: #1a1714;
+    color: var(--c-1a1714);
     font-family: 'Playfair Display', serif;
     font-size: 1rem;
     font-weight: 600;
@@ -689,7 +689,7 @@ a.seller-stat.is-active {
 
 .toast-notification__message {
     margin: 0;
-    color: #6b5f54;
+    color: var(--c-6b5f54);
     font-size: .78rem;
     line-height: 1.55;
     overflow-wrap: anywhere;
@@ -705,45 +705,45 @@ a.seller-stat.is-active {
     border: 0;
     border-radius: 50%;
     background: transparent;
-    color: #81746a;
+    color: var(--c-81746a);
     font: 400 1.4rem/1 'Inter', sans-serif;
     transition: background-color 160ms ease, color 160ms ease;
 }
 
 .toast-notification__close:hover {
-    background: #eee6de;
-    color: #1a1714;
+    background: var(--c-eee6de);
+    color: var(--c-1a1714);
 }
 
 .toast-notification__close:focus-visible {
-    outline: 2px solid #9a755e;
+    outline: 2px solid var(--c-9a755e);
     outline-offset: 2px;
 }
 
 .toast-notification--error {
-    border-left-color: #a75049;
+    border-left-color: var(--c-a75049);
 }
 
 .toast-notification--error::after {
-    background: #a75049;
+    background: var(--c-a75049);
 }
 
 .toast-notification--error .toast-notification__icon {
-    background: #f6e6e3;
-    color: #9f3f38;
+    background: var(--c-f6e6e3);
+    color: var(--c-9f3f38);
 }
 
 .toast-notification--success {
-    border-left-color: #70805b;
+    border-left-color: var(--c-70805b);
 }
 
 .toast-notification--success::after {
-    background: #70805b;
+    background: var(--c-70805b);
 }
 
 .toast-notification--success .toast-notification__icon {
-    background: #e9eee3;
-    color: #586747;
+    background: var(--c-e9eee3);
+    color: var(--c-586747);
 }
 
 /* Responsive */

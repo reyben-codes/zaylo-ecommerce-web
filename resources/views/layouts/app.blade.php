@@ -23,6 +23,7 @@
     <link rel="stylesheet" href="{{ asset('css/product-card-description.css') }}?v={{ filemtime(public_path('css/product-card-description.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/product-rating.css') }}?v={{ filemtime(public_path('css/product-rating.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/logout-confirm.css') }}?v={{ filemtime(public_path('css/logout-confirm.css')) }}">
+    @include('partials.theme-head')
 </head>
 <body class="@yield('body-class')">
     <!-- Navigation -->
@@ -60,6 +61,7 @@
                 <input type="search" name="search" value="{{ request('search') }}" placeholder="Search products" aria-label="Search products" />
             </form>
             <div class="icon-group">
+                <button type="button" class="theme-toggle" data-theme-toggle aria-label="Switch color theme"></button>
                 @if(auth()->user()?->role === 'buyer')
                     @include('partials.buyer-nav-icons')
                 @else
@@ -70,11 +72,11 @@
                 <form method="POST" action="{{ route('logout') }}" data-logout-confirm style="display:inline;margin-left:4px;">
                     @csrf
                     @if(auth()->user()->role !== 'buyer')
-                    <span style="font-size:0.8rem;font-weight:500;color:#6b5f54;border-left:1px solid #d8d0c8;padding-left:20px;margin-right:10px;">
+                    <span style="font-size:0.8rem;font-weight:500;color:var(--c-6b5f54);border-left:1px solid var(--c-d8d0c8);padding-left:20px;margin-right:10px;">
                         {{ auth()->user()->name }}
                     </span>
                     @endif
-                    <button type="submit" class="login-text" style="background:none;border:none;cursor:pointer;font-size:0.8rem;font-weight:500;letter-spacing:0.04em;color:#1e1e1e;border-left:1px solid #d8d0c8;padding-left:16px;">
+                    <button type="submit" class="login-text" style="background:none;border:none;cursor:pointer;font-size:0.8rem;font-weight:500;letter-spacing:0.04em;color:var(--c-1e1e1e);border-left:1px solid var(--c-d8d0c8);padding-left:16px;">
                         Logout
                     </button>
                 </form>

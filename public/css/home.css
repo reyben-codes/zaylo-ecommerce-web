@@ -8,7 +8,7 @@
     position: absolute;
     z-index: 1;
     inset: 0;
-    background: linear-gradient(90deg, rgba(250, 247, 242, .96), rgba(250, 247, 242, .83) 32%, rgba(250, 247, 242, .12) 72%);
+    background: linear-gradient(90deg, color-mix(in srgb, var(--c-faf7f2) 96%, transparent), color-mix(in srgb, var(--c-faf7f2) 83%, transparent) 32%, color-mix(in srgb, var(--c-faf7f2) 12%, transparent) 72%);
     content: '';
     pointer-events: none;
 }
@@ -48,16 +48,16 @@
     display: grid;
     width: 42px;
     height: 42px;
-    border: 1px solid rgba(26, 23, 20, .18);
+    border: 1px solid color-mix(in srgb, var(--c-1a1714) 18%, transparent);
     border-radius: 50%;
-    background: rgba(255, 255, 255, .88);
-    color: #1a1714;
+    background: color-mix(in srgb, var(--c-ffffff) 88%, transparent);
+    color: var(--c-1a1714);
     cursor: pointer;
     place-items: center;
 }
 
 .home-hero .hero-carousel-arrow:hover {
-    background: #fff;
+    background: var(--c-ffffff);
 }
 
 .home-hero .hero-carousel-dots {
@@ -82,7 +82,7 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: rgba(26, 23, 20, .4);
+    background: color-mix(in srgb, var(--c-1a1714) 40%, transparent);
     content: '';
     transition: width .2s ease, background-color .2s ease;
 }
@@ -90,11 +90,11 @@
 .home-hero .hero-carousel-dot[aria-pressed="true"]::before {
     width: 20px;
     border-radius: 999px;
-    background: #1a1714;
+    background: var(--c-1a1714);
 }
 
 .home-hero .hero-carousel-controls button:focus-visible {
-    outline: 2px solid #1a1714;
+    outline: 2px solid var(--c-1a1714);
     outline-offset: 3px;
 }
 
@@ -104,7 +104,7 @@
     }
 
     .home-hero::after {
-        background: linear-gradient(90deg, rgba(250, 247, 242, .94), rgba(250, 247, 242, .69) 65%, rgba(250, 247, 242, .25));
+        background: linear-gradient(90deg, color-mix(in srgb, var(--c-faf7f2) 94%, transparent), color-mix(in srgb, var(--c-faf7f2) 69%, transparent) 65%, color-mix(in srgb, var(--c-faf7f2) 25%, transparent));
     }
 
     .home-hero .hero-carousel-controls {

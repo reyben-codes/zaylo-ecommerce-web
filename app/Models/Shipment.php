@@ -2,9 +2,13 @@
 
 namespace App\Models;
 
+use App\Services\RiderDeliveries;
+use App\Services\ShipmentWorkflow;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 class Shipment extends Model
 {
@@ -48,5 +52,49 @@ class Shipment extends Model
     public function events(): HasMany
     {
         return $this->hasMany(DeliveryEvent::class)->orderBy('occurred_at');
+    }
+
+    /** The rider–buyer chat for this delivery, oldest first. */
+    public function messages(): HasMany
+    {
+        return $this->hasMany(DeliveryMessage::class)->orderBy('created_at')->orderBy('id');
+    }
+
+    /** The assigned rider's user account, on either database schema. */
+    public function riderUserId(): ?int
+    {
+        $userId = Schema::hasColumn('shipments', 'rider_id') ? $this->rider?->user_id : $this->courier_id;
+
+        return $userId === null ? null : (int) $userId;
+    }
+
+    /** The rider and buyer can message each other while the parcel is with the rider. */
+    public function chatIsOpen(): bool
+    {
+        return $this->riderUserId() !== null
+            && in_array(ShipmentWorkflow::stageOf($this), RiderDeliveries::ACTIVE_STAGES, true);
+    }
+
+    /**
+     * Adds a message; a repeated [$clientId] returns the existing one, so a
+     * send retried after a dropped connection is not stored twice.
+     */
+    public function postMessage(User $sender, string $body, bool $fromRider, ?string $clientId = null): DeliveryMessage
+    {
+        return $this->messages()->firstOrCreate(
+            ['client_id' => $clientId ?: (string) Str::uuid()],
+            ['sender_id' => $sender->id, 'from_rider' => $fromRider, 'body' => trim($body)],
+        );
+    }
+
+    /** Marks the other side's messages as read by the [$rider] side. */
+    public function markMessagesReadBy(bool $rider): void
+    {
+        $this->messages()->where('from_rider', ! $rider)->whereNull('read_at')->update(['read_at' => now()]);
+    }
+
+    public function unreadMessagesFor(bool $rider): int
+    {
+        return $this->messages()->where('from_rider', ! $rider)->whereNull('read_at')->count();
     }
 }

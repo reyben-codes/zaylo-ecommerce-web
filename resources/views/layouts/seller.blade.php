@@ -14,6 +14,7 @@
     @endforeach
     @stack('styles')
     <link rel="stylesheet" href="{{ asset('css/logout-confirm.css') }}?v={{ filemtime(public_path('css/logout-confirm.css')) }}">
+    @include('partials.theme-head')
 </head>
 <body class="seller-workspace">
     @include('partials.seller-header')

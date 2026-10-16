@@ -9,12 +9,12 @@
 .variant-picker legend {
     margin-bottom: 10px;
     padding: 0;
-    color: #6b5f54;
+    color: var(--c-6b5f54);
     font-size: .8rem;
 }
 
 .variant-picker legend strong {
-    color: #1a1714;
+    color: var(--c-1a1714);
 }
 
 .variant-picker__options {
@@ -44,25 +44,25 @@
     align-items: center;
     min-height: 52px;
     padding: 6px 14px 6px 6px;
-    border: 1px solid #ddd3c9;
+    border: 1px solid var(--c-ddd3c9);
     border-radius: 10px;
-    background: #fff;
-    color: #1a1714;
+    background: var(--c-ffffff);
+    color: var(--c-1a1714);
     transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease;
 }
 
 .variant-option:hover .variant-option__body {
-    border-color: #9a755e;
+    border-color: var(--c-9a755e);
 }
 
 .variant-option input:checked + .variant-option__body {
-    border-color: #1a1714;
-    box-shadow: 0 0 0 1px #1a1714;
-    background: #faf7f2;
+    border-color: var(--c-1a1714);
+    box-shadow: 0 0 0 1px var(--c-1a1714);
+    background: var(--c-faf7f2);
 }
 
 .variant-option input:focus-visible + .variant-option__body {
-    outline: 2px solid #9a755e;
+    outline: 2px solid var(--c-9a755e);
     outline-offset: 3px;
 }
 
@@ -70,7 +70,7 @@
     width: 40px;
     height: 40px;
     border-radius: 7px;
-    background: #eee8e1;
+    background: var(--c-eee8e1);
     object-fit: cover;
 }
 
@@ -78,7 +78,7 @@
     width: 26px;
     height: 26px;
     margin-left: 6px;
-    border: 1px solid rgba(26, 23, 20, .18);
+    border: 1px solid color-mix(in srgb, var(--c-1a1714) 18%, transparent);
     border-radius: 50%;
     background: var(--swatch);
 }
@@ -95,12 +95,12 @@
 }
 
 .variant-option__price {
-    color: #6b5f54;
+    color: var(--c-6b5f54);
     font-size: .72rem;
 }
 
 .variant-option__tag {
-    color: #a4413b;
+    color: var(--c-a4413b);
     font-size: .66rem;
     font-weight: 700;
     letter-spacing: .04em;
@@ -113,7 +113,7 @@
 
 .variant-option.is-sold-out .variant-option__body {
     border-style: dashed;
-    background: #f7f4f0;
+    background: var(--c-f7f4f0);
 }
 
 .variant-option.is-sold-out .variant-option__photo,
@@ -123,7 +123,7 @@
 }
 
 .variant-option.is-sold-out .variant-option__name {
-    color: #8c7c6d;
+    color: var(--c-8c7c6d);
     text-decoration: line-through;
 }
 

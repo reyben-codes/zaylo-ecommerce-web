@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="{{ asset('css/seller-sidebar.css') }}?v={{ filemtime(public_path('css/seller-sidebar.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/messaging.css') }}?v={{ filemtime(public_path('css/messaging.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/seller-header.css') }}?v={{ filemtime(public_path('css/seller-header.css')) }}">
+    @include('partials.theme-head')
 </head>
 <body class="seller-workspace messaging-seller messaging-page">
     @include('partials.seller-header')

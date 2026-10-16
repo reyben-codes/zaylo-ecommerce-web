@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="{{ asset('css/home.css') }}?v={{ filemtime(public_path('css/home.css')) }}" />
 <link rel="stylesheet" href="{{ asset('css/product-rating.css') }}?v={{ filemtime(public_path('css/product-rating.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/product-card-description.css') }}?v={{ filemtime(public_path('css/product-card-description.css')) }}">
+    @include('partials.theme-head')
 </head>
 <body>
     <header class="navbar">
@@ -41,6 +42,7 @@
                 <input type="search" name="search" placeholder="Search products" aria-label="Search products" />
             </form>
             <div class="icon-group">
+                <button type="button" class="theme-toggle" data-theme-toggle aria-label="Switch color theme"></button>
                 @if(auth()->user()?->role === 'buyer')
                     @include('partials.buyer-nav-icons')
                 @else
@@ -173,7 +175,7 @@
 <footer class="site-footer">
     <div class="footer-main">
         <div class="footer-brand">
-            <img src="{{ asset('images/ZAYLO_LOGO_LIGHT.png') }}" alt="ZAYLO" />
+            <img data-theme-fixed src="{{ asset('images/ZAYLO_LOGO_LIGHT.png') }}" alt="ZAYLO" />
             <p>Everyday essentials, exciting finds, and trusted sellers—all together in one marketplace.</p>
         </div>
         <div class="footer-links">

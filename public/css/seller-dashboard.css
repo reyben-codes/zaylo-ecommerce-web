@@ -10,7 +10,7 @@
     gap: 14px;
     align-items: center;
     padding: 15px 20px;
-    border-bottom: 1px solid #f1ebe5;
+    border-bottom: 1px solid var(--c-f1ebe5);
 }
 
 .dashboard-list__item:last-child {

@@ -70,6 +70,7 @@
     @endforeach
     @stack('styles')
     <link rel="stylesheet" href="{{ asset('css/logout-confirm.css') }}?v={{ filemtime(public_path('css/logout-confirm.css')) }}">
+    @include('partials.theme-head')
 </head>
 <body class="seller-workspace workspace-{{ $workspace }}">
     <header class="seller-site-header">
@@ -112,6 +113,7 @@
                     </a>
                 @endforeach
                 <div class="seller-sidebar__divider" aria-hidden="true"></div>
+                <button type="button" class="seller-sidebar__link" data-theme-toggle data-theme-toggle-label aria-label="Switch color theme"></button>
                 <form method="POST" action="{{ route('logout') }}" data-logout-confirm class="seller-sidebar__logout-form">
                     @csrf
                     <button type="submit" class="seller-sidebar__link seller-sidebar__logout">

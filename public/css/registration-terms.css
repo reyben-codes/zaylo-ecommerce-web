@@ -7,7 +7,7 @@
     display: flex;
     gap: 10px;
     align-items: flex-start;
-    color: #2a241f;
+    color: var(--c-2a241f);
     font-size: .8rem;
     line-height: 1.5;
     cursor: pointer;
@@ -18,17 +18,17 @@
     width: 18px;
     height: 18px;
     margin-top: 1px;
-    accent-color: #1a1714;
+    accent-color: var(--c-1a1714);
     cursor: pointer;
 }
 
 .terms-consent__label input:focus-visible {
-    outline: 2px solid #9a755e;
+    outline: 2px solid var(--c-9a755e);
     outline-offset: 2px;
 }
 
 .terms-consent__label a {
-    color: #1a1714;
+    color: var(--c-1a1714);
     font-weight: 600;
     text-decoration: underline;
     text-underline-offset: 2px;
@@ -36,6 +36,6 @@
 
 .terms-consent__error {
     margin-top: 6px;
-    color: #a4413b;
+    color: var(--c-a4413b);
     font-size: .75rem;
 }
