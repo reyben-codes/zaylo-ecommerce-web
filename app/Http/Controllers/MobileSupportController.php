@@ -10,10 +10,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /**
- * The rider app's chat with ZAYLO support. It is the rider's Help & support
- * thread from the website, so admins answer it from the same Admin Center inbox.
+ * The app's chat with ZAYLO support, for buyers and riders. It is the user's
+ * Help & support thread from the website, so admins answer it from the same
+ * Admin Center inbox.
  */
-class MobileRiderSupportController extends Controller
+class MobileSupportController extends Controller
 {
     /** The whole thread, oldest first; opening it marks support replies as read. */
     public function show(Request $request): JsonResponse
@@ -51,7 +52,7 @@ class MobileRiderSupportController extends Controller
         return response()->json(['message' => $this->payload($message, $thread)], 201);
     }
 
-    /** Unread support replies, for the badge on the Chat tab. */
+    /** Unread support replies, for the app's chat badge. */
     public function unread(Request $request): JsonResponse
     {
         $thread = SupportThread::where('user_id', $request->user()->id)->first();
@@ -59,14 +60,14 @@ class MobileRiderSupportController extends Controller
         return response()->json(['unread' => $thread ? $this->unreadReplies($thread, $request->user())->count() : 0]);
     }
 
-    private function thread(User $rider): SupportThread
+    private function thread(User $user): SupportThread
     {
-        return SupportThread::firstOrCreate(['user_id' => $rider->id]);
+        return SupportThread::firstOrCreate(['user_id' => $user->id]);
     }
 
-    private function unreadReplies(SupportThread $thread, User $rider)
+    private function unreadReplies(SupportThread $thread, User $user)
     {
-        return $thread->messages()->whereNull('read_at')->where('sender_id', '!=', $rider->id);
+        return $thread->messages()->whereNull('read_at')->where('sender_id', '!=', $user->id);
     }
 
     private function payload(SupportMessage $message, SupportThread $thread): array

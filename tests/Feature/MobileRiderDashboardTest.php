@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Announcement;
 use App\Models\LogisticsProvider;
 use App\Models\Rider;
 use App\Models\User;
@@ -83,6 +84,19 @@ class MobileRiderDashboardTest extends TestCase
             ->assertJsonPath('active.0.recipient_name', 'Maria Santos')
             ->assertJsonPath('active.0.next_status', 'out_for_delivery')
             ->assertJsonPath('active.0.chat_open', true);
+    }
+
+    public function test_dashboard_carries_announcements_for_riders_only(): void
+    {
+        $rider = $this->rider();
+        $admin = User::factory()->create(['role' => 'admin', 'status' => 'active']);
+        Announcement::create(['title' => 'Rider meeting', 'body' => 'Friday at 9.', 'audience' => 'rider', 'created_by' => $admin->id]);
+        Announcement::create(['title' => 'Buyer sale', 'body' => 'Shop now.', 'audience' => 'buyer', 'created_by' => $admin->id]);
+        Sanctum::actingAs($rider);
+
+        $this->getJson('/api/mobile/rider/dashboard')
+            ->assertJsonCount(1, 'announcements')
+            ->assertJsonPath('announcements.0.title', 'Rider meeting');
     }
 
     public function test_rider_delivers_a_parcel_and_earns_the_delivery_fee(): void

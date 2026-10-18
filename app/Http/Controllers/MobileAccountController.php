@@ -9,11 +9,13 @@ use App\Rules\PhoneNumber;
 use App\Rules\StrongPassword;
 use App\Services\AddressBook;
 use App\Services\BuyerNotificationFeed;
+use App\Services\IdentityVerifications;
 use App\Services\PsgcService;
 use App\Support\MobilePayload;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -83,6 +85,25 @@ class MobileAccountController extends Controller
             'message' => $hasPassword ? 'Password updated.' : 'Password created. You can now also sign in with email.',
             'user' => MobilePayload::user($user),
         ]);
+    }
+
+    /** ID verification status, as on the website's Profile Settings, plus the accepted ID types. */
+    public function identity(Request $request): JsonResponse
+    {
+        return response()->json(['identity' => MobilePayload::identity($request->user())]);
+    }
+
+    public function submitIdentity(Request $request, IdentityVerifications $verifications): JsonResponse
+    {
+        abort_unless(Schema::hasTable('identity_verifications'), 503, 'ID verification is being set up. Please try again later.');
+        $verifications->ensureNotVerified($request->user());
+        $data = $request->validate(IdentityVerifications::rules(), IdentityVerifications::messages());
+        $verifications->submit($request->user(), $data['id_type'], $request->file('document'));
+
+        return response()->json([
+            'message' => 'ID uploaded. An administrator will review it soon; you can keep shopping meanwhile.',
+            'identity' => MobilePayload::identity($request->user()),
+        ], 201);
     }
 
     public function addresses(Request $request): JsonResponse

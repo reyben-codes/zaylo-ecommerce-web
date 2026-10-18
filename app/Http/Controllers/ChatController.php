@@ -30,14 +30,7 @@ class ChatController extends Controller
 
     public function start(Request $request, Product $product)
     {
-        abort_unless($product->is_active, 404);
-        $seller = Product::usesLegacySchema() ? $product->seller : $product->seller?->owner;
-        abort_unless($seller && $seller->isActive() && $seller->hasRole('seller') && $seller->hasVerifiedEmail(), 404);
-        abort_if((int) $seller->id === (int) $request->user()->id, 422, 'You cannot message yourself.');
-
-        $conversation = Conversation::firstOrCreate([
-            'buyer_id' => $request->user()->id, 'seller_id' => $seller->id,
-        ], ['product_id' => $product->id]);
+        $conversation = Conversation::startAbout($request->user(), $product);
 
         return redirect()->route('buyer.chat', ['conversation' => $conversation->id]);
     }

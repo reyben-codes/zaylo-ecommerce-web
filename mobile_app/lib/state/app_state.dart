@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/api/buyer_api.dart';
+import 'package:zaylo_mobile/auth/google_auth.dart';
 import 'package:zaylo_mobile/auth/token_store.dart';
 import 'package:zaylo_mobile/models/auth_models.dart';
 import 'package:zaylo_mobile/models/buyer/cart_models.dart';
@@ -81,6 +82,8 @@ class AppState extends ChangeNotifier {
     } on ApiException {
       // The token is discarded locally either way.
     }
+    // So the next "Continue with Google" lets the buyer choose an account again.
+    await GoogleAuth.source.signOut();
     await _clearSession();
     notifyListeners();
   }

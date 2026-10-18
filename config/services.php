@@ -7,6 +7,8 @@ return [
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
         'redirect' => env('GOOGLE_REDIRECT_URI') ?: rtrim(env('APP_URL', 'http://localhost'), '/').'/auth/google/callback',
         'guzzle' => ['connect_timeout' => 3, 'timeout' => 10],
+        // The mobile app's iOS OAuth client IDs (comma-separated). Android ID tokens are issued to client_id.
+        'mobile_client_ids' => env('GOOGLE_MOBILE_CLIENT_IDS'),
     ],
 
     /*

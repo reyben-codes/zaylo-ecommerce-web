@@ -67,8 +67,20 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>NSCameraUsageDescription</key>
-	<string>ZAYLO uses the camera to photograph your driver's license and vehicle OR/CR when you register as a rider.</string>
+	<string>ZAYLO uses the camera to photograph your ID, product review photos, complaint evidence, and rider documents.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>ZAYLO lets you choose photos of your driver's license and vehicle OR/CR when you register as a rider.</string>
+	<string>ZAYLO lets you choose photos of your ID, product reviews, complaint evidence, and rider documents.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<!-- Google sign-in returns here; set in Flutter/GoogleSignIn.xcconfig. -->
+				<string>$(GOOGLE_REVERSED_CLIENT_ID)</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

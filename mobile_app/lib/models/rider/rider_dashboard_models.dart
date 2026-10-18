@@ -2,6 +2,7 @@
 library;
 
 import 'package:zaylo_mobile/components/address/ph_address_section.dart';
+import 'package:zaylo_mobile/models/support_models.dart';
 
 double _money(Object? value) => (value as num?)?.toDouble() ?? 0;
 DateTime? _date(Object? value) => value is String ? DateTime.tryParse(value)?.toLocal() : null;
@@ -244,6 +245,7 @@ class RiderDashboard {
     this.active = const [],
     this.recent = const [],
     this.deliveryModeMessage,
+    this.announcements = const [],
   });
 
   final RiderProfile rider;
@@ -256,6 +258,9 @@ class RiderDashboard {
   /// Set while sellers deliver their own orders and riders have nothing to do.
   final String? deliveryModeMessage;
 
+  /// Live notices from the ZAYLO admin for riders.
+  final List<Announcement> announcements;
+
   static List<RiderDelivery> _deliveries(Object? list) =>
       (list as List<dynamic>? ?? const []).map((item) => RiderDelivery.fromJson(item as Map<String, dynamic>)).toList();
 
@@ -265,5 +270,6 @@ class RiderDashboard {
         active: _deliveries(json['active']),
         recent: _deliveries(json['recent']),
         deliveryModeMessage: json['delivery_mode_message'] as String?,
+        announcements: Announcement.listFrom(json['announcements']),
       );
 }

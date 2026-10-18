@@ -93,6 +93,7 @@ class CheckoutQuote {
     this.voucherCode,
     this.deliveryFrom,
     this.deliveryTo,
+    this.identityVerified = true,
   });
 
   final List<CartItem> items;
@@ -101,6 +102,9 @@ class CheckoutQuote {
   final String? voucherCode;
   final DateTime? deliveryFrom;
   final DateTime? deliveryTo;
+
+  /// False until an administrator approves the buyer's ID; orders are refused until then.
+  final bool identityVerified;
 
   factory CheckoutQuote.fromJson(Map<String, dynamic> json) {
     final delivery = json['estimated_delivery'] as Map<String, dynamic>?;
@@ -115,6 +119,7 @@ class CheckoutQuote {
       voucherCode: json['voucher_code'] as String?,
       deliveryFrom: parseDate(delivery?['from']),
       deliveryTo: parseDate(delivery?['to']),
+      identityVerified: json['identity_verified'] as bool? ?? true,
     );
   }
 }

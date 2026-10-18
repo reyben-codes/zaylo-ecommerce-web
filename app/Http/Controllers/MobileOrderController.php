@@ -3,10 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Services\CheckoutService;
+use App\Services\ProductReviews;
 use App\Support\MobilePayload;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 
 class MobileOrderController extends Controller
@@ -56,9 +59,24 @@ class MobileOrderController extends Controller
         ]);
     }
 
+    /** Rates a delivered item, with up to three photos, like the website's review form. */
+    public function review(Request $request, OrderItem $orderItem, ProductReviews $reviews): JsonResponse
+    {
+        $reviews->authorize($request->user(), $orderItem);
+        $data = $request->validate(ProductReviews::rules());
+        $reviews->publish($request->user(), $orderItem, $data['rating'], $data['comment'] ?? null, $request->file('photos', []));
+
+        return response()->json(['message' => 'Thank you! Your product review has been published.'], 201);
+    }
+
     private function detailed(Order $order): array
     {
-        $order->load(['items.product.images', 'payment', 'shipment', 'statusHistory' => fn ($query) => $query->oldest()]);
+        $order->load(array_filter([
+            'items.product.images', 'items.review', 'payment', 'shipment',
+            'statusHistory' => fn ($query) => $query->oldest(),
+            // Complaints arrive with the admin modules migration.
+            Schema::hasTable('dispute_messages') ? 'disputes' : null,
+        ]));
 
         return MobilePayload::order($order, true);
     }

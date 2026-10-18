@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/api/rider_api.dart';
 import 'package:zaylo_mobile/auth/rider/rider_login_screen.dart';
-import 'package:zaylo_mobile/auth/rider/widgets/document_upload_field.dart';
+import 'package:zaylo_mobile/components/document_upload_field.dart';
 import 'package:zaylo_mobile/auth/rider/widgets/rider_terms_dialog.dart';
 import 'package:zaylo_mobile/auth/widgets/auth_layout.dart';
 import 'package:zaylo_mobile/auth/widgets/registration_progress.dart';

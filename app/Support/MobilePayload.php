@@ -3,11 +3,16 @@
 namespace App\Support;
 
 use App\Models\Address;
+use App\Models\Announcement;
 use App\Models\CartItem;
+use App\Models\IdentityVerification;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\User;
+use App\Services\ProductReviews;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 /**
@@ -46,6 +51,28 @@ class MobilePayload
             'email_verified' => $user->hasVerifiedEmail(),
             'has_password' => filled($user->getAuthPassword()),
             'google_linked' => filled($user->google_id ?? null),
+            // Buyers need an approved ID to check out, as on the website.
+            'identity_verified' => $user->isIdentityVerified(),
+        ];
+    }
+
+    /** The buyer's ID verification: whether they can check out, and their latest upload. */
+    public static function identity(User $user): array
+    {
+        $enabled = Schema::hasTable('identity_verifications');
+        $submission = $enabled ? $user->latestIdentityVerification()->first() : null;
+
+        return [
+            'enabled' => $enabled,
+            'verified' => $user->isIdentityVerified(),
+            'submission' => $submission ? [
+                'status' => $submission->status,
+                'id_type' => $submission->id_type,
+                'id_type_label' => $submission->id_type_label,
+                'rejection_reason' => $submission->rejection_reason,
+                'submitted_at' => $submission->updated_at?->toIso8601String(),
+            ] : null,
+            'id_types' => collect(IdentityVerification::ID_TYPES)->map(fn ($label, $key) => ['id' => $key, 'label' => $label])->values(),
         ];
     }
 
@@ -64,6 +91,12 @@ class MobilePayload
             'has_options' => (int) ($product->active_variants_count ?? 0) > 1,
             'saved' => $saved,
         ];
+
+        // Present when the query used Product::withReviewSummary() or loaded the counts.
+        if (array_key_exists('reviews_count', $product->getAttributes())) {
+            $data['review_count'] = (int) $product->reviews_count;
+            $data['rating'] = $product->reviews_count > 0 ? round((float) $product->reviews_avg_rating, 1) : null;
+        }
 
         if ($detailed) {
             $data += [
@@ -127,7 +160,7 @@ class MobilePayload
                 'unit_price' => (float) $item->unit_price,
                 'quantity' => (int) $item->quantity,
                 'line_total' => (float) $item->line_total,
-            ])->values(),
+            ] + ($detailed ? self::reviewState($order, $item) : []))->values(),
         ];
 
         if ($detailed) {
@@ -141,6 +174,8 @@ class MobilePayload
                 'payment_status' => $order->payment?->status,
                 'tracking_number' => $order->shipment?->tracking_number,
                 'rider_chat' => self::riderChat($order),
+                'complaint' => self::complaint($order),
+                'can_complain' => $order->relationLoaded('disputes') && $order->status !== 'cancelled' && $order->disputes->isEmpty(),
                 'history' => $order->statusHistory->map(fn ($entry) => [
                     'status' => $entry->status,
                     'label' => Str::headline($entry->status),
@@ -151,6 +186,31 @@ class MobilePayload
         }
 
         return $data;
+    }
+
+    /** Whether the buyer can rate a delivered item, or the rating they gave. */
+    private static function reviewState(Order $order, OrderItem $item): array
+    {
+        if (Order::usesLegacySchema()) {
+            $item->setRelation('order', $order);
+        }
+
+        return [
+            'can_review' => app(ProductReviews::class)->canReview($item),
+            'review_rating' => $item->review?->rating,
+        ];
+    }
+
+    /** The complaint filed about the order, if any. */
+    private static function complaint(Order $order): ?array
+    {
+        $dispute = $order->relationLoaded('disputes') ? $order->disputes->first() : null;
+
+        return $dispute ? [
+            'id' => $dispute->id,
+            'status' => $dispute->status,
+            'status_label' => $dispute->status_label,
+        ] : null;
     }
 
     /** The buyer's chat with the rider, once one is assigned to the delivery. */
@@ -191,6 +251,21 @@ class MobilePayload
             'is_structured' => $address->isStructured(),
             'formatted' => $address->formatted(),
         ];
+    }
+
+    /**
+     * Live admin announcements. The key changes when the admin edits one, so a
+     * notice the user dismissed shows again after an update, as on the website.
+     *
+     * @param  iterable<Announcement>  $announcements
+     */
+    public static function announcements(iterable $announcements): array
+    {
+        return collect($announcements)->map(fn (Announcement $notice) => [
+            'key' => $notice->id.'-'.$notice->updated_at?->timestamp,
+            'title' => $notice->title,
+            'body' => $notice->body,
+        ])->values()->all();
     }
 
     public static function imageUrl(?string $path): ?string

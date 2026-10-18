@@ -103,3 +103,65 @@ The Google tests use the real Socialite GoogleProvider but replace all its HTTP 
 12. Check the login button and errors on desktop/mobile. Test with one consistent host/port so session cookies are preserved.
 
 Real Google consent/callback testing remains dependent on your own configured OAuth credentials.
+
+## Mobile app
+
+The buyer app offers **Continue with Google** on its sign-in screen and on the first step of sign-up. It uses the phone's own Google sign-in (Android Credential Manager, Google Sign-In on iOS) through the `google_sign_in` Flutter package, not the website's redirect flow.
+
+1. The app shows Google's account picker and receives a Google **ID token**.
+2. It sends the token to `POST /api/mobile/google` (6 per minute, like `/api/mobile/login`).
+3. `GoogleIdTokenVerifier` checks the RS256 signature against Google's published keys (`https://www.googleapis.com/oauth2/v3/certs`, cached as long as Google's `Cache-Control` allows and fetched again once if Google has rotated keys). It also checks the issuer, the expiry (60 seconds of clock tolerance), and that the token was issued to one of ZAYLO's OAuth clients.
+4. The account is found, linked, or created by the same `GoogleAccountService` rules as the website, always as a **buyer**. Existing seller, rider or partner accounts with that Google ID or email are refused *before* anything is linked, so the buyer app never changes them. Suspended accounts are refused.
+5. The app receives a normal Sanctum token, exactly as after email sign-in. Signing out of the app also forgets the chosen Google account, so the next sign-in asks again.
+
+As on the website, no ID token, access token or Google profile payload is stored or logged; failures log only the exception type.
+
+Riders keep signing in with email and password, matching the website, where Google sign-up is offered to buyers and sellers only.
+
+### Server settings
+
+| Variable | Value |
+|---|---|
+| `GOOGLE_CLIENT_ID` | The existing **Web application** client ID (already used by the website). The app passes it to Google as `serverClientId`, so Android ID tokens are issued to it. |
+| `GOOGLE_MOBILE_CLIENT_IDS` | The **iOS** client ID (comma-separate several). Leave blank if you only ship Android. |
+
+Run `php artisan config:clear` after changing them. Until `GOOGLE_CLIENT_ID` is set, the endpoint answers 503 with `code: google_unconfigured`.
+
+### Google Cloud Console
+
+Use the same project as the website's OAuth client. On **Google Auth Platform → Clients**:
+
+1. **Web application**: the existing client. Copy its client ID; it is the app's `GOOGLE_SERVER_CLIENT_ID`. Nothing else changes.
+2. **Android**: create a client with
+   - package name `com.example.zaylo_mobile` (from `mobile_app/android/app/build.gradle.kts`);
+   - the SHA-1 fingerprint of each key that signs the app. For local debug builds:
+
+         keytool -list -v -keystore "%USERPROFILE%\.android\debug.keystore" -alias androiddebugkey -storepass android -keypass android
+
+     Add one Android client per fingerprint: debug, your release/upload key, and the **App signing key** shown in Play Console if Google Play signs the app.
+
+   No file goes into the app. Most "Google sign-in is not set up correctly" errors (`clientConfigurationError`, or a cancel right after choosing an account) are a missing or wrong SHA-1 or package name.
+3. **iOS** (only if you ship iOS): create a client with bundle ID `com.example.zayloMobile` (from the Xcode project). Then:
+   - add its client ID to `GOOGLE_MOBILE_CLIENT_IDS` on the server;
+   - put its **reversed** client ID (`com.googleusercontent.apps.…`, shown on the client's page) in `mobile_app/ios/Flutter/GoogleSignIn.xcconfig`. `Info.plist` registers it as the URL scheme Google returns to.
+
+Before publishing, replace the `com.example` package name and bundle ID with ZAYLO's own: Google Play rejects `com.example` apps. Then update the Android and iOS clients to match.
+
+Apple's App Review Guideline 4.8 asks apps offering third-party sign-in such as Google to also offer an equivalent privacy-focused option (for example Sign in with Apple), with some exceptions; check this before an App Store release.
+
+### Building the app
+
+The client IDs are build settings, not secrets:
+
+    flutter run --dart-define=ZAYLO_API_URL=https://zaylo-zyl.shop/api ^
+                --dart-define=GOOGLE_SERVER_CLIENT_ID=<web client ID> ^
+                --dart-define=GOOGLE_IOS_CLIENT_ID=<iOS client ID>
+
+`GOOGLE_IOS_CLIENT_ID` is needed for iOS only. Without `GOOGLE_SERVER_CLIENT_ID` (or, on iOS, without `GOOGLE_IOS_CLIENT_ID`) the Google button is hidden and the app works with email sign-in only.
+
+### Tests
+
+- `tests/Feature/MobileGoogleSignInTest.php` signs real RS256 ID tokens with the test-only keys in `tests/Fixtures/google/` and serves their public halves as a faked Google key set. It covers sign-up, linking by exact email, iOS audiences, wrong audience or issuer, expiry, unverified email, forged signatures, HS256 and malformed tokens, refusing seller accounts without linking them, suspension, key rotation, and missing configuration or unreachable Google.
+- `mobile_app/test/app_test.dart` ("continue with Google") replaces the native sign-in with a fake and covers signing in, closing the account picker, a refused account, and the hidden button.
+
+Signing in with a real Google account needs the Android or iOS client from the steps above and a phone or emulator with a Google account.

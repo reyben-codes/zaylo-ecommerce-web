@@ -10,7 +10,6 @@ use App\Support\OrderParties;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -49,19 +48,7 @@ class DisputeController extends Controller
         if ($order->disputes()->exists()) {
             throw ValidationException::withMessages(['details' => 'You already filed a complaint about this order. Reply in that case instead.']);
         }
-        $data = $request->validate([
-            'category' => ['required', Rule::in(array_keys(Dispute::CATEGORIES))],
-            'details' => ['required', 'string', 'min:20', 'max:2000'],
-            'evidence' => ['nullable', 'array', 'max:'.Dispute::MAX_EVIDENCE],
-            'evidence.*' => ['file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:'.Dispute::MAX_EVIDENCE_KB],
-        ], [
-            'category.required' => 'Choose what went wrong.',
-            'details.required' => 'Describe the problem.',
-            'details.min' => 'Describe the problem in at least 20 characters so the team can act on it.',
-            'evidence.max' => 'Attach up to '.Dispute::MAX_EVIDENCE.' files.',
-            'evidence.*.mimes' => 'Evidence must be photos (JPG, PNG, WebP) or PDF files.',
-            'evidence.*.max' => 'Each file must be 5 MB or smaller.',
-        ]);
+        $data = $request->validate(Dispute::filingRules(), Dispute::filingMessages());
 
         $dispute = $this->disputes->open($order, $request->user(), $data['category'], $data['details'], $request->file('evidence', []));
 
@@ -89,10 +76,7 @@ class DisputeController extends Controller
         if ($dispute->isClosed()) {
             throw ValidationException::withMessages(['body' => 'This case is closed. Contact the ZAYLO team in Help & support if you need more help.']);
         }
-        $data = $request->validate([
-            'body' => ['required', 'string', 'max:2000'],
-            'attachment' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:'.Dispute::MAX_EVIDENCE_KB],
-        ], ['body.required' => 'Write a reply first.', 'attachment.mimes' => 'Attach a photo (JPG, PNG, WebP) or a PDF.']);
+        $data = $request->validate(Dispute::replyRules(), Dispute::replyMessages());
         $this->disputes->reply($dispute, $request->user(), trim($data['body']), $request->file('attachment'));
 
         return back()->with('status', 'Reply sent.');

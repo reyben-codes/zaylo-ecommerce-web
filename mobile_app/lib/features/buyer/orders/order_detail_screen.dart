@@ -4,12 +4,17 @@ import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/api/buyer_api.dart';
 import 'package:zaylo_mobile/components/buttons.dart';
 import 'package:zaylo_mobile/components/chat/delivery_chat.dart';
+import 'package:zaylo_mobile/components/complaints.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
 import 'package:zaylo_mobile/components/layout.dart';
+import 'package:zaylo_mobile/components/star_rating.dart';
+import 'package:zaylo_mobile/features/buyer/orders/complaint_form_screen.dart';
+import 'package:zaylo_mobile/features/buyer/orders/review_form_screen.dart';
 import 'package:zaylo_mobile/features/buyer/orders/status_pill.dart';
 import 'package:zaylo_mobile/features/buyer/widgets/shop_actions.dart';
 import 'package:zaylo_mobile/models/buyer/catalog_models.dart';
 import 'package:zaylo_mobile/models/buyer/order_models.dart';
+import 'package:zaylo_mobile/models/support_models.dart';
 import 'package:zaylo_mobile/state/app_state.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 import 'package:zaylo_mobile/utils/formatters.dart';
@@ -63,6 +68,28 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         send: (body, clientId) => api.sendOrderMessage(order.id, body, clientId: clientId),
       ),
     ));
+    if (mounted) await _load();
+  }
+
+  Future<void> _review(OrderItem item) async {
+    final published = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => ReviewFormScreen(item: item)),
+    );
+    if (published == true && mounted) await _load();
+  }
+
+  Future<void> _reportProblem(Order order) async {
+    final complaint = await Navigator.of(context).push<Complaint>(
+      MaterialPageRoute(builder: (_) => ComplaintFormScreen(order: order)),
+    );
+    if (complaint == null || !mounted) return;
+    await _load();
+    if (mounted) await _openComplaint(complaint.id);
+  }
+
+  Future<void> _openComplaint(int id) async {
+    final api = _api;
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => ComplaintDetailScreen(api: api, complaintId: id)));
     if (mounted) await _load();
   }
 
@@ -150,7 +177,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     SectionCard(
                       padding: const EdgeInsets.fromLTRB(14, 12, 14, 2),
                       child: Column(children: [
-                        for (final item in order.items) _ItemRow(item),
+                        for (final item in order.items)
+                          _ItemRow(item, onReview: item.canReview ? () => _review(item) : null),
                       ]),
                     ),
                     const SizedBox(height: 16),
@@ -190,6 +218,17 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                         SummaryRow('Total', peso(order.total), emphasize: true),
                       ]),
                     ),
+                    if (order.complaint != null || order.canComplain) ...[
+                      const SizedBox(height: 16),
+                      const Eyebrow('Need help?'),
+                      const SizedBox(height: 9),
+                      _ComplaintCard(
+                        complaint: order.complaint,
+                        onOpen: order.complaint == null
+                            ? () => _reportProblem(order)
+                            : () => _openComplaint(order.complaint!.id),
+                      ),
+                    ],
                     if (order.canCancel) ...[
                       const SizedBox(height: 22),
                       SizedBox(
@@ -223,12 +262,14 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 }
 
 class _ItemRow extends StatelessWidget {
-  const _ItemRow(this.item);
+  const _ItemRow(this.item, {this.onReview});
 
   final OrderItem item;
 
-  @override
-  Widget build(BuildContext context) => InkWell(
+  /// Set while the delivered item can still be rated.
+  final VoidCallback? onReview;
+
+  Widget _row(BuildContext context) => InkWell(
         // Opens the product again, for reordering.
         onTap: item.productSlug == null
             ? null
@@ -264,6 +305,59 @@ class _ItemRow extends StatelessWidget {
           ]),
         ),
       );
+
+  @override
+  Widget build(BuildContext context) {
+    final rating = item.reviewRating;
+    if (onReview == null && rating == null) return _row(context);
+    return Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+      _row(context),
+      Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: rating != null
+            ? Row(mainAxisSize: MainAxisSize.min, children: [
+                Text('You rated ', style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
+                StarRow(rating: rating.toDouble(), size: 14),
+              ])
+            : OutlinedButton.icon(
+                onPressed: onReview,
+                icon: const Icon(Icons.star_outline_rounded, size: 18),
+                label: const Text('Rate this item'),
+              ),
+      ),
+    ]);
+  }
+}
+
+/// Report a problem with the order, or follow the complaint already filed.
+class _ComplaintCard extends StatelessWidget {
+  const _ComplaintCard({required this.complaint, required this.onOpen});
+
+  final OrderComplaint? complaint;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final filed = complaint;
+    return SectionCard(
+      padding: EdgeInsets.zero,
+      child: ListTile(
+        leading: Icon(Icons.report_gmailerrorred_outlined, color: ZayloColors.ink),
+        title: Text(filed == null ? 'Report a problem' : 'Your complaint',
+            style: TextStyle(fontWeight: FontWeight.w700, color: ZayloColors.ink)),
+        subtitle: Text(
+          filed == null
+              ? 'Missing, damaged or wrong items, delivery or refund issues'
+              : 'Follow the case and reply to the ZAYLO team',
+          style: const TextStyle(fontSize: 12),
+        ),
+        trailing: filed == null
+            ? Icon(Icons.chevron_right, color: ZayloColors.muted)
+            : ComplaintStatusPill(status: filed.status, label: filed.statusLabel),
+        onTap: onOpen,
+      ),
+    );
+  }
 }
 
 class _Timeline extends StatelessWidget {

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/api/buyer_api.dart';
+import 'package:zaylo_mobile/components/buttons.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
+import 'package:zaylo_mobile/components/form_fields.dart';
 import 'package:zaylo_mobile/components/layout.dart';
 import 'package:zaylo_mobile/features/buyer/catalog/product_card.dart';
 import 'package:zaylo_mobile/features/buyer/catalog/search_field.dart';
@@ -11,6 +13,7 @@ import 'package:zaylo_mobile/state/app_state.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 
 const _sortOptions = {
+  'relevance': 'Best match',
   'newest': 'Newest',
   'price_low': 'Price: low to high',
   'price_high': 'Price: high to low',
@@ -43,8 +46,10 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
   late final _search = TextEditingController(text: widget.initialSearch);
   final _scroll = ScrollController();
   late String? _category = widget.category;
-  String _sort = 'newest';
-  String? _gender;
+
+  /// Null lets the server choose, as on the website: best match while searching, otherwise newest.
+  String? _sort;
+  CatalogFilters _filters = const CatalogFilters();
 
   final List<Product> _products = [];
   int _page = 0;
@@ -92,7 +97,15 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
     setState(() => _loading = true);
     try {
       final page = await _api.products(
-          category: _category, search: _search.text, sort: _sort, gender: _gender, page: _page + 1);
+        category: _category,
+        search: _search.text,
+        sort: _sort,
+        gender: _filters.gender,
+        minPrice: _filters.minPrice,
+        maxPrice: _filters.maxPrice,
+        onSale: _filters.onSale,
+        page: _page + 1,
+      );
       if (!mounted || generation != _generation) return;
       setState(() {
         _products.addAll(page.products);
@@ -107,6 +120,25 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
     }
   }
 
+  bool get _searching => _search.text.trim().isNotEmpty;
+
+  /// Best match without a search is the newest first, on the server too.
+  String get _effectiveSort =>
+      (_sort == 'relevance' && !_searching ? null : _sort) ?? (_searching ? 'relevance' : 'newest');
+
+  Future<void> _chooseFilters() async {
+    final chosen = await showModalBottomSheet<CatalogFilters>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: ZayloColors.paper,
+      builder: (_) => _FilterSheet(initial: _filters),
+    );
+    if (chosen != null && chosen != _filters) {
+      _filters = chosen;
+      _reload();
+    }
+  }
+
   Future<void> _chooseSort() async {
     final choice = await showModalBottomSheet<String>(
       context: context,
@@ -118,15 +150,17 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
             child: Align(alignment: Alignment.centerLeft, child: Eyebrow('Sort by')),
           ),
           for (final entry in _sortOptions.entries)
-            ListTile(
-              title: Text(entry.value),
-              trailing: entry.key == _sort ? Icon(Icons.check, color: ZayloColors.ink) : null,
-              onTap: () => Navigator.pop(context, entry.key),
-            ),
+            // Best match only means something while searching.
+            if (entry.key != 'relevance' || _searching)
+              ListTile(
+                title: Text(entry.value),
+                trailing: entry.key == _effectiveSort ? Icon(Icons.check, color: ZayloColors.ink) : null,
+                onTap: () => Navigator.pop(context, entry.key),
+              ),
         ]),
       ),
     );
-    if (choice != null && choice != _sort) {
+    if (choice != null && choice != _effectiveSort) {
       _sort = choice;
       _reload();
     }
@@ -183,34 +217,19 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
                   style: TextStyle(fontSize: 12, color: ZayloColors.muted),
                 ),
               ),
-              PopupMenuButton<String?>(
-                tooltip: 'Filter by gender',
-                initialValue: _gender,
-                onSelected: (gender) {
-                  if (gender == _gender) return;
-                  _gender = gender;
-                  _reload();
-                },
-                itemBuilder: (_) => const [
-                  PopupMenuItem(value: null, child: Text('All genders')),
-                  PopupMenuItem(value: 'men', child: Text('Men')),
-                  PopupMenuItem(value: 'women', child: Text('Women')),
-                  PopupMenuItem(value: 'unisex', child: Text('Unisex')),
-                ],
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(Icons.tune, size: 17, color: ZayloColors.ink),
-                    const SizedBox(width: 6),
-                    Text(switch (_gender) { 'men' => 'Men', 'women' => 'Women', 'unisex' => 'Unisex', _ => 'Gender' },
-                        style: TextStyle(fontWeight: FontWeight.w600, color: ZayloColors.ink, fontSize: 13)),
-                  ]),
+              TextButton.icon(
+                onPressed: _chooseFilters,
+                icon: Badge(
+                  isLabelVisible: _filters.activeCount > 0,
+                  label: Text('${_filters.activeCount}'),
+                  child: const Icon(Icons.tune, size: 18),
                 ),
+                label: const Text('Filters'),
               ),
               TextButton.icon(
                 onPressed: _chooseSort,
                 icon: const Icon(Icons.swap_vert, size: 18),
-                label: Text(_sortOptions[_sort]!),
+                label: Text(_sortOptions[_effectiveSort]!),
               ),
             ]),
           ),
@@ -230,7 +249,7 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
         onAction: () {
           _search.clear();
           _category = null;
-          _gender = null;
+          _filters = const CatalogFilters();
           _reload();
         },
       );
@@ -266,4 +285,143 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
       ),
     );
   }
+}
+
+/// The website's catalog filters beyond category and search.
+@immutable
+class CatalogFilters {
+  const CatalogFilters({this.gender, this.minPrice, this.maxPrice, this.onSale = false});
+
+  final String? gender;
+  final double? minPrice;
+  final double? maxPrice;
+  final bool onSale;
+
+  int get activeCount =>
+      [gender != null, minPrice != null || maxPrice != null, onSale].where((active) => active).length;
+
+  @override
+  bool operator ==(Object other) =>
+      other is CatalogFilters &&
+      other.gender == gender &&
+      other.minPrice == minPrice &&
+      other.maxPrice == maxPrice &&
+      other.onSale == onSale;
+
+  @override
+  int get hashCode => Object.hash(gender, minPrice, maxPrice, onSale);
+}
+
+class _FilterSheet extends StatefulWidget {
+  const _FilterSheet({required this.initial});
+
+  final CatalogFilters initial;
+
+  @override
+  State<_FilterSheet> createState() => _FilterSheetState();
+}
+
+class _FilterSheetState extends State<_FilterSheet> {
+  static const _genders = {null: 'All', 'women': 'Women', 'men': 'Men', 'unisex': 'Unisex'};
+
+  late String? _gender = widget.initial.gender;
+  late bool _onSale = widget.initial.onSale;
+  late final _min = TextEditingController(text: _format(widget.initial.minPrice));
+  late final _max = TextEditingController(text: _format(widget.initial.maxPrice));
+  String? _priceError;
+
+  static String _format(double? value) => value == null ? '' : value.toStringAsFixed(value % 1 == 0 ? 0 : 2);
+
+  @override
+  void dispose() {
+    _min.dispose();
+    _max.dispose();
+    super.dispose();
+  }
+
+  void _apply() {
+    final min = double.tryParse(_min.text.trim());
+    final max = double.tryParse(_max.text.trim());
+    if (min != null && max != null && max < min) {
+      setState(() => _priceError = 'Maximum price must be greater than or equal to minimum price.');
+      return;
+    }
+    Navigator.pop(context, CatalogFilters(gender: _gender, minPrice: min, maxPrice: max, onSale: _onSale));
+  }
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(ZayloSpace.page, 18, ZayloSpace.page, 16),
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Expanded(child: Text('Filters', style: Theme.of(context).textTheme.titleLarge)),
+                TextButton(
+                  onPressed: () => setState(() {
+                    _gender = null;
+                    _onSale = false;
+                    _min.clear();
+                    _max.clear();
+                    _priceError = null;
+                  }),
+                  child: const Text('Reset'),
+                ),
+              ]),
+              const SizedBox(height: 12),
+              const FieldLabel('Gender'),
+              Wrap(spacing: 8, runSpacing: 8, children: [
+                for (final entry in _genders.entries)
+                  ChoiceChip(
+                    label: Text(entry.value),
+                    selected: _gender == entry.key,
+                    showCheckmark: false,
+                    selectedColor: ZayloColors.ink,
+                    backgroundColor: ZayloColors.white,
+                    side: BorderSide(color: ZayloColors.line),
+                    labelStyle: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: _gender == entry.key ? ZayloColors.white : ZayloColors.ink,
+                    ),
+                    onSelected: (_) => setState(() => _gender = entry.key),
+                  ),
+              ]),
+              const SizedBox(height: 18),
+              const FieldLabel('Price (₱)'),
+              Row(children: [
+                Expanded(
+                  child: TextField(
+                    controller: _min,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: zayloInputDecoration('Min'),
+                  ),
+                ),
+                const Padding(padding: EdgeInsets.symmetric(horizontal: 10), child: Text('–')),
+                Expanded(
+                  child: TextField(
+                    controller: _max,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: zayloInputDecoration('Max'),
+                  ),
+                ),
+              ]),
+              if (_priceError != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(_priceError!, style: const TextStyle(color: Colors.redAccent, fontSize: 12)),
+                ),
+              const SizedBox(height: 10),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('On sale only'),
+                value: _onSale,
+                onChanged: (value) => setState(() => _onSale = value),
+              ),
+              const SizedBox(height: 10),
+              PrimaryButton(label: 'SHOW RESULTS', onPressed: _apply),
+            ]),
+          ),
+        ),
+      );
 }

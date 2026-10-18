@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'package:zaylo_mobile/components/cart_icon.dart';
 import 'package:zaylo_mobile/components/layout.dart';
 import 'package:zaylo_mobile/components/theme_toggle.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
@@ -44,7 +45,7 @@ class HomeTopBar extends StatelessWidget {
                   isLabelVisible: cartCount > 0,
                   label: Text('$cartCount'),
                   backgroundColor: ZayloColors.ink,
-                  child: const Icon(Icons.shopping_bag_outlined),
+                  child: const CartIcon(),
                 ),
               ),
             ]),
@@ -72,7 +73,8 @@ class HomeHeroCarousel extends StatefulWidget {
 }
 
 class _HomeHeroCarouselState extends State<HomeHeroCarousel> {
-  static const _height = 390.0;
+  /// A landscape banner: 16:10 of the screen width.
+  static const _aspectRatio = 16 / 10;
   static const _slide = Duration(milliseconds: 600);
 
   /// Pages start far from zero so the first swipe back can wrap around.
@@ -167,10 +169,10 @@ class _HomeHeroCarouselState extends State<HomeHeroCarousel> {
   Widget build(BuildContext context) => LayoutBuilder(builder: (context, constraints) {
         final width = constraints.maxWidth;
         final compact = width < 360;
-        // The web's phone-width height is a floor here, so large accessibility
-        // text grows the hero instead of clipping the copy.
+        // The landscape height is a floor, so narrow phones and large
+        // accessibility text grow the hero instead of clipping the copy.
         return ConstrainedBox(
-          constraints: BoxConstraints(minWidth: width, minHeight: _height),
+          constraints: BoxConstraints(minWidth: width, minHeight: width / _aspectRatio),
           child: ColoredBox(
             color: ZayloColors.sand,
             child: Stack(alignment: Alignment.centerLeft, children: [
@@ -208,9 +210,9 @@ class _HomeHeroCarouselState extends State<HomeHeroCarousel> {
               ),
               // The bottom inset keeps the copy clear of the dots.
               Padding(
-                padding: EdgeInsets.fromLTRB(width * .05, 24, width * .05, 48),
+                padding: EdgeInsets.fromLTRB(width * .05, 20, width * .05, 36),
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 320),
+                  constraints: const BoxConstraints(maxWidth: 360),
                   child: _HeroCopy(compact: compact, wide: width > 480, onShop: widget.onShop, onNew: widget.onNew),
                 ),
               ),
@@ -240,7 +242,8 @@ class _HeroCopy extends StatelessWidget {
   Widget build(BuildContext context) {
     final headline = TextStyle(
       fontFamily: 'Playfair Display',
-      fontSize: compact ? 30 : 35,
+      // Sized so the headline stays on two lines in the landscape banner.
+      fontSize: compact ? 24 : 27,
       fontWeight: FontWeight.w600,
       height: 1.1,
       letterSpacing: -.7,
@@ -256,7 +259,7 @@ class _HeroCopy extends StatelessWidget {
             child: Text('ONE MARKETPLACE. ENDLESS FINDS.',
                 style: TextStyle(fontSize: compact ? 10 : 12, letterSpacing: compact ? 1.8 : 2.4, color: ZayloColors.muted)),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           Text.rich(
             TextSpan(style: headline, children: [
               const TextSpan(text: 'Driven by passion.\n'),
@@ -266,7 +269,7 @@ class _HeroCopy extends StatelessWidget {
               ),
             ]),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           if (wide) ...[
             SizedBox(
               width: 260,
@@ -283,7 +286,7 @@ class _HeroCopy extends StatelessWidget {
         ]),
       ),
       Wrap(
-        spacing: compact ? 20 : 32,
+        spacing: compact ? 16 : 24,
         runSpacing: 10,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:zaylo_mobile/auth/buyer/login_screen.dart';
 import 'package:zaylo_mobile/auth/buyer/registration_screen.dart';
 import 'package:zaylo_mobile/auth/rider/rider_login_screen.dart';
+import 'package:zaylo_mobile/components/announcement_banner.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
 import 'package:zaylo_mobile/features/buyer/catalog/product_card.dart';
 import 'package:zaylo_mobile/features/buyer/catalog/product_catalog_screen.dart';
@@ -131,12 +132,11 @@ class _StorefrontScreenState extends State<StorefrontScreen> {
                                 ),
                               ),
                             ),
-                            if (state.user != null)
+                            if (data.announcements.isNotEmpty)
                               SliverToBoxAdapter(
-                                child: Padding(
-                                  padding: const EdgeInsets.fromLTRB(ZayloSpace.page, 0, ZayloSpace.page, 14),
-                                  child: Text('Welcome back, ${state.user!.firstName}',
-                                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontSize: 22)),
+                                child: AnnouncementBanner(
+                                  announcements: data.announcements,
+                                  padding: const EdgeInsets.symmetric(horizontal: ZayloSpace.page),
                                 ),
                               ),
                             SliverToBoxAdapter(

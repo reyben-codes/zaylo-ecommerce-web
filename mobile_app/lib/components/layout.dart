@@ -3,10 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 
 class NetworkImageBox extends StatelessWidget {
-  const NetworkImageBox({super.key, required this.url, this.fit = BoxFit.cover});
+  const NetworkImageBox({super.key, required this.url, this.fit = BoxFit.cover, this.headers});
 
   final String? url;
   final BoxFit fit;
+
+  /// For private files, such as complaint evidence: the session's auth header.
+  final Map<String, String>? headers;
 
   static Widget get _placeholder => ColoredBox(
     color: ZayloColors.sand,
@@ -19,6 +22,7 @@ class NetworkImageBox extends StatelessWidget {
       : Image.network(
           url!,
           fit: fit,
+          headers: headers,
           errorBuilder: (_, __, ___) => _placeholder,
           loadingBuilder: (context, child, progress) =>
               progress == null ? child : ColoredBox(color: ZayloColors.sand),

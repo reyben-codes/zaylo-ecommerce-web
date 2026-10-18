@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/api/rider_api.dart';
 import 'package:zaylo_mobile/components/buttons.dart';
+import 'package:zaylo_mobile/components/complaints.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
 import 'package:zaylo_mobile/components/layout.dart';
+import 'package:zaylo_mobile/components/policies.dart';
 import 'package:zaylo_mobile/components/theme_toggle.dart';
 import 'package:zaylo_mobile/features/rider/account/rider_address_screen.dart';
 import 'package:zaylo_mobile/features/rider/account/rider_change_password_screen.dart';
@@ -215,6 +217,33 @@ class _RiderAccountTabState extends State<RiderAccountTab> {
                     trailing: const Icon(Icons.chevron_right),
                     onTap: widget.onContactSupport,
                   ),
+                ),
+                const _Heading('Help'),
+                SectionCard(
+                  padding: EdgeInsets.zero,
+                  child: Column(children: [
+                    _Row(
+                      icon: Icons.report_gmailerrorred_outlined,
+                      label: 'Complaints',
+                      value: 'Cases about deliveries you handled',
+                      action: 'View',
+                      onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => ComplaintsScreen(
+                          api: widget.api,
+                          emptyMessage: 'When a buyer reports a problem with a delivery you handled, the case appears here.',
+                        ),
+                      )),
+                    ),
+                    _Row(
+                      icon: Icons.description_outlined,
+                      label: 'Terms & policies',
+                      value: 'Terms, privacy, returns and prohibited items',
+                      action: 'View',
+                      onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => PoliciesScreen(api: widget.api),
+                      )),
+                    ),
+                  ]),
                 ),
                 const SizedBox(height: 28),
                 OutlinedButton.icon(

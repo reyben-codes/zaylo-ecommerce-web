@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:zaylo_mobile/api/api_client.dart';
 import 'package:zaylo_mobile/components/chat/delivery_chat.dart';
 import 'package:zaylo_mobile/models/auth_models.dart';
@@ -6,6 +8,8 @@ import 'package:zaylo_mobile/models/buyer/address_models.dart';
 import 'package:zaylo_mobile/models/buyer/cart_models.dart';
 import 'package:zaylo_mobile/models/buyer/catalog_models.dart';
 import 'package:zaylo_mobile/models/buyer/order_models.dart';
+import 'package:zaylo_mobile/models/buyer/seller_chat_models.dart';
+import 'package:zaylo_mobile/models/support_models.dart';
 import 'package:zaylo_mobile/utils/ids.dart';
 
 /// Buyer endpoints: catalog, sign-in, bag, checkout, orders and account.
@@ -22,6 +26,9 @@ class BuyerApi extends ApiClient {
     String? search,
     String? sort,
     String? gender,
+    double? minPrice,
+    double? maxPrice,
+    bool onSale = false,
     int page = 1,
   }) async {
     final data = await send('GET', '/mobile/products', query: {
@@ -29,6 +36,9 @@ class BuyerApi extends ApiClient {
       if (gender != null) 'gender': gender,
       if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
       if (sort != null) 'sort': sort,
+      if (minPrice != null) 'min_price': minPrice.toStringAsFixed(2),
+      if (maxPrice != null) 'max_price': maxPrice.toStringAsFixed(2),
+      if (onSale) 'on_sale': '1',
       'page': '$page',
     });
     return ProductPage.fromJson(data['products'] as Map<String, dynamic>);
@@ -39,12 +49,22 @@ class BuyerApi extends ApiClient {
     return Product.fromJson(data['product'] as Map<String, dynamic>);
   }
 
+  Future<ProductReviewPage> productReviews(String slug, {int page = 1}) async => ProductReviewPage.fromJson(
+      await send('GET', '/mobile/products/${Uri.encodeComponent(slug)}/reviews', query: {'page': '$page'}));
+
   // ------------------------------------------------------------------- Auth
 
   Future<AuthResult> login(String email, String password) async =>
       AuthResult.fromJson(await send('POST', '/mobile/login', body: {
         'email': email,
         'password': password,
+        'device_name': deviceName,
+      }));
+
+  /// Signs in (or signs up) with a Google ID token from the phone's Google sign-in.
+  Future<AuthResult> googleSignIn(String idToken) async =>
+      AuthResult.fromJson(await send('POST', '/mobile/google', body: {
+        'id_token': idToken,
         'device_name': deviceName,
       }));
 
@@ -145,6 +165,66 @@ class BuyerApi extends ApiClient {
         'client_id': clientId,
       }))['message'] as Map<String, dynamic>);
 
+  /// Rates a delivered item, with up to three photos.
+  Future<String> reviewOrderItem(int itemId, {required int rating, String? comment, List<File> photos = const []}) async =>
+      (await sendMultipart('/mobile/order-items/$itemId/review', fields: {
+        'rating': '$rating',
+        if (comment != null && comment.trim().isNotEmpty) 'comment': comment.trim(),
+      }, files: {
+        for (final (index, photo) in photos.indexed) 'photos[$index]': photo,
+      }))['message'] as String;
+
+  Future<List<ComplaintCategory>> complaintCategories() async =>
+      ((await send('GET', '/mobile/complaints/categories'))['categories'] as List<dynamic>)
+          .map((item) => ComplaintCategory.fromJson(item as Map<String, dynamic>))
+          .toList();
+
+  /// Files a complaint about order [orderId], with up to four photos or PDFs.
+  Future<Complaint> fileComplaint(int orderId,
+          {required String category, required String details, List<File> evidence = const []}) async =>
+      Complaint.fromJson((await sendMultipart('/mobile/orders/$orderId/complaint', fields: {
+        'category': category,
+        'details': details.trim(),
+      }, files: {
+        for (final (index, file) in evidence.indexed) 'evidence[$index]': file,
+      }))['complaint'] as Map<String, dynamic>);
+
+  // ------------------------------------------------------ Chat with sellers
+
+  Future<List<SellerConversation>> sellerConversations() async =>
+      ((await send('GET', '/mobile/messages'))['conversations'] as List<dynamic>)
+          .map((item) => SellerConversation.fromJson(item as Map<String, dynamic>))
+          .toList();
+
+  Future<int> sellerUnreadCount() async => (await send('GET', '/mobile/messages/unread'))['unread'] as int? ?? 0;
+
+  /// Opens (or creates) the conversation with the seller of a product.
+  Future<SellerConversation> startSellerChat(String slug) async => SellerConversation.fromJson(
+      (await send('POST', '/mobile/products/${Uri.encodeComponent(slug)}/chat'))['conversation'] as Map<String, dynamic>);
+
+  /// The latest messages, or only those after message id [after] when polling.
+  Future<SellerChatBatch> sellerMessages(int conversationId, {int? after, int? before}) async =>
+      SellerChatBatch.fromJson(await send('GET', '/mobile/messages/$conversationId', query: {
+        if (after != null) 'after': '$after',
+        if (before != null) 'before': '$before',
+      }));
+
+  /// [clientId] makes a retried send safe: the server stores it only once.
+  Future<SellerChatMessage> sendSellerMessage(int conversationId, String body, {required String clientId}) async =>
+      SellerChatMessage.fromJson(
+        (await send('POST', '/mobile/messages/$conversationId', body: {'body': body, 'client_id': clientId}))['message']
+            as Map<String, dynamic>,
+        clientId: clientId,
+      );
+
+  /// Marks the seller's messages up to [through] as read.
+  Future<void> markSellerChatRead(int conversationId, int through) =>
+      send('POST', '/mobile/messages/$conversationId/read', body: {'through': through});
+
+  /// Shows (or clears) "typing…" on the seller's side for a few seconds.
+  Future<void> sendTyping(int conversationId, bool typing) =>
+      send('POST', '/mobile/messages/$conversationId/typing', body: {'typing': typing});
+
   // ---------------------------------------------------------------- Account
 
   Future<ProfileUpdate> updateProfile({
@@ -198,6 +278,14 @@ class BuyerApi extends ApiClient {
       NotificationFeed.fromJson(await send('POST', '/mobile/notifications/read', body: {
         if (key != null) 'key': key,
       }));
+
+  Future<IdentityStatus> identity() async =>
+      IdentityStatus.fromJson((await send('GET', '/mobile/account/identity'))['identity'] as Map<String, dynamic>);
+
+  /// Uploads a photo or PDF of a government ID for an administrator to review.
+  Future<IdentityStatus> submitIdentity({required String idType, required File document}) async =>
+      IdentityStatus.fromJson((await sendMultipart('/mobile/account/identity',
+          fields: {'id_type': idType}, files: {'document': document}))['identity'] as Map<String, dynamic>);
 
   // ---------------------------------------------------------------- Helpers
 

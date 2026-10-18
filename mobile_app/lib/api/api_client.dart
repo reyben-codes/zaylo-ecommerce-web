@@ -8,6 +8,8 @@ import 'package:flutter/foundation.dart';
 import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/models/auth_models.dart';
 import 'package:zaylo_mobile/models/location.dart';
+import 'package:zaylo_mobile/models/support_models.dart';
+import 'package:zaylo_mobile/utils/ids.dart';
 
 /// HTTP boundary for Laravel. The app never connects to MySQL directly.
 ///
@@ -50,6 +52,56 @@ class ApiClient {
 
   Future<Map<String, dynamic>> resendVerification(String email) =>
       send('POST', '/mobile/resend-verification', body: {'email': email});
+
+  // ------------------------------------- Support, complaints and policies
+
+  /// Where this account's own endpoints live: `/mobile` for buyers and
+  /// `/mobile/rider` for riders. Support and complaints use the same thread
+  /// and cases as the website under either prefix.
+  @protected
+  String get accountPrefix => '/mobile';
+
+  /// The whole support thread, oldest first. Opening it marks replies as read.
+  Future<List<SupportMessage>> supportMessages() async =>
+      ((await send('GET', '$accountPrefix/support'))['messages'] as List<dynamic>)
+          .map((item) => SupportMessage.fromJson(item as Map<String, dynamic>))
+          .toList();
+
+  /// [clientId] makes a retried send safe: the server stores it only once.
+  Future<SupportMessage> sendSupportMessage(String body, {String? clientId}) async =>
+      SupportMessage.fromJson((await send('POST', '$accountPrefix/support/messages', body: {
+        'body': body,
+        'client_id': clientId ?? newUuidV4(),
+      }))['message'] as Map<String, dynamic>);
+
+  /// Support replies not opened yet.
+  Future<int> supportUnreadCount() async => (await send('GET', '$accountPrefix/support/unread'))['unread'] as int? ?? 0;
+
+  /// Complaints the user filed (buyers) or is part of (riders), newest first.
+  Future<List<Complaint>> complaints() async =>
+      ((await send('GET', '$accountPrefix/complaints'))['complaints'] as List<dynamic>)
+          .map((item) => Complaint.fromJson(item as Map<String, dynamic>))
+          .toList();
+
+  Future<Complaint> complaint(int id) async =>
+      Complaint.fromJson((await send('GET', '$accountPrefix/complaints/$id'))['complaint'] as Map<String, dynamic>);
+
+  /// Replies in the case thread, with an optional photo or PDF; returns the updated case.
+  Future<Complaint> replyToComplaint(int id, String body, {File? attachment}) async =>
+      Complaint.fromJson((await sendMultipart('$accountPrefix/complaints/$id/messages',
+          fields: {'body': body}, files: {if (attachment != null) 'attachment': attachment}))['complaint']
+          as Map<String, dynamic>);
+
+  /// Terms, privacy, returns and prohibited items: the website's policy pages.
+  Future<List<PolicySummary>> policies() async => ((await send('GET', '/mobile/policies'))['policies'] as List<dynamic>)
+      .map((item) => PolicySummary.fromJson(item as Map<String, dynamic>))
+      .toList();
+
+  Future<Policy> policy(String slug) async =>
+      Policy.fromJson((await send('GET', '/mobile/policies/$slug'))['policy'] as Map<String, dynamic>);
+
+  /// For loading private files, such as complaint evidence, with this session.
+  Map<String, String> get authHeaders => {if (token != null) HttpHeaders.authorizationHeader: 'Bearer $token'};
 
   // -------------------------------------------- Philippine locations (PSGC)
 

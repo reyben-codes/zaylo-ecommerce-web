@@ -6,6 +6,7 @@ import 'package:zaylo_mobile/auth/buyer/registration_screen.dart';
 import 'package:zaylo_mobile/auth/buyer/verify_email_screen.dart';
 import 'package:zaylo_mobile/auth/forgot_password_screen.dart';
 import 'package:zaylo_mobile/auth/widgets/auth_layout.dart';
+import 'package:zaylo_mobile/auth/widgets/google_sign_in_button.dart';
 import 'package:zaylo_mobile/components/buttons.dart';
 import 'package:zaylo_mobile/components/form_fields.dart';
 import 'package:zaylo_mobile/components/layout.dart';
@@ -113,6 +114,7 @@ class _LoginScreenState extends State<LoginScreen> {
             PrimaryButton(label: 'SIGN IN', busy: _submitting, onPressed: _submit),
           ]),
         ),
+        GoogleSignInSection(onError: (message) => setState(() => _error = message)),
         const SizedBox(height: 27),
         Center(
           child: TextButton(

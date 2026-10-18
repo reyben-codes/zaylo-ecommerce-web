@@ -9,6 +9,8 @@ class OrderItem {
     required this.lineTotal,
     this.productSlug,
     this.imageUrl,
+    this.canReview = false,
+    this.reviewRating,
   });
 
   final int id;
@@ -19,6 +21,10 @@ class OrderItem {
   final String? productSlug;
   final String? imageUrl;
 
+  /// Detail-only: delivered and not rated yet, or the stars the buyer gave.
+  final bool canReview;
+  final int? reviewRating;
+
   factory OrderItem.fromJson(Map<String, dynamic> json) => OrderItem(
         id: (json['id'] as num).toInt(),
         productName: json['product_name'] as String,
@@ -27,6 +33,8 @@ class OrderItem {
         lineTotal: parseMoney(json['line_total']),
         productSlug: json['product_slug'] as String?,
         imageUrl: json['image_url'] as String?,
+        canReview: json['can_review'] as bool? ?? false,
+        reviewRating: (json['review_rating'] as num?)?.toInt(),
       );
 }
 
@@ -71,6 +79,8 @@ class Order {
     this.trackingNumber,
     this.history = const [],
     this.riderChat,
+    this.complaint,
+    this.canComplain = false,
   });
 
   final int id;
@@ -100,6 +110,10 @@ class Order {
 
   /// Present once a rider has accepted the delivery.
   final RiderChatSummary? riderChat;
+
+  /// The complaint filed about this order, or whether one can be filed.
+  final OrderComplaint? complaint;
+  final bool canComplain;
 
   String get paymentLabel => switch (paymentMethod) {
         'gcash' => 'GCash',
@@ -138,6 +152,24 @@ class Order {
         riderChat: json['rider_chat'] is Map<String, dynamic>
             ? RiderChatSummary.fromJson(json['rider_chat'] as Map<String, dynamic>)
             : null,
+        complaint: json['complaint'] is Map<String, dynamic>
+            ? OrderComplaint.fromJson(json['complaint'] as Map<String, dynamic>)
+            : null,
+        canComplain: json['can_complain'] as bool? ?? false,
+      );
+}
+
+class OrderComplaint {
+  const OrderComplaint({required this.id, required this.status, required this.statusLabel});
+
+  final int id;
+  final String status;
+  final String statusLabel;
+
+  factory OrderComplaint.fromJson(Map<String, dynamic> json) => OrderComplaint(
+        id: (json['id'] as num).toInt(),
+        status: json['status'] as String? ?? 'open',
+        statusLabel: json['status_label'] as String? ?? 'Open',
       );
 }
 

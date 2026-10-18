@@ -1,16 +1,15 @@
 import 'dart:io';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 
-import 'package:zaylo_mobile/components/feedback.dart';
+import 'package:zaylo_mobile/components/file_picking.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 import 'package:zaylo_mobile/utils/rider_validators.dart';
 
-/// A required document (driver's license, OR/CR): a camera photo, a gallery
-/// image, or a JPG/PNG/PDF file. Type and the 5.0 MB limit are checked the
-/// moment a file is picked, so the rider sees the problem right away.
+/// A required document (driver's license, OR/CR, government ID): a camera
+/// photo, a gallery image, or a file. Type and the 5.0 MB limit are checked
+/// the moment a file is picked, so the problem shows right away. Rider
+/// documents use the rider sign-up rules unless a [validator] is given.
 class DocumentUploadField extends FormField<File> {
   DocumentUploadField({
     super.key,
@@ -18,10 +17,15 @@ class DocumentUploadField extends FormField<File> {
     String? serverError,
     super.initialValue,
     ValueChanged<File>? onChanged,
+    FormFieldValidator<File>? validator,
+    List<String> extensions = riderDocumentExtensions,
+    String hint = 'JPG, PNG, or PDF up to 5.0 MB',
   }) : super(
-          validator: (file) => riderDocumentError(file, label: label),
+          validator: validator ?? (file) => riderDocumentError(file, label: label),
           builder: (field) => _DocumentUploadPicker(
             label: label,
+            hint: hint,
+            extensions: extensions,
             file: field.value,
             errorText: field.errorText ?? serverError,
             onPicked: (file) {
@@ -33,13 +37,19 @@ class DocumentUploadField extends FormField<File> {
         );
 }
 
-enum _Source { camera, gallery, file }
-
 class _DocumentUploadPicker extends StatelessWidget {
-  const _DocumentUploadPicker(
-      {required this.label, required this.file, required this.errorText, required this.onPicked});
+  const _DocumentUploadPicker({
+    required this.label,
+    required this.hint,
+    required this.extensions,
+    required this.file,
+    required this.errorText,
+    required this.onPicked,
+  });
 
   final String label;
+  final String hint;
+  final List<String> extensions;
   final File? file;
   final String? errorText;
   final ValueChanged<File> onPicked;
@@ -47,54 +57,8 @@ class _DocumentUploadPicker extends StatelessWidget {
   bool get _isPdf => file != null && file!.path.toLowerCase().endsWith('.pdf');
 
   Future<void> _choose(BuildContext context) async {
-    final source = await showModalBottomSheet<_Source>(
-      context: context,
-      backgroundColor: ZayloColors.white,
-      builder: (sheetContext) => SafeArea(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          ListTile(
-            leading: const Icon(Icons.photo_camera_outlined),
-            title: const Text('Take photo'),
-            onTap: () => Navigator.pop(sheetContext, _Source.camera),
-          ),
-          ListTile(
-            leading: const Icon(Icons.photo_library_outlined),
-            title: const Text('Choose from gallery'),
-            onTap: () => Navigator.pop(sheetContext, _Source.gallery),
-          ),
-          ListTile(
-            leading: const Icon(Icons.upload_file_outlined),
-            title: const Text('Choose a file'),
-            subtitle: const Text('JPG, PNG, or PDF up to 5.0 MB'),
-            onTap: () => Navigator.pop(sheetContext, _Source.file),
-          ),
-        ]),
-      ),
-    );
-    if (source == null || !context.mounted) return;
-
-    try {
-      final path = switch (source) {
-        // Photos are resized and saved as JPG, which keeps them well under 5.0 MB.
-        _Source.camera || _Source.gallery => (await ImagePicker().pickImage(
-            source: source == _Source.camera ? ImageSource.camera : ImageSource.gallery,
-            maxWidth: 2000,
-            maxHeight: 2000,
-            imageQuality: 80,
-          ))
-              ?.path,
-        _Source.file => (await FilePicker.pickFile(
-            type: FileType.custom,
-            allowedExtensions: riderDocumentExtensions,
-          ))
-              ?.path,
-      };
-      if (path != null) onPicked(File(path));
-    } on Exception catch (error) {
-      // Usually a denied camera, photo, or storage permission.
-      debugPrint('[ZAYLO] Document picker (${source.name}) failed: $error');
-      if (context.mounted) showMessage(context, 'Could not open the ${source.name}. Check the app\'s permissions.');
-    }
+    final picked = await pickPhotoOrFile(context, fileExtensions: extensions, fileHint: hint);
+    if (picked != null) onPicked(picked);
   }
 
   @override
@@ -116,7 +80,7 @@ class _DocumentUploadPicker extends StatelessWidget {
             ),
             clipBehavior: Clip.antiAlias,
             child: switch (file) {
-              null => _EmptyPrompt(label: label),
+              null => _EmptyPrompt(label: label, hint: hint),
               _ when _isPdf => _PdfPreview(file: file!),
               _ => Stack(fit: StackFit.expand, children: [
                   Image.file(
@@ -141,9 +105,10 @@ class _DocumentUploadPicker extends StatelessWidget {
 }
 
 class _EmptyPrompt extends StatelessWidget {
-  const _EmptyPrompt({required this.label});
+  const _EmptyPrompt({required this.label, required this.hint});
 
   final String label;
+  final String hint;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -153,7 +118,7 @@ class _EmptyPrompt extends StatelessWidget {
           const SizedBox(height: 8),
           Text('Upload $label', style: const TextStyle(fontWeight: FontWeight.w600), textAlign: TextAlign.center),
           const SizedBox(height: 2),
-          Text('JPG, PNG, or PDF up to 5.0 MB',
+          Text(hint,
               style: TextStyle(fontSize: 12, color: ZayloColors.muted), textAlign: TextAlign.center),
         ]),
       );

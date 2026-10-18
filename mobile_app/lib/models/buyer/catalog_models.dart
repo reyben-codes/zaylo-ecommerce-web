@@ -1,3 +1,6 @@
+import 'package:zaylo_mobile/models/json_parsing.dart';
+import 'package:zaylo_mobile/models/support_models.dart';
+
 class Category {
   const Category({required this.id, required this.label, required this.imageUrl});
 
@@ -49,6 +52,8 @@ class Product {
     this.description,
     this.hasOptions = false,
     this.saved = false,
+    this.rating,
+    this.reviewCount = 0,
     this.stock,
     this.sellerName,
     this.images = const [],
@@ -67,6 +72,10 @@ class Product {
   final String? description;
   final bool hasOptions;
   final bool saved;
+
+  /// Average stars (1 decimal) from verified purchases; null without reviews.
+  final double? rating;
+  final int reviewCount;
 
   /// Detail-only fields; empty or null on list payloads.
   final int? stock;
@@ -94,6 +103,8 @@ class Product {
         description: json['description'] as String?,
         hasOptions: json['has_options'] as bool? ?? false,
         saved: json['saved'] as bool? ?? false,
+        rating: (json['rating'] as num?)?.toDouble(),
+        reviewCount: (json['review_count'] as num?)?.toInt() ?? 0,
         stock: (json['stock'] as num?)?.toInt(),
         sellerName: json['seller_name'] as String?,
         images: List<String>.from(json['images'] as List<dynamic>? ?? const []),
@@ -135,6 +146,7 @@ class StorefrontHome {
     required this.newArrivals,
     this.flashSales = const [],
     this.suggested = const [],
+    this.announcements = const [],
   });
 
   final List<Category> categories;
@@ -144,6 +156,9 @@ class StorefrontHome {
   /// Signed-in only, like the web buyer dashboard.
   final List<Product> flashSales;
   final List<Product> suggested;
+
+  /// Live notices from the ZAYLO admin for buyers (or everyone, for guests).
+  final List<Announcement> announcements;
 
   static List<Product> _products(Object? list) => (list as List<dynamic>? ?? const [])
       .map((item) => Product.fromJson(item as Map<String, dynamic>))
@@ -157,5 +172,69 @@ class StorefrontHome {
         newArrivals: _products(json['new_arrivals']),
         flashSales: _products(json['flash_sales']),
         suggested: _products(json['suggested']),
+        announcements: Announcement.listFrom(json['announcements']),
+      );
+}
+
+/// A verified-purchase review; buyers are shown by first name only.
+class ProductReview {
+  const ProductReview({
+    required this.id,
+    required this.rating,
+    required this.buyerName,
+    this.comment,
+    this.photos = const [],
+    this.createdAt,
+  });
+
+  final int id;
+  final int rating;
+  final String buyerName;
+  final String? comment;
+  final List<String> photos;
+  final DateTime? createdAt;
+
+  factory ProductReview.fromJson(Map<String, dynamic> json) => ProductReview(
+        id: (json['id'] as num).toInt(),
+        rating: (json['rating'] as num).toInt(),
+        buyerName: json['buyer_name'] as String? ?? 'ZAYLO buyer',
+        comment: json['comment'] as String?,
+        photos: List<String>.from(json['photos'] as List<dynamic>? ?? const []),
+        createdAt: parseDate(json['created_at']),
+      );
+}
+
+/// GET /mobile/products/{slug}/reviews: the summary plus one page of reviews.
+class ProductReviewPage {
+  const ProductReviewPage({
+    required this.count,
+    required this.breakdown,
+    required this.reviews,
+    required this.currentPage,
+    required this.lastPage,
+    this.average,
+  });
+
+  final double? average;
+  final int count;
+
+  /// Reviews per star rating, 5 down to 1.
+  final Map<int, int> breakdown;
+  final List<ProductReview> reviews;
+  final int currentPage;
+  final int lastPage;
+
+  bool get hasMore => currentPage < lastPage;
+
+  factory ProductReviewPage.fromJson(Map<String, dynamic> json) => ProductReviewPage(
+        average: (json['average'] as num?)?.toDouble(),
+        count: (json['count'] as num?)?.toInt() ?? 0,
+        breakdown: (json['breakdown'] as Map<String, dynamic>? ?? const {})
+            .map((stars, total) => MapEntry(int.parse(stars), (total as num).toInt())),
+        reviews: (json['reviews'] as List<dynamic>? ?? const [])
+            .map((item) => ProductReview.fromJson(item as Map<String, dynamic>))
+            .toList(),
+        currentPage: (json['page'] as num?)?.toInt() ?? 1,
+        lastPage: (json['last_page'] as num?)?.toInt() ?? 1,
       );
 }

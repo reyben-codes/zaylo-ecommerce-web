@@ -10,14 +10,18 @@ import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 class SignedOutPrompt extends StatelessWidget {
   const SignedOutPrompt({
     super.key,
-    required this.icon,
+    this.icon,
+    this.iconWidget,
     required this.heading,
     required this.eyebrow,
     required this.title,
     required this.message,
-  });
+  }) : assert(icon != null || iconWidget != null);
 
-  final IconData icon;
+  final IconData? icon;
+
+  /// Used instead of [icon], for drawn icons such as the cart.
+  final Widget? iconWidget;
 
   /// The tab's name, shown in the header.
   final String heading;
@@ -35,7 +39,7 @@ class SignedOutPrompt extends StatelessWidget {
               CircleAvatar(
                 radius: 38,
                 backgroundColor: ZayloColors.sand,
-                child: Icon(icon, size: 34, color: ZayloColors.ink),
+                child: iconWidget ?? Icon(icon, size: 34, color: ZayloColors.ink),
               ),
               const SizedBox(height: 20),
               Text(title, style: Theme.of(context).textTheme.headlineSmall),

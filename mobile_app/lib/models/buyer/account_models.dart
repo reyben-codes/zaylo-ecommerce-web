@@ -59,3 +59,55 @@ class NotificationFeed {
         unreadCount: (json['unread_count'] as num).toInt(),
       );
 }
+
+class IdType {
+  const IdType({required this.id, required this.label});
+
+  final String id;
+  final String label;
+
+  factory IdType.fromJson(Map<String, dynamic> json) => IdType(id: json['id'] as String, label: json['label'] as String);
+}
+
+/// The buyer's latest ID upload and its review.
+class IdentitySubmission {
+  const IdentitySubmission({required this.status, required this.idTypeLabel, this.rejectionReason, this.submittedAt});
+
+  /// pending, approved or rejected.
+  final String status;
+  final String idTypeLabel;
+  final String? rejectionReason;
+  final DateTime? submittedAt;
+
+  factory IdentitySubmission.fromJson(Map<String, dynamic> json) => IdentitySubmission(
+        status: json['status'] as String? ?? 'pending',
+        idTypeLabel: json['id_type_label'] as String? ?? '',
+        rejectionReason: json['rejection_reason'] as String?,
+        submittedAt: parseDate(json['submitted_at']),
+      );
+}
+
+/// GET /mobile/account/identity: whether the buyer can check out, and how to verify.
+class IdentityStatus {
+  const IdentityStatus({required this.enabled, required this.verified, required this.idTypes, this.submission});
+
+  /// False until the server's ID verification migration runs; nobody is blocked then.
+  final bool enabled;
+  final bool verified;
+  final IdentitySubmission? submission;
+  final List<IdType> idTypes;
+
+  bool get pending => !verified && submission?.status == 'pending';
+  bool get rejected => !verified && submission?.status == 'rejected';
+
+  factory IdentityStatus.fromJson(Map<String, dynamic> json) => IdentityStatus(
+        enabled: json['enabled'] as bool? ?? true,
+        verified: json['verified'] as bool? ?? false,
+        submission: json['submission'] is Map<String, dynamic>
+            ? IdentitySubmission.fromJson(json['submission'] as Map<String, dynamic>)
+            : null,
+        idTypes: (json['id_types'] as List<dynamic>? ?? const [])
+            .map((item) => IdType.fromJson(item as Map<String, dynamic>))
+            .toList(),
+      );
+}

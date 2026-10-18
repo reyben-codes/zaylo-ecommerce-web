@@ -17,6 +17,7 @@ use App\Rules\StrongPassword;
 use App\Models\Wishlist;
 use App\Services\CartService;
 use App\Services\CheckoutService;
+use App\Support\ProductCatalog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -70,7 +71,7 @@ class BuyerController extends Controller
         if (isset($validated['min_price'], $validated['max_price']) && $validated['max_price'] < $validated['min_price']) {
             throw ValidationException::withMessages(['max_price' => 'Maximum price must be greater than or equal to minimum price.']);
         }
-        $validated['search'] = trim(preg_replace('/\s+/u', ' ', $validated['search'] ?? ''));
+        $validated['search'] = ProductCatalog::normalizeSearch($validated['search'] ?? null);
         $validated['sort'] = $validated['sort'] ?? ($validated['search'] !== '' ? 'relevance' : 'newest');
         // Show everything by default; sold-out products are grayed out and listed after available ones.
         $validated['availability'] = $validated['availability'] ?? 'all';
@@ -88,56 +89,12 @@ class BuyerController extends Controller
         if ($validated['availability'] === 'in_stock') $query->where($available);
         if ($validated['availability'] === 'out_of_stock') $query->whereNot($available);
 
-        if (! empty($validated['category'])) {
-            if (Product::usesLegacySchema()) {
-                $validated['category'] === 'fashion'
-                    ? $query->whereIn('category', config('marketplace.fashion_categories'))
-                    : $query->where('category', $validated['category']);
-            } else {
-                $validated['category'] === 'fashion'
-                    ? $query->whereHas('category', fn ($category) => $category->whereIn('slug', config('marketplace.fashion_categories')))
-                    : $query->whereHas('category', fn ($category) => $category->where('slug', $validated['category']));
-            }
-        }
-        if (! empty($validated['gender'])) {
-            // Unisex items are for everyone, so they also appear under Men and Women.
-            $validated['gender'] === 'unisex'
-                ? $query->where('gender', 'unisex')
-                : $query->whereIn('gender', [$validated['gender'], 'unisex']);
-        }
-        $escapeLike = fn ($text) => str_replace(['!', '%', '_'], ['!!', '!%', '!_'], mb_strtolower($text));
-        if ($validated['search'] !== '') {
-            foreach (array_unique(explode(' ', $validated['search'])) as $word) {
-                $pattern = '%'.$escapeLike($word).'%';
-                $query->where(function ($match) use ($pattern) {
-                    $match->whereRaw("LOWER(products.name) LIKE ? ESCAPE '!'", [$pattern])
-                        ->orWhereRaw("LOWER(products.description) LIKE ? ESCAPE '!'", [$pattern]);
-                    if (Product::usesLegacySchema()) {
-                        $match->orWhereRaw("LOWER(products.sku) LIKE ? ESCAPE '!'", [$pattern])
-                            ->orWhereRaw("LOWER(products.category) LIKE ? ESCAPE '!'", [$pattern]);
-                    } else {
-                        $match->orWhereHas('category', fn ($category) => $category->whereRaw("LOWER(name) LIKE ? ESCAPE '!'", [$pattern]));
-                    }
-                    $match->orWhereHas('variants', fn ($variant) => $variant->where('is_active', true)->whereRaw("LOWER(sku) LIKE ? ESCAPE '!'", [$pattern]));
-                });
-            }
-        }
-
-        $priceSql = Product::sellingPriceSql();
-        $priceTime = now();
-        foreach (['min_price' => '>=', 'max_price' => '<='] as $field => $operator) {
-            if (isset($validated[$field])) $query->whereRaw("({$priceSql}) {$operator} CAST(? AS DECIMAL(12, 2))", [$priceTime, $priceTime, $validated[$field]]);
-        }
+        ProductCatalog::category($query, $validated['category'] ?? null);
+        ProductCatalog::gender($query, $validated['gender'] ?? null);
+        ProductCatalog::search($query, $validated['search']);
+        ProductCatalog::priceRange($query, $validated['min_price'] ?? null, $validated['max_price'] ?? null);
         if (! empty($validated['on_sale'])) {
-            $query->where(function ($sale) use ($priceSql, $priceTime) {
-                $sale->whereRaw('('.$priceSql.') < ('.Product::regularPriceSql().')', [$priceTime, $priceTime])
-                    ->orWhere(function ($legacy) {
-                        $legacy->whereNull('sale_type');
-                        Product::usesLegacySchema()
-                            ? $legacy->whereColumn('original_price', '>', 'price')
-                            : $legacy->whereHas('defaultVariant', fn ($variant) => $variant->whereColumn('original_price_minor', '>', 'price_minor'));
-                    });
-            });
+            ProductCatalog::onSale($query);
         }
 
         if ($validated['availability'] === 'all') {
@@ -147,15 +104,7 @@ class BuyerController extends Controller
             }
             $query->orderByRaw("CASE WHEN {$inStockSql} THEN 0 ELSE 1 END");
         }
-        if (in_array($validated['sort'] ?? '', ['price_low', 'price_high'], true)) {
-            $direction = $validated['sort'] === 'price_high' ? 'DESC' : 'ASC';
-            $query->orderByRaw(Product::sellingPriceSql()." {$direction}", [now(), now()]);
-        } elseif ($validated['sort'] === 'relevance' && $validated['search'] !== '') {
-            $query->orderByRaw("CASE WHEN LOWER(products.name) = ? THEN 0 WHEN LOWER(products.name) LIKE ? ESCAPE '!' THEN 1 ELSE 2 END", [mb_strtolower($validated['search']), $escapeLike($validated['search']).'%'])->latest();
-        } else {
-            $query->latest();
-        }
-        $query->orderByDesc('products.id');
+        ProductCatalog::sort($query, $validated['sort'], $validated['search']);
 
         $chips = [];
         foreach (['search', 'category', 'gender', 'min_price', 'max_price', 'availability', 'on_sale'] as $key) {

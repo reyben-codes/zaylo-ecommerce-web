@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 
 import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/components/buttons.dart';
+import 'package:zaylo_mobile/components/cart_icon.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
 import 'package:zaylo_mobile/components/form_fields.dart';
 import 'package:zaylo_mobile/components/layout.dart';
+import 'package:zaylo_mobile/components/star_rating.dart';
 import 'package:zaylo_mobile/features/buyer/catalog/product_card.dart';
+import 'package:zaylo_mobile/features/buyer/catalog/product_reviews_screen.dart';
 import 'package:zaylo_mobile/features/buyer/checkout/checkout_screen.dart';
+import 'package:zaylo_mobile/features/buyer/messages/seller_chat_screen.dart';
 import 'package:zaylo_mobile/features/buyer/widgets/shop_actions.dart';
 import 'package:zaylo_mobile/models/buyer/catalog_models.dart';
 import 'package:zaylo_mobile/state/app_state.dart';
@@ -29,6 +33,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   ProductVariant? _variant;
   int _quantity = 1;
   bool _busy = false;
+  bool _openingChat = false;
 
   @override
   void initState() {
@@ -78,6 +83,21 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
   }
 
+  /// Opens the conversation with this product's seller, as the website's "Chat with seller".
+  Future<void> _chatWithSeller(Product product) async {
+    if (_openingChat || !await ShopActions.ensureSignedIn(context) || !mounted) return;
+    setState(() => _openingChat = true);
+    try {
+      final conversation = await AppScope.read(context).api.startSellerChat(product.slug);
+      if (!mounted) return;
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => SellerChatScreen(conversation: conversation)));
+    } on ApiException catch (error) {
+      if (mounted) showMessage(context, error.message);
+    } finally {
+      if (mounted) setState(() => _openingChat = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) => FutureBuilder<Product>(
         future: _product,
@@ -103,7 +123,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   icon: Badge(
                     isLabelVisible: AppScope.of(context).cartCount > 0,
                     label: Text('${AppScope.of(context).cartCount}'),
-                    child: const Icon(Icons.shopping_bag_outlined),
+                    child: const CartIcon(),
                   ),
                 ),
               ],
@@ -178,14 +198,28 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                   style: TextStyle(
                                       fontSize: 12, fontWeight: FontWeight.w700, color: ZayloColors.success)),
                             ),
+                          if (loaded) ...[
+                            const SizedBox(height: 10),
+                            _RatingLink(
+                              product: product,
+                              onOpen: () => Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => ProductReviewsScreen(product: product)),
+                              ),
+                            ),
+                          ],
                           if (product.sellerName != null) ...[
-                            const SizedBox(height: 14),
+                            const SizedBox(height: 8),
                             Row(children: [
                               Icon(Icons.storefront_outlined, size: 17, color: ZayloColors.muted),
                               const SizedBox(width: 6),
                               Expanded(
                                 child: Text('Sold by ${product.sellerName}',
                                     style: TextStyle(fontSize: 13, color: ZayloColors.muted)),
+                              ),
+                              TextButton.icon(
+                                onPressed: _openingChat ? null : () => _chatWithSeller(product),
+                                icon: const Icon(Icons.chat_bubble_outline, size: 17),
+                                label: const Text('Chat with seller'),
                               ),
                             ]),
                           ],
@@ -258,6 +292,37 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           );
         },
       );
+}
+
+/// Average stars and review count, opening the customer reviews.
+class _RatingLink extends StatelessWidget {
+  const _RatingLink({required this.product, required this.onOpen});
+
+  final Product product;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final rating = product.rating;
+    final count = product.reviewCount;
+    return InkWell(
+      onTap: onOpen,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(children: [
+          if (rating != null) ...[
+            StarRow(rating: rating),
+            const SizedBox(width: 6),
+            Text(rating.toStringAsFixed(1), style: TextStyle(fontWeight: FontWeight.w700, color: ZayloColors.ink)),
+            const SizedBox(width: 6),
+          ],
+          Text(count == 0 ? 'No reviews yet' : '$count ${count == 1 ? 'review' : 'reviews'}',
+              style: TextStyle(fontSize: 13, color: ZayloColors.muted, decoration: TextDecoration.underline)),
+        ]),
+      ),
+    );
+  }
 }
 
 class _ActionBar extends StatelessWidget {

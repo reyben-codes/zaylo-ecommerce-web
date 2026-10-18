@@ -48,14 +48,18 @@ class LoadError extends StatelessWidget {
 class EmptyState extends StatelessWidget {
   const EmptyState({
     super.key,
-    required this.icon,
+    this.icon,
+    this.iconWidget,
     required this.title,
     required this.message,
     this.actionLabel,
     this.onAction,
-  });
+  }) : assert(icon != null || iconWidget != null);
 
-  final IconData icon;
+  final IconData? icon;
+
+  /// Used instead of [icon], for drawn icons such as the cart.
+  final Widget? iconWidget;
   final String title;
   final String message;
   final String? actionLabel;
@@ -69,7 +73,7 @@ class EmptyState extends StatelessWidget {
             CircleAvatar(
               radius: 38,
               backgroundColor: ZayloColors.sand,
-              child: Icon(icon, size: 34, color: ZayloColors.ink),
+              child: iconWidget ?? Icon(icon, size: 34, color: ZayloColors.ink),
             ),
             const SizedBox(height: 20),
             Text(title, style: Theme.of(context).textTheme.headlineSmall, textAlign: TextAlign.center),

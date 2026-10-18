@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\RegisterRiderRequest;
+use App\Models\Announcement;
 use App\Models\Shipment;
 use App\Models\User;
 use App\Services\RiderDeliveries;
 use App\Services\ShipmentWorkflow;
+use App\Support\MobilePayload;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -34,6 +36,7 @@ class MobileRiderDashboardController extends Controller
 
         return response()->json([
             'rider' => $this->riderPayload($rider),
+            'announcements' => MobilePayload::announcements(Announcement::for('rider')),
             // While sellers deliver their own parcels, the app explains why there is nothing to do.
             'delivery_mode' => $sellerManaged ? 'seller_managed' : 'logistics',
             'delivery_mode_message' => $sellerManaged

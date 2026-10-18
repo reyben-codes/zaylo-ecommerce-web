@@ -2,12 +2,17 @@ import 'package:flutter/material.dart';
 
 import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/components/buttons.dart';
+import 'package:zaylo_mobile/components/complaints.dart';
 import 'package:zaylo_mobile/components/layout.dart';
+import 'package:zaylo_mobile/components/policies.dart';
 import 'package:zaylo_mobile/components/theme_toggle.dart';
+import 'package:zaylo_mobile/features/buyer/account/identity_screen.dart';
 import 'package:zaylo_mobile/features/buyer/account/notifications_screen.dart';
 import 'package:zaylo_mobile/features/buyer/account/password_screen.dart';
 import 'package:zaylo_mobile/features/buyer/account/profile_screen.dart';
+import 'package:zaylo_mobile/features/buyer/account/support_screen.dart';
 import 'package:zaylo_mobile/features/buyer/address/addresses_screen.dart';
+import 'package:zaylo_mobile/features/buyer/messages/seller_inbox_screen.dart';
 import 'package:zaylo_mobile/features/buyer/orders/orders_screen.dart';
 import 'package:zaylo_mobile/features/buyer/widgets/shop_actions.dart';
 import 'package:zaylo_mobile/features/buyer/widgets/signed_out_prompt.dart';
@@ -24,6 +29,8 @@ class AccountScreen extends StatefulWidget {
 
 class _AccountScreenState extends State<AccountScreen> {
   int _unread = 0;
+  int _unreadMessages = 0;
+  int _unreadSupport = 0;
   int? _lastUserId;
 
   @override
@@ -36,17 +43,42 @@ class _AccountScreenState extends State<AccountScreen> {
     }
   }
 
+  /// Badges for notifications, seller messages and support replies. Each is
+  /// optional; the screen still works when one cannot load.
   Future<void> _loadUnread() async {
+    final state = AppScope.read(context);
+    final api = state.api;
+    Future<int> count(Future<int> Function() load) async {
+      try {
+        return await load();
+      } on ApiException {
+        return 0;
+      }
+    }
+
+    final counts = await Future.wait([
+      count(() async => (await api.notifications()).unreadCount),
+      count(api.sellerUnreadCount),
+      count(api.supportUnreadCount),
+    ]);
+    if (!mounted) return;
+    setState(() {
+      _unread = counts[0];
+      _unreadMessages = counts[1];
+      _unreadSupport = counts[2];
+    });
+    // The ID badge follows approvals made while the app was open.
     try {
-      final feed = await AppScope.read(context).api.notifications();
-      if (mounted) setState(() => _unread = feed.unreadCount);
+      state.updateUser(await api.me());
     } on ApiException {
-      // The badge is optional; the screen still works without it.
+      // Keep the profile we have.
     }
   }
 
   void _push(Widget screen) =>
       Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen)).then((_) => _loadUnread());
+
+  static Widget? _badge(int count) => count > 0 ? Badge(label: Text('$count'), backgroundColor: Colors.redAccent) : null;
 
   Future<void> _signOut() async {
     final confirmed = await showDialog<bool>(
@@ -118,6 +150,35 @@ class _AccountScreenState extends State<AccountScreen> {
             ]),
           ),
           const SizedBox(height: 22),
+          const Eyebrow('Messages & help'),
+          const SizedBox(height: 9),
+          SectionCard(
+            padding: EdgeInsets.zero,
+            child: Column(children: [
+              _MenuTile(
+                icon: Icons.forum_outlined,
+                label: 'Messages with sellers',
+                trailing: _badge(_unreadMessages),
+                onTap: () => _push(const SellerInboxScreen()),
+              ),
+              _MenuTile(
+                icon: Icons.support_agent_outlined,
+                label: 'Help & support',
+                trailing: _badge(_unreadSupport),
+                onTap: () => _push(const SupportScreen()),
+              ),
+              _MenuTile(
+                icon: Icons.report_gmailerrorred_outlined,
+                label: 'Complaints',
+                onTap: () => _push(ComplaintsScreen(
+                  api: state.api,
+                  emptyMessage: 'Report a problem from an order’s details and follow the case here.',
+                )),
+                last: true,
+              ),
+            ]),
+          ),
+          const SizedBox(height: 22),
           const Eyebrow('Settings'),
           const SizedBox(height: 9),
           SectionCard(
@@ -126,8 +187,16 @@ class _AccountScreenState extends State<AccountScreen> {
               _MenuTile(
                 icon: Icons.notifications_none,
                 label: 'Notifications',
-                trailing: _unread > 0 ? Badge(label: Text('$_unread'), backgroundColor: Colors.redAccent) : null,
+                trailing: _badge(_unread),
                 onTap: () => _push(const NotificationsScreen()),
+              ),
+              _MenuTile(
+                icon: Icons.badge_outlined,
+                label: 'ID verification',
+                trailing: user.identityVerified
+                    ? Icon(Icons.verified, size: 18, color: ZayloColors.success)
+                    : Text('Required to order', style: TextStyle(fontSize: 11, color: ZayloColors.warning)),
+                onTap: () => _push(const IdentityScreen()),
               ),
               _MenuTile(icon: Icons.location_on_outlined, label: 'Saved addresses', onTap: () => _push(const AddressesScreen())),
               _MenuTile(icon: Icons.person_outline, label: 'Profile settings', onTap: () => _push(const ProfileScreen())),
@@ -141,6 +210,16 @@ class _AccountScreenState extends State<AccountScreen> {
           ),
           const SizedBox(height: 12),
           const SectionCard(padding: EdgeInsets.zero, child: ThemeToggleTile()),
+          const SizedBox(height: 12),
+          SectionCard(
+            padding: EdgeInsets.zero,
+            child: _MenuTile(
+              icon: Icons.description_outlined,
+              label: 'Terms & policies',
+              onTap: () => _push(PoliciesScreen(api: state.api)),
+              last: true,
+            ),
+          ),
           const SizedBox(height: 22),
           SizedBox(
             width: double.infinity,

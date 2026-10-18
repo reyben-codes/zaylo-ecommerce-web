@@ -8,6 +8,7 @@ class UserProfile {
     this.emailVerified = true,
     this.hasPassword = true,
     this.googleLinked = false,
+    this.identityVerified = true,
   });
 
   final int id;
@@ -18,6 +19,9 @@ class UserProfile {
   final bool emailVerified;
   final bool hasPassword;
   final bool googleLinked;
+
+  /// Buyers need an approved government ID before they can place orders.
+  final bool identityVerified;
 
   String get firstName => name.split(' ').first;
 
@@ -36,6 +40,7 @@ class UserProfile {
         emailVerified: json['email_verified'] as bool? ?? true,
         hasPassword: json['has_password'] as bool? ?? true,
         googleLinked: json['google_linked'] as bool? ?? false,
+        identityVerified: json['identity_verified'] as bool? ?? true,
       );
 }
 

@@ -122,6 +122,8 @@ class MobileShoppingController extends Controller
             ],
             'addresses' => $request->user()->addresses()->orderByDesc('is_default')->orderBy('id')->get()
                 ->map(fn ($address) => MobilePayload::address($address))->values(),
+            // Orders need an approved ID; the app shows the upload step before Place order.
+            'identity_verified' => $request->user()->isIdentityVerified(),
         ]);
     }
 

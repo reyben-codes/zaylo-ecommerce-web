@@ -8,19 +8,28 @@ import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/api/buyer_api.dart';
 import 'package:zaylo_mobile/api/rider_api.dart';
 import 'package:zaylo_mobile/app.dart';
+import 'package:zaylo_mobile/auth/buyer/login_screen.dart';
+import 'package:zaylo_mobile/auth/google_auth.dart';
 import 'package:zaylo_mobile/auth/rider/rider_registration_screen.dart';
 import 'package:zaylo_mobile/auth/rider/widgets/rider_terms_dialog.dart';
 import 'package:zaylo_mobile/auth/token_store.dart';
+import 'package:zaylo_mobile/components/announcement_banner.dart';
 import 'package:zaylo_mobile/components/chat/delivery_chat.dart';
+import 'package:zaylo_mobile/components/policies.dart';
+import 'package:zaylo_mobile/features/buyer/checkout/checkout_screen.dart';
+import 'package:zaylo_mobile/features/buyer/orders/order_detail_screen.dart';
 import 'package:zaylo_mobile/features/buyer/home/widgets/home_header.dart';
 import 'package:zaylo_mobile/models/auth_models.dart';
+import 'package:zaylo_mobile/models/buyer/account_models.dart';
 import 'package:zaylo_mobile/models/buyer/cart_models.dart';
 import 'package:zaylo_mobile/models/buyer/catalog_models.dart';
 import 'package:zaylo_mobile/models/buyer/order_models.dart';
+import 'package:zaylo_mobile/models/buyer/seller_chat_models.dart';
 import 'package:zaylo_mobile/models/location.dart';
 import 'package:zaylo_mobile/models/rider/rider_activity_models.dart';
 import 'package:zaylo_mobile/models/rider/rider_dashboard_models.dart';
 import 'package:zaylo_mobile/models/rider/rider_models.dart';
+import 'package:zaylo_mobile/models/support_models.dart';
 import 'package:zaylo_mobile/navigation/rider_shell.dart';
 import 'package:zaylo_mobile/state/app_state.dart';
 import 'package:zaylo_mobile/theme/theme_controller.dart';
@@ -62,9 +71,16 @@ Map<String, dynamic> cartJson(List<int> ids) => {
     };
 
 class FakeApi extends BuyerApi {
-  FakeApi({this.cartIds = const []}) : super(baseUrl: 'http://fake.test/api');
+  FakeApi({this.cartIds = const [], this.announcements = const [], this.identityVerified = true})
+      : super(baseUrl: 'http://fake.test/api');
 
   final List<int> cartIds;
+
+  /// Admin notices on the home screen, in the API's shape.
+  final List<Map<String, dynamic>> announcements;
+
+  /// Whether the buyer's ID is approved, which checkout requires.
+  final bool identityVerified;
 
   @override
   Future<StorefrontHome> home() async => StorefrontHome.fromJson({
@@ -75,6 +91,56 @@ class FakeApi extends BuyerApi {
         'new_arrivals': [productJson(1), productJson(2)],
         if (token != null) 'flash_sales': [productJson(3, name: 'Gloves', price: 399, original: 599)],
         if (token != null) 'suggested': [productJson(4)],
+        'announcements': announcements,
+      });
+
+  @override
+  Future<NotificationFeed> notifications() async => NotificationFeed.fromJson({'notifications': [], 'unread_count': 0});
+
+  @override
+  Future<int> sellerUnreadCount() async => 3;
+
+  @override
+  Future<int> supportUnreadCount() async => 0;
+
+  @override
+  Future<CheckoutQuote> quote(List<int> cartItemIds, {String? voucherCode}) async => CheckoutQuote.fromJson({
+        'items': cartJson(cartItemIds)['items'],
+        'totals': {'subtotal': 499.0, 'shipping': 120.0, 'shipping_discount': 0.0, 'total': 619.0},
+        'addresses': [
+          {
+            'id': 1,
+            'label': 'Home',
+            'recipient_name': 'Maria Santos',
+            'phone': '09171234567',
+            'line1': '12 Rizal St.',
+            'formatted': '12 Rizal St., Calamba, Laguna',
+            'is_default': true,
+            'is_structured': true,
+          },
+        ],
+        'identity_verified': identityVerified,
+      });
+
+  @override
+  Future<Order> order(int id) async => Order.fromJson({
+        'id': id,
+        'order_number': 'ZAY-DELIVERED',
+        'status': 'completed',
+        'status_label': 'Completed',
+        'status_message': 'Your order has been delivered.',
+        'subtotal': 998.0,
+        'shipping_fee': 120.0,
+        'shipping_discount': 0.0,
+        'total': 1118.0,
+        'payment_method': 'cod',
+        'items': [
+          {'id': 1, 'product_name': 'Watering Can', 'unit_price': 499.0, 'quantity': 1, 'line_total': 499.0, 'can_review': true},
+          {'id': 2, 'product_name': 'Garden Gloves', 'unit_price': 499.0, 'quantity': 1, 'line_total': 499.0, 'review_rating': 4},
+        ],
+        'history': [],
+        'complaint': null,
+        'can_complain': true,
       });
 
   @override
@@ -86,6 +152,44 @@ class FakeApi extends BuyerApi {
 
   @override
   Future<List<Product>> wishlist() async => [];
+
+  /// ID tokens sent to POST /mobile/google; "rejected" answers like a seller's account.
+  final googleTokens = <String>[];
+
+  @override
+  Future<AuthResult> googleSignIn(String idToken) async {
+    googleTokens.add(idToken);
+    if (idToken == 'rejected') {
+      throw ApiException.fromResponse(422, {
+        'errors': {
+          'google': ['This sign-in is for buyer accounts. Riders can use Login as a Rider; sellers can use the website.'],
+        },
+      });
+    }
+    return AuthResult.fromJson({
+      'message': 'Signed in.',
+      'token': 'google-session',
+      'user': {'id': 7, 'name': 'Maria Santos', 'email': 'maria@example.test', 'google_linked': true, 'has_password': false},
+    });
+  }
+}
+
+/// Stands in for the phone's Google sign-in sheet.
+class FakeGoogleIdTokenSource implements GoogleIdTokenSource {
+  FakeGoogleIdTokenSource({this.available = true, this.token = 'google-id-token'});
+
+  @override
+  final bool available;
+
+  /// What the account picker returns: a token, or null when the buyer closes it.
+  final String? token;
+  int signOuts = 0;
+
+  @override
+  Future<String?> idToken() async => token;
+
+  @override
+  Future<void> signOut() async => signOuts++;
 }
 
 /// Rider API that answers from memory, in the shape MobileRiderDashboardController returns.
@@ -249,25 +353,25 @@ class FakeRiderApi extends RiderApi {
   Future<int> supportUnreadCount() async => unread;
 
   @override
-  Future<List<RiderSupportMessage>> supportMessages() async {
+  Future<List<SupportMessage>> supportMessages() async {
     unread = 0;
     return [
-      RiderSupportMessage.fromJson({'id': 1, 'client_id': 'a', 'body': 'Hi! How can we help?', 'from_staff': true}),
+      SupportMessage.fromJson({'id': 1, 'client_id': 'a', 'body': 'Hi! How can we help?', 'from_staff': true}),
     ];
   }
 
   @override
-  Future<RiderSupportMessage> sendSupportMessage(String body, {String? clientId}) async {
+  Future<SupportMessage> sendSupportMessage(String body, {String? clientId}) async {
     sent.add(body);
-    return RiderSupportMessage.fromJson({'id': 2, 'client_id': clientId, 'body': body, 'from_staff': false});
+    return SupportMessage.fromJson({'id': 2, 'client_id': clientId, 'body': body, 'from_staff': false});
   }
 }
 
 Future<void> pumpApp(WidgetTester tester,
-    {String? token, List<int> cart = const [], double width = 400, ThemeController? theme}) async {
+    {String? token, List<int> cart = const [], double width = 400, ThemeController? theme, FakeApi? api}) async {
   final tokens = MemoryTokenStore();
   if (token != null) await tokens.write(token);
-  final state = AppState(api: FakeApi(cartIds: cart), tokens: tokens);
+  final state = AppState(api: api ?? FakeApi(cartIds: cart), tokens: tokens);
   // A phone-width screen tall enough that the lazily built home renders
   // every section, so absence checks are meaningful.
   tester.view.devicePixelRatio = 1;
@@ -304,7 +408,7 @@ void main() {
     testWidgets('restores the session and shows the dashboard sections', (tester) async {
       await pumpApp(tester, token: 'stored-token', cart: [11, 12]);
 
-      expect(find.text('Welcome back, Maria'), findsOneWidget);
+      expect(find.textContaining('Welcome back'), findsNothing, reason: 'the hero comes right after search');
       expect(find.text('Flash Sales'), findsOneWidget);
       expect(find.text('Suggested Products'), findsOneWidget);
       // Bag badge in the bottom navigation reflects the server cart.
@@ -641,11 +745,218 @@ void main() {
       await tester.pageBack();
       await tester.pumpAndSettle();
       expect(find.text('Change your password'), findsOneWidget);
+      expect(find.text('Cases about deliveries you handled'), findsOneWidget);
+      expect(find.text('Terms & policies'), findsOneWidget);
       expect(find.text('SIGN OUT'), findsOneWidget);
 
       await tester.tap(find.text('SIGN OUT'));
       await tester.pumpAndSettle();
       expect(find.text('Sign out?'), findsOneWidget, reason: 'asks before signing out');
+    });
+  });
+
+  group('continue with Google', () {
+    late GoogleIdTokenSource original;
+    setUp(() => original = GoogleAuth.source);
+    tearDown(() => GoogleAuth.source = original);
+
+    Future<(FakeApi, AppState)> openLogin(WidgetTester tester, FakeGoogleIdTokenSource google) async {
+      GoogleAuth.source = google;
+      final api = FakeApi();
+      await pumpApp(tester, api: api);
+      tester.state<NavigatorState>(find.byType(Navigator).first)
+          .push(MaterialPageRoute(builder: (_) => const LoginScreen()));
+      await tester.pumpAndSettle();
+      final state = AppScope.read(tester.element(find.byType(LoginScreen)));
+      return (api, state);
+    }
+
+    Future<void> tapGoogle(WidgetTester tester) async {
+      await tester.ensureVisible(find.text('Continue with Google'));
+      await tester.tap(find.text('Continue with Google'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('signs the buyer in with the Google ID token', (tester) async {
+      final (api, state) = await openLogin(tester, FakeGoogleIdTokenSource());
+
+      await tapGoogle(tester);
+      expect(api.googleTokens, ['google-id-token']);
+      expect(state.signedIn, isTrue);
+      expect(state.user?.email, 'maria@example.test');
+      expect(find.byType(LoginScreen), findsNothing, reason: 'sign-in screens close');
+    });
+
+    testWidgets('closing Google\'s account picker changes nothing', (tester) async {
+      final (api, state) = await openLogin(tester, FakeGoogleIdTokenSource(token: null));
+
+      await tapGoogle(tester);
+      expect(api.googleTokens, isEmpty);
+      expect(state.signedIn, isFalse);
+      expect(find.byType(LoginScreen), findsOneWidget);
+    });
+
+    testWidgets('shows why the server refused and lets the buyer pick another account', (tester) async {
+      final google = FakeGoogleIdTokenSource(token: 'rejected');
+      final (_, state) = await openLogin(tester, google);
+
+      await tapGoogle(tester);
+      expect(state.signedIn, isFalse);
+      expect(find.textContaining('This sign-in is for buyer accounts.'), findsOneWidget);
+      expect(google.signOuts, 1);
+    });
+
+    testWidgets('is hidden until Google sign-in is configured for the build', (tester) async {
+      await openLogin(tester, FakeGoogleIdTokenSource(available: false));
+
+      expect(find.text('Continue with Google'), findsNothing);
+      expect(find.text('SIGN IN'), findsOneWidget);
+    });
+  });
+
+  group('website features', () {
+    /// Opens [screen] on top of the signed-in app.
+    Future<void> open(WidgetTester tester, Widget screen) async {
+      tester.state<NavigatorState>(find.byType(Navigator).first).push(MaterialPageRoute(builder: (_) => screen));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('account lists messages, support, complaints, ID verification and policies', (tester) async {
+      await pumpApp(tester, token: 'stored-token');
+
+      await tester.tap(find.text('Account'));
+      await tester.pumpAndSettle();
+      expect(find.text('Messages with sellers'), findsOneWidget);
+      expect(find.text('3'), findsOneWidget, reason: 'unread seller messages badge');
+      expect(find.text('Help & support'), findsOneWidget);
+      expect(find.text('Complaints'), findsOneWidget);
+      expect(find.text('ID verification'), findsOneWidget);
+      expect(find.text('Terms & policies'), findsOneWidget);
+    });
+
+    testWidgets('checkout asks for an approved ID before placing an order', (tester) async {
+      await pumpApp(tester, token: 'stored-token', api: FakeApi(cartIds: [11], identityVerified: false));
+      await open(tester, const CheckoutScreen(cartItemIds: [11]));
+
+      expect(find.text('Verify your ID to place orders'), findsOneWidget);
+      expect(find.text('VERIFY MY ID'), findsOneWidget);
+      final placeOrder = find.ancestor(of: find.text('PLACE ORDER'), matching: find.byType(FilledButton));
+      expect(tester.widget<FilledButton>(placeOrder).onPressed, isNull);
+    });
+
+    testWidgets('verified buyers check out without the ID step', (tester) async {
+      await pumpApp(tester, token: 'stored-token', api: FakeApi(cartIds: [11]));
+      await open(tester, const CheckoutScreen(cartItemIds: [11]));
+
+      expect(find.text('Verify your ID to place orders'), findsNothing);
+      final placeOrder = find.ancestor(of: find.text('PLACE ORDER'), matching: find.byType(FilledButton));
+      expect(tester.widget<FilledButton>(placeOrder).onPressed, isNotNull);
+    });
+
+    testWidgets('delivered orders offer reviews and reporting a problem', (tester) async {
+      await pumpApp(tester, token: 'stored-token');
+      await open(tester, const OrderDetailScreen(orderId: 9));
+
+      expect(find.text('Rate this item'), findsOneWidget, reason: 'only the unrated item');
+      expect(find.text('You rated '), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('Report a problem'), 200);
+      expect(find.text('Report a problem'), findsOneWidget);
+
+      await tester.tap(find.text('Rate this item'));
+      await tester.pumpAndSettle();
+      expect(find.text('Review your purchase'), findsOneWidget);
+      await tester.tap(find.text('PUBLISH REVIEW'));
+      await tester.pump();
+      expect(find.text('Choose a star rating.'), findsOneWidget, reason: 'stars are required, as on the website');
+    });
+
+    testWidgets('admin announcements show on home and can be dismissed', (tester) async {
+      await pumpApp(tester, api: FakeApi(announcements: [
+        {'key': '1-100', 'title': 'Holiday delivery', 'body': 'Expect delays on Dec 24.'},
+      ]));
+
+      expect(find.text('Holiday delivery  Expect delays on Dec 24.', findRichText: true), findsOneWidget);
+      await tester.tap(find.byTooltip('Dismiss announcement: Holiday delivery'));
+      await tester.pumpAndSettle();
+      expect(find.text('Holiday delivery  Expect delays on Dec 24.', findRichText: true), findsNothing);
+      expect(find.byType(AnnouncementBanner, skipOffstage: false), findsOneWidget, reason: 'collapsed in place');
+      expect(find.text('New Arrivals'), findsOneWidget, reason: 'still on the home screen');
+    });
+
+    test('new payloads parse in the API shapes', () {
+      final product = Product.fromJson({...productJson(1), 'rating': 4.5, 'review_count': 12});
+      expect(product.rating, 4.5);
+      expect(product.reviewCount, 12);
+
+      final reviews = ProductReviewPage.fromJson({
+        'average': 4.5,
+        'count': 2,
+        'breakdown': {'5': 1, '4': 1, '3': 0, '2': 0, '1': 0},
+        'reviews': [
+          {'id': 1, 'rating': 5, 'buyer_name': 'Maria', 'photos': ['http://fake.test/a.jpg']},
+        ],
+        'page': 1,
+        'last_page': 2,
+      });
+      expect(reviews.breakdown[5], 1);
+      expect(reviews.reviews.single.photos, hasLength(1));
+      expect(reviews.hasMore, isTrue);
+
+      final identity = IdentityStatus.fromJson({
+        'enabled': true,
+        'verified': false,
+        'submission': {'status': 'rejected', 'id_type_label': 'Passport', 'rejection_reason': 'Blurry photo'},
+        'id_types': [
+          {'id': 'philid', 'label': 'PhilSys National ID (PhilID)'},
+        ],
+      });
+      expect(identity.rejected, isTrue);
+      expect(identity.pending, isFalse);
+
+      final complaint = Complaint.fromJson({
+        'id': 3,
+        'order_number': 'ZAY-1',
+        'category_label': 'Damaged or defective item',
+        'status': 'in_review',
+        'status_label': 'In review',
+        'closed': false,
+        'can_reply': true,
+        'evidence': [
+          {'name': 'split.png', 'url': 'http://fake.test/e/0', 'is_image': true},
+        ],
+        'messages': [
+          {'id': 9, 'body': 'Handed over intact.', 'mine': false, 'sender': 'Jun · Rider', 'attachment': null},
+        ],
+      });
+      expect(complaint.evidence.single.isImage, isTrue);
+      expect(complaint.messages.single.sender, 'Jun · Rider');
+
+      final batch = SellerChatBatch.fromJson({
+        'messages': [
+          {'id': 4, 'body': 'Yes, 20 meters.', 'mine': false, 'created_at': '2026-10-17T08:00:00Z'},
+        ],
+        'has_older': false,
+        'typing': true,
+      });
+      expect(batch.typing, isTrue);
+      expect(batch.messages.single.clientId, 'server-4');
+    });
+
+    testWidgets('policy text renders headings and bullets like the website', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => ListView(
+              children: PolicyText.blocks(context, '## 1. Your account\n- Buyers must be at least 18.\n\nPlain paragraph.'),
+            ),
+          ),
+        ),
+      ));
+
+      expect(find.text('1. Your account'), findsOneWidget);
+      expect(find.text('Buyers must be at least 18.'), findsOneWidget);
+      expect(find.text('Plain paragraph.'), findsOneWidget);
+      expect(find.text('## 1. Your account'), findsNothing);
     });
   });
 

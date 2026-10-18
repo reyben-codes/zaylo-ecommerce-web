@@ -6,6 +6,7 @@ import 'package:zaylo_mobile/components/buttons.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
 import 'package:zaylo_mobile/components/form_fields.dart';
 import 'package:zaylo_mobile/components/layout.dart';
+import 'package:zaylo_mobile/features/buyer/account/identity_screen.dart';
 import 'package:zaylo_mobile/features/buyer/address/address_form_screen.dart';
 import 'package:zaylo_mobile/features/buyer/address/address_tag.dart';
 import 'package:zaylo_mobile/features/buyer/checkout/order_success_screen.dart';
@@ -120,6 +121,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
 
+  /// Orders need an approved ID; the upload happens here instead of failing at Place order.
+  Future<void> _verifyIdentity() async {
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const IdentityScreen()));
+    if (mounted) await _loadQuote();
+  }
+
   Future<void> _placeOrder() async {
     final addressId = _addressId;
     if (addressId == null) {
@@ -146,8 +153,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     } on ApiException catch (error) {
       if (!mounted) return;
       showMessage(context, error.message);
-      // Stock or the bag changed under us; show the fresh totals.
-      if (error.fieldErrors.containsKey('cart') || error.fieldErrors.containsKey('cart_item_ids')) _loadQuote();
+      // Stock, the bag, or the ID status changed under us; show the fresh state.
+      if (const ['cart', 'cart_item_ids', 'identity'].any(error.fieldErrors.containsKey)) _loadQuote();
     } finally {
       if (mounted) setState(() => _placing = false);
     }
@@ -181,7 +188,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     child: PrimaryButton(
                       label: 'PLACE ORDER',
                       busy: _placing,
-                      onPressed: _quoting || _addressId == null ? null : _placeOrder,
+                      onPressed: _quoting || _addressId == null || !quote.identityVerified ? null : _placeOrder,
                     ),
                   ),
                 ]),
@@ -194,6 +201,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           : ListView(
               padding: const EdgeInsets.all(ZayloSpace.page),
               children: [
+                if (!quote.identityVerified) ...[
+                  _IdentityRequired(onVerify: _verifyIdentity),
+                  const SizedBox(height: 18),
+                ],
                 _section('Delivery address', _addressSection(quote)),
                 const SizedBox(height: 18),
                 _section('Items (${quote.items.fold<int>(0, (sum, item) => sum + item.quantity)})', _itemsSection(quote)),
@@ -496,5 +507,30 @@ class _PaymentOption extends StatelessWidget {
             ]),
           ),
         ),
+      );
+}
+
+class _IdentityRequired extends StatelessWidget {
+  const _IdentityRequired({required this.onVerify});
+
+  final VoidCallback onVerify;
+
+  @override
+  Widget build(BuildContext context) => SectionCard(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Icon(Icons.badge_outlined, color: ZayloColors.warning),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text('Verify your ID to place orders',
+                  style: TextStyle(fontWeight: FontWeight.w800, color: ZayloColors.ink)),
+            ),
+          ]),
+          const SizedBox(height: 6),
+          const Text('An administrator approves your government ID once. Your bag is kept while you wait.',
+              style: TextStyle(fontSize: 13)),
+          const SizedBox(height: 12),
+          OutlinedButton(onPressed: onVerify, style: secondaryButtonStyle, child: const Text('VERIFY MY ID')),
+        ]),
       );
 }

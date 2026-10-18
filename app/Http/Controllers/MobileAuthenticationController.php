@@ -8,13 +8,17 @@ use App\Rules\PersonName;
 use App\Rules\PhoneNumber;
 use App\Rules\StrongPassword;
 use App\Services\EmailVerificationService;
+use App\Services\GoogleAccountService;
+use App\Services\GoogleIdTokenVerifier;
 use App\Support\MobilePayload;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\ValidationException;
+use Laravel\Socialite\Two\User as GoogleUser;
 
 /**
  * Buyer sign-in, registration and email verification for the mobile app, plus
@@ -27,6 +31,70 @@ class MobileAuthenticationController extends Controller
     public function login(Request $request): JsonResponse
     {
         return $this->signInWithRole($request, 'buyer', 'This sign-in is for buyer accounts. Riders can use Login as a Rider; sellers can use the website.');
+    }
+
+    /**
+     * "Continue with Google" in the buyer app. The app signs in with Google
+     * natively and sends the ID token; accounts are found, linked or created
+     * by the same rules as the website's Google sign-in (GoogleAccountService).
+     */
+    public function google(Request $request, GoogleIdTokenVerifier $verifier, GoogleAccountService $accounts): JsonResponse
+    {
+        $validated = $request->validate([
+            'id_token' => ['required', 'string', 'max:4096'],
+            'device_name' => ['nullable', 'string', 'max:100'],
+        ]);
+        if (! GoogleIdTokenVerifier::configured()) {
+            return response()->json([
+                'message' => 'Google sign-in is not set up yet. Please use email and password for now.',
+                'code' => 'google_unconfigured',
+            ], 503);
+        }
+
+        try {
+            $claims = $verifier->verify($validated['id_token']);
+        } catch (\DomainException $exception) {
+            $this->googleFailed($exception);
+        } catch (\Throwable $exception) {
+            // Google's signing keys could not be fetched; the token itself may be fine.
+            Log::warning('Google sign-in key fetch failed.', ['exception_type' => $exception::class]);
+
+            return response()->json(['message' => 'Google sign-in is unavailable right now. Please try again or use email and password.'], 503);
+        }
+
+        // Check the role before linking, so a seller's or rider's account is never changed from the buyer app.
+        $existing = User::where('google_id', $claims['sub'])
+            ->when(is_string($claims['email'] ?? null), fn ($query) => $query->orWhere('email', $claims['email']))
+            ->get();
+        if ($existing->contains(fn (User $user) => ! $user->hasRole('buyer'))) {
+            throw ValidationException::withMessages(['google' => 'This sign-in is for buyer accounts. Riders can use Login as a Rider; sellers can use the website.']);
+        }
+
+        $identity = (new GoogleUser)->setRaw($claims)->map([
+            'id' => $claims['sub'],
+            'name' => $claims['name'] ?? null,
+            'email' => $claims['email'] ?? null,
+            'avatar' => $claims['picture'] ?? null,
+        ]);
+        try {
+            $user = $accounts->resolve($identity, 'buyer');
+        } catch (\DomainException $exception) {
+            $this->googleFailed($exception);
+        }
+
+        if (! $user->isActive()) {
+            throw ValidationException::withMessages(['google' => 'This account is suspended. Please contact support.']);
+        }
+
+        return $this->issueToken($user, $validated['device_name'] ?? null);
+    }
+
+    private function googleFailed(\Throwable $exception): never
+    {
+        // Like the website: log only the exception type, never the token or Google's claims.
+        Log::warning('Google sign-in failed.', ['exception_type' => $exception::class]);
+
+        throw ValidationException::withMessages(['google' => 'We could not sign you in with Google. Please try again or use email and password.']);
     }
 
     public function me(Request $request): JsonResponse

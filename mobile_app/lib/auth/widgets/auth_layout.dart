@@ -62,11 +62,13 @@ class AuthMasthead extends StatelessWidget {
           // A photo under a dark scrim reads the same in light and dark mode.
           color: ZayloPalette.light.ink,
           borderRadius: BorderRadius.circular(20),
-          image: const DecorationImage(
-            image: NetworkImage(
+          image: DecorationImage(
+            image: const NetworkImage(
                 'https://images.unsplash.com/photo-1583394838336-acd977736f90?w=1000&q=80&auto=format&fit=crop'),
             fit: BoxFit.cover,
             opacity: .45,
+            // Offline, the plain dark background stands in for the photo.
+            onError: (_, __) {},
           ),
         ),
         child: Container(

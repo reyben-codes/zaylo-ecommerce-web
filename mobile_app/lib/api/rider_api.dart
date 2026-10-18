@@ -5,13 +5,16 @@ import 'package:zaylo_mobile/models/auth_models.dart';
 import 'package:zaylo_mobile/models/rider/rider_activity_models.dart';
 import 'package:zaylo_mobile/models/rider/rider_dashboard_models.dart';
 import 'package:zaylo_mobile/models/rider/rider_models.dart';
-import 'package:zaylo_mobile/utils/ids.dart';
 
 /// Rider endpoints. A rider token lives on its own [RiderApi], separate from
 /// the buyer session in AppState, so signing in as a rider never signs the
 /// buyer out. Logout and forgot-password come from [ApiClient].
 class RiderApi extends ApiClient {
   RiderApi({super.baseUrl});
+
+  /// Support chat and complaints live under the rider prefix.
+  @override
+  String get accountPrefix => '/mobile/rider';
 
   /// Rider accounts only; buyers are turned away by the server.
   Future<AuthResult> login(String email, String password) async =>
@@ -80,24 +83,6 @@ class RiderApi extends ApiClient {
         'password': password,
         'password_confirmation': passwordConfirmation,
       }))['message'] as String;
-
-  // ---------------------------------------------------- ZAYLO support chat
-
-  /// The whole thread, oldest first. Opening it marks support replies as read.
-  Future<List<RiderSupportMessage>> supportMessages() async =>
-      ((await send('GET', '/mobile/rider/support'))['messages'] as List<dynamic>)
-          .map((item) => RiderSupportMessage.fromJson(item as Map<String, dynamic>))
-          .toList();
-
-  /// [clientId] makes a retried send safe: the server stores it only once.
-  Future<RiderSupportMessage> sendSupportMessage(String body, {String? clientId}) async =>
-      RiderSupportMessage.fromJson((await send('POST', '/mobile/rider/support/messages', body: {
-        'body': body,
-        'client_id': clientId ?? newUuidV4(),
-      }))['message'] as Map<String, dynamic>);
-
-  /// Support replies the rider has not opened yet.
-  Future<int> supportUnreadCount() async => (await send('GET', '/mobile/rider/support/unread'))['unread'] as int? ?? 0;
 
   /// Creates a pending rider account and emails a verification code. Returns
   /// the server's `{email, verification_sent, message}`.

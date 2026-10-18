@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
+import 'package:zaylo_mobile/components/cart_icon.dart';
 import 'package:zaylo_mobile/components/layout.dart';
 import 'package:zaylo_mobile/features/buyer/widgets/shop_actions.dart';
 import 'package:zaylo_mobile/models/buyer/catalog_models.dart';
@@ -18,7 +19,7 @@ class ProductGridDelegate extends SliverGridDelegate {
 
   static const _crossSpacing = 12.0;
   static const _mainSpacing = 14.0;
-  static const infoHeight = 162.0;
+  static const infoHeight = 98.0;
 
   @override
   SliverGridLayout getLayout(SliverConstraints constraints) {
@@ -38,17 +39,26 @@ class ProductGridDelegate extends SliverGridDelegate {
   bool shouldRelayout(ProductGridDelegate oldDelegate) => false;
 }
 
+/// A product tile: the photo fading into a soft card, a save button and
+/// badges over the photo, then the name, price and a quick "add to bag".
 class ProductCard extends StatelessWidget {
   const ProductCard({super.key, required this.product});
 
   final Product product;
 
+  static const _radius = 20.0;
+
+  /// A shade between the page and sand, so cards stand out softly in light and dark mode.
+  static Color get surface => Color.lerp(ZayloColors.cream, ZayloColors.sand, .55)!;
+
   @override
   Widget build(BuildContext context) {
     final saved = AppScope.of(context).isSaved(product);
+    final surface = ProductCard.surface;
+    final badge = product.discountPercent != null ? '-${product.discountPercent}%' : product.badge;
     return Material(
-      color: ZayloColors.paper,
-      borderRadius: BorderRadius.circular(14),
+      color: surface,
+      borderRadius: BorderRadius.circular(_radius),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () => ShopActions.openProduct(context, product),
@@ -57,55 +67,77 @@ class ProductCard extends StatelessWidget {
             aspectRatio: 1,
             child: Stack(fit: StackFit.expand, children: [
               NetworkImageBox(url: product.imageUrl),
-              if (product.badge != null || product.discountPercent != null)
-                Positioned(
-                  top: 9,
-                  left: 9,
-                  child: ProductBadge(product.discountPercent != null ? '-${product.discountPercent}%' : product.badge!),
-                ),
+              // The photo fades into the card, so the name and price sit on one surface.
               Positioned(
-                top: 2,
+                left: 0,
                 right: 0,
-                child: IconButton(
+                bottom: 0,
+                height: 56,
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [surface.withValues(alpha: 0), surface],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: _SquareIconButton(
                   tooltip: saved ? 'Remove from saved' : 'Save for later',
                   onPressed: () => ShopActions.toggleSaved(context, product),
+                  background: ZayloColors.white,
                   icon: Icon(
                     saved ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                    size: 19,
                     color: saved ? Colors.redAccent : ZayloColors.ink,
                   ),
                 ),
               ),
+              if (badge != null) Positioned(left: 10, bottom: 10, child: _Pill(child: Text(badge))),
+              if (product.rating != null)
+                Positioned(
+                  right: 10,
+                  bottom: 10,
+                  child: Semantics(
+                    label: 'Rated ${product.rating!.toStringAsFixed(1)} out of 5 from ${product.reviewCount} reviews',
+                    excludeSemantics: true,
+                    child: _Pill(
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(Icons.star_rounded, size: 12, color: ZayloColors.bronze),
+                        const SizedBox(width: 2),
+                        Text(product.rating!.toStringAsFixed(1)),
+                      ]),
+                    ),
+                  ),
+                ),
             ]),
           ),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(11, 10, 11, 10),
+              padding: const EdgeInsets.fromLTRB(12, 8, 10, 10),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(product.categoryLabel.toUpperCase(),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        fontSize: 9, letterSpacing: .8, color: ZayloColors.taupe, fontWeight: FontWeight.w700)),
-                const SizedBox(height: 4),
                 Text(product.name,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        fontSize: 14, height: 1.2, fontWeight: FontWeight.w600, color: ZayloColors.ink)),
+                    style: TextStyle(fontSize: 13.5, height: 1.25, fontWeight: FontWeight.w500, color: ZayloColors.muted)),
                 const Spacer(),
-                PriceLine(product: product, size: 13),
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
+                Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                  Expanded(child: PriceLine(product: product, size: 15)),
+                  const SizedBox(width: 6),
+                  _SquareIconButton(
+                    tooltip: product.hasOptions ? 'Choose options' : 'Add to bag',
                     onPressed: () => ShopActions.quickAdd(context, product),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 7),
-                      textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
-                    ),
-                    child: Text(product.hasOptions ? 'Choose options' : 'Add to bag'),
+                    background: ZayloColors.ink,
+                    size: 34,
+                    icon: CartIcon(size: 18, color: ZayloColors.white),
                   ),
-                ),
+                ]),
               ]),
             ),
           ),
@@ -113,6 +145,61 @@ class ProductCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A small rounded-square button, like the save and bag buttons on the card.
+class _SquareIconButton extends StatelessWidget {
+  const _SquareIconButton({
+    required this.tooltip,
+    required this.onPressed,
+    required this.background,
+    required this.icon,
+    this.size = 36,
+  });
+
+  final String tooltip;
+  final VoidCallback onPressed;
+  final Color background;
+  final Widget icon;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+        message: tooltip,
+        child: Semantics(
+          button: true,
+          label: tooltip,
+          excludeSemantics: true,
+          child: Material(
+            color: background,
+            borderRadius: BorderRadius.circular(11),
+            child: InkWell(
+              onTap: onPressed,
+              borderRadius: BorderRadius.circular(11),
+              child: SizedBox.square(dimension: size, child: Center(child: icon)),
+            ),
+          ),
+        ),
+      );
+}
+
+/// A white label over the photo, such as "New in", "-20%" or the rating.
+class _Pill extends StatelessWidget {
+  const _Pill({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+        decoration: BoxDecoration(color: ZayloColors.white, borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+          child: DefaultTextStyle.merge(
+            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: ZayloColors.ink),
+            child: child,
+          ),
+        ),
+      );
 }
 
 class PriceLine extends StatelessWidget {

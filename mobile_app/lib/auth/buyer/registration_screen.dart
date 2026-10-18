@@ -5,6 +5,7 @@ import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/auth/buyer/login_screen.dart';
 import 'package:zaylo_mobile/auth/buyer/verify_email_screen.dart';
 import 'package:zaylo_mobile/auth/widgets/auth_layout.dart';
+import 'package:zaylo_mobile/auth/widgets/google_sign_in_button.dart';
 import 'package:zaylo_mobile/auth/widgets/registration_progress.dart';
 import 'package:zaylo_mobile/components/buttons.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
@@ -34,6 +35,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   bool _obscurePassword = true;
   bool _isSubmitting = false;
   Map<String, String> _errors = {};
+
+  /// A problem with "Continue with Google", shown above the button.
+  String? _googleError;
   int _step = 1;
 
   @override
@@ -132,6 +136,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             2 => _signInDetailsForm(),
             _ => buyerVerificationForm(context, _email.text.trim()),
           },
+          // Google accounts skip the form and the email code, as on the website.
+          if (_step == 1) ...[
+            if (_googleError != null) Padding(padding: const EdgeInsets.only(top: 16), child: AuthErrorBanner(_googleError!)),
+            GoogleSignInSection(onError: (message) => setState(() => _googleError = message)),
+          ],
           const SizedBox(height: 25),
           if (_step < 3)
             Center(

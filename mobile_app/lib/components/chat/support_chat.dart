@@ -3,19 +3,30 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'package:zaylo_mobile/api/api_exception.dart';
-import 'package:zaylo_mobile/api/rider_api.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
-import 'package:zaylo_mobile/models/rider/rider_activity_models.dart';
+import 'package:zaylo_mobile/models/support_models.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 import 'package:zaylo_mobile/utils/formatters.dart';
 import 'package:zaylo_mobile/utils/ids.dart';
 
-/// Chat with ZAYLO support. Staff reply from the admin Chat page; new replies
-/// are fetched every [_pollEvery] while this tab is open.
-class RiderSupportChatTab extends StatefulWidget {
-  const RiderSupportChatTab({super.key, required this.api, required this.visible, this.onRead});
+/// Chat with ZAYLO support, for buyers and riders. Staff reply from the admin
+/// Chat page; new replies are fetched every [_pollEvery] while it is visible.
+/// Each app passes its own [load] and [send] calls.
+class SupportChatView extends StatefulWidget {
+  const SupportChatView({
+    super.key,
+    required this.load,
+    required this.send,
+    required this.intro,
+    this.visible = true,
+    this.onRead,
+  });
 
-  final RiderApi api;
+  final Future<List<SupportMessage>> Function() load;
+  final Future<SupportMessage> Function(String body, String clientId) send;
+
+  /// What to message support about, shown above the thread.
+  final String intro;
 
   /// Polling runs only while the tab is on screen.
   final bool visible;
@@ -24,19 +35,19 @@ class RiderSupportChatTab extends StatefulWidget {
   final VoidCallback? onRead;
 
   @override
-  State<RiderSupportChatTab> createState() => _RiderSupportChatTabState();
+  State<SupportChatView> createState() => _SupportChatViewState();
 }
 
-class _RiderSupportChatTabState extends State<RiderSupportChatTab> {
+class _SupportChatViewState extends State<SupportChatView> {
   static const _pollEvery = Duration(seconds: 15);
   static const _maxLength = 2000;
 
   final _input = TextEditingController();
   final _scroll = ScrollController();
-  List<RiderSupportMessage> _messages = [];
+  List<SupportMessage> _messages = [];
 
   /// Sent but not yet confirmed (or failed), keyed by client id.
-  final _outbox = <String, RiderSupportMessage>{};
+  final _outbox = <String, SupportMessage>{};
   bool _loading = false;
   Object? _error;
   Timer? _poll;
@@ -48,7 +59,7 @@ class _RiderSupportChatTabState extends State<RiderSupportChatTab> {
   }
 
   @override
-  void didUpdateWidget(RiderSupportChatTab oldWidget) {
+  void didUpdateWidget(SupportChatView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.visible && !oldWidget.visible) _start();
     if (!widget.visible) _poll?.cancel();
@@ -71,7 +82,7 @@ class _RiderSupportChatTabState extends State<RiderSupportChatTab> {
   Future<void> _load({bool quiet = false}) async {
     if (!quiet) setState(() => _loading = _messages.isEmpty);
     try {
-      final messages = await widget.api.supportMessages();
+      final messages = await widget.load();
       if (!mounted) return;
       final grew = messages.length != _messages.length;
       setState(() {
@@ -89,16 +100,16 @@ class _RiderSupportChatTabState extends State<RiderSupportChatTab> {
     }
   }
 
-  Future<void> _send([RiderSupportMessage? retry]) async {
+  Future<void> _send([SupportMessage? retry]) async {
     final body = retry?.body ?? _input.text.trim();
     if (body.isEmpty) return;
     final draft = retry?.copyWith(pending: true, failed: false) ??
-        RiderSupportMessage(clientId: newUuidV4(), body: body, fromStaff: false, sentAt: DateTime.now(), pending: true);
+        SupportMessage(clientId: newUuidV4(), body: body, fromStaff: false, sentAt: DateTime.now(), pending: true);
     setState(() => _outbox[draft.clientId] = draft);
     if (retry == null) _input.clear();
     _scrollToEnd();
     try {
-      final saved = await widget.api.sendSupportMessage(body, clientId: draft.clientId);
+      final saved = await widget.send(body, draft.clientId);
       if (!mounted) return;
       setState(() {
         _outbox.remove(draft.clientId);
@@ -136,7 +147,7 @@ class _RiderSupportChatTabState extends State<RiderSupportChatTab> {
                       physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
                       children: [
-                        const _SupportIntro(),
+                        _SupportIntro(widget.intro),
                         for (final message in thread) _Bubble(message: message, onRetry: () => _send(message)),
                       ],
                     ),
@@ -178,20 +189,19 @@ class _RiderSupportChatTabState extends State<RiderSupportChatTab> {
 }
 
 class _SupportIntro extends StatelessWidget {
-  const _SupportIntro();
+  const _SupportIntro(this.text);
+
+  final String text;
 
   @override
   Widget build(BuildContext context) => Container(
         margin: const EdgeInsets.only(bottom: 14),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(color: ZayloColors.paper, borderRadius: BorderRadius.circular(12)),
-        child: const Row(children: [
-          Icon(Icons.support_agent_outlined),
-          SizedBox(width: 12),
-          Expanded(
-            child: Text('Message the ZAYLO support team about pickups, deliveries, payments, or your account. '
-                'Include the order number if it is about a delivery.'),
-          ),
+        child: Row(children: [
+          const Icon(Icons.support_agent_outlined),
+          const SizedBox(width: 12),
+          Expanded(child: Text(text)),
         ]),
       );
 }
@@ -199,7 +209,7 @@ class _SupportIntro extends StatelessWidget {
 class _Bubble extends StatelessWidget {
   const _Bubble({required this.message, required this.onRetry});
 
-  final RiderSupportMessage message;
+  final SupportMessage message;
   final VoidCallback onRetry;
 
   @override

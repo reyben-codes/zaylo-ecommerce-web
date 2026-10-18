@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:zaylo_mobile/components/cart_icon.dart';
 import 'package:zaylo_mobile/features/buyer/account/account_screen.dart';
 import 'package:zaylo_mobile/features/buyer/bag/bag_screen.dart';
 import 'package:zaylo_mobile/features/buyer/home/storefront_screen.dart';
@@ -74,9 +75,13 @@ class _BuyerShellState extends State<BuyerShell> {
                 icon: Badge(
                   isLabelVisible: state.cartCount > 0,
                   label: Text('${state.cartCount}'),
-                  child: const Icon(Icons.shopping_bag_outlined),
+                  child: const CartIcon(),
                 ),
-                selectedIcon: const Icon(Icons.shopping_bag),
+                selectedIcon: Badge(
+                  isLabelVisible: state.cartCount > 0,
+                  label: Text('${state.cartCount}'),
+                  child: const CartIcon(filled: true),
+                ),
                 label: 'Bag',
               ),
               const NavigationDestination(

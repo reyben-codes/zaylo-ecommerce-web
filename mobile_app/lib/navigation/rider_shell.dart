@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 
 import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/api/rider_api.dart';
+import 'package:zaylo_mobile/components/chat/support_chat.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
 import 'package:zaylo_mobile/features/rider/account/rider_account_tab.dart';
 import 'package:zaylo_mobile/features/rider/dashboard/rider_dashboard_tab.dart';
 import 'package:zaylo_mobile/features/rider/history/rider_history_tab.dart';
-import 'package:zaylo_mobile/features/rider/support/rider_support_chat_tab.dart';
 import 'package:zaylo_mobile/models/auth_models.dart';
 import 'package:zaylo_mobile/models/rider/rider_activity_models.dart';
 import 'package:zaylo_mobile/navigation/floating_nav_bar.dart';
@@ -136,8 +136,11 @@ class _RiderShellState extends State<RiderShell> {
               for (final (index, tab) in [
                 RiderDashboardTab(api: widget.api, onOpenHistory: _openHistory),
                 RiderHistoryTab(api: widget.api, period: _historyPeriod),
-                RiderSupportChatTab(
-                  api: widget.api,
+                SupportChatView(
+                  load: widget.api.supportMessages,
+                  send: (body, clientId) => widget.api.sendSupportMessage(body, clientId: clientId),
+                  intro: 'Message the ZAYLO support team about pickups, deliveries, payments, or your account. '
+                      'Include the order number if it is about a delivery.',
                   visible: _tab == _chatTab,
                   onRead: () {
                     if (_unreadSupport != 0) setState(() => _unreadSupport = 0);

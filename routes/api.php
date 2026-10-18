@@ -1,15 +1,18 @@
 <?php
 
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\MobileAccountController;
 use App\Http\Controllers\MobileAuthenticationController;
+use App\Http\Controllers\MobileChatController;
+use App\Http\Controllers\MobileComplaintController;
 use App\Http\Controllers\MobileDeliveryChatController;
 use App\Http\Controllers\MobileOrderController;
 use App\Http\Controllers\MobileRiderAccountController;
 use App\Http\Controllers\MobileRiderAuthenticationController;
 use App\Http\Controllers\MobileRiderDashboardController;
-use App\Http\Controllers\MobileRiderSupportController;
 use App\Http\Controllers\MobileShoppingController;
 use App\Http\Controllers\MobileStorefrontController;
+use App\Http\Controllers\MobileSupportController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -27,6 +30,9 @@ Route::prefix('mobile')->middleware('throttle:60,1')->group(function () {
     Route::get('/home', [MobileStorefrontController::class, 'home']);
     Route::get('/products', [MobileStorefrontController::class, 'products']);
     Route::get('/products/{product:slug}', [MobileStorefrontController::class, 'show']);
+    Route::get('/products/{product:slug}/reviews', [MobileStorefrontController::class, 'reviews']);
+    Route::get('/policies', [MobileStorefrontController::class, 'policies']);
+    Route::get('/policies/{slug}', [MobileStorefrontController::class, 'policy']);
 
     // Pre-upload check of rider sign-up fields; shares the 60/min group limit.
     Route::post('/rider/register/check', [MobileRiderAuthenticationController::class, 'checkRegistration']);
@@ -34,6 +40,7 @@ Route::prefix('mobile')->middleware('throttle:60,1')->group(function () {
 
     Route::middleware('throttle:6,1')->group(function () {
         Route::post('/login', [MobileAuthenticationController::class, 'login']);
+        Route::post('/google', [MobileAuthenticationController::class, 'google']);
         Route::post('/rider/login', [MobileRiderAuthenticationController::class, 'login']);
         Route::post('/rider/register', [MobileRiderAuthenticationController::class, 'register']);
         Route::post('/register', [MobileAuthenticationController::class, 'register']);
@@ -59,9 +66,9 @@ Route::prefix('mobile')->middleware('throttle:60,1')->group(function () {
             Route::put('/account/address', [MobileRiderAccountController::class, 'updateAddress']);
             Route::put('/account/password', [MobileRiderAccountController::class, 'updatePassword']);
 
-            Route::get('/support', [MobileRiderSupportController::class, 'show']);
-            Route::get('/support/unread', [MobileRiderSupportController::class, 'unread']);
-            Route::post('/support/messages', [MobileRiderSupportController::class, 'send'])->middleware('throttle:20,1');
+            Route::get('/support', [MobileSupportController::class, 'show']);
+            Route::get('/support/unread', [MobileSupportController::class, 'unread']);
+            Route::post('/support/messages', [MobileSupportController::class, 'send'])->middleware('throttle:20,1');
         });
 
         Route::middleware('mobile.buyer')->group(function () {
@@ -94,6 +101,45 @@ Route::prefix('mobile')->middleware('throttle:60,1')->group(function () {
 
             Route::get('/notifications', [MobileAccountController::class, 'notifications']);
             Route::post('/notifications/read', [MobileAccountController::class, 'markNotificationsRead']);
+
+            Route::get('/account/identity', [MobileAccountController::class, 'identity']);
+            Route::post('/account/identity', [MobileAccountController::class, 'submitIdentity'])->middleware('throttle:10,1');
+
+            Route::post('/order-items/{orderItem}/review', [MobileOrderController::class, 'review'])->middleware('throttle:10,1');
+            Route::post('/orders/{order}/complaint', [MobileComplaintController::class, 'store'])->middleware('throttle:10,1');
+
+            // Chat with sellers; the thread endpoints are the website's own JSON chat API.
+            Route::get('/messages', [MobileChatController::class, 'inbox']);
+            Route::get('/messages/unread', [MobileChatController::class, 'unread']);
+            Route::post('/products/{product:slug}/chat', [MobileChatController::class, 'start'])->middleware('throttle:20,1');
+            Route::prefix('messages/{conversation}')->whereNumber('conversation')->group(function () {
+                Route::get('/', [ChatController::class, 'messages']);
+                Route::post('/', [ChatController::class, 'send'])->middleware('throttle:30,1');
+                Route::post('/typing', [ChatController::class, 'typing']);
+                Route::post('/read', [ChatController::class, 'read']);
+            });
+
+            Route::get('/support', [MobileSupportController::class, 'show']);
+            Route::get('/support/unread', [MobileSupportController::class, 'unread']);
+            Route::post('/support/messages', [MobileSupportController::class, 'send'])->middleware('throttle:20,1');
         });
     });
+});
+
+/** Complaint cases for the buyer and rider apps; each case checks that the user is part of it. */
+$complaintRoutes = function (): void {
+    Route::prefix('complaints')->name('complaints.')->group(function () {
+        Route::get('/', [MobileComplaintController::class, 'index'])->name('index');
+        Route::get('/categories', [MobileComplaintController::class, 'categories'])->name('categories');
+        Route::get('/messages/{message}/attachment', [MobileComplaintController::class, 'attachment'])->name('attachment');
+        Route::get('/{dispute}', [MobileComplaintController::class, 'show'])->name('show');
+        Route::post('/{dispute}/messages', [MobileComplaintController::class, 'reply'])->middleware('throttle:20,1')->name('reply');
+        Route::get('/{dispute}/evidence/{index}', [MobileComplaintController::class, 'evidence'])->whereNumber('index')->name('evidence');
+    });
+};
+
+// Buyers follow the complaints they filed; riders follow those about deliveries they handled.
+Route::prefix('mobile')->middleware(['throttle:60,1', 'auth:sanctum'])->group(function () use ($complaintRoutes) {
+    Route::middleware('mobile.buyer')->name('mobile.')->group($complaintRoutes);
+    Route::middleware('mobile.rider')->prefix('rider')->name('mobile.rider.')->group($complaintRoutes);
 });

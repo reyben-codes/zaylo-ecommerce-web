@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/components/buttons.dart';
+import 'package:zaylo_mobile/components/cart_icon.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
 import 'package:zaylo_mobile/components/layout.dart';
 import 'package:zaylo_mobile/features/buyer/checkout/checkout_screen.dart';
@@ -118,7 +119,7 @@ class _BagScreenState extends State<BagScreen> {
     final state = AppScope.of(context);
     if (!state.signedIn) {
       return const SignedOutPrompt(
-        icon: Icons.shopping_bag_outlined,
+        iconWidget: CartIcon(size: 34),
         heading: 'Bag',
         eyebrow: 'Ready for checkout',
         title: 'Your bag',
@@ -174,7 +175,7 @@ class _BagScreenState extends State<BagScreen> {
               : _loading
                   ? const Loader()
                   : EmptyState(
-                      icon: Icons.shopping_bag_outlined,
+                      iconWidget: CartIcon(size: 34),
                       title: 'Your bag is empty',
                       message: 'Find something you love and it will wait for you here.',
                       actionLabel: 'Start shopping',
