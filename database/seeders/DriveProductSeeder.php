@@ -62,6 +62,8 @@ class DriveProductSeeder extends Seeder
                         ->delete();
                 }
 
+                $product->syncAdditionalCategories($item['additional_categories'] ?? []);
+
                 foreach ($item['images'] as $index => $path) {
                     $product->images()->updateOrCreate(
                         ['path' => $path],

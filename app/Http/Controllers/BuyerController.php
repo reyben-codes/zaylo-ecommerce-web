@@ -30,11 +30,11 @@ class BuyerController extends Controller
     {
         $base = Product::withReviewSummary()->where('is_active', true);
         if (Product::usesLegacySchema()) {
-            $base->where('stock', '>', 0)->with('images')
+            $base->where('stock', '>', 0)->with(['images', 'additionalCategories'])
                 ->withCount(['variants as active_variants_count' => fn ($query) => $query->where('is_active', true)]);
         } else {
             $base->whereHas('variants', fn ($query) => $query->where('is_active', true)->where('stock', '>', 0))
-                ->with(['images', 'defaultVariant', 'category'])
+                ->with(['images', 'defaultVariant', 'category', 'additionalCategories'])
                 ->withCount(['variants as active_variants_count' => fn ($query) => $query->where('is_active', true)]);
         }
         $flashProducts = (clone $base)->where(function ($query) {
@@ -70,7 +70,7 @@ class BuyerController extends Controller
         $validated['sort'] = $validated['sort'] ?? ($validated['search'] !== '' ? 'relevance' : 'newest');
         // Show everything by default; sold-out products are grayed out and listed after available ones.
         $validated['availability'] = $validated['availability'] ?? 'all';
-        $query = Product::withReviewSummary()->with(['seller', 'images'])
+        $query = Product::withReviewSummary()->with(['seller', 'images', 'additionalCategories'])
             ->withCount(['variants as active_variants_count' => fn ($builder) => $builder->where('is_active', true)])
             ->withSum(['variants as catalog_variant_stock' => fn ($builder) => $builder->where('is_active', true)], 'stock')
             ->where('is_active', true);
@@ -85,15 +85,9 @@ class BuyerController extends Controller
         if ($validated['availability'] === 'out_of_stock') $query->whereNot($available);
 
         if (! empty($validated['category'])) {
-            if (Product::usesLegacySchema()) {
-                $validated['category'] === 'fashion'
-                    ? $query->whereIn('category', config('marketplace.fashion_categories'))
-                    : $query->where('category', $validated['category']);
-            } else {
-                $validated['category'] === 'fashion'
-                    ? $query->whereHas('category', fn ($category) => $category->whereIn('slug', config('marketplace.fashion_categories')))
-                    : $query->whereHas('category', fn ($category) => $category->where('slug', $validated['category']));
-            }
+            $query->inCategories($validated['category'] === 'fashion'
+                ? config('marketplace.fashion_categories')
+                : [$validated['category']]);
         }
         if (! empty($validated['gender'])) {
             // Unisex items are for everyone, so they also appear under Men and Women.
@@ -114,6 +108,7 @@ class BuyerController extends Controller
                     } else {
                         $match->orWhereHas('category', fn ($category) => $category->whereRaw("LOWER(name) LIKE ? ESCAPE '!'", [$pattern]));
                     }
+                    $match->orWhereHas('additionalCategories', fn ($extra) => $extra->whereRaw("LOWER(category) LIKE ? ESCAPE '!'", [$pattern]));
                     $match->orWhereHas('variants', fn ($variant) => $variant->where('is_active', true)->whereRaw("LOWER(sku) LIKE ? ESCAPE '!'", [$pattern]));
                 });
             }

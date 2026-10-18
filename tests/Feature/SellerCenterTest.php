@@ -98,6 +98,18 @@ class SellerCenterTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_low_stock_alert_is_fixed_at_ten(): void
+    {
+        // Sellers cannot change the alert level, even by submitting one.
+        [$seller] = $this->sellerWithProduct(stock: 10);
+        $this->product($seller, ['name' => 'Canvas Sneaker', 'stock' => 11, 'low_stock_threshold' => 50]);
+
+        $this->actingAs($seller)->get(route('seller.inventory', ['stock' => 'low']))
+            ->assertOk()->assertSee('Leather Heel')->assertDontSee('Canvas Sneaker')->assertSee('Alert at 10');
+        $this->get(route('seller.inventory', ['stock' => 'in']))->assertOk()->assertSee('Canvas Sneaker')->assertDontSee('Leather Heel');
+        $this->get(route('seller.products.create'))->assertOk()->assertDontSee('name="low_stock_threshold"', false);
+    }
+
     public function test_products_page_lists_the_catalog_and_opens_a_full_editor(): void
     {
         [$seller, $product] = $this->sellerWithProduct();

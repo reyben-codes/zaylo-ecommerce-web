@@ -1,6 +1,6 @@
 {{-- Stock per option on the Inventory page: a one-line summary that opens to each color and its sizes. Expects $product and $variants (2 or more). --}}
 @php
-    $state = fn ($variant) => $variant->stock <= 0 ? 'out' : ($variant->stock <= ($variant->low_stock_threshold ?? $product->low_stock_threshold) ? 'low' : 'in');
+    $state = fn ($variant) => $variant->stock <= 0 ? 'out' : ($variant->stock <= $product->low_stock_threshold ? 'low' : 'in');
     $colors = $variants->groupBy(fn ($variant) => $variant->color_label ?? '');
     $sized = $variants->contains(fn ($variant) => $variant->size_label !== null);
     $soldOut = $variants->filter(fn ($variant) => $state($variant) === 'out')->count();

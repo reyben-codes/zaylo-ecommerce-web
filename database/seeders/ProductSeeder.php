@@ -47,7 +47,7 @@ class ProductSeeder extends Seeder
             ['name' => 'Compact Mechanical Keyboard', 'category' => 'electronics', 'gender' => null, 'price' => 2290, 'original_price' => null, 'badge' => 'New', 'image_url' => 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=400&h=533&fit=crop&auto=format', 'stock' => 28, 'description' => 'A space-saving mechanical keyboard with responsive switches and customizable lighting.'],
 
             // Home & Living
-            ['name' => 'Digital Air Fryer', 'category' => 'home_living', 'gender' => null, 'price' => 2890, 'original_price' => 3490, 'badge' => 'Sale', 'image_url' => 'https://images.unsplash.com/photo-1585515320310-259814833e62?w=400&h=533&fit=crop&auto=format', 'stock' => 20, 'description' => 'Prepare crisp family meals with easy digital controls and less oil.'],
+            ['name' => 'Digital Air Fryer', 'category' => 'electronics', 'gender' => null, 'price' => 2890, 'original_price' => 3490, 'badge' => 'Sale', 'image_url' => 'https://images.unsplash.com/photo-1585515320310-259814833e62?w=400&h=533&fit=crop&auto=format', 'stock' => 20, 'description' => 'Prepare crisp family meals with easy digital controls and less oil.'],
             ['name' => 'Woven Storage Basket Set', 'category' => 'home_living', 'gender' => null, 'price' => 790, 'original_price' => null, 'badge' => null, 'image_url' => 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=400&h=533&fit=crop&auto=format', 'stock' => 42, 'description' => 'Versatile woven baskets for organizing shelves, wardrobes, and living spaces.'],
 
             // Beauty & Health

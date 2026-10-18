@@ -67,7 +67,12 @@
         'government_id',
         'dti_certificate',
         'sec_certificate',
-        'bir_2303'
+        'bir_2303',
+        'sec_registration_no',
+        'contact_position',
+        'service_areas',
+        'business_permit',
+        'representative_id'
     ]) ? 1
         : (
             $errors->hasAny([
@@ -82,7 +87,7 @@
 @include('auth.partials.registration-styles')
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/registration-terms.css') }}?v={{ filemtime(public_path('css/registration-terms.css')) }}">
-@if($selectedRole === 'seller')
+@if(in_array($selectedRole, ['seller', 'logistics'], true))
 <link rel="stylesheet" href="{{ asset('css/seller-application.css') }}?v={{ filemtime(public_path('css/seller-application.css')) }}">
 @endif
 @if($selectedRole === 'courier')
@@ -94,7 +99,7 @@
 <script src="{{ asset('js/rider-application.js') }}?v={{ filemtime(public_path('js/rider-application.js')) }}" defer></script>
 @endpush
 @endif
-@if($selectedRole === 'seller')
+@if(in_array($selectedRole, ['seller', 'logistics'], true))
 @push('scripts')
 <script src="{{ asset('js/address-selector.js') }}?v={{ filemtime(public_path('js/address-selector.js')) }}" defer></script>
 <script src="{{ asset('js/seller-application.js') }}?v={{ filemtime(public_path('js/seller-application.js')) }}" defer></script>
@@ -217,7 +222,7 @@
                 method="POST"
                 action="{{ route('register') }}"
                 id="registerForm"
-                @if(in_array($selectedRole, ['seller', 'courier'], true)) enctype="multipart/form-data" @endif
+                @if(in_array($selectedRole, ['seller', 'courier', 'logistics'], true)) enctype="multipart/form-data" @endif
             >
 
                 @csrf
@@ -346,7 +351,9 @@
                         @include('seller.partials.application-fields')
                     @endif
 
-                    @if($selectedRole === 'logistics')
+                    @if($selectedRole === 'logistics' && \Illuminate\Support\Facades\Schema::hasColumn('logistics_providers', 'sec_registration_no'))
+                        @include('logistics.partials.application-fields')
+                    @elseif($selectedRole === 'logistics')
 
                         <div class="form-group">
                             <label for="company_name">Company name</label>

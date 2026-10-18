@@ -11,24 +11,33 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Tests\Support\CompletesSignUp;
+use Tests\Support\PsgcFixtures;
 use Tests\TestCase;
 
 class LogisticsPartnerTest extends TestCase
 {
-    use CompletesSignUp, RefreshDatabase;
+    use CompletesSignUp, PsgcFixtures, RefreshDatabase;
 
     public function test_logistics_partner_registers_and_needs_admin_approval(): void
     {
         Notification::fake();
+        Storage::fake('local');
+        $this->fakeLocations();
         $owner = $this->signUp($this->registration('logistics', 'dispatch@example.com') + [
-            'company_name' => 'Swift Parcels', 'service_area' => 'Metro Manila',
+            'company_name' => 'Swift Parcels', 'sec_registration_no' => 'CS202012345', 'tin' => '234-567-890-000', 'contact_position' => 'Operations Manager',
+            'service_areas' => ['NCR'], 'region_code' => '130000000', 'province_code' => '', 'city_code' => '137404000', 'barangay_code' => '137404001',
+            'street_address' => 'Unit 5B, 88 West Capitol Drive', 'postal_code' => '1603',
+            'sec_certificate' => UploadedFile::fake()->create('sec_certificate.pdf', 1000, 'application/pdf'),
+            'bir_2303' => UploadedFile::fake()->create('bir_2303.pdf', 1100, 'application/pdf'),
+            'business_permit' => UploadedFile::fake()->create('mayors_permit.pdf', 1300, 'application/pdf'),
+            'representative_id' => UploadedFile::fake()->create('govt_id_front.jpg', 1200, 'image/jpeg'),
         ]);
         $this->assertSame('logistics', $owner->role);
         $this->assertSame('pending', $owner->status);
         $this->assertDatabaseHas('logistics_providers', ['user_id' => $owner->id, 'name' => 'Swift Parcels', 'status' => 'pending']);
 
-        // Not yet approved: the partner cannot use the portal and riders cannot pick it.
-        $this->actingAs($owner)->get(route('logistics.dashboard'))->assertRedirect(route('logistics.login'));
+        // Not yet approved: the partner only sees its application and riders cannot pick it.
+        $this->actingAs($owner)->get(route('logistics.dashboard'))->assertRedirect(route('logistics.application'));
         $this->get(route('register', ['role' => 'courier']))->assertDontSee('Swift Parcels');
 
         $admin = $this->admin();
@@ -152,8 +161,13 @@ class LogisticsPartnerTest extends TestCase
             ->assertRedirect(route('logistics.login'))->assertSessionHasErrors(['email' => 'Incorrect logistics email or password.']);
         $this->assertGuest();
 
+        // Applicants under review see their application; suspended partners are turned away.
         $pending = User::factory()->create(['role' => 'logistics', 'status' => 'pending', 'password' => 'Pending-pass1!']);
         $this->post(route('logistics.login.submit'), ['email' => $pending->email, 'password' => 'Pending-pass1!'])
+            ->assertRedirect(route('logistics.application'));
+        $this->post(route('logout'));
+        $suspended = User::factory()->create(['role' => 'logistics', 'status' => 'suspended', 'password' => 'Suspended-pass1!']);
+        $this->post(route('logistics.login.submit'), ['email' => $suspended->email, 'password' => 'Suspended-pass1!'])
             ->assertSessionHasErrors(['email' => 'This logistics account is pending approval or has been suspended.']);
         $this->assertGuest();
     }

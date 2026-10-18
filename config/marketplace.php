@@ -3,10 +3,14 @@
 return [
     'seller_managed_delivery' => env('SELLER_MANAGED_DELIVERY', true),
 
+    // Products and options show as "Low stock" at or below this many units. Fixed for every seller.
+    'low_stock_threshold' => 10,
+
     'categories' => [
         'fashion' => 'Fashion',
         'electronics' => 'Electronics',
         'home_living' => 'Home & Living',
+        'kitchen_dining' => 'Kitchen & Dining',
         'beauty_health' => 'Beauty & Health',
         'groceries' => 'Groceries',
         'sports_outdoors' => 'Sports & Outdoors',
@@ -54,6 +58,10 @@ return [
             'label' => 'Automotive',
             'image' => 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=160&h=160&fit=crop&auto=format',
         ],
+        'kitchen_dining' => [
+            'label' => 'Kitchen & Dining',
+            'image' => 'https://images.unsplash.com/photo-1556911220-bff31c812dba?w=160&h=160&fit=crop&auto=format',
+        ],
     ],
 
     // Words that flag a product for the admin's compliance review (items that cannot be sold on ZAYLO).
@@ -74,6 +82,16 @@ return [
         'gray' => '#9a9a9a', 'grey' => '#9a9a9a', 'brown' => '#7b5a3c', 'beige' => '#e3d3b5', 'cream' => '#efe6d2',
         'yellow' => '#e6c84a', 'orange' => '#e07b39', 'purple' => '#7d5ba6', 'maroon' => '#6e2430', 'khaki' => '#b8a77a',
         'teal' => '#2f7f7c', 'lavender' => '#b9a7d6', 'tan' => '#c19a6b', 'charcoal' => '#3b3b3d', 'ivory' => '#f6f1e3',
+    ],
+
+    // Regions a logistics partner can choose to serve (at least one).
+    'service_regions' => [
+        'NCR' => 'NCR', 'CAR' => 'CAR', 'I' => 'Region I (Ilocos Region)', 'II' => 'Region II (Cagayan Valley)',
+        'III' => 'Region III (Central Luzon)', 'IV-A' => 'Region IV-A (CALABARZON)', 'MIMAROPA' => 'MIMAROPA Region',
+        'V' => 'Region V (Bicol Region)', 'VI' => 'Region VI (Western Visayas)', 'NIR' => 'Negros Island Region',
+        'VII' => 'Region VII (Central Visayas)', 'VIII' => 'Region VIII (Eastern Visayas)', 'IX' => 'Region IX (Zamboanga Peninsula)',
+        'X' => 'Region X (Northern Mindanao)', 'XI' => 'Region XI (Davao Region)', 'XII' => 'Region XII (SOCCSKSARGEN)',
+        'XIII' => 'Region XIII (Caraga)', 'BARMM' => 'BARMM',
     ],
 
     // Colors offered as one-tap labels when a seller adds a product; any other color name can be typed.

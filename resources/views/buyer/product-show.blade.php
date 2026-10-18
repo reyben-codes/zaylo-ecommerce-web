@@ -49,7 +49,8 @@
         @endif
     </div>
     <section class="detail-copy">
-        <p class="product-category">{{ $product->category_label }}@if($product->gender) · {{ ucfirst($product->gender) }}@endif</p>
+        <div class="category-tags--detail">@include('partials.category-tags', ['href' => fn ($key) => route('products.index', ['category' => $key])])</div>
+        @if($product->gender)<p class="product-category">For {{ $product->gender === 'unisex' ? 'everyone' : $product->gender }}</p>@endif
         <h1>{{ $product->name }}</h1>
         <p class="detail-price" aria-live="polite"><span data-sale-price>₱{{ number_format($displayPrice, 2) }}</span>
             <del class="sale-price-original" data-sale-regular @if($displayPrice >= $displayRegular) hidden @endif>₱{{ number_format($displayRegular, 2) }}</del>

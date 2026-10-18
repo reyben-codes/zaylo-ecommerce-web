@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\LogisticsProvider;
 use App\Models\Product;
 use App\Models\Seller;
 use App\Models\SellerApplication;
@@ -42,7 +43,12 @@ class SellerApplicationService
             'shop_category' => ['required', Rule::in(array_keys(SellerApplication::categories()))],
             'seller_type' => ['required', Rule::in(array_keys(SellerApplication::SELLER_TYPES))],
             'tin' => ['required', 'string', 'regex:/^[0-9]{3}-[0-9]{3}-[0-9]{3}-[0-9]{3}$/D',
-                Rule::unique('seller_applications', 'tin')->ignore($existing?->id)],
+                Rule::unique('seller_applications', 'tin')->ignore($existing?->id), function (string $attribute, mixed $value, \Closure $fail) {
+                    // One TIN is one business, whether it sells or delivers.
+                    if (Schema::hasColumn('logistics_providers', 'tin') && LogisticsProvider::where('tin', $value)->exists()) {
+                        $fail('This TIN is already registered.');
+                    }
+                }],
             'region_code' => ['required', 'regex:/^[0-9]{9}$/D'],
             'province_code' => ['nullable', 'regex:/^[0-9]{9}$/D'],
             'city_code' => ['required', 'regex:/^[0-9]{9}$/D'],

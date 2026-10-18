@@ -1,8 +1,10 @@
 {{-- Status actions for one account. Expects $account (User).
      Reject, suspend and deactivate ask for a reason, which is emailed to the account owner
-     (required when rejecting a seller who submitted an application). --}}
+     (required when rejecting a seller or logistics partner who submitted an application). --}}
 @php
     $sellerApplied = $account->role === 'seller' && \Illuminate\Support\Facades\Schema::hasTable('seller_applications') && $account->sellerApplication;
+    $partnerApplied = $account->role === 'logistics' && $account->awaitsLogisticsApproval() && $account->logisticsProvider?->hasApplication();
+    $explains = $sellerApplied || $partnerApplied;
     // [status, label, icon, button variant, asks for a reason]
     $actions = match ($account->status) {
         'pending' => [['active', 'Approve', 'fa-check', '', false], ['rejected', 'Reject', 'fa-xmark', ' seller-button--danger', true]],
@@ -33,8 +35,8 @@
                             @method('PATCH')
                             <input type="hidden" name="status" value="{{ $status }}">
                             <input type="hidden" name="account" value="{{ $account->id }}">
-                            <label for="reason-{{ $status }}-{{ $account->id }}">{{ $status === 'rejected' && $sellerApplied ? 'Reason shown to the seller (also emailed)' : 'Reason emailed to '.(Str::before($account->name, ' ') ?: 'them').' (optional)' }}</label>
-                            <textarea id="reason-{{ $status }}-{{ $account->id }}" name="reason" maxlength="500" @if($status === 'rejected' && $sellerApplied) required @endif placeholder="{{ $reasonHints[$status] }}">{{ $errorHere ? old('reason') : '' }}</textarea>
+                            <label for="reason-{{ $status }}-{{ $account->id }}">{{ $status === 'rejected' && $explains ? 'Reason shown to the '.($sellerApplied ? 'seller' : 'logistics partner').' (also emailed)' : 'Reason emailed to '.(Str::before($account->name, ' ') ?: 'them').' (optional)' }}</label>
+                            <textarea id="reason-{{ $status }}-{{ $account->id }}" name="reason" maxlength="500" @if($status === 'rejected' && $explains) required @endif placeholder="{{ $reasonHints[$status] }}">{{ $errorHere ? old('reason') : '' }}</textarea>
                             @if($errorHere)<p class="seller-field__error" role="alert">{{ $errors->first('reason') }}</p>@endif
                             <button type="submit" class="seller-button seller-button--small{{ $status === 'deactivated' ? ' seller-button--secondary' : ' seller-button--danger' }}">Confirm {{ Str::lower($label) }}</button>
                         </form>

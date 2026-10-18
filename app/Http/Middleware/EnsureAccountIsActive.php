@@ -10,8 +10,8 @@ class EnsureAccountIsActive
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->user()?->awaitsSellerApproval() && $request->user()->hasVerifiedEmail()) {
-            return redirect()->route('seller.application');
+        if (($route = $request->user()?->applicationRoute()) && $request->user()->hasVerifiedEmail()) {
+            return redirect()->route($route);
         }
 
         if ($request->user() && ! $request->user()->isActive()) {

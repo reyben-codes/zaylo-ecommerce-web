@@ -34,6 +34,7 @@
                             <td>
                                 <strong>{{ $partner->name }}</strong>
                                 <span class="seller-cell-note">{{ $partner->service_area ? 'Serves '.$partner->service_area : 'No service area given' }}</span>
+                                <a href="{{ route('admin.logistics.show', $partner) }}" class="workspace-link">Review application <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
                             </td>
                             <td>
                                 {{ $partner->owner?->name ?? '—' }}

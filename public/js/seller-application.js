@@ -1,5 +1,6 @@
 (() => {
-    document.querySelectorAll('[data-seller-application]').forEach((root) => {
+    // Seller applications, and logistics applications that share the same fields and checks.
+    document.querySelectorAll('[data-seller-application], [data-business-application]').forEach((root) => {
         const type = root.querySelector('[data-seller-type]');
         const documents = [...root.querySelectorAll('[data-seller-document]')];
 
@@ -23,6 +24,18 @@
                 const digits = input.value.replace(/[^0-9]/g, '').slice(0, 12);
                 input.value = digits.match(/.{1,3}/g)?.join('-') ?? '';
             });
+        });
+
+        root.querySelectorAll('[data-uppercase]').forEach((input) => {
+            input.addEventListener('input', () => { input.value = input.value.replace(/\s+/g, '').toUpperCase(); });
+        });
+
+        // Checkbox groups that need at least one choice; the first box carries the message so the browser can point to it.
+        root.querySelectorAll('[data-require-one]').forEach((group) => {
+            const boxes = [...group.querySelectorAll('input[type=checkbox]')];
+            const check = () => boxes[0]?.setCustomValidity(boxes.some((box) => box.checked) ? '' : group.dataset.requireOne);
+            boxes.forEach((box) => box.addEventListener('change', check));
+            check();
         });
 
         root.querySelectorAll('[data-digits-only]').forEach((input) => {

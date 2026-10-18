@@ -199,15 +199,40 @@ class AdminController extends Controller
         return view('admin.logistics', compact('partners'));
     }
 
+    /** A logistics partner's business details and documents, for approval. */
+    public function logisticsApplication(LogisticsProvider $provider)
+    {
+        return view('admin.logistics-application', [
+            'provider' => $provider->load('owner'),
+            'applicant' => $provider->owner,
+            'documents' => LogisticsProvider::DOCUMENTS,
+            'regions' => LogisticsProvider::serviceRegions(),
+        ]);
+    }
+
+    public function logisticsDocument(LogisticsProvider $provider, string $document)
+    {
+        abort_unless(array_key_exists($document, LogisticsProvider::DOCUMENTS), 404);
+        $path = $provider->{$document.'_path'};
+        abort_unless($path && Storage::disk('local')->exists($path), 404);
+
+        // Labels such as "Mayor's / Business Permit" are not valid file names, so name the download after the field.
+        return Storage::disk('local')->response($path, str_replace('_', '-', $document).'.'.pathinfo($path, PATHINFO_EXTENSION), [
+            'Cache-Control' => 'private, no-store',
+            'X-Content-Type-Options' => 'nosniff',
+        ], 'inline');
+    }
+
     public function updateUserStatus(Request $request, User $user)
     {
         abort_if($user->is(auth()->user()), 422, 'You cannot change your own account status.');
         $application = $user->hasRole('seller') && Schema::hasTable('seller_applications') ? $user->sellerApplication : null;
+        $partnerApplied = $user->hasRole('logistics') && $user->awaitsLogisticsApproval() && $user->logisticsProvider?->hasApplication();
         $data = $request->validate([
             'status' => ['required', Rule::in(array_keys(self::STATUS_LABELS))],
-            // Rejected sellers see the reason, so it is required when one has applied.
-            'reason' => [$application ? 'required_if:status,rejected' : 'nullable', 'nullable', 'string', 'max:500'],
-        ], ['reason.required_if' => 'Give the reason for rejecting this application. The seller sees it.']);
+            // Rejected sellers and logistics partners see the reason, so it is required when one has applied.
+            'reason' => [$application || $partnerApplied ? 'required_if:status,rejected' : 'nullable', 'nullable', 'string', 'max:500'],
+        ], ['reason.required_if' => 'Give the reason for rejecting this application. The applicant sees it.']);
         $deciding = in_array($user->status, ['pending', 'rejected'], true) && in_array($data['status'], ['active', 'rejected'], true);
         $previous = $user->status;
 
@@ -220,7 +245,10 @@ class AdminController extends Controller
 
             $partnerStatus = self::PARTNER_STATUSES[$data['status']];
             if ($user->hasRole('logistics') && Schema::hasTable('logistics_providers')) {
-                LogisticsProvider::where('user_id', $user->id)->update(['status' => $partnerStatus] + ($partnerStatus === 'approved' ? ['approved_at' => now()] : []));
+                $review = Schema::hasColumn('logistics_providers', 'reviewed_at') && in_array($data['status'], ['active', 'rejected'], true)
+                    ? ['reviewed_at' => now(), 'rejection_reason' => $data['status'] === 'rejected' ? ($data['reason'] ?? null) : null]
+                    : [];
+                LogisticsProvider::where('user_id', $user->id)->update(['status' => $partnerStatus] + ($partnerStatus === 'approved' ? ['approved_at' => now()] : []) + $review);
             }
             if ($user->hasRole('rider') && Schema::hasTable('riders')) {
                 Rider::where('user_id', $user->id)->update(['status' => $partnerStatus, 'reviewed_at' => now()]);

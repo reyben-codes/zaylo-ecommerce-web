@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\LogisticsProvider;
+use App\Models\PendingRegistration;
 use App\Models\Rider;
 use App\Models\User;
 use App\Rules\PersonName;
@@ -18,6 +19,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Illuminate\Auth\Events\PasswordReset;
 use App\Services\EmailVerificationService;
+use App\Services\LogisticsApplicationService;
 use App\Services\PendingRegistrationService;
 use App\Services\SellerApplicationService;
 use Illuminate\Validation\Rule;
@@ -46,6 +48,10 @@ class AuthController extends Controller
         $remember    = $request->boolean('remember');
 
         if (!Auth::attempt($credentials, $remember)) {
+            if ($resume = $this->resumePendingSignUp($request)) {
+                return $resume;
+            }
+
             throw ValidationException::withMessages([
                 'email' => 'Incorrect email or password.',
             ]);
@@ -57,8 +63,8 @@ class AuthController extends Controller
             return redirect()->route('verification.notice');
         }
 
-        if (Auth::user()->awaitsSellerApproval()) {
-            return redirect()->route('seller.application');
+        if ($route = Auth::user()->applicationRoute()) {
+            return redirect()->route($route);
         }
 
         if (! Auth::user()->isActive()) {
@@ -108,6 +114,10 @@ class AuthController extends Controller
 
         $rejected = "Incorrect {$role} email or password.";
         if (! Auth::attempt($request->only('email', 'password'), $request->boolean('remember'))) {
+            if ($resume = $this->resumePendingSignUp($request, $role)) {
+                return $resume;
+            }
+
             throw ValidationException::withMessages(['email' => $rejected]);
         }
 
@@ -122,9 +132,9 @@ class AuthController extends Controller
             return redirect()->route('verification.notice');
         }
 
-        // Sellers under review or rejected see their application: the status, any reason, and how to resubmit.
-        if (Auth::user()->awaitsSellerApproval()) {
-            return redirect()->route('seller.application');
+        // Sellers and logistics partners under review or rejected see their application: the status, any reason, and how to resubmit.
+        if ($route = Auth::user()->applicationRoute()) {
+            return redirect()->route($route);
         }
 
         if (! Auth::user()->isActive()) {
@@ -149,7 +159,7 @@ class AuthController extends Controller
         ]);
     }
 
-    public function register(Request $request, SellerApplicationService $sellerApplications, PendingRegistrationService $registrations)
+    public function register(Request $request, SellerApplicationService $sellerApplications, LogisticsApplicationService $logisticsApplications, PendingRegistrationService $registrations)
     {
         // +63 9XX numbers are the same phone as 09XX; store one form so duplicates are caught either way.
         if (preg_match('/^\+639[0-9]{9}$/D', (string) $request->input('phone'))) {
@@ -157,7 +167,11 @@ class AuthController extends Controller
         }
 
         $sellerApplying = $request->input('role') === 'seller' && $sellerApplications->available();
-        // Rider applications take a driver's license (LTO format), its expiry, and license and OR/CR documents.
+        // Logistics partners give their SEC and TIN details, office address, service regions and business documents.
+        $logisticsApplying = $request->input('role') === 'logistics' && $logisticsApplications->available();
+        if ($logisticsApplying) {
+            $logisticsApplications->prepare($request);
+        }        // Rider applications take a driver's license (LTO format), its expiry, and license and OR/CR documents.
         $riderApplying = $request->input('role') === 'courier';
         $riderDocuments = $riderApplying && Schema::hasColumn('riders', 'license_document_path');
         if ($riderApplying) {
@@ -173,7 +187,7 @@ class AuthController extends Controller
             'or_cr_document' => $riderOnly(['file', 'mimes:jpg,jpeg,png,pdf', 'max:'.Rider::MAX_DOCUMENT_KB]),
         ] : [];
 
-        $validated = $request->validate([
+        $validated = $request->validate(array_replace([
             'email'                 => 'required|email:filter|unique:users,email',
             'password'              => ['required', 'string', 'confirmed', new StrongPassword],
             'first_name'            => ['required', 'string', 'min:2', 'max:50', new PersonName],
@@ -187,12 +201,14 @@ class AuthController extends Controller
             'terms'                 => 'accepted',
             'role'                  => 'required|in:buyer,seller,courier,logistics',
             'company_name'          => 'exclude_unless:role,logistics|required|string|min:2|max:150',
-            'service_area'          => 'exclude_unless:role,logistics|nullable|string|max:150',
+            'service_area'          => $logisticsApplying ? 'exclude' : 'exclude_unless:role,logistics|nullable|string|max:150',
             'logistics_provider_id' => ['exclude_unless:role,courier', 'required', 'integer', Rule::exists('logistics_providers', 'id')->where('status', 'approved')],
             'vehicle_type'          => ['exclude_unless:role,courier', 'required', Rule::in(Rider::VEHICLE_TYPES)],
             'plate_no'              => $riderOnly(['string', 'regex:'.Rider::PLATE_PATTERN, 'unique:riders,plate_no']),
             'license_number'        => $riderOnly(['string', 'regex:'.Rider::LICENSE_PATTERN, 'unique:riders,license_number']),
-        ] + $riderRules + ($sellerApplying ? $sellerApplications->rules($request) : []), [
+        ] + $riderRules + ($sellerApplying ? $sellerApplications->rules($request) : []),
+            // The logistics company name rule (with its duplicate check) replaces the basic one above.
+            $logisticsApplying ? $logisticsApplications->rules() : []), [
             'email.email' => 'Enter a valid email address, such as name@example.com.',
             'first_name.min' => 'The first name must be 2 to 50 characters.',
             'first_name.max' => 'The first name must be 2 to 50 characters.',
@@ -220,14 +236,18 @@ class AuthController extends Controller
             'or_cr_document.max' => 'Vehicle OR/CR: the file must be 5 MB or smaller.',
             'license_document.uploaded' => "Driver's license: the file could not be uploaded. Files must be 5 MB or smaller.",
             'or_cr_document.uploaded' => 'Vehicle OR/CR: the file could not be uploaded. Files must be 5 MB or smaller.',
-        ] + ($sellerApplying ? $sellerApplications->messages() : []));
+        ] + ($sellerApplying ? $sellerApplications->messages() : []) + ($logisticsApplying ? $logisticsApplications->messages() : []));
 
         if ($request->role === 'courier' && ! LogisticsProvider::acceptingRiders()->whereKey($request->logistics_provider_id)->exists()) {
             throw ValidationException::withMessages(['logistics_provider_id' => 'That logistics partner is not accepting riders right now.']);
         }
 
         // Resolve the pickup address before saving anything, so a location-service outage leaves no half-made account.
-        $pickupNames = $sellerApplying ? $sellerApplications->addressNames($validated) : null;
+        $pickupNames = match (true) {
+            $sellerApplying => $sellerApplications->addressNames($validated),
+            $logisticsApplying => $logisticsApplications->addressNames($validated),
+            default => null,
+        };
 
         if (! $registrations->available()) {
             // Until the pending_registrations migration runs, sign-up saves the account first, as before.
@@ -333,6 +353,9 @@ class AuthController extends Controller
         if ($request->user()->awaitsSellerApproval()) {
             return redirect()->route('seller.application')->with('status', 'Email verified. Your seller application is waiting for admin approval.');
         }
+        if ($request->user()->awaitsLogisticsApproval()) {
+            return redirect()->route('logistics.application')->with('status', 'Email verified. Your logistics application is waiting for admin approval.');
+        }
 
         if (! $request->user()->isActive()) {
             $loginRoute = $request->user()->portalLoginRoute();
@@ -436,6 +459,32 @@ class AuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
         return redirect()->route($redirectRoute);
+    }
+
+    /**
+     * Signing in before entering the emailed code: there is no account yet, only the waiting sign-up.
+     * With the right password, reopen that sign-up's code page instead of reporting a wrong password.
+     */
+    private function resumePendingSignUp(Request $request, ?string $portalRole = null)
+    {
+        if (! Schema::hasTable('pending_registrations')) {
+            return null;
+        }
+        $pending = PendingRegistration::whereRaw('LOWER(email) = ?', [Str::lower(trim((string) $request->input('email')))])
+            ->where('expires_at', '>', now())->latest('id')->first();
+        if (! $pending || ! Hash::check((string) $request->input('password'), $pending->payload['password_hash'] ?? '')) {
+            return null;
+        }
+        $role = $pending->role === 'courier' ? 'rider' : $pending->role;
+        if ($portalRole && $role !== $portalRole) {
+            return null;
+        }
+
+        $request->session()->regenerate();
+        $request->session()->put(PendingRegistrationService::SESSION_KEY, $pending->token);
+
+        return redirect()->route('verification.notice')
+            ->with('status', 'Please verify your email first. Enter the code we emailed you to finish creating your account, or tap Resend code.');
     }
 
     /** Tells a rider who is reviewing them, or why their application was rejected. */

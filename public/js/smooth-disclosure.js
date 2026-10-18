@@ -2,10 +2,12 @@
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const finishers = [];
 
-    document.querySelectorAll('details[data-smooth-disclosure]').forEach(details => {
+    const setup = details => {
         const summary = details.querySelector(':scope > summary');
         const content = details.querySelector(':scope > [data-disclosure-content]');
-        if (!summary || !content || !details.animate) return;
+        // Each element gets one handler, even if init() runs again over it.
+        if (!summary || !content || !details.animate || details.dataset.smoothDisclosureReady) return;
+        details.dataset.smoothDisclosureReady = 'true';
 
         let animation = null;
         let expanded = details.open;
@@ -51,7 +53,11 @@
             animation.onfinish = finish;
         });
         finishers.push(finish);
-    });
+    };
+    const init = (root = document) => root.querySelectorAll('details[data-smooth-disclosure]').forEach(setup);
+    init();
+    // Lets scripts that add disclosures later (e.g. new color cards) animate them too.
+    window.SmoothDisclosure = { init };
 
     window.addEventListener('resize', () => finishers.forEach(finish => finish()));
     reducedMotion.addEventListener('change', () => finishers.forEach(finish => finish()));

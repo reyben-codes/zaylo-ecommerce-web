@@ -18,6 +18,7 @@ use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\IdentityVerificationController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\DisputeController;
+use App\Http\Controllers\LogisticsApplicationController;
 use App\Http\Controllers\LogisticsChatController;
 use App\Http\Controllers\LogisticsController;
 use App\Http\Controllers\LogisticsOperationsController;
@@ -36,11 +37,11 @@ Route::get('/', function () {
 
         if (Schema::hasColumn('products', 'stock')) {
             $query->where('stock', '>', 0)
-                ->with('images')
+                ->with(['images', 'additionalCategories'])
                 ->withCount(['variants as active_variants_count' => fn ($builder) => $builder->where('is_active', true)]);
         } else {
             $query->whereHas('variants', fn ($builder) => $builder->where('is_active', true)->where('stock', '>', 0))
-                ->with(['images', 'defaultVariant', 'category'])
+                ->with(['images', 'defaultVariant', 'category', 'additionalCategories'])
                 ->withCount(['variants as active_variants_count' => fn ($builder) => $builder->where('is_active', true)]);
         }
 
@@ -189,6 +190,8 @@ Route::middleware(['auth', 'active', 'verified', 'role:admin', 'nocache'])->pref
     Route::get('/applications/{user}', [AdminController::class, 'sellerApplication'])->name('seller-applications.show');
     Route::get('/applications/{user}/documents/{document}', [AdminController::class, 'sellerApplicationDocument'])->name('seller-applications.document');
     Route::get('/logistics', [AdminController::class, 'logistics'])->name('logistics');
+    Route::get('/logistics/{provider}', [AdminController::class, 'logisticsApplication'])->name('logistics.show');
+    Route::get('/logistics/{provider}/documents/{document}', [AdminController::class, 'logisticsDocument'])->name('logistics.document');
     Route::get('/identity', [AdminController::class, 'identity'])->name('identity');
     Route::get('/identity/{verification}/document', [AdminController::class, 'identityDocument'])->name('identity.document');
     Route::patch('/identity/{verification}', [AdminController::class, 'reviewIdentity'])->name('identity.review');
@@ -241,6 +244,12 @@ Route::middleware(['auth', 'active', 'verified', 'nocache'])->group(function () 
     Route::get('/support', [SupportChatController::class, 'user'])->middleware('role:buyer,seller,rider,logistics')->name('support');
     Route::get('/support/{thread}/messages', [SupportChatController::class, 'messages'])->middleware('throttle:120,1')->name('support.messages');
     Route::post('/support/{thread}', [SupportChatController::class, 'send'])->middleware('throttle:30,1')->name('support.send');
+});
+
+// Pending and rejected logistics partners can still reach their application, so this group skips the active check.
+Route::middleware(['auth', 'verified', 'role:logistics', 'nocache'])->prefix('logistics')->name('logistics.')->group(function () {
+    Route::get('/application', [LogisticsApplicationController::class, 'show'])->name('application');
+    Route::post('/application', [LogisticsApplicationController::class, 'update'])->middleware('throttle:10,1')->name('application.update');
 });
 
 Route::middleware(['auth', 'active', 'verified', 'role:logistics', 'nocache'])->prefix('logistics')->name('logistics.')->group(function () {

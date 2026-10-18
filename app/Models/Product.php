@@ -45,6 +45,7 @@ class Product extends Model
             $product->slug ??= Str::slug($product->name).'-'.Str::lower(Str::random(6));
             if (static::usesLegacySchema()) {
                 $product->sku ??= 'ZAY-'.Str::upper(Str::random(8));
+                $product->attributes['low_stock_threshold'] = static::lowStockThreshold();
             }
         });
 
@@ -70,7 +71,7 @@ class Product extends Model
                 if (! $variant->exists) {
                     $attributes += [
                         'sku' => 'ZAY-'.Str::upper(Str::random(8)), 'name' => 'Default',
-                        'price_minor' => 0, 'stock' => 0, 'low_stock_threshold' => 5,
+                        'price_minor' => 0, 'stock' => 0, 'low_stock_threshold' => static::lowStockThreshold(),
                     ];
                 }
                 $variant->fill($attributes)->save();
@@ -198,8 +199,10 @@ class Product extends Model
     public function getStockAttribute(mixed $value): int { return static::usesLegacySchema() ? (int) $value : (int) ($this->defaultVariant?->stock ?? 0); }
     public function setSkuAttribute(?string $value): void { static::usesLegacySchema() ? $this->attributes['sku'] = ($value ?: 'ZAY-'.Str::upper(Str::random(8))) : $this->variantInput['sku'] = ($value ?: 'ZAY-'.Str::upper(Str::random(8))); }
     public function getSkuAttribute(mixed $value): ?string { return static::usesLegacySchema() ? $value : $this->defaultVariant?->sku; }
-    public function setLowStockThresholdAttribute(mixed $value): void { static::usesLegacySchema() ? $this->attributes['low_stock_threshold'] = (int) $value : $this->variantInput['low_stock_threshold'] = (int) $value; }
-    public function getLowStockThresholdAttribute(mixed $value): int { return static::usesLegacySchema() ? (int) ($value ?? 5) : (int) ($this->defaultVariant?->low_stock_threshold ?? 5); }
+    // The low stock alert is fixed platform-wide, so any submitted value is replaced with it.
+    public static function lowStockThreshold(): int { return (int) config('marketplace.low_stock_threshold', 10); }
+    public function setLowStockThresholdAttribute(mixed $value): void { static::usesLegacySchema() ? $this->attributes['low_stock_threshold'] = static::lowStockThreshold() : $this->variantInput['low_stock_threshold'] = static::lowStockThreshold(); }
+    public function getLowStockThresholdAttribute(mixed $value): int { return static::lowStockThreshold(); }
     public function setWeightGramsAttribute(mixed $value): void { static::usesLegacySchema() ? $this->attributes['weight_grams'] = $value : $this->variantInput['weight_grams'] = filled($value) ? (int) $value : null; }
     public function getWeightGramsAttribute(mixed $value): ?int { return static::usesLegacySchema() ? (filled($value) ? (int) $value : null) : $this->defaultVariant?->weight_grams; }
     public function setImageUrlAttribute(?string $value): void { static::usesLegacySchema() ? $this->attributes['image_url'] = $value : $this->coverImageInput = $value; }
@@ -215,6 +218,53 @@ class Product extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class, 'category_id');
+    }
+
+    /** Extra categories this product is also listed under, besides its main category. */
+    public function additionalCategories(): HasMany
+    {
+        return $this->hasMany(ProductCategory::class);
+    }
+
+    /** @return list<string> The main category followed by the additional ones. */
+    public function getCategoryKeysAttribute(): array
+    {
+        return collect([$this->category_key])->merge($this->additionalCategories->pluck('category'))
+            ->filter()->unique()->values()->all();
+    }
+
+    /** @return array<string, string> Category key => label, main category first. */
+    public function getCategoryTagsAttribute(): array
+    {
+        return collect($this->category_keys)
+            ->mapWithKeys(fn ($key) => [$key => config('marketplace.categories')[$key] ?? Str::headline($key)])->all();
+    }
+
+    public function getCategoryLabelsAttribute(): array
+    {
+        return array_values($this->category_tags);
+    }
+
+    /** Keeps the additional categories in step with the form; the main category is never repeated here. */
+    public function syncAdditionalCategories(array $categories): void
+    {
+        $categories = array_values(array_diff(array_unique($categories), [$this->category_key]));
+        $this->additionalCategories()->whereNotIn('category', $categories)->delete();
+        foreach ($categories as $category) {
+            $this->additionalCategories()->firstOrCreate(['category' => $category]);
+        }
+        $this->unsetRelation('additionalCategories');
+    }
+
+    /** Products whose main or additional category is one of the given keys. */
+    public function scopeInCategories($query, array $categories)
+    {
+        return $query->where(function ($match) use ($categories) {
+            static::usesLegacySchema()
+                ? $match->whereIn('products.category', $categories)
+                : $match->whereHas('category', fn ($category) => $category->whereIn('slug', $categories));
+            $match->orWhereHas('additionalCategories', fn ($extra) => $extra->whereIn('category', $categories));
+        });
     }
 
     public function variants(): HasMany
@@ -240,6 +290,15 @@ class Product extends Model
     public function images(): HasMany
     {
         return $this->hasMany(ProductImage::class)->orderBy(static::usesLegacySchema() ? 'sort_order' : 'position');
+    }
+
+    /** Gallery photos besides the main one, leaving out color photos ("<product> — <color>" alt text). */
+    public function getExtraPhotosAttribute()
+    {
+        $cover = $this->image_url;
+
+        return $this->images->reject(fn (ProductImage $image) => $image->path === $cover
+            || ($image->alt_text !== $this->name && Str::contains((string) $image->alt_text, ' — ')))->values();
     }
 
     /**
