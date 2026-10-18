@@ -26,41 +26,13 @@
     .flash-timer .time-block .number { font-size: 1.6rem; font-weight: 600; color: var(--c-1a1714); font-family: 'Playfair Display', serif; min-width: 36px; text-align: center; }
     .flash-timer .time-block .label { font-size: 0.6rem; text-transform: uppercase; color: var(--c-6b5f54); }
     .flash-timer .separator { font-size: 1.4rem; color: var(--c-b28b6f); font-weight: 300; }
-    .flash-product { background: var(--c-ffffff); border: 1px solid var(--c-1a1714); position: relative; overflow: hidden; transition: transform .38s cubic-bezier(.22, 1, .36, 1), box-shadow .38s cubic-bezier(.22, 1, .36, 1); }
-    .flash-product:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(192,57,43,0.1); }
-    .flash-product:hover .product-image img { transform: scale(1.03); }
     .flash-discount { position: absolute; top: 12px; left: 12px; background: var(--c-c0392b); color: var(--c-ffffff); border-radius: 999px; padding: 4px 12px; font-size: 0.65rem; font-weight: 700; }
-    .flash-product .product-wishlist { position: absolute; top: 12px; right: 12px; background: var(--c-ffffff); border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; transition: 0.15s; box-shadow: 0 2px 8px rgba(0,0,0,0.06); font-size: 1rem; color: var(--c-1a1714); display: flex; align-items: center; justify-content: center; }
-    .flash-product .product-wishlist:hover { background: var(--c-1a1714); color: var(--c-ffffff); }
-    .flash-product .product-price { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
-    .flash-product .current-price { font-size: 1.05rem; font-weight: 600; color: var(--c-c0392b); }
-    .flash-product .original-price { font-size: 0.8rem; color: var(--c-6b5f54); text-decoration: line-through; }
-    .flash-product .btn-flash { width: 100%; margin-top: 4px; padding: 10px 8px; min-height: 42px; background: var(--c-c0392b); color: var(--c-ffffff); border: none; border-radius: 8px; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: 0.15s; font-family: 'Inter', sans-serif; text-decoration: none; text-align: center; display: block; }
-    .flash-product .btn-flash:hover { background: var(--c-a93226); }
-    .flash-product .btn-flash.added { background: var(--c-2d7d46); }
     .suggested-products { padding: 60px 48px 72px; background: var(--c-faf7f2); }
     .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; max-width: 1400px; margin-left: auto; margin-right: auto; }
     .section-header h2 { font-family: 'Playfair Display', serif; font-size: 2.2rem; font-weight: 600; color: var(--c-1a1714); }
     .section-header .section-label { font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--c-6b5f54); font-weight: 400; display: block; margin-bottom: 6px; }
     .section-header a { color: var(--c-6b5f54); text-decoration: none; font-size: 0.85rem; transition: 0.15s; }
     .section-header a:hover { color: var(--c-1a1714); }
-    .product-card { background: var(--c-ffffff); border: 1px solid var(--c-1a1714); transition: transform .38s cubic-bezier(.22, 1, .36, 1), box-shadow .38s cubic-bezier(.22, 1, .36, 1); overflow: hidden; animation: floatIn 0.6s ease forwards; opacity: 0; }
-    .product-card:nth-child(1){animation-delay:0.05s} .product-card:nth-child(2){animation-delay:0.1s} .product-card:nth-child(3){animation-delay:0.15s} .product-card:nth-child(4){animation-delay:0.2s}
-    @keyframes floatIn { 0%{opacity:0;transform:translateY(30px) scale(0.95)} 100%{opacity:1;transform:translateY(0) scale(1)} }
-    .product-card:hover { transform: translateY(-6px) scale(1.01); border-color: var(--c-1a1714); box-shadow: 0 8px 32px rgba(0,0,0,0.06); }
-    .product-card:hover .product-image img { transform: scale(1.05); }
-    .product-card .product-wishlist { position: absolute; top: 12px; right: 12px; background: var(--c-ffffff); border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; transition: 0.15s; box-shadow: 0 2px 8px rgba(0,0,0,0.06); font-size: 1rem; color: var(--c-1a1714); display: flex; align-items: center; justify-content: center; }
-    .product-card .product-wishlist:hover, .product-card .product-wishlist.active { background: var(--c-1a1714); color: var(--c-ffffff); }
-    .product-card .product-badge { position: absolute; top: 12px; left: 12px; padding: 4px 14px; border-radius: 999px; font-size: 0.55rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; background: var(--c-1a1714); color: var(--c-ffffff); }
-    .product-card .product-badge.sale { background: var(--c-b28b6f); }
-    .product-card .product-badge.best { background: var(--c-d4af37); }
-    .product-card .product-rating { font-size: 0.7rem; color: var(--c-d4af37); margin: 8px 0; }
-    .product-card .product-rating span { color: var(--c-6b5f54); margin-left: 4px; }
-    .product-card .product-price { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
-    .product-card .current-price { font-size: 1.05rem; font-weight: 600; color: var(--c-1a1714); }
-    .product-card .original-price { font-size: 0.8rem; color: var(--c-6b5f54); text-decoration: line-through; }
-    .product-card .btn-add-cart:hover { background: var(--c-b28b6f); }
-    .product-card .btn-add-cart.added { background: var(--c-2d7d46); }
     .loader-container { text-align: center; padding: 48px 0; max-width: 1400px; margin: 0 auto; }
     .loader { display: inline-block; width: 36px; height: 36px; border: 2px solid var(--c-ece4db); border-top: 2px solid var(--c-1a1714); border-radius: 50%; animation: spin 0.8s linear infinite; }
     @keyframes spin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
@@ -124,29 +96,7 @@
         </div>
         <div class="flash-grid" id="flashGrid">
             @foreach($flashProducts as $product)
-            @php $discount = round((1 - $product->price / $product->original_price) * 100) . '% OFF'; @endphp
-            <div class="flash-product" data-product-url="{{ route('products.show', $product) }}">
-                <div class="product-image">
-                    @include('partials.product-card-image', ['product' => $product])
-                    <span class="flash-discount">{{ $discount }}</span>
-                    <form data-wishlist-toggle method="POST" action="{{ route('buyer.wishlist.toggle', $product) }}">@csrf<button class="product-wishlist" aria-label="Save {{ $product->name }}"><i class="far fa-heart"></i></button></form>
-                </div>
-                <div class="product-info">
-                    <h3 class="product-name"><a href="{{ route('products.show', $product) }}">{{ $product->name }}</a></h3>
-                    @include('partials.product-card-description')
-                    @include('partials.category-tags', ['href' => fn ($key) => route('products.index', ['category' => $key])])
-                    @include('partials.product-rating')
-                    <div class="product-price">
-                        <span class="current-price">₱{{ number_format($product->price, 2) }}</span>
-                        <span class="original-price">₱{{ number_format($product->original_price, 2) }}</span>
-                    </div>
-                    @if($product->active_variants_count)
-                        <a class="btn-flash" href="{{ route('products.show', $product) }}">Choose options</a>
-                    @else
-                        <form data-cart-add method="POST" action="{{ route('buyer.cart.add', $product) }}">@csrf<input type="hidden" name="quantity" value="1"><button class="btn-flash"><i class="fas fa-bolt"></i> Grab Now</button></form>
-                    @endif
-                </div>
-            </div>
+                @include('partials.shop-card', ['product' => $product])
             @endforeach
         </div>
     </section>
@@ -162,32 +112,7 @@
         </div>
         <div class="product-grid" id="productGrid">
             @foreach($suggestedProducts as $product)
-            <div class="product-card" data-product-url="{{ route('products.show', $product) }}">
-                <div class="product-image">
-                    @include('partials.product-card-image', ['product' => $product])
-                    <form data-wishlist-toggle method="POST" action="{{ route('buyer.wishlist.toggle', $product) }}">@csrf<button class="product-wishlist" aria-label="Save {{ $product->name }}"><i class="far fa-heart"></i></button></form>
-                    @if($product->badge)
-                        <span class="product-badge {{ $product->badge === 'Sale' ? 'sale' : ($product->badge === 'Best Seller' ? 'best' : '') }}">{{ $product->badge }}</span>
-                    @endif
-                </div>
-                <div class="product-info">
-                    <h3 class="product-name"><a href="{{ route('products.show', $product) }}">{{ $product->name }}</a></h3>
-                    @include('partials.product-card-description')
-                    @include('partials.category-tags', ['href' => fn ($key) => route('products.index', ['category' => $key])])
-                    @include('partials.product-rating')
-                    <div class="product-price">
-                        <span class="current-price">₱{{ number_format($product->price, 2) }}</span>
-                        @if($product->original_price)
-                            <span class="original-price">₱{{ number_format($product->original_price, 2) }}</span>
-                        @endif
-                    </div>
-                    @if($product->active_variants_count)
-                        <a class="btn-add-cart" href="{{ route('products.show', $product) }}">Choose options</a>
-                    @else
-                        <form data-cart-add method="POST" action="{{ route('buyer.cart.add', $product) }}">@csrf<input type="hidden" name="quantity" value="1"><button class="btn-add-cart"><i class="fas fa-shopping-bag"></i> Add to Cart</button></form>
-                    @endif
-                </div>
-            </div>
+                @include('partials.shop-card', ['product' => $product])
             @endforeach
         </div>
         <div class="end-message"><i class="far fa-circle-check end-icon" aria-hidden="true"></i>You've reached the end of our suggestions</div>

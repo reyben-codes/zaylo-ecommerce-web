@@ -1,0 +1,197 @@
+/*
+ * Storefront product cards (partials/shop-card.blade.php), matching the mobile
+ * app's ProductCard: a soft rounded card a shade between the page and sand,
+ * the photo fading into it, white pills and a save button over the photo, and
+ * a compact ink bag button beside the price. Colors come from theme.css, so
+ * dark mode follows the app's dark palette.
+ */
+
+.shop-card {
+    --shop-card-surface: var(--c-f5f0ea);
+    --shop-card-focus: var(--c-9a755e);
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+    border-radius: 20px;
+    background: var(--shop-card-surface);
+    transition: transform .38s cubic-bezier(.22, 1, .36, 1), box-shadow .38s cubic-bezier(.22, 1, .36, 1);
+}
+
+@supports (background: color-mix(in srgb, red 50%, blue)) {
+    /* The mobile card color: 45% page cream, 55% sand. */
+    .shop-card { --shop-card-surface: color-mix(in srgb, var(--c-faf7f2) 45%, var(--c-ede4d8)); }
+}
+
+.shop-card:hover { transform: translateY(-4px); box-shadow: 0 12px 28px rgba(42, 32, 25, .1); }
+
+/* Photo */
+.shop-card__media {
+    position: relative;
+    flex-shrink: 0;
+    aspect-ratio: 1;
+    overflow: hidden;
+    background: var(--c-ede4d8);
+}
+
+.shop-card__photo { display: block; width: 100%; height: 100%; }
+
+.shop-card__photo img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scale(1);
+    transition: transform .5s cubic-bezier(.22, 1, .36, 1);
+}
+
+.shop-card:hover .shop-card__photo img { transform: scale(1.035); }
+.shop-card__photo img[data-card-slides] { transition: opacity .18s ease, transform .5s cubic-bezier(.22, 1, .36, 1); }
+.shop-card__photo img[data-card-slides].is-changing { opacity: 0; }
+
+/* The photo fades into the card, so the name and price sit on one surface. */
+.shop-card__media::after {
+    position: absolute;
+    z-index: 1;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 56px;
+    background: linear-gradient(to bottom, transparent, var(--shop-card-surface));
+    content: '';
+    pointer-events: none;
+}
+
+.shop-card__photo:focus-visible { outline: 2px solid var(--shop-card-focus); outline-offset: -4px; border-radius: 20px 20px 0 0; }
+
+/* The bottom corners hold the badge and rating, so the photo count moves to the top. */
+.shop-card .product-photo-count { top: 10px; right: auto; bottom: auto; left: 10px; }
+
+/* Save and bag buttons: small rounded squares. */
+.shop-card__save { position: absolute; z-index: 2; top: 8px; right: 8px; margin: 0; }
+
+.shop-card__button {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border: 0;
+    border-radius: 11px;
+    font-size: 1rem;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color .18s ease, color .18s ease, transform .18s ease;
+}
+
+.shop-card__button:focus-visible { outline: 2px solid var(--shop-card-focus); outline-offset: 2px; }
+.shop-card__button:disabled { cursor: progress; opacity: .6; }
+
+.shop-card__button--light { background: var(--c-ffffff); color: var(--c-1a1714); box-shadow: 0 2px 8px rgba(0, 0, 0, .08); }
+.shop-card__button--light:hover { background: var(--c-f5f0ea); }
+.shop-card__button--light[aria-pressed="true"] { color: var(--c-c0392b); }
+
+.shop-card__button--ink { background: var(--c-1a1714); color: var(--c-ffffff); }
+.shop-card__button--ink:hover { background: var(--c-6d5140); }
+
+/* White labels over the photo: the badge (such as "New" or "-20%") and the rating. */
+.shop-card__pill {
+    position: absolute;
+    z-index: 2;
+    bottom: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    max-width: calc(50% - 14px);
+    padding: 4px 9px;
+    overflow: hidden;
+    border-radius: 20px;
+    background: var(--c-ffffff);
+    color: var(--c-1a1714);
+    font-size: .64rem;
+    font-weight: 700;
+    line-height: 1.3;
+    text-decoration: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.shop-card__pill--badge { left: 10px; }
+.shop-card__pill--rating { right: 10px; }
+.shop-card__pill--rating i { color: var(--c-b28b6f); font-size: .6rem; }
+.shop-card__pill--rating:hover { text-decoration: underline; text-underline-offset: 2px; }
+.shop-card__pill--rating:focus-visible { outline: 2px solid var(--shop-card-focus); outline-offset: 2px; }
+
+/* Text */
+.shop-card__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    padding: 8px 12px 12px;
+}
+
+.shop-card__body .category-tags { margin: 0; }
+
+.shop-card__name {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    min-height: 2.5em;
+    margin: 0;
+    color: var(--c-6b5f54);
+    font-family: 'Inter', sans-serif;
+    font-size: .86rem;
+    font-weight: 500;
+    line-height: 1.25;
+}
+
+.shop-card__name a { color: inherit; text-decoration: none; }
+.shop-card__name a:hover { color: var(--c-1a1714); }
+.shop-card__name a:focus-visible { outline: 2px solid var(--shop-card-focus); outline-offset: 2px; border-radius: 4px; }
+
+.shop-card__body .product-card-description { margin: 0; }
+
+.shop-card__footer {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 6px;
+    margin-top: auto;
+}
+
+.shop-card__footer form { margin: 0; }
+
+.shop-card__price {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 6px;
+    min-width: 0;
+    margin: 0;
+}
+
+.shop-card__price strong { color: var(--c-1a1714); font-size: .98rem; font-weight: 800; white-space: nowrap; }
+.shop-card__price del { color: var(--c-8a7a6b); font-size: .76rem; white-space: nowrap; }
+
+.shop-card .catalog-stock { margin: 0; }
+
+@media (max-width: 640px) {
+    .shop-card { border-radius: 16px; }
+    .shop-card__body { padding: 8px 10px 10px; }
+    .shop-card__button { width: 34px; height: 34px; font-size: .9rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shop-card,
+    .shop-card__photo img,
+    .shop-card__photo img[data-card-slides] { transition: none; }
+    .shop-card:hover,
+    .shop-card:hover .shop-card__photo img { transform: none; }
+}

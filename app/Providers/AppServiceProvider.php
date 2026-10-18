@@ -39,6 +39,18 @@ class AppServiceProvider extends ServiceProvider
             ]);
         });
 
+        // Product cards fill the heart for saved products; looked up once per request.
+        View::composer('partials.shop-card', function ($view) {
+            $request = request();
+            if (! $request->attributes->has('savedProductIds')) {
+                $viewer = auth()->user();
+                $request->attributes->set('savedProductIds', $viewer?->role === 'buyer'
+                    ? $viewer->wishlistItems()->pluck('product_id')->flip()->all()
+                    : []);
+            }
+            $view->with('savedProductIds', $request->attributes->get('savedProductIds'));
+        });
+
         RateLimiter::for('login', function (Request $request) {
             return Limit::perMinute(5)->by(strtolower((string) $request->input('email')).'|'.$request->ip());
         });

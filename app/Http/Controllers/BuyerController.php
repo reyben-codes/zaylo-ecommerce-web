@@ -408,7 +408,10 @@ class BuyerController extends Controller
 
     public function wishlist()
     {
-        $items = auth()->user()->wishlistItems()->with('product.images')->latest()->get();
+        $items = auth()->user()->wishlistItems()->with(['product' => fn ($product) => $product->withReviewSummary()
+            ->with(['images', 'additionalCategories'])
+            ->withCount(['variants as active_variants_count' => fn ($variants) => $variants->where('is_active', true)])])
+            ->latest()->get();
 
         return view('buyer.wishlist', compact('items'));
     }

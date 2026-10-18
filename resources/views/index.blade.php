@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="{{ asset('css/product-rating.css') }}?v={{ filemtime(public_path('css/product-rating.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/category-tags.css') }}?v={{ filemtime(public_path('css/category-tags.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/product-card-description.css') }}?v={{ filemtime(public_path('css/product-card-description.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/shop-card.css') }}?v={{ filemtime(public_path('css/shop-card.css')) }}">
     @include('partials.theme-head')
 </head>
 <body>
@@ -119,42 +120,9 @@
         </div>
 
         @if($newArrivals->isNotEmpty())
-            <div class="home-product-grid">
+            <div class="product-grid">
                 @foreach($newArrivals as $product)
-                    <article class="home-product-card" data-product-url="{{ route('products.show', $product) }}">
-                        <a href="{{ route('products.show', $product) }}" class="home-product-image">
-                            @include('partials.product-card-image', ['product' => $product])
-                            @if($product->badge)
-                                <span class="home-product-badge">{{ $product->badge }}</span>
-                            @endif
-                        </a>
-                        <div class="home-product-info">
-                            @include('partials.category-tags', ['href' => fn ($key) => route('products.index', ['category' => $key])])
-                            <h3><a href="{{ route('products.show', $product) }}">{{ $product->name }}</a></h3>
-                            @include('partials.product-card-description')
-                            @include('partials.product-rating')
-                            <div class="home-product-price">
-                                <span>₱{{ number_format($product->price, 2) }}</span>
-                                @if($product->original_price)
-                                    <del>₱{{ number_format($product->original_price, 2) }}</del>
-                                    <small>{{ $product->discount_percentage }}% off</small>
-                                @endif
-                            </div>
-                            @if(auth()->check() && auth()->user()->role === 'buyer')
-                                @if($product->active_variants_count)
-                                    <a href="{{ route('products.show', $product) }}" class="home-add-button">Choose options</a>
-                                @else
-                                    <form data-cart-add method="POST" action="{{ route('buyer.cart.add', $product) }}">
-                                        @csrf
-                                        <input type="hidden" name="quantity" value="1" />
-                                        <button type="submit" class="home-add-button"><i class="fas fa-shopping-bag" aria-hidden="true"></i> Add to bag</button>
-                                    </form>
-                                @endif
-                            @else
-                                <a href="{{ route('products.show', $product) }}" class="home-add-button">View product</a>
-                            @endif
-                        </div>
-                    </article>
+                    @include('partials.shop-card', ['product' => $product])
                 @endforeach
             </div>
         @else
