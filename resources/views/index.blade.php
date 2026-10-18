@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="{{ asset('css/style.css') }}?v={{ filemtime(public_path('css/style.css')) }}" />
     <link rel="stylesheet" href="{{ asset('css/home.css') }}?v={{ filemtime(public_path('css/home.css')) }}" />
 <link rel="stylesheet" href="{{ asset('css/product-rating.css') }}?v={{ filemtime(public_path('css/product-rating.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/category-tags.css') }}?v={{ filemtime(public_path('css/category-tags.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/product-card-description.css') }}?v={{ filemtime(public_path('css/product-card-description.css')) }}">
     @include('partials.theme-head')
 </head>
@@ -128,7 +129,7 @@
                             @endif
                         </a>
                         <div class="home-product-info">
-                            <p class="home-product-category">{{ $product->category_label }}</p>
+                            @include('partials.category-tags', ['href' => fn ($key) => route('products.index', ['category' => $key])])
                             <h3><a href="{{ route('products.show', $product) }}">{{ $product->name }}</a></h3>
                             @include('partials.product-card-description')
                             @include('partials.product-rating')

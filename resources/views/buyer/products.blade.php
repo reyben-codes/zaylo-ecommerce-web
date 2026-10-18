@@ -26,7 +26,7 @@
                     @if($product->badge)<span class="product-badge">{{ $product->badge }}</span>@endif
                 </a>
                 <div class="product-info">
-                    <p class="product-category">{{ $product->category_label }}</p>
+                    @include('partials.category-tags', ['href' => fn ($key) => route('products.index', ['category' => $key])])
                     <h2 class="product-name"><a href="{{ route('products.show', $product) }}">{{ $product->name }}</a></h2>
                     @include('partials.product-card-description')
                     @include('partials.product-rating')

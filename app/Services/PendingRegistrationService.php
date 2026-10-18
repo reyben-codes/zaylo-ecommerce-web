@@ -30,7 +30,13 @@ class PendingRegistrationService
     public const CODE_MINUTES = 5;
     public const MAX_ATTEMPTS = 5;
 
-    public function __construct(private SellerApplicationService $sellerApplications) {}
+    public function __construct(private SellerApplicationService $sellerApplications, private LogisticsApplicationService $logisticsApplications) {}
+
+    /** Upload fields any sign-up may send; only those validated for the chosen role are kept. */
+    private static function documentFields(): array
+    {
+        return array_unique(array_merge(array_keys(SellerApplication::DOCUMENTS), array_keys(Rider::DOCUMENTS), array_keys(LogisticsProvider::DOCUMENTS)));
+    }
 
     public function available(): bool
     {
@@ -63,7 +69,7 @@ class PendingRegistrationService
 
         $token = Str::random(64);
         $documents = [];
-        foreach (array_merge(array_keys(SellerApplication::DOCUMENTS), array_keys(Rider::DOCUMENTS)) as $field) {
+        foreach (self::documentFields() as $field) {
             if ($request->hasFile($field) && array_key_exists($field, $validated)) {
                 $documents[$field] = $request->file($field)->store("pending-registrations/{$token}", 'local');
             }
@@ -154,7 +160,7 @@ class PendingRegistrationService
             'role' => $validated['role'],
         ]);
         $documents = [];
-        foreach (array_merge(array_keys(SellerApplication::DOCUMENTS), array_keys(Rider::DOCUMENTS)) as $field) {
+        foreach (self::documentFields() as $field) {
             if ($request->hasFile($field) && array_key_exists($field, $validated)) {
                 $documents[$field] = $request->file($field)->store("pending-registrations/{$pending->token}", 'local');
             }
@@ -197,6 +203,9 @@ class PendingRegistrationService
             User::where('phone', $data['phone'])->exists() => 'This mobile number was registered by another account in the meantime.',
             $pending->role === 'seller' && isset($data['shop_name']) && $this->sellerApplications->shopNameTaken($data['shop_name']) => 'Your shop name was taken by another seller in the meantime.',
             $pending->role === 'seller' && isset($data['tin']) && $this->sellerApplications->available() && SellerApplication::where('tin', $data['tin'])->exists() => 'Your TIN was registered by another seller in the meantime.',
+            $pending->role === 'logistics' && isset($data['company_name']) && $this->logisticsApplications->companyNameTaken($data['company_name']) => 'Your company name was registered by another logistics partner in the meantime.',
+            $pending->role === 'logistics' && isset($data['sec_registration_no']) && LogisticsProvider::where('sec_registration_no', $data['sec_registration_no'])->exists() => 'Your SEC registration number was registered by another logistics partner in the meantime.',
+            $pending->role === 'logistics' && isset($data['tin']) && LogisticsProvider::where('tin', $data['tin'])->exists() => 'Your TIN was registered by another business in the meantime.',
             $pending->role === 'courier' && ! empty($data['license_number']) && Rider::where('license_number', $data['license_number'])->exists() => "Your driver's license number was registered by another rider in the meantime.",
             $pending->role === 'courier' && ! empty($data['plate_no']) && Rider::where('plate_no', $data['plate_no'])->exists() => 'Your plate number was registered by another rider in the meantime.',
             $pending->role === 'courier' && ! LogisticsProvider::acceptingRiders()->whereKey($data['logistics_provider_id'] ?? 0)->exists() => 'That logistics partner is no longer accepting riders.',
@@ -225,7 +234,11 @@ class PendingRegistrationService
         ]);
         $user->forceFill(['email_verified_at' => now()])->save();
 
-        $documents = $this->moveDocuments($pending, $role === 'seller' ? "seller-applications/{$user->id}" : "riders/{$user->id}");
+        $documents = $this->moveDocuments($pending, match ($role) {
+            'seller' => "seller-applications/{$user->id}",
+            'logistics' => "logistics-applications/{$user->id}",
+            default => "riders/{$user->id}",
+        });
 
         if ($role === 'seller') {
             $applying = isset($data['shop_name']) && $this->sellerApplications->available();
@@ -235,7 +248,9 @@ class PendingRegistrationService
             }
         }
 
-        if ($role === 'logistics') {
+        if ($role === 'logistics' && isset($data['sec_registration_no']) && $this->logisticsApplications->available()) {
+            $this->logisticsApplications->save($user, null, $data, $data['pickup_names'] ?? [], null, $documents);
+        } elseif ($role === 'logistics') {
             LogisticsProvider::create([
                 'user_id' => $user->id,
                 'name' => $data['company_name'],

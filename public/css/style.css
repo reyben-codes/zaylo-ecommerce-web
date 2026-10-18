@@ -261,12 +261,6 @@ body {
     line-height: 1.45;
     color: var(--c-1a1714);
 }
-.product-card .product-category, .flash-product .product-category {
-    font-size: 0.65rem;
-    color: var(--c-6b5f54);
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-}
 .product-price { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .current-price { font-size: 0.95rem; font-weight: 600; }
 .product-badge { position: absolute; top: 10px; left: 10px; padding: 4px 10px; background: var(--c-1a1714); color: var(--c-ffffff); font-size: 0.6rem; }
@@ -1176,14 +1170,6 @@ th { color: var(--c-6b5f54); font-size: .72rem; text-transform: uppercase; lette
 .home-product-info > form,
 .home-product-info > .home-add-button { margin-top: auto; }
 
-.home-product-category {
-    margin-bottom: 6px;
-    color: var(--c-8a7a6b);
-    font-size: 0.64rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-}
-
 .home-product-info h3 {
     margin: 0;
     color: var(--c-1a1714);
@@ -1538,7 +1524,6 @@ th { color: var(--c-6b5f54); font-size: .72rem; text-transform: uppercase; lette
     .product-card .card-actions { flex-wrap: wrap; }
     .product-card .card-actions > form:first-child, .product-card .card-actions > a { flex-basis: 100%; }
     .home-product-info { padding-top: 13px; }
-    .home-product-category { font-size: 0.58rem; }
     .home-product-info h3 { font-size: 0.84rem; }
     .home-product-price { align-items: flex-start; align-content: flex-start; flex-direction: column; gap: 1px; min-height: 2.8em; font-size: 0.86rem; }
     .home-add-button { min-height: 38px; padding-inline: 6px; font-size: 0.6rem; }

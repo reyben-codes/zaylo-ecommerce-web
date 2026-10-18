@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Shipment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 
 class CourierController extends Controller
@@ -15,6 +16,8 @@ class CourierController extends Controller
 
         return view('courier.dashboard', [
             'user' => auth()->user(),
+            // The logistics partner this rider delivers for.
+            'company' => Schema::hasTable('riders') ? auth()->user()->rider?->provider?->name : null,
             'availableCount' => $sellerManaged ? 0 : Shipment::whereNull('courier_id')->where('status', 'ready')->count(),
             'activeCount' => Shipment::where('courier_id', auth()->id())->whereNotIn('status', ['delivered', 'cancelled'])->count(),
             'completedCount' => Shipment::where('courier_id', auth()->id())->where('status', 'delivered')->count(),

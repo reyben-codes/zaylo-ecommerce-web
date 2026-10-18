@@ -45,6 +45,92 @@ class MarketplaceFlowTest extends TestCase
             ->assertDontSee($electronics->name);
     }
 
+    public function test_a_product_appears_under_each_of_its_categories(): void
+    {
+        $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);
+
+        $this->actingAs($seller)->post(route('seller.products.store'), [
+            'name' => 'Digital Rice Cooker',
+            'category' => 'electronics',
+            'additional_categories' => ['kitchen_dining', 'electronics'],
+            'price' => 1899,
+            'stock' => 5,
+            'low_stock_threshold' => 2,
+            'is_active' => 1,
+        ])->assertSessionHasNoErrors();
+        $cooker = Product::where('name', 'Digital Rice Cooker')->firstOrFail();
+        $shirt = $this->product(overrides: ['name' => 'Everyday Shirt']);
+
+        // The main category is not stored again as an extra one.
+        $this->assertSame(['electronics', 'kitchen_dining'], $cooker->category_keys);
+        auth()->logout();
+        foreach (['electronics', 'kitchen_dining'] as $category) {
+            $this->get(route('products.index', ['category' => $category]))
+                ->assertOk()->assertSee('Digital Rice Cooker')->assertDontSee('Everyday Shirt');
+        }
+        $this->get(route('products.index', ['category' => 'home_living']))->assertDontSee('Digital Rice Cooker');
+        $this->get(route('products.index', ['search' => 'kitchen']))->assertSee('Digital Rice Cooker');
+        // Every category shows as a tag linking to it: on the product page, shop cards and the home page.
+        $tags = ['<a class="category-tag" href="'.route('products.index', ['category' => 'electronics']).'">Electronics</a>',
+            '<a class="category-tag" href="'.route('products.index', ['category' => 'kitchen_dining']).'">Kitchen &amp; Dining</a>'];
+        $this->get(route('products.show', $cooker))->assertSeeInOrder($tags, false);
+        $this->get(route('products.index', ['category' => 'kitchen_dining']))->assertSeeInOrder($tags, false);
+        $this->get(route('home'))->assertSeeInOrder($tags, false);
+        $this->actingAs($seller)->get(route('seller.products'))
+            ->assertSee('<a class="category-tag" href="'.route('seller.products', ['category' => 'kitchen_dining']).'">Kitchen &amp; Dining</a>', false);
+        auth()->logout();
+
+        // Unticking every extra category removes them.
+        $this->actingAs($seller)->put(route('seller.products.update', $cooker), [
+            'name' => 'Digital Rice Cooker', 'category' => 'electronics', 'low_stock_threshold' => 2, 'is_active' => 1,
+        ])->assertSessionHasNoErrors();
+        $this->assertSame(['electronics'], $cooker->fresh()->category_keys);
+        $this->assertNotNull($shirt);
+    }
+
+    public function test_sellers_tick_one_or_more_categories_instead_of_a_dropdown(): void
+    {
+        $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);
+        $this->actingAs($seller)->get(route('seller.products.create'))->assertOk()
+            ->assertSee('name="categories[]"', false)
+            ->assertDontSee('name="category"', false)
+            ->assertDontSee('name="additional_categories[]"', false);
+
+        $payload = ['name' => 'Steel Kettle', 'price' => 999, 'stock' => 4, 'is_active' => 1];
+        $this->post(route('seller.products.store'), $payload)->assertSessionHasErrors(['categories' => 'Choose at least one category.']);
+        $this->post(route('seller.products.store'), $payload + ['categories' => []])->assertSessionHasErrors('categories');
+        $this->post(route('seller.products.store'), $payload + ['categories' => ['weapons']])->assertSessionHasErrors('categories.0');
+        $this->assertSame(0, Product::count());
+
+        // With no registered shop category, the first ticked one is the main category.
+        $this->post(route('seller.products.store'), $payload + ['categories' => ['kitchen_dining', 'home_living']])->assertSessionHasNoErrors();
+        $kettle = Product::where('name', 'Steel Kettle')->firstOrFail();
+        $this->assertSame(['kitchen_dining', 'home_living'], $kettle->category_keys);
+        $this->get(route('seller.products.edit', $kettle))->assertOk()
+            ->assertSee('name="categories[]" value="home_living" checked', false)
+            ->assertDontSee('name="categories[]" value="electronics" checked', false);
+
+        // Editing keeps the main category while it stays ticked, and moves it when it is unticked.
+        $this->put(route('seller.products.update', $kettle), $payload + ['categories' => ['electronics', 'home_living', 'kitchen_dining']])->assertSessionHasNoErrors();
+        $this->assertSame(['kitchen_dining', 'electronics', 'home_living'], $kettle->fresh()->category_keys);
+        $this->put(route('seller.products.update', $kettle), $payload + ['categories' => ['electronics', 'home_living']])->assertSessionHasNoErrors();
+        $this->assertSame(['electronics', 'home_living'], $kettle->fresh()->category_keys);
+    }
+
+    public function test_the_main_category_follows_the_sellers_registered_shop_category(): void
+    {
+        $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);
+        \App\Models\SellerApplication::create(['user_id' => $seller->id, 'shop_name' => 'Home Shop', 'shop_category' => 'home_living', 'seller_type' => 'individual',
+            'tin' => '123-456-789-000', 'region_code' => '130000000', 'region_name' => 'NCR', 'city_code' => '137404000', 'city_name' => 'Quezon City',
+            'barangay_code' => '137404001', 'barangay_name' => 'Alicia', 'street_address' => '2F', 'postal_code' => '1121']);
+
+        $this->actingAs($seller)->post(route('seller.products.store'), [
+            'name' => 'Rice Cooker', 'price' => 1500, 'stock' => 3, 'is_active' => 1, 'categories' => ['electronics', 'home_living'],
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame(['home_living', 'electronics'], Product::where('name', 'Rice Cooker')->firstOrFail()->category_keys);
+    }
+
     public function test_sellers_can_list_products_outside_fashion(): void
     {
         $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);
@@ -85,12 +171,15 @@ class MarketplaceFlowTest extends TestCase
 
     public function test_pending_marketplace_accounts_cannot_open_dashboards(): void
     {
-        // Pending sellers are kept on their application page; other pending partners are signed out.
+        // Pending sellers and logistics partners are kept on their application page; suspended partners are signed out.
         $seller = User::factory()->create(['role' => 'seller', 'status' => 'pending']);
         $this->actingAs($seller)->get(route('seller.dashboard'))->assertRedirect(route('seller.application'));
 
         $partner = User::factory()->create(['role' => 'logistics', 'status' => 'pending']);
-        $this->actingAs($partner)->get(route('logistics.dashboard'))->assertRedirect(route('logistics.login'));
+        $this->actingAs($partner)->get(route('logistics.dashboard'))->assertRedirect(route('logistics.application'));
+
+        $suspended = User::factory()->create(['role' => 'logistics', 'status' => 'suspended']);
+        $this->actingAs($suspended)->get(route('logistics.dashboard'))->assertRedirect(route('logistics.login'));
         $this->assertGuest();
     }
 

@@ -199,6 +199,25 @@ class User extends Authenticatable implements MustVerifyEmail
             && Schema::hasTable('seller_applications');
     }
 
+    /**
+     * A logistics partner whose application is under review or was rejected; they may only use the application page.
+     */
+    public function awaitsLogisticsApproval(): bool
+    {
+        return $this->hasRole('logistics') && in_array($this->status, ['pending', 'rejected'], true)
+            && Schema::hasColumn('logistics_providers', 'sec_registration_no');
+    }
+
+    /** Where an applicant under review is sent instead of their workspace, or null. */
+    public function applicationRoute(): ?string
+    {
+        return match (true) {
+            $this->awaitsSellerApproval() => 'seller.application',
+            $this->awaitsLogisticsApproval() => 'logistics.application',
+            default => null,
+        };
+    }
+
     public function sellerApplication(): HasOne
     {
         return $this->hasOne(SellerApplication::class);

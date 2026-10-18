@@ -40,7 +40,7 @@
             @php
                 $defaultPrice = number_format((float) ($group->first()?->regular_price ?? $product->regular_price), 2, '.', '');
                 $groupStock = (int) $group->sum('stock');
-                $low = $group->contains(fn ($variant) => $variant->stock > 0 && $variant->stock <= ($variant->low_stock_threshold ?? $product->low_stock_threshold));
+                $low = $group->contains(fn ($variant) => $variant->stock > 0 && $variant->stock <= $product->low_stock_threshold);
                 $groupState = $group->isEmpty() ? null : ($groupStock <= 0 ? ['out', 'Sold out'] : ($low ? ['low', 'Low stock'] : ['in', 'In stock']));
                 $photo = $photoFor((string) $color);
                 $swatch = $photo || $color === '' ? null : \App\Models\ProductVariant::swatchFor((string) $color);
@@ -88,7 +88,7 @@
                             <small title="{{ $variant->sku }}">{{ $variant->sku }}</small>
                             @if($variant->stock <= 0)
                                 <em class="is-out" title="Sold out"><span aria-hidden="true">Out</span><span class="sr-only">Sold out</span></em>
-                            @elseif($variant->stock <= ($variant->low_stock_threshold ?? $product->low_stock_threshold))
+                            @elseif($variant->stock <= $product->low_stock_threshold)
                                 <em title="Low stock"><span aria-hidden="true">Low</span><span class="sr-only">Low stock</span></em>
                             @endif
                         </span>

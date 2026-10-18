@@ -49,16 +49,24 @@
                         <p class="seller-field__help">Your own stock code. Must be unique.</p>
                         @if($fieldError('sku'))<p class="seller-field__error">{{ $errors->first('sku') }}</p>@endif
                     </div>
-                    <div class="seller-field">
-                        <label for="productCategory">Category</label>
-                        <select id="productCategory" name="category" required @if($fieldError('category')) aria-invalid="true" @endif>
-                            <option value="">Select category</option>
+                    @php
+                        $chosenCategories = (array) old('categories', $product?->category_keys ?? []);
+                        $categoryError = $fieldError('categories') ? $errors->first('categories') : ($errors->has('categories.*') ? $errors->first('categories.*') : null);
+                    @endphp
+                    <fieldset class="seller-field seller-field--full product-form__categories" data-categories aria-describedby="productCategoriesHelp"
+                              @if($categoryError) aria-invalid="true" @endif>
+                        <legend>Categories</legend>
+                        <p class="seller-field__help" id="productCategoriesHelp">Tick every category buyers should find this in, e.g. a rice cooker under Electronics and Kitchen &amp; Dining. Choose at least one.</p>
+                        <div class="product-form__category-options">
                             @foreach($categories as $key => $label)
-                                <option value="{{ $key }}" @selected($value('category', $product?->category_key) === $key)>{{ $label }}</option>
+                                <label class="product-form__category-option">
+                                    <input type="checkbox" name="categories[]" value="{{ $key }}" @checked(in_array($key, $chosenCategories, true))>
+                                    <span>{{ $label }}</span>
+                                </label>
                             @endforeach
-                        </select>
-                        @if($fieldError('category'))<p class="seller-field__error">{{ $errors->first('category') }}</p>@endif
-                    </div>
+                        </div>
+                        <p class="seller-field__error" data-categories-error @if(! $categoryError) hidden @endif>{{ $categoryError }}</p>
+                    </fieldset>
                     <div class="seller-field">
                         <label for="productGender">For</label>
                         <select id="productGender" name="gender">
@@ -78,22 +86,6 @@
                         </select>
                         <p class="seller-field__help">"Sale" is added automatically during a scheduled sale.</p>
                     </div>
-                    @unless($product)
-                        <div class="seller-field seller-field--full" data-color-labels>
-                            <label for="productColors">Colors <span class="seller-field__optional">Optional</span></label>
-                            <input id="productColors" name="colors" value="{{ $value('colors') }}" maxlength="600" placeholder="e.g. Black, White, Olive" autocomplete="off" aria-describedby="productColorsHelp" @if($fieldError('colors')) aria-invalid="true" @endif>
-                            <div class="color-labels" data-color-chips hidden>
-                                @foreach(config('marketplace.color_presets') as $preset)
-                                    <button type="button" class="color-label" data-color-chip="{{ $preset }}" aria-pressed="false">
-                                        <span class="color-label__swatch" style="--swatch: {{ \App\Models\ProductVariant::swatchFor($preset) }}" aria-hidden="true"></span>
-                                        {{ $preset }}
-                                    </button>
-                                @endforeach
-                            </div>
-                            <p class="seller-field__help" id="productColorsHelp">Separate colors with commas. Each color starts with the price and stock above, and you can add sizes per color after saving.</p>
-                            @if($fieldError('colors'))<p class="seller-field__error">{{ $errors->first('colors') }}</p>@endif
-                        </div>
-                    @endunless
                     <div class="seller-field seller-field--full">
                         <label for="productDescription">Description</label>
                         <textarea id="productDescription" name="description" maxlength="2000" rows="6" @if($fieldError('description')) aria-invalid="true" @endif>{{ $value('description', $product?->description) }}</textarea>
@@ -111,7 +103,8 @@
                     @else
                         <div class="seller-field">
                             <label for="productPrice">Regular price (&#8369;)</label>
-                            <input type="number" id="productPrice" name="price" value="{{ $value('price', $product?->regular_price) }}" min="0" max="99999999.99" step="0.01" required @if($fieldError('price')) aria-invalid="true" @endif>
+                            <input type="number" id="productPrice" name="price" value="{{ $value('price', $product?->regular_price) }}" min="0" max="99999999.99" step="0.01" required data-main-price @if($fieldError('price')) aria-invalid="true" @endif>
+                            @unless($product)<p class="seller-field__help" data-main-price-note hidden>Used for any color or size below that has no price of its own.</p>@endunless
                             @if($fieldError('price'))<p class="seller-field__error">{{ $errors->first('price') }}</p>@endif
                         </div>
                     @endif
@@ -127,16 +120,12 @@
                     @unless($multiVariant)
                         <div class="seller-field">
                             <label for="productStock">Available stock</label>
-                            <input type="number" id="productStock" name="stock" value="{{ $value('stock', $product?->stock ?? 0) }}" min="0" max="1000000" required @if($fieldError('stock')) aria-invalid="true" @endif>
+                            <input type="number" id="productStock" name="stock" value="{{ $value('stock', $product?->stock ?? 0) }}" min="0" max="1000000" required aria-describedby="productStockHelp" data-main-stock @if($fieldError('stock')) aria-invalid="true" @endif>
+                            @unless($product)<p class="seller-field__help" data-main-stock-note hidden>Counted from your colors and sizes below.</p>@endunless
+                            <p class="seller-field__help" id="productStockHelp">Shown as "Low stock" at {{ \App\Models\Product::lowStockThreshold() }} or fewer.</p>
                             @if($fieldError('stock'))<p class="seller-field__error">{{ $errors->first('stock') }}</p>@endif
                         </div>
                     @endunless
-                    <div class="seller-field">
-                        <label for="productThreshold">Low stock alert</label>
-                        <input type="number" id="productThreshold" name="low_stock_threshold" value="{{ $value('low_stock_threshold', $product?->low_stock_threshold ?? 5) }}" min="0" max="100000" required @if($fieldError('low_stock_threshold')) aria-invalid="true" @endif>
-                        <p class="seller-field__help">Shown as "Low stock" in Inventory at or below this number.</p>
-                        @if($fieldError('low_stock_threshold'))<p class="seller-field__error">{{ $errors->first('low_stock_threshold') }}</p>@endif
-                    </div>
                     <div class="seller-field">
                         <label for="productWeight">Weight (grams)</label>
                         <input type="number" id="productWeight" name="weight_grams" value="{{ $value('weight_grams', $product?->weight_grams) }}" min="0" max="1000000">
@@ -145,15 +134,46 @@
                 </div>
             </section>
 
+            @unless($product)
+                @include('seller.partials.new-product-options')
+            @endunless
+
             <section class="seller-panel" aria-labelledby="photo-heading">
-                <header class="seller-panel__header"><div><h2 id="photo-heading">Photo</h2><p>The main picture on the product page and in search.</p></div></header>
+                <header class="seller-panel__header"><div><h2 id="photo-heading">Photos</h2><p>The main photo shows first in search and on the product page; buyers swipe through the rest.</p></div></header>
                 <div class="seller-panel__body product-form__photo">
                     <img src="{{ $product?->image_url ?: asset('images/ZAYLO_LOGO_DARK.png') }}" alt="" class="product-form__preview{{ $product?->image_url ? '' : ' is-placeholder' }}" data-image-preview data-fallback-src="{{ asset('images/ZAYLO_LOGO_DARK.png') }}">
                     <div class="seller-field">
-                        <label for="productImage">{{ $product?->image_url ? 'Replace photo' : 'Upload photo' }}</label>
+                        <label for="productImage">{{ $product?->image_url ? 'Replace main photo' : 'Upload main photo' }}</label>
                         <input type="file" id="productImage" name="image" accept="image/jpeg,image/png,image/webp" data-image-input @if($fieldError('image')) aria-invalid="true" @endif>
                         <p class="seller-field__help">JPG, PNG, or WebP up to 5 MB.{{ $product ? ' Leave empty to keep the current photo.' : '' }}</p>
                         @if($fieldError('image'))<p class="seller-field__error">{{ $errors->first('image') }}</p>@endif
+                    </div>
+                </div>
+                @php
+                    $extraPhotos = $product ? $product->extra_photos : collect();
+                    $removing = array_map('intval', (array) old('remove_photos', []));
+                    $photoError = $fieldError('photos') ? $errors->first('photos') : ($errors->has('photos.*') ? $errors->first('photos.*') : null);
+                @endphp
+                <div class="seller-panel__body product-form__gallery" data-photo-gallery data-max="9" data-per-upload="6" data-existing="{{ $extraPhotos->count() }}">
+                    <div class="seller-field">
+                        <label for="productPhotos">More photos <span class="product-form__optional">(optional)</span></label>
+                        <p class="seller-field__help" id="productPhotosHelp">Add up to 9 more photos, 6 at a time. JPG, PNG, or WebP up to 5 MB each.</p>
+                        @if($extraPhotos->isNotEmpty())
+                            <ul class="product-form__photo-grid" aria-label="Current photos">
+                                @foreach($extraPhotos as $photo)
+                                    <li class="product-form__photo-item">
+                                        <img src="{{ $photo->path }}" alt="Photo {{ $loop->iteration + 1 }} of {{ $product->name }}" loading="lazy">
+                                        <label class="product-form__photo-remove">
+                                            <input type="checkbox" name="remove_photos[]" value="{{ $photo->id }}" data-photo-remove @checked(in_array($photo->id, $removing, true))>
+                                            <span>Remove</span>
+                                        </label>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @endif
+                        <ul class="product-form__photo-grid" data-photo-previews aria-label="Photos to upload" hidden></ul>
+                        <input type="file" id="productPhotos" name="photos[]" accept="image/jpeg,image/png,image/webp" multiple data-photo-input aria-describedby="productPhotosHelp" @if($photoError) aria-invalid="true" @endif>
+                        <p class="seller-field__error" data-photo-message role="status" @if(! $photoError) hidden @endif>{{ $photoError }}</p>
                     </div>
                 </div>
             </section>
@@ -210,7 +230,7 @@
                 <section class="seller-panel">
                     <header class="seller-panel__header"><h2>After you create it</h2></header>
                     <ul class="seller-panel__body product-form__tips">
-                        <li>Add more colors, and sizes per color, each with its own price and stock.</li>
+                        <li>Change or add colors and sizes anytime, each with its own price and stock.</li>
                         <li>Schedule sales with a start and end time.</li>
                         <li>Restock anytime from Inventory.</li>
                         <li>Hide it from buyers without deleting it.</li>

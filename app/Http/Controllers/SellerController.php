@@ -15,6 +15,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -63,6 +64,11 @@ class SellerController extends Controller
         'delivered' => ['delivered', 'completed'],
         'cancelled' => ['cancelled'],
     ];
+
+    // A product shows its main photo plus up to this many more; each save uploads at most PHOTOS_PER_UPLOAD
+    // so a full form stays under the server's 40 MB post limit.
+    private const MAX_EXTRA_PHOTOS = 9;
+    private const PHOTOS_PER_UPLOAD = 6;
 
     public const STATUS_LABELS = [
         'placed' => 'Placed',
@@ -114,19 +120,28 @@ class SellerController extends Controller
 
     public function storeProduct(Request $request)
     {
+        $options = $this->newProductOptions($request);
+        if ($options !== []) {
+            // With options, the listing price is the cheapest option and stock is their total.
+            $request->merge(['price' => min(array_column($options, 'price')), 'stock' => array_sum(array_column($options, 'stock'))]);
+        }
         $data = $this->validatedProduct($request);
-        $colors = $this->colorList($request);
         $data = $this->storeProductImage($request, $data);
-        $product = DB::transaction(function () use ($data, $colors, $request) {
+        $extraCategories = Arr::pull($data, 'additional_categories') ?? [];
+        $product = DB::transaction(function () use ($data, $options, $request, $extraCategories) {
             $product = Product::create($data + ['seller_id' => $this->shopId(), 'is_active' => $request->boolean('is_active', true)]);
-            $this->createColorOptions($product, $colors);
+            $product->syncAdditionalCategories($extraCategories);
+            $this->saveExtraPhotos($request, $product);
+            $this->createProductOptions($product, $options);
 
             return $product;
         });
 
-        return redirect()->route('seller.products.edit', $product)->with('status', $colors
-            ? 'Product created in '.count($colors).' '.Str::plural('color', count($colors)).'. Set each color\'s sizes, price and stock below.'
-            : 'Product created. You can schedule a sale or add variation stock below.');
+        $count = count($options);
+
+        return redirect()->route('seller.products.edit', $product)->with('status', $count
+            ? 'Product created with '.$count.' '.Str::plural('option', $count).'. You can change sizes, prices and stock below anytime.'
+            : 'Product created. You can schedule a sale or add colors and sizes below.');
     }
 
     public function updateProduct(Request $request, Product $product)
@@ -134,7 +149,13 @@ class SellerController extends Controller
         $this->authorize('update', $product);
         $data = $this->validatedProduct($request, $product);
         $data = $this->storeProductImage($request, $data, $product);
-        $product->update($data + ['is_active' => $request->boolean('is_active')]);
+        $extraCategories = Arr::pull($data, 'additional_categories') ?? [];
+        $removePhotos = array_map('intval', Arr::pull($data, 'remove_photos') ?? []);
+        DB::transaction(function () use ($product, $data, $request, $extraCategories, $removePhotos) {
+            $product->update($data + ['is_active' => $request->boolean('is_active')]);
+            $product->syncAdditionalCategories($extraCategories);
+            $this->saveExtraPhotos($request, $product, $removePhotos);
+        });
 
         return back()->with('status', 'Product updated successfully.');
     }
@@ -504,7 +525,7 @@ class SellerController extends Controller
                 $variant = new ProductVariant(['product_id' => $product->id, 'is_active' => true, 'stock' => $row['stock']]
                     + $priceColumn($row['price']) + ['sku' => $this->variantSku($base?->sku ?? $product->sku, $row['size'] ?? (string) $row['color'])]);
                 $variant->fill($optionColumns(null, $row['color'], $row['size'])
-                    + ($legacy ? [] : ['low_stock_threshold' => $base?->low_stock_threshold ?? $product->low_stock_threshold]));
+                    + ($legacy ? [] : ['low_stock_threshold' => Product::lowStockThreshold()]));
                 $variant->save();
             }
 
@@ -528,7 +549,105 @@ class SellerController extends Controller
     }
 
     /**
-     * Colors typed on the add-product form ("Black, White, Olive"): trimmed, de-duplicated ignoring case.
+     * Colors and sizes entered on the add-product form, as one row per option: [color, size, price, stock].
+     * A color without sizes is sold as a single option; an unnamed list holds sizes only. Empty when none were entered.
+     */
+    private function newProductOptions(Request $request): array
+    {
+        $request->validate([
+            'options' => 'sometimes|array|max:20',
+            'options.*.color' => 'nullable|string|max:40',
+            'options.*.sizes' => 'sometimes|array|max:30',
+            'options.*.sizes.*.size' => 'nullable|string|max:40',
+            'options.*.sizes.*.price' => 'nullable|numeric|min:0|max:99999999.99',
+            'options.*.sizes.*.stock' => 'nullable|integer|min:0|max:1000000',
+        ], [
+            'options.max' => 'Add up to 20 colors. You can add more after saving.',
+            'options.*.color.max' => 'Keep each color name to 40 characters or fewer.',
+            'options.*.sizes.max' => 'Add up to 30 sizes per color.',
+            'options.*.sizes.*.size.max' => 'Keep each size to 40 characters or fewer.',
+            'options.*.sizes.*.price.*' => 'Enter a price from 0 for every size.',
+            'options.*.sizes.*.stock.*' => 'Enter a whole-number stock from 0 for every size.',
+        ]);
+
+        $groups = collect($request->input('options', []))->map(function ($group) {
+            $color = filled($group['color'] ?? null) ? Str::squish($group['color']) : null;
+            $rows = collect($group['sizes'] ?? [])->values();
+            $sized = $rows->filter(fn ($row) => filled(trim((string) ($row['size'] ?? ''))));
+            if ($sized->isNotEmpty()) {
+                $rows = $sized->map(fn ($row) => ['size' => Str::squish($row['size'])] + $row);
+            } else {
+                // A named color with no sizes is one option, priced and stocked from its first row.
+                $rows = $color !== null ? collect([['size' => null] + ($rows->first() ?? [])]) : collect();
+            }
+
+            return ['color' => $color, 'rows' => $rows->values()];
+        })->filter(fn ($group) => $group['rows']->isNotEmpty())->values();
+
+        // The older comma-separated Colors field: one option per color at the product's price and stock.
+        if ($groups->isEmpty() && $request->filled('colors')) {
+            $groups = collect($this->colorList($request))->map(fn ($color) => [
+                'color' => $color, 'rows' => collect([['size' => null, 'stock' => $request->input('stock')]]),
+            ]);
+        }
+        if ($groups->isEmpty()) {
+            return [];
+        }
+
+        if ($groups->count() > 1 && $groups->contains('color', null)) {
+            throw ValidationException::withMessages(['options' => 'Name every color, so buyers can tell them apart.']);
+        }
+        if ($groups->pluck('color')->filter()->map(fn ($color) => Str::lower($color))->duplicates()->isNotEmpty()) {
+            throw ValidationException::withMessages(['options' => 'Each color can only be added once. Put all of its sizes in one card.']);
+        }
+        $fallbackPrice = $request->input('price');
+        $rows = [];
+        foreach ($groups as $group) {
+            $label = $group['color'] ?? 'this product';
+            if ($group['rows']->pluck('size')->filter()->map(fn ($size) => Str::lower($size))->duplicates()->isNotEmpty()) {
+                throw ValidationException::withMessages(['options' => "Each size can only be listed once for {$label}."]);
+            }
+            foreach ($group['rows'] as $row) {
+                $price = filled($row['price'] ?? null) ? $row['price'] : $fallbackPrice;
+                if (! is_numeric($price)) {
+                    throw ValidationException::withMessages(['options' => 'Enter a price for '.($row['size'] ? "{$label} size {$row['size']}" : $label).'.']);
+                }
+                $rows[] = ['color' => $group['color'], 'size' => $row['size'], 'price' => round((float) $price, 2), 'stock' => (int) ($row['stock'] ?? 0)];
+            }
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Turns a new product's colors and sizes into options; the default option it was created with becomes the first one.
+     */
+    private function createProductOptions(Product $product, array $rows): void
+    {
+        if ($rows === []) {
+            return;
+        }
+
+        $legacy = Product::usesLegacySchema();
+        $default = $legacy ? null : $product->variants()->oldest('id')->first();
+        foreach ($rows as $index => $row) {
+            $columns = ['name' => ProductVariant::nameFor($row['color'], $row['size']), 'stock' => $row['stock']] + ($legacy
+                ? ['color' => $row['color'], 'size' => $row['size'], 'price' => $row['price']]
+                : ['options' => array_filter(['color' => $row['color'], 'size' => $row['size']], fn ($value) => filled($value)), 'price_minor' => (int) round($row['price'] * 100)]);
+            if ($index === 0 && $default) {
+                $default->update($columns);
+                continue;
+            }
+            $variant = new ProductVariant(['product_id' => $product->id, 'is_active' => true,
+                'sku' => $this->variantSku($product->sku, implode('-', array_filter([$row['color'], $row['size']])))]);
+            $variant->fill($columns + ($legacy ? [] : ['low_stock_threshold' => Product::lowStockThreshold(), 'weight_grams' => $default?->weight_grams]));
+            $variant->save();
+        }
+        Product::syncStockFromVariants($product->id);
+    }
+
+    /**
+     * Colors typed in the older comma-separated field ("Black, White, Olive"): trimmed, de-duplicated ignoring case.
      */
     private function colorList(Request $request): array
     {
@@ -545,36 +664,6 @@ class SellerController extends Controller
         }
 
         return $colors->all();
-    }
-
-    /**
-     * A new product listed in colors gets one option per color, each starting at the product's price and stock.
-     */
-    private function createColorOptions(Product $product, array $colors): void
-    {
-        if ($colors === []) {
-            return;
-        }
-
-        $legacy = Product::usesLegacySchema();
-        $default = $legacy ? null : $product->variants()->oldest('id')->first();
-        foreach ($colors as $index => $color) {
-            $name = ProductVariant::nameFor($color, null);
-            if ($index === 0 && $default) {
-                // The default option the product was created with becomes its first color.
-                $default->update(['options' => ['color' => $color], 'name' => $name]);
-                continue;
-            }
-            $variant = new ProductVariant([
-                'product_id' => $product->id, 'is_active' => true, 'name' => $name, 'stock' => $product->stock,
-                'sku' => $this->variantSku($product->sku, $color),
-            ]);
-            $variant->fill($legacy
-                ? ['color' => $color, 'price' => $product->regular_price]
-                : ['options' => ['color' => $color], 'price_minor' => $default->price_minor, 'low_stock_threshold' => $default->low_stock_threshold, 'weight_grams' => $default->weight_grams]);
-            $variant->save();
-        }
-        Product::syncStockFromVariants($product->id);
     }
 
     private function variantSku(?string $base, string $size): string
@@ -708,9 +797,7 @@ class SellerController extends Controller
                     ->when($legacy, fn (Builder $q) => $q->orWhere('sku', 'like', $term))
                     ->when(! $legacy, fn (Builder $q) => $q->orWhereHas('variants', fn (Builder $variant) => $variant->where('sku', 'like', $term))));
             })
-            ->when(filled($filters['category']), fn (Builder $query) => $legacy
-                ? $query->where('category', $filters['category'])
-                : $query->whereHas('category', fn (Builder $category) => $category->where('slug', $filters['category'])))
+            ->when(filled($filters['category']), fn (Builder $query) => $query->inCategories([$filters['category']]))
             ->when($filters['stock'] !== 'all', fn (Builder $query) => $this->whereStock($query, $filters['stock']));
     }
 
@@ -722,8 +809,8 @@ class SellerController extends Controller
     private function withStockDetails(Builder $query): Builder
     {
         return Product::usesLegacySchema()
-            ? $query->with(['variants' => fn ($variants) => $this->forSale($variants)->orderBy('id')])
-            : $query->with(['category', 'images', 'defaultVariant', 'variants' => fn ($variants) => $this->forSale($variants)->orderBy('id')]);
+            ? $query->with(['additionalCategories', 'variants' => fn ($variants) => $this->forSale($variants)->orderBy('id')])
+            : $query->with(['category', 'additionalCategories', 'images', 'defaultVariant', 'variants' => fn ($variants) => $this->forSale($variants)->orderBy('id')]);
     }
 
     /**
@@ -739,19 +826,20 @@ class SellerController extends Controller
     }
 
     /**
-     * Stock states: "out" has nothing to sell, "low" has some stock at or under its alert level, "in" is healthy.
+     * Stock states: "out" has nothing to sell, "low" has some stock at or under the fixed alert level, "in" is healthy.
      */
     private function whereStock(Builder $query, string $state): Builder
     {
+        $threshold = Product::lowStockThreshold();
         if (Product::usesLegacySchema()) {
             return match ($state) {
                 'out' => $query->where('stock', '<=', 0),
-                'low' => $query->where('stock', '>', 0)->whereColumn('stock', '<=', 'low_stock_threshold'),
-                default => $query->whereColumn('stock', '>', 'low_stock_threshold'),
+                'low' => $query->where('stock', '>', 0)->where('stock', '<=', $threshold),
+                default => $query->where('stock', '>', $threshold),
             };
         }
 
-        $low = fn (Builder $variant) => $variant->where('stock', '>', 0)->whereColumn('stock', '<=', 'low_stock_threshold');
+        $low = fn (Builder $variant) => $variant->where('stock', '>', 0)->where('stock', '<=', $threshold);
 
         return match ($state) {
             'out' => $query->whereDoesntHave('variants', fn (Builder $variant) => $variant->where('stock', '>', 0)),
@@ -768,7 +856,7 @@ class SellerController extends Controller
         } else {
             $total = (int) $product->variants->sum('stock');
             $low = $product->variants->contains(fn (ProductVariant $variant) => $variant->stock > 0
-                && $variant->stock <= ($variant->low_stock_threshold ?? $product->low_stock_threshold));
+                && $variant->stock <= $product->low_stock_threshold);
         }
 
         return ['total' => $total, 'state' => $total <= 0 ? 'out' : ($low ? 'low' : 'in')];
@@ -921,20 +1009,28 @@ class SellerController extends Controller
     private function validatedProduct(Request $request, ?Product $product = null): array
     {
         $variantId = Product::usesLegacySchema() ? 'NULL' : ($product?->defaultVariant?->id ?? 'NULL');
-        return $request->validate([
+        // Older forms sent a main category plus extras; treat them as one list of ticked categories.
+        if (! $request->has('categories') && $request->filled('category')) {
+            $request->merge(['categories' => array_values(array_unique([$request->input('category'), ...(array) $request->input('additional_categories', [])]))]);
+        }
+        $data = $request->validate([
             'name' => 'required|string|max:150',
             'sku' => Product::usesLegacySchema()
                 ? 'nullable|string|max:80|unique:products,sku,'.($product?->id ?? 'NULL')
                 : "nullable|string|max:80|unique:product_variants,sku,{$variantId}",
-            'category' => ['required', Rule::in(array_keys(config('marketplace.categories')))],
+            'categories' => 'required|array|min:1|max:6',
+            'categories.*' => ['distinct', Rule::in(array_keys(config('marketplace.categories')))],
             'gender' => 'nullable|in:men,women,unisex',
             'description' => 'nullable|string|max:2000',
             'price' => ($product ? 'sometimes|' : '').'required|numeric|min:0|max:99999999.99',
             'original_price' => 'nullable|numeric|gte:price|max:99999999.99',
             'stock' => ($product ? 'sometimes|' : '').'required|integer|min:0|max:1000000',
-            'low_stock_threshold' => 'required|integer|min:0|max:100000',
             'weight_grams' => 'nullable|integer|min:0|max:1000000',
             'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'photos' => 'nullable|array|max:'.self::PHOTOS_PER_UPLOAD,
+            'photos.*' => 'image|mimes:jpg,jpeg,png,webp|max:5120',
+            'remove_photos' => 'nullable|array',
+            'remove_photos.*' => 'integer',
             'image_url' => [
                 'nullable',
                 'string',
@@ -946,7 +1042,76 @@ class SellerController extends Controller
                 },
             ],
             'badge' => 'nullable|in:New,Sale,Best Seller',
+        ], [
+            'categories.required' => 'Choose at least one category.',
+            'categories.min' => 'Choose at least one category.',
+            'categories.max' => 'Choose up to 6 categories.',
+            'categories.*.in' => 'Choose categories from the list.',
+            'photos.max' => 'Upload up to '.self::PHOTOS_PER_UPLOAD.' photos at a time.',
+            'photos.*.image' => 'Each photo must be a JPG, PNG, or WebP image.',
+            'photos.*.mimes' => 'Each photo must be a JPG, PNG, or WebP image.',
+            'photos.*.max' => 'Each photo must be 5 MB or smaller.',
         ]);
+        unset($data['photos']);
+        [$data['category'], $data['additional_categories']] = $this->splitCategories(array_values(array_unique($data['categories'])), $product);
+        unset($data['categories']);
+
+        $kept = $product ? $product->extra_photos->whereNotIn('id', array_map('intval', $data['remove_photos'] ?? []))->count() : 0;
+        if ($kept + count($request->file('photos', [])) > self::MAX_EXTRA_PHOTOS) {
+            throw ValidationException::withMessages(['photos' => 'A product can have up to '.(self::MAX_EXTRA_PHOTOS + 1).' photos: the main photo and '.self::MAX_EXTRA_PHOTOS.' more.']);
+        }
+
+        return $data;
+    }
+
+    /**
+     * Picks the main category from the ticked ones: the product's current one if still ticked, else one matching the
+     * seller's registered shop category (so compliance checks stay meaningful), else the first ticked. The rest are extras.
+     *
+     * @return array{0: string, 1: list<string>}
+     */
+    private function splitCategories(array $categories, ?Product $product): array
+    {
+        $shopCategory = auth()->user()?->sellerApplication?->shop_category;
+        $shopGroup = $shopCategory ? (config('marketplace.category_groups')[$shopCategory] ?? [$shopCategory]) : [];
+        $main = in_array($product?->category_key, $categories, true)
+            ? $product->category_key
+            : (collect($categories)->first(fn ($category) => in_array($category, $shopGroup, true)) ?? $categories[0]);
+
+        return [$main, array_values(array_diff($categories, [$main]))];
+    }
+
+    /** Removes the ticked gallery photos and appends newly uploaded ones after the existing photos. */
+    private function saveExtraPhotos(Request $request, Product $product, array $removeIds = []): void
+    {
+        $product->load('images');
+        foreach ($product->extra_photos->whereIn('id', $removeIds) as $image) {
+            $this->deleteStoredProductPhoto($image->path);
+            $image->delete();
+        }
+
+        $order = (int) $product->images()->max(Product::usesLegacySchema() ? 'sort_order' : 'position');
+        foreach ($request->file('photos', []) as $file) {
+            $product->images()->create([
+                'path' => Storage::url($file->store('products/'.auth()->id(), 'public')),
+                'alt_text' => $product->name,
+                'sort_order' => ++$order,
+            ]);
+        }
+        $product->unsetRelation('images');
+        // Without a main photo the first gallery photo stands in (the normalized schema already reads it that way).
+        if (Product::usesLegacySchema() && blank($product->image_url) && ($first = $product->images()->first())) {
+            $product->update(['image_url' => $first->path]);
+        }
+    }
+
+    /** Deletes an uploaded photo file; shared catalog images under /images are left alone. */
+    private function deleteStoredProductPhoto(?string $path): void
+    {
+        $relative = Str::startsWith((string) $path, '/storage/') ? Str::after($path, '/storage/') : null;
+        if ($relative && Storage::disk('public')->exists($relative)) {
+            Storage::disk('public')->delete($relative);
+        }
     }
 
     private function storeProductImage(Request $request, array $data, ?Product $product = null): array

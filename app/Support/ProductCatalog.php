@@ -18,20 +18,15 @@ class ProductCatalog
         return trim(preg_replace('/\s+/u', ' ', $search ?? ''));
     }
 
+    /** Matches the main or an additional category; "fashion" covers every fashion category. */
     public static function category(Builder $query, ?string $category): void
     {
         if (! $category) {
             return;
         }
-        if (Product::usesLegacySchema()) {
-            $category === 'fashion'
-                ? $query->whereIn('category', config('marketplace.fashion_categories'))
-                : $query->where('category', $category);
-        } else {
-            $category === 'fashion'
-                ? $query->whereHas('category', fn ($builder) => $builder->whereIn('slug', config('marketplace.fashion_categories')))
-                : $query->whereHas('category', fn ($builder) => $builder->where('slug', $category));
-        }
+        $query->inCategories($category === 'fashion'
+            ? config('marketplace.fashion_categories')
+            : [$category]);
     }
 
     /** Unisex items are for everyone, so they also appear under Men and Women. */
@@ -45,7 +40,7 @@ class ProductCatalog
             : $query->whereIn('gender', [$gender, 'unisex']);
     }
 
-    /** Every word must match the name, description, category or a SKU. */
+    /** Every word must match the name, description, a category or a SKU. */
     public static function search(Builder $query, string $search): void
     {
         if ($search === '') {
@@ -62,6 +57,7 @@ class ProductCatalog
                 } else {
                     $match->orWhereHas('category', fn ($category) => $category->whereRaw("LOWER(name) LIKE ? ESCAPE '!'", [$pattern]));
                 }
+                $match->orWhereHas('additionalCategories', fn ($extra) => $extra->whereRaw("LOWER(category) LIKE ? ESCAPE '!'", [$pattern]));
                 $match->orWhereHas('variants', fn ($variant) => $variant->where('is_active', true)->whereRaw("LOWER(sku) LIKE ? ESCAPE '!'", [$pattern]));
             });
         }

@@ -134,7 +134,7 @@
                 <div class="product-info">
                     <h3 class="product-name"><a href="{{ route('products.show', $product) }}">{{ $product->name }}</a></h3>
                     @include('partials.product-card-description')
-                    <p class="product-category">{{ $product->category_label }}</p>
+                    @include('partials.category-tags', ['href' => fn ($key) => route('products.index', ['category' => $key])])
                     @include('partials.product-rating')
                     <div class="product-price">
                         <span class="current-price">₱{{ number_format($product->price, 2) }}</span>
@@ -173,7 +173,7 @@
                 <div class="product-info">
                     <h3 class="product-name"><a href="{{ route('products.show', $product) }}">{{ $product->name }}</a></h3>
                     @include('partials.product-card-description')
-                    <p class="product-category">{{ $product->category_label }}</p>
+                    @include('partials.category-tags', ['href' => fn ($key) => route('products.index', ['category' => $key])])
                     @include('partials.product-rating')
                     <div class="product-price">
                         <span class="current-price">₱{{ number_format($product->price, 2) }}</span>

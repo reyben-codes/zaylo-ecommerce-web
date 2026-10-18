@@ -321,3 +321,37 @@
 .seller-application__group > .field-note {
     margin: 0 0 14px;
 }
+
+/* Logistics service areas: a grid of region checkboxes. */
+.service-areas {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 8px;
+}
+
+.service-area {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 10px;
+    border: 1px solid #e8e0d7;
+    border-radius: 8px;
+    font-size: .85rem;
+    cursor: pointer;
+}
+
+.service-area:has(input:checked) {
+    border-color: #1a1714;
+    background: #faf7f2;
+}
+
+.service-area input {
+    flex: none;
+    width: auto;
+    margin: 0;
+}
+
+.service-area:has(input:focus-visible) {
+    outline: 2px solid #1a1714;
+    outline-offset: 2px;
+}

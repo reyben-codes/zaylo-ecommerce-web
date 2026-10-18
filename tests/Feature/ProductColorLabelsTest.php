@@ -18,7 +18,7 @@ class ProductColorLabelsTest extends TestCase
         $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);
 
         $this->actingAs($seller)->get(route('seller.products.create'))->assertOk()
-            ->assertSee('name="colors"', false)->assertSee('data-color-chip="Navy"', false);
+            ->assertSee('name="options[0][color]"', false)->assertSee('data-option-chip="Navy"', false);
 
         $this->post(route('seller.products.store'), [
             'name' => 'Canvas Tote', 'category' => 'bags', 'price' => 650, 'stock' => 8, 'low_stock_threshold' => 2, 'is_active' => 1,

@@ -33,6 +33,8 @@ class DriveProductCatalogTest extends TestCase
         $this->assertSame(1, Product::where('name', 'Touchscreen Air Fryer')->firstOrFail()->images()->count());
         $this->assertSame(1, Product::where('name', 'Compact Black Air Fryer')->firstOrFail()->images()->count());
         $this->assertTrue(Product::where('name', 'Nike Dunk Low Retro Panda')->firstOrFail()->is_active);
+        $this->assertSame(['electronics', 'kitchen_dining'], Product::where('name', 'Touchscreen Air Fryer')->firstOrFail()->category_keys);
+        $this->assertSame(['electronics'], Product::where('name', 'Neilsen CT3997 Power Sander')->firstOrFail()->category_keys);
 
         $this->seed(DriveProductSeeder::class);
         $this->assertSame(69, Product::count());

@@ -55,6 +55,9 @@
                                 @if($applicant->role === 'logistics' && $applicant->logisticsProvider?->service_area)
                                     <span class="seller-cell-note">Serves {{ $applicant->logisticsProvider->service_area }}</span>
                                 @endif
+                                @if($applicant->role === 'logistics' && $applicant->logisticsProvider)
+                                    <a href="{{ route('admin.logistics.show', $applicant->logisticsProvider) }}" class="workspace-link">Review application <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+                                @endif
                                 @if($applicant->role === 'seller' && $applicant->relationLoaded('sellerApplication'))
                                     @if($applicant->sellerApplication)
                                         <span class="seller-cell-note">{{ $applicant->sellerApplication->category_label }} · {{ $applicant->sellerApplication->seller_type_label }}</span>

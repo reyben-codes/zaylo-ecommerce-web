@@ -815,3 +815,215 @@
         transition: none;
     }
 }
+
+/* "Also list under": extra categories as a grid of checkboxes. */
+.product-form__categories {
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.product-form__categories legend {
+    margin-bottom: 7px;
+    padding: 0;
+    color: #4f453c;
+    font-size: .74rem;
+    font-weight: 700;
+}
+
+.product-form__optional {
+    color: #81756b;
+    font-weight: 500;
+}
+
+.product-form__category-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 8px;
+}
+
+.product-form__category-option {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 10px;
+    border: 1px solid #e8e0d7;
+    border-radius: 8px;
+    color: #4f453c;
+    font-size: .8rem;
+    cursor: pointer;
+}
+
+.product-form__category-option[hidden] {
+    display: none;
+}
+
+.product-form__category-option:has(input:checked) {
+    border-color: #1a1714;
+    background: #faf7f2;
+}
+
+.product-form__category-option:has(input:focus-visible) {
+    outline: 2px solid #1a1714;
+    outline-offset: 2px;
+}
+
+.seller-field .product-form__category-option input {
+    flex: none;
+    width: 16px;
+    min-height: 0;
+    height: 16px;
+    margin: 0;
+    padding: 0;
+    accent-color: #1a1714;
+}
+
+.seller-field .product-form__category-option input:focus {
+    box-shadow: none;
+}
+
+/* More photos: current gallery photos (tick to remove) and previews of new uploads. */
+.product-form__gallery {
+    border-top: 1px solid #efe8e0;
+}
+
+.product-form__photo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.product-form__photo-grid[hidden] {
+    display: none;
+}
+
+.product-form__photo-item {
+    position: relative;
+    display: grid;
+    gap: 6px;
+}
+
+.product-form__photo-item img {
+    width: 100%;
+    aspect-ratio: 1;
+    border: 1px solid #e8e0d7;
+    border-radius: 8px;
+    object-fit: cover;
+    background: #f8f5f1;
+    transition: opacity .2s ease-out, filter .2s ease-out;
+}
+
+.product-form__photo-item.is-removing img {
+    opacity: .4;
+    filter: grayscale(1);
+}
+
+.product-form__photo-remove {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    color: #81756b;
+    font-size: .72rem;
+    cursor: pointer;
+}
+
+.seller-field .product-form__photo-remove input {
+    flex: none;
+    width: 14px;
+    min-height: 0;
+    height: 14px;
+    margin: 0;
+    padding: 0;
+    accent-color: #a4413b;
+}
+
+.product-form__photo-item.is-removing .product-form__photo-remove {
+    color: #a4413b;
+    font-weight: 600;
+}
+
+.product-form__photo-drop {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(26, 23, 20, .75);
+    color: #fff;
+    font-size: .75rem;
+    cursor: pointer;
+}
+
+.product-form__photo-drop:hover {
+    background: #1a1714;
+}
+
+.product-form__photo-drop:focus-visible {
+    outline: 2px solid #1a1714;
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .product-form__photo-item img {
+        transition: none;
+    }
+}
+
+/* Add product: colors & sizes entered before the product exists. */
+.product-form__option-cards,
+.product-form__option-rows {
+    display: grid;
+    gap: 8px;
+}
+
+.product-form__chips-label {
+    align-self: center;
+    color: #81756b;
+    font-size: .7rem;
+    font-weight: 600;
+}
+
+.color-label:disabled {
+    opacity: .45;
+    cursor: default;
+}
+
+button.product-form__remove {
+    padding: 0;
+    background: #fff;
+    font: inherit;
+}
+
+button.product-form__remove[hidden] {
+    display: none;
+}
+
+button.product-form__remove:focus-visible {
+    outline: 2px solid var(--zaylo-accent);
+    outline-offset: 2px;
+}
+
+.product-form__size-button--danger {
+    margin-left: auto;
+    color: #a4413b;
+}
+
+.product-form__size-button--danger:hover {
+    border-color: #d8a7a3;
+}
+
+.product-form__option-rows input::placeholder {
+    color: #b3a79c;
+}
+
+.seller-field input[readonly][data-main-stock] {
+    background: #f8f5f1;
+    color: var(--zaylo-muted);
+}

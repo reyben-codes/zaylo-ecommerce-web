@@ -4,6 +4,7 @@
 
 @push('styles')
     <link rel="stylesheet" href="{{ asset('css/seller-products.css') }}?v={{ filemtime(public_path('css/seller-products.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/category-tags.css') }}?v={{ filemtime(public_path('css/category-tags.css')) }}">
 @endpush
 
 @section('content')
@@ -56,7 +57,8 @@
                     <span class="product-card__visibility{{ $product->is_active ? '' : ' is-hidden' }}">{{ $product->is_active ? 'Active' : 'Hidden' }}</span>
                 </a>
                 <div class="product-card__body">
-                    <p class="product-card__category">{{ $product->category_label }}@if($product->gender) · {{ ucfirst($product->gender) }}@endif</p>
+                    @include('partials.category-tags', ['href' => fn ($key) => route('seller.products', ['category' => $key])])
+                    @if($product->gender)<p class="product-card__category">For {{ $product->gender === 'unisex' ? 'everyone' : $product->gender }}</p>@endif
                     <h2 class="product-card__name"><a href="{{ route('seller.products.edit', $product) }}">{{ $product->name }}</a></h2>
                     <p class="product-card__sku">SKU {{ $product->sku ?: '—' }}</p>
                     <p class="product-card__description">{{ $product->description ?: 'No description yet. Add one so buyers know what they are getting.' }}</p>
