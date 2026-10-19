@@ -116,13 +116,19 @@ class RiderStats {
 /// One line of the parcel: what the rider collects from the seller.
 /// A step the rider can take on a delivery, e.g. "Could not deliver".
 class RiderDeliveryAction {
-  const RiderDeliveryAction({required this.status, required this.label});
+  const RiderDeliveryAction({required this.status, required this.label, this.needsScan = false});
 
   final String status;
   final String label;
 
-  factory RiderDeliveryAction.fromJson(Map<String, dynamic> json) =>
-      RiderDeliveryAction(status: json['status'] as String? ?? '', label: json['label'] as String? ?? '');
+  /// Taken by scanning the QR code on the parcel label (starting and finishing a delivery).
+  final bool needsScan;
+
+  factory RiderDeliveryAction.fromJson(Map<String, dynamic> json) => RiderDeliveryAction(
+        status: json['status'] as String? ?? '',
+        label: json['label'] as String? ?? '',
+        needsScan: json['needs_scan'] as bool? ?? false,
+      );
 }
 
 class RiderDeliveryItem {
@@ -173,10 +179,14 @@ class RiderDelivery {
     this.chatOpen = false,
     this.actions = const [],
     this.unreadMessages = 0,
+    this.scanCode = '',
   });
 
   final int id;
   final String trackingNumber;
+
+  /// The code in the parcel label's QR code.
+  final String scanCode;
   final String status;
   final String statusLabel;
 
@@ -207,6 +217,15 @@ class RiderDelivery {
 
   int get itemCount => items.fold(0, (sum, item) => sum + item.quantity);
 
+  /// Whether the main next step is taken by scanning the parcel.
+  bool get nextNeedsScan => actions.isNotEmpty && actions.first.needsScan;
+
+  /// Whether [code], read from a parcel label, is this delivery's.
+  bool matchesCode(String code) {
+    final scanned = code.trim().toUpperCase();
+    return scanned.isNotEmpty && (scanned == scanCode.toUpperCase() || scanned == trackingNumber.toUpperCase());
+  }
+
   factory RiderDelivery.fromJson(Map<String, dynamic> json) => RiderDelivery(
         id: json['id'] as int,
         trackingNumber: json['tracking_number'] as String? ?? '',
@@ -235,6 +254,24 @@ class RiderDelivery {
             .map((item) => RiderDeliveryAction.fromJson(item as Map<String, dynamic>))
             .toList(),
         unreadMessages: json['unread_messages'] as int? ?? 0,
+        scanCode: json['scan_code'] as String? ?? json['tracking_number'] as String? ?? '',
+      );
+}
+
+/// What happened when the rider scanned a parcel.
+class RiderScanResult {
+  const RiderScanResult({required this.message, required this.step, required this.delivery});
+
+  final String message;
+
+  /// out_for_delivery or delivered.
+  final String step;
+  final RiderDelivery delivery;
+
+  factory RiderScanResult.fromJson(Map<String, dynamic> json) => RiderScanResult(
+        message: json['message'] as String? ?? '',
+        step: json['step'] as String? ?? '',
+        delivery: RiderDelivery.fromJson(json['delivery'] as Map<String, dynamic>),
       );
 }
 

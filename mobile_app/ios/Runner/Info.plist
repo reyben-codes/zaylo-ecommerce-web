@@ -67,7 +67,7 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>NSCameraUsageDescription</key>
-	<string>ZAYLO uses the camera to photograph your ID, product review photos, complaint evidence, and rider documents.</string>
+	<string>ZAYLO uses the camera to photograph your ID, product review photos, complaint evidence, and rider documents, and to scan parcel QR codes.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>ZAYLO lets you choose photos of your ID, product reviews, complaint evidence, and rider documents.</string>
 	<key>CFBundleURLTypes</key>

@@ -3,11 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\Announcement;
+use App\Models\LogisticsMessage;
 use App\Models\LogisticsProvider;
 use App\Models\Rider;
 use App\Models\User;
+use App\Notifications\ParcelDeliveryUpdate;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Laravel\Sanctum\Sanctum;
 use Tests\Support\LegacyOrderTables;
 use Tests\TestCase;
@@ -103,15 +106,19 @@ class MobileRiderDashboardTest extends TestCase
     {
         $rider = $this->rider();
         $shipmentId = $this->parcel('assigned', $rider);
+        $orderId = DB::table('shipments')->where('id', $shipmentId)->value('order_id');
         Sanctum::actingAs($rider);
 
         $this->patchJson("/api/mobile/rider/deliveries/$shipmentId", ['status' => 'delivered'])->assertUnprocessable();
-        $this->patchJson("/api/mobile/rider/deliveries/$shipmentId", ['status' => 'out_for_delivery'])
+        $this->postJson('/api/mobile/rider/deliveries/scan', ['code' => "TRK-$orderId"])
             ->assertOk()
+            ->assertJsonPath('step', 'out_for_delivery')
             ->assertJsonPath('delivery.status', 'out_for_delivery')
             ->assertJsonPath('delivery.actions.0.status', 'delivered')
-            ->assertJsonPath('delivery.actions.1.status', 'failed');
-        $this->patchJson("/api/mobile/rider/deliveries/$shipmentId", ['status' => 'delivered'])->assertOk();
+            ->assertJsonPath('delivery.actions.0.needs_scan', true)
+            ->assertJsonPath('delivery.actions.1.status', 'failed')
+            ->assertJsonPath('delivery.actions.1.needs_scan', false);
+        $this->postJson('/api/mobile/rider/deliveries/scan', ['code' => "TRK-$orderId"])->assertOk()->assertJsonPath('step', 'delivered');
 
         $this->getJson('/api/mobile/rider/dashboard')
             ->assertJsonPath('stats.completed', 1)
@@ -132,7 +139,58 @@ class MobileRiderDashboardTest extends TestCase
             ->assertOk()
             ->assertJsonPath('delivery.status', 'failed')
             ->assertJsonPath('delivery.next_status', 'out_for_delivery');
-        $this->patchJson("/api/mobile/rider/deliveries/$shipmentId", ['status' => 'out_for_delivery'])->assertOk();
+        $code = DB::table('shipments')->where('id', $shipmentId)->value('tracking_number');
+        $this->postJson('/api/mobile/rider/deliveries/scan', ['code' => $code])->assertOk()->assertJsonPath('step', 'out_for_delivery');
+    }
+
+    public function test_starting_and_finishing_a_delivery_need_a_scan(): void
+    {
+        $rider = $this->rider();
+        $shipmentId = $this->parcel('assigned', $rider);
+        Sanctum::actingAs($rider);
+
+        $this->patchJson("/api/mobile/rider/deliveries/$shipmentId", ['status' => 'out_for_delivery'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('status');
+        $this->assertSame('assigned', DB::table('shipments')->value('status'));
+    }
+
+    public function test_scanning_notifies_the_buyer_and_on_delivery_the_seller(): void
+    {
+        Notification::fake();
+        $rider = $this->rider();
+        $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);
+        $shipmentId = $this->parcel('assigned', $rider);
+        DB::table('orders')->update(['seller_id' => $seller->id]);
+        $buyer = User::find(DB::table('orders')->value('user_id'));
+        $code = DB::table('shipments')->where('id', $shipmentId)->value('tracking_number');
+        Sanctum::actingAs($rider);
+
+        $this->postJson('/api/mobile/rider/deliveries/scan', ['code' => " $code "])->assertOk();
+        Notification::assertSentTo($buyer, ParcelDeliveryUpdate::class, fn ($n) => $n->step === 'out_for_delivery' && ! $n->forSeller);
+        Notification::assertNotSentTo($seller, ParcelDeliveryUpdate::class);
+        $this->assertDatabaseHas('order_status_histories', ['status' => 'out_for_delivery']);
+
+        $this->postJson('/api/mobile/rider/deliveries/scan', ['code' => $code])->assertOk();
+        Notification::assertSentTo($buyer, ParcelDeliveryUpdate::class, fn ($n) => $n->step === 'delivered');
+        Notification::assertSentTo($seller, ParcelDeliveryUpdate::class, fn ($n) => $n->step === 'delivered' && $n->forSeller);
+        $this->assertSame('completed', DB::table('orders')->value('status'));
+        $this->assertTrue(LogisticsMessage::where('body', 'like', "%{$code}%delivered%")->exists());
+
+        $this->postJson('/api/mobile/rider/deliveries/scan', ['code' => $code])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.code.0', 'This parcel was already delivered.');
+    }
+
+    public function test_riders_cannot_scan_parcels_that_are_not_theirs(): void
+    {
+        $shipmentId = $this->parcel('assigned', $this->rider('Other Rider'));
+        $code = DB::table('shipments')->where('id', $shipmentId)->value('tracking_number');
+        Sanctum::actingAs($this->rider());
+
+        $this->postJson('/api/mobile/rider/deliveries/scan', ['code' => $code])->assertUnprocessable()->assertJsonValidationErrors('code');
+        $this->postJson('/api/mobile/rider/deliveries/scan', ['code' => 'TRK-NOPE'])->assertUnprocessable();
+        $this->assertSame('assigned', DB::table('shipments')->value('status'));
     }
 
     public function test_riders_cannot_update_parcels_of_other_riders_or_claim_parcels(): void

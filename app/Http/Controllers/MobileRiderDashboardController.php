@@ -131,7 +131,7 @@ class MobileRiderDashboardController extends Controller
         return round($shipments->sum(fn (Shipment $s) => (float) $s->order?->shipping_fee), 2);
     }
 
-    /** Moves the rider's delivery to its next step: out for delivery, delivered, or could not deliver. */
+    /** Reports that a delivery could not be made; starting and finishing a delivery go through scan(). */
     public function update(Request $request, Shipment $shipment): JsonResponse
     {
         $data = $request->validate(['status' => 'required|in:out_for_delivery,delivered,failed']);
@@ -139,6 +139,24 @@ class MobileRiderDashboardController extends Controller
 
         return response()->json([
             'message' => ShipmentWorkflow::label($data['status']).'.',
+            'delivery' => $this->shipmentPayload($shipment->load(self::RELATIONS)),
+        ]);
+    }
+
+    /**
+     * The rider scanned a parcel label: the parcel goes out for delivery, or is delivered if it already was out.
+     * The buyer (and on delivery, the seller) is notified.
+     */
+    public function scan(Request $request): JsonResponse
+    {
+        $data = $request->validate(['code' => 'required|string|max:100']);
+        [$shipment, $step] = $this->deliveries->scan($request->user(), $data['code']);
+
+        return response()->json([
+            'message' => $step === 'delivered'
+                ? 'Delivered. The buyer and seller were notified.'
+                : 'Out for delivery. The buyer was told their parcel is on its way.',
+            'step' => $step,
             'delivery' => $this->shipmentPayload($shipment->load(self::RELATIONS)),
         ]);
     }
@@ -202,7 +220,13 @@ class MobileRiderDashboardController extends Controller
             // The main button, then any other choice (e.g. "Could not deliver").
             'next_status' => array_key_first($steps),
             'next_action_label' => $steps ? reset($steps) : null,
-            'actions' => collect($steps)->map(fn (string $label, string $status) => ['status' => $status, 'label' => $label])->values(),
+            'actions' => collect($steps)->map(fn (string $label, string $status) => [
+                'status' => $status,
+                'label' => $label,
+                // Taken by scanning the parcel's QR code instead of a plain button press.
+                'needs_scan' => in_array($status, RiderDeliveries::SCAN_STEPS, true),
+            ])->values(),
+            'scan_code' => RiderDeliveries::labelCode($shipment),
             'order_number' => $order?->order_number,
             'shipping_address' => $order?->shipping_address,
             'recipient_name' => $order?->recipient_name,

@@ -55,6 +55,26 @@ class SellerManagedDeliveryTest extends TestCase
         $this->assertCount(4, $order->statusHistory()->get());
     }
 
+    public function test_seller_prints_a_parcel_label_with_a_qr_code_for_the_rider(): void
+    {
+        $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);
+        $buyer = User::factory()->create(['role' => 'buyer', 'status' => 'active']);
+        $order = $this->order($buyer, $seller, 'ready_for_pickup');
+
+        $this->actingAs($seller)->get(route('seller.orders.label', $order))->assertNotFound();
+
+        $order->shipment()->create(['tracking_number' => 'TRK-LABEL123', 'status' => 'ready']);
+        $this->get(route('seller.orders'))->assertSee(route('seller.orders.label', $order), false);
+        $this->get(route('seller.orders.label', $order))
+            ->assertOk()
+            ->assertSee('TRK-LABEL123')
+            ->assertSee('<svg', false)
+            ->assertSee($order->recipient_name);
+
+        $otherSeller = User::factory()->create(['role' => 'seller', 'status' => 'active']);
+        $this->actingAs($otherSeller)->get(route('seller.orders.label', $order))->assertForbidden();
+    }
+
     public function test_seller_cannot_skip_delivery_stages_or_update_another_sellers_order(): void
     {
         $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);

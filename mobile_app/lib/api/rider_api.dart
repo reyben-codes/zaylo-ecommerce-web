@@ -37,10 +37,16 @@ class RiderApi extends ApiClient {
 
   Future<RiderDashboard> dashboard() async => RiderDashboard.fromJson(await send('GET', '/mobile/rider/dashboard'));
 
-  /// Moves a delivery to its next step (out_for_delivery, delivered, failed).
+  /// Reports a failed delivery attempt; starting and finishing a delivery go through [scanParcel].
   Future<RiderDelivery> updateDelivery(int id, String status) async =>
       RiderDelivery.fromJson((await send('PATCH', '/mobile/rider/deliveries/$id', body: {'status': status}))['delivery']
           as Map<String, dynamic>);
+
+  /// Sends the code read from a parcel label's QR code. The parcel goes out for
+  /// delivery, or is delivered if it already was; the buyer (and on delivery,
+  /// the seller) is notified by the server.
+  Future<RiderScanResult> scanParcel(String code) async =>
+      RiderScanResult.fromJson(await send('POST', '/mobile/rider/deliveries/scan', body: {'code': code.trim()}));
 
   /// Completed deliveries for [period], newest first; [page] starts at 1.
   Future<RiderHistoryPage> history({RiderPeriod period = RiderPeriod.all, int page = 1}) async =>

@@ -99,6 +99,26 @@ class RiderDashboardTabState extends State<RiderDashboardTab> with RiderDelivery
             )),
           ),
 
+          // Always shown, so riders know where scanning lives; off while sellers deliver their own orders.
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed:
+                  busyDeliveryId == null && data.deliveryModeMessage == null ? () => scanAnyParcel(data.active) : null,
+              style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+              icon: const Icon(Icons.qr_code_scanner),
+              label: const Text('SCAN PARCEL', style: TextStyle(fontWeight: FontWeight.w700)),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+              data.deliveryModeMessage != null
+                  ? 'Scanning turns on when your logistics partner starts assigning parcels to riders.'
+                  : 'Scan a label to start a delivery, and again at the door to confirm it. '
+                      'The buyer and seller are notified automatically.',
+              style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
+
           RiderSectionHeader(title: 'Your active deliveries', count: data.active.length),
           if (data.active.isEmpty)
             const RiderEmptyCard(

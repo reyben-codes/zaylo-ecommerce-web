@@ -133,6 +133,11 @@
                                     @else
                                         <span class="seller-cell-note">No action needed</span>
                                     @endif
+                                    @if($order->shipment && ! in_array($order->shipment->status, ['delivered', 'cancelled'], true))
+                                        <a href="{{ route('seller.orders.label', $order) }}" class="seller-button seller-button--small seller-button--secondary" target="_blank" rel="noopener">
+                                            <i class="fas fa-qrcode" aria-hidden="true"></i> Print label
+                                        </a>
+                                    @endif
 
                                     <details class="order-details">
                                         <summary>Details</summary>

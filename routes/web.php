@@ -150,6 +150,7 @@ Route::middleware(['auth', 'active', 'verified', 'role:seller', 'nocache'])->pre
     Route::delete('/products/{product}', [SellerController::class, 'deleteProduct'])->name('products.destroy');
     Route::get('/orders', [SellerController::class, 'orders'])->name('orders');
     Route::patch('/orders/{order}/status', [SellerController::class, 'updateOrderStatus'])->name('orders.status');
+    Route::get('/orders/{order}/label', [SellerController::class, 'parcelLabel'])->name('orders.label');
     Route::get('/inventory', [SellerController::class, 'inventory'])->name('inventory');
     Route::get('/handover', [SellerController::class, 'handover'])->name('handover');
     Route::get('/reports', [SellerController::class, 'reports'])->name('reports');

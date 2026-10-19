@@ -16,6 +16,7 @@ import 'package:zaylo_mobile/auth/token_store.dart';
 import 'package:zaylo_mobile/components/announcement_banner.dart';
 import 'package:zaylo_mobile/components/chat/delivery_chat.dart';
 import 'package:zaylo_mobile/components/policies.dart';
+import 'package:zaylo_mobile/features/buyer/messages/seller_messages_button.dart';
 import 'package:zaylo_mobile/features/buyer/checkout/checkout_screen.dart';
 import 'package:zaylo_mobile/features/buyer/orders/order_detail_screen.dart';
 import 'package:zaylo_mobile/features/buyer/home/widgets/home_header.dart';
@@ -95,7 +96,7 @@ class FakeApi extends BuyerApi {
       });
 
   @override
-  Future<NotificationFeed> notifications() async => NotificationFeed.fromJson({'notifications': [], 'unread_count': 0});
+  Future<NotificationFeed> notifications() async => NotificationFeed.fromJson({'notifications': [], 'unread_count': 2});
 
   @override
   Future<int> sellerUnreadCount() async => 3;
@@ -196,23 +197,24 @@ class FakeGoogleIdTokenSource implements GoogleIdTokenSource {
 class FakeRiderApi extends RiderApi {
   FakeRiderApi() : super(baseUrl: 'http://fake.test/api');
 
-  /// Steps sent to [updateDelivery], as "id:status".
+  /// Steps sent to [updateDelivery] and [scanParcel], as "id:status".
   final updates = <String>[];
 
   /// The steps the rider can take at each status, as the server sends them.
   static const _steps = {
     'assigned': [
-      {'status': 'out_for_delivery', 'label': 'Start delivery'},
+      {'status': 'out_for_delivery', 'label': 'Scan to start delivery', 'needs_scan': true},
     ],
     'out_for_delivery': [
-      {'status': 'delivered', 'label': 'Mark as delivered'},
-      {'status': 'failed', 'label': 'Could not deliver'},
+      {'status': 'delivered', 'label': 'Scan to confirm delivery', 'needs_scan': true},
+      {'status': 'failed', 'label': 'Could not deliver', 'needs_scan': false},
     ],
   };
 
   static Map<String, dynamic> delivery(int id, String status) => {
         'id': id,
         'tracking_number': 'TRK-$id',
+        'scan_code': 'TRK-$id',
         'status': status,
         'status_label': switch (status) {
           'assigned' => 'Rider assigned',
@@ -293,6 +295,18 @@ class FakeRiderApi extends RiderApi {
   Future<RiderDelivery> updateDelivery(int id, String status) async {
     updates.add('$id:$status');
     return RiderDelivery.fromJson(delivery(id, status));
+  }
+
+  @override
+  Future<RiderScanResult> scanParcel(String code) async {
+    final id = int.parse(code.replaceFirst('TRK-', ''));
+    final step = id == 1 ? 'out_for_delivery' : 'delivered';
+    updates.add('$id:$step');
+    return RiderScanResult(
+      message: step == 'delivered' ? 'Delivered. The buyer and seller were notified.' : 'Out for delivery. The buyer was told.',
+      step: step,
+      delivery: RiderDelivery.fromJson(delivery(id, step)),
+    );
   }
 
   @override
@@ -653,10 +667,25 @@ void main() {
     expect(find.text('Happy Heels'), findsNWidgets(2));
     expect(find.text('Items to pick up (3)'), findsNWidgets(2));
 
-    await tester.tap(find.text('START DELIVERY'));
+    // Starting a delivery opens the scanner; a damaged label can be typed in.
+    await tester.tap(find.text('SCAN TO START DELIVERY'));
+    await tester.pumpAndSettle();
+    expect(find.text('Start delivery'), findsOneWidget, reason: 'scanner title');
+    await tester.tap(find.text('Label damaged? Type the tracking number'));
+    await tester.pumpAndSettle();
+    // Another parcel's label is turned away, and the scanner stays open.
+    await tester.enterText(find.byType(TextField), 'TRK-2');
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+    expect(find.text('That label is for a different parcel. Scan TRK-1.'), findsOneWidget);
+    expect(api.updates, isEmpty);
+    await tester.tap(find.text('Label damaged? Type the tracking number'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'trk-1');
+    await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
     expect(api.updates, ['1:out_for_delivery']);
-    expect(find.text('Out for delivery. Drive safely!'), findsOneWidget);
+    expect(find.text('Out for delivery. The buyer was told.'), findsOneWidget);
 
     // Out for delivery: deliver it, or report that it could not be delivered.
     await tester.ensureVisible(find.text('COULD NOT DELIVER'));
@@ -684,8 +713,8 @@ void main() {
       await tester.tap(find.text('Active'));
       await tester.pumpAndSettle();
       expect(find.text('Active deliveries'), findsOneWidget);
-      expect(find.text('START DELIVERY'), findsOneWidget);
-      expect(find.text('MARK AS DELIVERED'), findsOneWidget);
+      expect(find.text('SCAN TO START DELIVERY'), findsOneWidget);
+      expect(find.text('SCAN TO CONFIRM DELIVERY'), findsOneWidget);
     });
 
     testWidgets('Delivered today opens history filtered to today', (tester) async {
@@ -821,17 +850,103 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    testWidgets('account lists messages, support, complaints, ID verification and policies', (tester) async {
+    testWidgets('account lists orders, then settings, with help last', (tester) async {
       await pumpApp(tester, token: 'stored-token');
 
       await tester.tap(find.text('Account'));
       await tester.pumpAndSettle();
-      expect(find.text('Messages with sellers'), findsOneWidget);
-      expect(find.text('3'), findsOneWidget, reason: 'unread seller messages badge');
+      // Seller messages moved to the floating button on Home.
+      expect(find.text('Messages with sellers'), findsNothing);
       expect(find.text('Help & support'), findsOneWidget);
       expect(find.text('Complaints'), findsOneWidget);
       expect(find.text('ID verification'), findsOneWidget);
       expect(find.text('Terms & policies'), findsOneWidget);
+      double top(String text) => tester.getTopLeft(find.text(text)).dy;
+      expect(top('To ship'), lessThan(top('Notifications')), reason: 'Settings under My orders');
+      expect(top('Notifications'), lessThan(top('Terms & policies')));
+      expect(top('Terms & policies'), lessThan(top('Help & support')), reason: 'Help last');
+      expect(top('Complaints'), lessThan(top('SIGN OUT')));
+    });
+
+    testWidgets('home has a floating button for messages with sellers', (tester) async {
+      await pumpApp(tester, token: 'stored-token');
+
+      final button = find.byTooltip('Messages with sellers, 3 unread');
+      expect(button, findsOneWidget);
+      expect(find.descendant(of: button, matching: find.text('3')), findsOneWidget, reason: 'unread badge');
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      expect(find.text('Messages'), findsOneWidget, reason: 'seller inbox title');
+    });
+
+    testWidgets('the seller messages button hides while Home scrolls', (tester) async {
+      await pumpApp(tester, token: 'stored-token');
+      double opacity() => tester
+          .widget<AnimatedOpacity>(
+              find.ancestor(of: find.byType(FloatingActionButton), matching: find.byType(AnimatedOpacity)).first)
+          .opacity;
+      expect(opacity(), 1);
+
+      // A phone-height screen, so the page has room to scroll.
+      tester.view.physicalSize = const Size(400, 800);
+      await tester.pumpAndSettle();
+      final gesture = await tester.startGesture(tester.getCenter(find.byType(CustomScrollView)));
+      for (var step = 0; step < 5; step++) {
+        await gesture.moveBy(const Offset(0, -40));
+        await tester.pump();
+      }
+      await tester.pump();
+      expect(opacity(), 0, reason: 'hidden mid-scroll');
+
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(opacity(), 1, reason: 'back once the scroll stops');
+    });
+
+    testWidgets('the home top bar has a notifications bell instead of the bag', (tester) async {
+      await pumpApp(tester, token: 'stored-token');
+
+      final bar = find.byType(HomeTopBar);
+      expect(find.descendant(of: bar, matching: find.byTooltip('Bag')), findsNothing);
+      final bell = find.descendant(of: bar, matching: find.byTooltip('Notifications, 2 unread'));
+      expect(bell, findsOneWidget);
+      expect(find.descendant(of: bell, matching: find.text('2')), findsOneWidget, reason: 'unread badge');
+      await tester.tap(bell);
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(AppBar, 'Notifications'), findsOneWidget);
+    });
+
+    testWidgets('guests tapping the bell are asked to sign in', (tester) async {
+      await pumpApp(tester);
+
+      await tester.tap(find.descendant(of: find.byType(HomeTopBar), matching: find.byTooltip('Notifications')));
+      await tester.pumpAndSettle();
+      expect(find.byType(LoginScreen), findsOneWidget);
+    });
+
+    testWidgets('tapping Home while on Home glides back to the top', (tester) async {
+      await pumpApp(tester, token: 'stored-token');
+      tester.view.physicalSize = const Size(400, 800);
+      await tester.pumpAndSettle();
+      ScrollPosition home() => tester.state<ScrollableState>(find.descendant(
+            of: find.byType(CustomScrollView),
+            matching: find.byType(Scrollable),
+          ).first).position;
+
+      home().jumpTo(600);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Home'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(home().pixels, inExclusiveRange(0, 600), reason: 'animates rather than jumping');
+      await tester.pumpAndSettle();
+      expect(home().pixels, 0);
+    });
+
+    testWidgets('guests do not see the seller messages button', (tester) async {
+      await pumpApp(tester);
+
+      expect(find.byType(SellerMessagesButton), findsNothing);
     });
 
     testWidgets('checkout asks for an approved ID before placing an order', (tester) async {

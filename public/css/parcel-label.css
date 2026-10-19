@@ -1,0 +1,146 @@
+/* Printable parcel label (seller/parcel-label.blade.php). Sized for a 4 × 6 in label; also fits A4/Letter. */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 24px 16px;
+    background: #f4f1ec;
+    color: #1d1a17;
+    font-family: Inter, system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+p {
+    margin: 0;
+}
+
+.label-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    max-width: 4in;
+    margin: 0 auto 16px;
+}
+
+.label-toolbar a {
+    color: inherit;
+    font-weight: 600;
+}
+
+.label-toolbar button {
+    padding: 10px 18px;
+    border: 0;
+    border-radius: 8px;
+    background: #1d1a17;
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.label-toolbar button:focus-visible,
+.label-toolbar a:focus-visible {
+    outline: 3px solid #b8860b;
+    outline-offset: 2px;
+}
+
+.parcel-label {
+    width: 100%;
+    max-width: 4in;
+    margin: 0 auto;
+    border: 2px solid #1d1a17;
+    background: #fff;
+}
+
+.parcel-label__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    border-bottom: 2px solid #1d1a17;
+    font-weight: 600;
+}
+
+.parcel-label__brand {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+}
+
+.parcel-label__scan {
+    display: grid;
+    grid-template-columns: 1.6in 1fr;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-bottom: 2px solid #1d1a17;
+}
+
+.parcel-label__qr svg {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.parcel-label__code {
+    margin-top: 4px;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 16px;
+    font-weight: 700;
+    word-break: break-all;
+}
+
+.parcel-label__block {
+    padding: 10px 14px;
+    border-bottom: 1px solid #1d1a17;
+}
+
+.parcel-label__block:last-child {
+    border-bottom: 0;
+}
+
+.parcel-label__row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.parcel-label__caption {
+    margin-bottom: 2px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #5f574f;
+}
+
+.parcel-label__name {
+    font-size: 15px;
+    font-weight: 700;
+}
+
+@media print {
+    @page {
+        size: 4in 6in;
+        margin: 0.15in;
+    }
+
+    body {
+        padding: 0;
+        background: #fff;
+    }
+
+    .label-toolbar {
+        display: none;
+    }
+
+    .parcel-label {
+        max-width: none;
+    }
+}

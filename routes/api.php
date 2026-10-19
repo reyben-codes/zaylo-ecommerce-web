@@ -55,6 +55,7 @@ Route::prefix('mobile')->middleware('throttle:60,1')->group(function () {
 
         Route::middleware('mobile.rider')->prefix('rider')->group(function () {
             Route::get('/dashboard', [MobileRiderDashboardController::class, 'dashboard']);
+            Route::post('/deliveries/scan', [MobileRiderDashboardController::class, 'scan'])->middleware('throttle:30,1');
             Route::patch('/deliveries/{shipment}', [MobileRiderDashboardController::class, 'update']);
             Route::get('/deliveries/{shipment}/chat', [MobileDeliveryChatController::class, 'riderShow']);
             Route::post('/deliveries/{shipment}/chat', [MobileDeliveryChatController::class, 'riderSend'])->middleware('throttle:20,1');

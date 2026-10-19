@@ -10,8 +10,11 @@ use App\Models\ProductReview;
 use App\Models\ProductVariant;
 use App\Models\SellerOrder;
 use App\Models\SellerProfile;
+use App\Services\RiderDeliveries;
 use App\Services\SellerApplicationService;
 use Carbon\CarbonImmutable;
+use chillerlan\QRCode\QRCode;
+use chillerlan\QRCode\QROptions;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -202,6 +205,22 @@ class SellerController extends Controller
             ->withQueryString();
 
         return view('seller.orders', compact('orders', 'filter', 'counts', 'statusLabels'));
+    }
+
+    /** A printable label for the parcel; the rider scans its QR code (the tracking number) to deliver it. */
+    public function parcelLabel(Order $order)
+    {
+        abort_unless((int) $order->seller_id === $this->shopId(), 403);
+        $order->load(['shipment', 'items']);
+        abort_unless($order->shipment, 404, 'Mark the order ready to ship to get its parcel label.');
+        $code = RiderDeliveries::labelCode($order->shipment);
+
+        return view('seller.parcel-label', [
+            'order' => $order,
+            'code' => $code,
+            'store' => $this->storeName(),
+            'qr' => (new QRCode(new QROptions(['outputBase64' => false, 'addQuietzone' => true])))->render($code),
+        ]);
     }
 
     public function updateOrderStatus(Request $request, Order $order)

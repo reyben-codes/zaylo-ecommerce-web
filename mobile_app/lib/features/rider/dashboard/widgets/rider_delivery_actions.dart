@@ -4,6 +4,7 @@ import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/api/rider_api.dart';
 import 'package:zaylo_mobile/components/chat/delivery_chat.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
+import 'package:zaylo_mobile/features/rider/dashboard/rider_scan_screen.dart';
 import 'package:zaylo_mobile/models/rider/rider_dashboard_models.dart';
 
 /// Delivery step logic shared by every screen that lists deliveries.
@@ -18,21 +19,62 @@ mixin RiderDeliveryActions<T extends StatefulWidget> on State<T> {
   /// The delivery whose button is waiting on the server, if any.
   int? busyDeliveryId;
 
-  /// Moves [delivery] to [status] (its main next step by default), confirming
-  /// before "delivered" and "could not deliver".
+  /// Moves [delivery] to [status] (its main next step by default). Starting
+  /// and finishing a delivery need a scan of the parcel's QR code; "could not
+  /// deliver" is confirmed first.
   Future<void> advanceDelivery(RiderDelivery delivery, [String? status]) async {
     final next = status ?? delivery.nextStatus;
     if (next == null) return;
-    if (next == 'delivered' && !await _confirmDelivered(delivery)) return;
-    if (next == 'failed' && !await _confirmFailed()) return;
+    final needsScan = delivery.actions.any((action) => action.status == next && action.needsScan);
+    if (needsScan) {
+      final code = await _scan(
+        title: next == 'delivered' ? 'Confirm delivery' : 'Start delivery',
+        hint: 'Scan the label of ${delivery.orderNumber ?? delivery.trackingNumber}.',
+        accept: (code) => delivery.matchesCode(code)
+            ? null
+            : 'That label is for a different parcel. Scan ${delivery.trackingNumber}.',
+      );
+      if (code == null || !mounted) return;
+      await _sendScan(code, delivery);
+      return;
+    }
+    if (next != 'failed' || !await _confirmFailed()) return;
     await _run(
         delivery,
         () => riderApi.updateDelivery(delivery.id, next),
-        switch (next) {
-          'out_for_delivery' => 'Out for delivery. Drive safely!',
-          'failed' => 'Marked as not delivered. Your logistics partner can see it.',
-          _ => 'Delivered. Nice work!',
-        });
+        'Marked as not delivered. Your logistics partner can see it.');
+  }
+
+  /// Scans any parcel label: one of [active] goes out for delivery, or is
+  /// delivered if it already was. The server checks the parcel is the rider's.
+  Future<void> scanAnyParcel(List<RiderDelivery> active) async {
+    final code = await _scan(title: 'Scan parcel', hint: 'Scan a parcel to start or confirm its delivery.');
+    if (code == null || !mounted) return;
+    await _sendScan(code, active.where((delivery) => delivery.matchesCode(code)).firstOrNull);
+  }
+
+  Future<String?> _scan({required String title, required String hint, String? Function(String code)? accept}) =>
+      Navigator.of(context).push<String>(MaterialPageRoute(
+        builder: (_) => RiderScanScreen(title: title, hint: hint, accept: accept),
+      ));
+
+  /// Sends a scanned [code]. Handing over a parcel ([delivery] out for
+  /// delivery) is confirmed first, with a cash reminder for COD.
+  Future<void> _sendScan(String code, RiderDelivery? delivery) async {
+    if (delivery?.nextStatus == 'delivered' && !await _confirmDelivered(delivery!)) return;
+    if (!mounted) return;
+    setState(() => busyDeliveryId = delivery?.id ?? -1);
+    try {
+      // A typed code may differ in case from the label; send the parcel's own code when it is known.
+      final result = await riderApi.scanParcel(delivery == null || delivery.scanCode.isEmpty ? code : delivery.scanCode);
+      if (mounted) showMessage(context, result.message);
+    } on ApiException catch (error) {
+      debugPrint('[ZAYLO] Parcel scan failed: ${error.debugDescription}');
+      if (mounted) showMessage(context, error.message);
+    } finally {
+      if (mounted) setState(() => busyDeliveryId = null);
+    }
+    if (mounted) await reloadDeliveries();
   }
 
   /// Opens the chat with [delivery]'s buyer, then refreshes so its unread badge clears.

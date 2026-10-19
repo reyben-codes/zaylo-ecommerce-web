@@ -312,7 +312,16 @@ class RiderDeliveryCard extends StatelessWidget {
                           width: 18,
                           height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2, color: ZayloColors.white))
-                      : Text(actionLabel!.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.w700)),
+                      : Row(mainAxisSize: MainAxisSize.min, children: [
+                          if (delivery.nextNeedsScan) ...[
+                            const Icon(Icons.qr_code_scanner, size: 18),
+                            const SizedBox(width: 8),
+                          ],
+                          Flexible(
+                            child: Text(actionLabel!.toUpperCase(),
+                                overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)),
+                          ),
+                        ]),
                 ),
               ),
             ],
