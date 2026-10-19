@@ -2,16 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import 'package:zaylo_mobile/components/cart_icon.dart';
 import 'package:zaylo_mobile/components/layout.dart';
 import 'package:zaylo_mobile/components/theme_toggle.dart';
+import 'package:zaylo_mobile/features/buyer/account/notification_bell_button.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 
 class HomeTopBar extends StatelessWidget {
-  const HomeTopBar({super.key, required this.cartCount, required this.onBag});
-
-  final int cartCount;
-  final VoidCallback onBag;
+  const HomeTopBar({super.key});
 
   /// The bar floats over the page, which reserves this much space for it.
   static const height = 70.0;
@@ -38,16 +35,8 @@ class HomeTopBar extends StatelessWidget {
           Expanded(
             child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
               const ThemeToggleButton(),
-              IconButton(
-                tooltip: 'Bag',
-                onPressed: onBag,
-                icon: Badge(
-                  isLabelVisible: cartCount > 0,
-                  label: Text('$cartCount'),
-                  backgroundColor: ZayloColors.ink,
-                  child: const CartIcon(),
-                ),
-              ),
+              // The bag is in the bottom nav bar.
+              const NotificationBellButton(),
             ]),
           ),
         ]),

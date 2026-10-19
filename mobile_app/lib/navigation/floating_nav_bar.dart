@@ -27,6 +27,24 @@ class NavBarVisibility extends ValueNotifier<bool> {
   }
 }
 
+/// Whether a floating button is showing: hidden while the page scrolls in
+/// either direction, back once the scroll comes to rest.
+class ScrollIdleVisibility extends ValueNotifier<bool> {
+  ScrollIdleVisibility() : super(true);
+
+  /// For `NotificationListener<ScrollNotification>.onNotification`.
+  bool handleScroll(ScrollNotification notification) {
+    // Sideways carousels and chip rows never hide the button.
+    if (notification.metrics.axis != Axis.vertical) return false;
+    if (notification is ScrollUpdateNotification && (notification.scrollDelta ?? 0) != 0) {
+      value = false;
+    } else if (notification is ScrollEndNotification) {
+      value = true;
+    }
+    return false;
+  }
+}
+
 /// A rounded bottom bar that floats above the page, as in the Facebook app.
 ///
 /// Use it as the `bottomNavigationBar` of a `Scaffold(extendBody: true)` so

@@ -13,8 +13,8 @@ import 'package:zaylo_mobile/features/buyer/catalog/search_field.dart';
 import 'package:zaylo_mobile/features/buyer/home/widgets/home_header.dart';
 import 'package:zaylo_mobile/features/buyer/home/widgets/home_menu_drawer.dart';
 import 'package:zaylo_mobile/features/buyer/home/widgets/home_sections.dart';
+import 'package:zaylo_mobile/features/buyer/messages/seller_messages_button.dart';
 import 'package:zaylo_mobile/features/buyer/orders/orders_screen.dart';
-import 'package:zaylo_mobile/features/buyer/widgets/shop_actions.dart';
 import 'package:zaylo_mobile/models/buyer/catalog_models.dart';
 import 'package:zaylo_mobile/navigation/floating_nav_bar.dart';
 import 'package:zaylo_mobile/state/app_state.dart';
@@ -23,7 +23,10 @@ import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 /// The Home tab. Guests see the web landing page; signed-in buyers also get
 /// the web dashboard's Flash Sales and Suggested Products.
 class StorefrontScreen extends StatefulWidget {
-  const StorefrontScreen({super.key});
+  const StorefrontScreen({super.key, this.scrollController});
+
+  /// Lets the app shell scroll Home back to the top when Home is tapped again.
+  final ScrollController? scrollController;
 
   @override
   State<StorefrontScreen> createState() => _StorefrontScreenState();
@@ -33,6 +36,7 @@ class _StorefrontScreenState extends State<StorefrontScreen> {
   Future<StorefrontHome>? _home;
   final _searchController = TextEditingController();
   final _topBarVisibility = NavBarVisibility();
+  final _messagesVisibility = ScrollIdleVisibility();
   int? _loadedForUser = -1;
 
   @override
@@ -50,6 +54,7 @@ class _StorefrontScreenState extends State<StorefrontScreen> {
   void dispose() {
     _searchController.dispose();
     _topBarVisibility.dispose();
+    _messagesVisibility.dispose();
     super.dispose();
   }
 
@@ -114,12 +119,16 @@ class _StorefrontScreenState extends State<StorefrontScreen> {
                   // bubble up to the app shell.
                   return Stack(children: [
                     NotificationListener<ScrollNotification>(
-                      onNotification: _topBarVisibility.handleScroll,
+                      onNotification: (notification) {
+                        _messagesVisibility.handleScroll(notification);
+                        return _topBarVisibility.handleScroll(notification);
+                      },
                       child: RefreshIndicator(
                         color: ZayloColors.ink,
                         edgeOffset: HomeTopBar.height,
                         onRefresh: _reload,
                         child: CustomScrollView(
+                          controller: widget.scrollController,
                           physics: const AlwaysScrollableScrollPhysics(),
                           slivers: [
                             const SliverToBoxAdapter(child: SizedBox(height: HomeTopBar.height)),
@@ -188,9 +197,16 @@ class _StorefrontScreenState extends State<StorefrontScreen> {
                       right: 0,
                       child: AutoHideTopBar(
                         visibility: _topBarVisibility,
-                        child: HomeTopBar(cartCount: state.cartCount, onBag: () => ShopActions.showTab(context, 2)),
+                        child: const HomeTopBar(),
                       ),
                     ),
+                    // Messages with sellers, kept above the floating nav bar.
+                    if (state.signedIn)
+                      Positioned(
+                        right: ZayloSpace.page,
+                        bottom: MediaQuery.paddingOf(context).bottom + 16,
+                        child: SellerMessagesButton(visibility: _messagesVisibility),
+                      ),
                   ]);
                 },
               ),

@@ -12,7 +12,6 @@ import 'package:zaylo_mobile/features/buyer/account/password_screen.dart';
 import 'package:zaylo_mobile/features/buyer/account/profile_screen.dart';
 import 'package:zaylo_mobile/features/buyer/account/support_screen.dart';
 import 'package:zaylo_mobile/features/buyer/address/addresses_screen.dart';
-import 'package:zaylo_mobile/features/buyer/messages/seller_inbox_screen.dart';
 import 'package:zaylo_mobile/features/buyer/orders/orders_screen.dart';
 import 'package:zaylo_mobile/features/buyer/widgets/shop_actions.dart';
 import 'package:zaylo_mobile/features/buyer/widgets/signed_out_prompt.dart';
@@ -29,7 +28,6 @@ class AccountScreen extends StatefulWidget {
 
 class _AccountScreenState extends State<AccountScreen> {
   int _unread = 0;
-  int _unreadMessages = 0;
   int _unreadSupport = 0;
   int? _lastUserId;
 
@@ -43,7 +41,7 @@ class _AccountScreenState extends State<AccountScreen> {
     }
   }
 
-  /// Badges for notifications, seller messages and support replies. Each is
+  /// Badges for notifications and support replies. Each is
   /// optional; the screen still works when one cannot load.
   Future<void> _loadUnread() async {
     final state = AppScope.read(context);
@@ -58,14 +56,12 @@ class _AccountScreenState extends State<AccountScreen> {
 
     final counts = await Future.wait([
       count(() async => (await api.notifications()).unreadCount),
-      count(api.sellerUnreadCount),
       count(api.supportUnreadCount),
     ]);
     if (!mounted) return;
     setState(() {
       _unread = counts[0];
-      _unreadMessages = counts[1];
-      _unreadSupport = counts[2];
+      _unreadSupport = counts[1];
     });
     // The ID badge follows approvals made while the app was open.
     try {
@@ -150,35 +146,6 @@ class _AccountScreenState extends State<AccountScreen> {
             ]),
           ),
           const SizedBox(height: 22),
-          const Eyebrow('Messages & help'),
-          const SizedBox(height: 9),
-          SectionCard(
-            padding: EdgeInsets.zero,
-            child: Column(children: [
-              _MenuTile(
-                icon: Icons.forum_outlined,
-                label: 'Messages with sellers',
-                trailing: _badge(_unreadMessages),
-                onTap: () => _push(const SellerInboxScreen()),
-              ),
-              _MenuTile(
-                icon: Icons.support_agent_outlined,
-                label: 'Help & support',
-                trailing: _badge(_unreadSupport),
-                onTap: () => _push(const SupportScreen()),
-              ),
-              _MenuTile(
-                icon: Icons.report_gmailerrorred_outlined,
-                label: 'Complaints',
-                onTap: () => _push(ComplaintsScreen(
-                  api: state.api,
-                  emptyMessage: 'Report a problem from an order’s details and follow the case here.',
-                )),
-                last: true,
-              ),
-            ]),
-          ),
-          const SizedBox(height: 22),
           const Eyebrow('Settings'),
           const SizedBox(height: 9),
           SectionCard(
@@ -219,6 +186,29 @@ class _AccountScreenState extends State<AccountScreen> {
               onTap: () => _push(PoliciesScreen(api: state.api)),
               last: true,
             ),
+          ),
+          const SizedBox(height: 22),
+          const Eyebrow('Help'),
+          const SizedBox(height: 9),
+          SectionCard(
+            padding: EdgeInsets.zero,
+            child: Column(children: [
+              _MenuTile(
+                icon: Icons.support_agent_outlined,
+                label: 'Help & support',
+                trailing: _badge(_unreadSupport),
+                onTap: () => _push(const SupportScreen()),
+              ),
+              _MenuTile(
+                icon: Icons.report_gmailerrorred_outlined,
+                label: 'Complaints',
+                onTap: () => _push(ComplaintsScreen(
+                  api: state.api,
+                  emptyMessage: 'Report a problem from an order’s details and follow the case here.',
+                )),
+                last: true,
+              ),
+            ]),
           ),
           const SizedBox(height: 22),
           SizedBox(
