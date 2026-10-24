@@ -38,7 +38,8 @@
                                 <span class="parcel-bin__count">{{ $bin['total'] }} {{ Str::plural('parcel', $bin['total']) }}</span>
                             </div>
                             @if($riders->isNotEmpty())
-                                <form method="POST" action="{{ route('logistics.areas.assign') }}" class="parcel-inline-form">
+                                <form method="POST" action="{{ route('logistics.areas.assign') }}" class="parcel-inline-form"
+                                      data-confirm="Give all {{ $bin['total'] }} {{ Str::plural('parcel', $bin['total']) }} in {{ $bin['area'] }} to the chosen rider?" data-confirm-title="Assign whole area?" data-confirm-button="Assign">
                                     @csrf
                                     <input type="hidden" name="area" value="{{ $bin['area'] }}">
                                     <label class="sr-only" for="area-rider-{{ $loop->index }}">Rider for {{ $bin['area'] }}</label>

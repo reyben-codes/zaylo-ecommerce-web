@@ -2,6 +2,14 @@
 
 @section('title', 'ID Checks')
 
+@push('styles')
+    <link rel="stylesheet" href="{{ asset('css/document-viewer.css') }}?v={{ filemtime(public_path('css/document-viewer.css')) }}">
+@endpush
+
+@push('scripts')
+    <script src="{{ asset('js/document-viewer.js') }}?v={{ filemtime(public_path('js/document-viewer.js')) }}" defer></script>
+@endpush
+
 @section('content')
     @php
         $tabs = ['pending' => 'To review', 'approved' => 'Approved', 'rejected' => 'Rejected'];
@@ -71,8 +79,8 @@
                                     @endif
                                 </td>
                                 <td>
-                                    <a href="{{ route('admin.identity.document', $verification) }}" target="_blank" rel="noopener" class="seller-button seller-button--secondary seller-button--small">
-                                        <i class="fas fa-up-right-from-square" aria-hidden="true"></i> View ID<span class="sr-only"> for {{ $buyer?->name }} (opens a new tab)</span>
+                                    <a href="{{ route('admin.identity.document', $verification) }}" target="_blank" rel="noopener" class="seller-button seller-button--secondary seller-button--small" data-document-viewer data-document-title="{{ $verification->id_type_label }} · {{ $buyer?->name ?? 'Deleted account' }}" data-document-type="{{ \App\Support\DocumentPreview::type($verification->document_path) }}">
+                                        <i class="fas fa-eye" aria-hidden="true"></i> View ID<span class="sr-only"> for {{ $buyer?->name }}</span>
                                     </a>
                                 </td>
                                 <td>
@@ -87,7 +95,8 @@
                                             <details class="review-reason" data-smooth-disclosure>
                                                 <summary class="seller-button seller-button--small seller-button--danger"><i class="fas fa-xmark" aria-hidden="true"></i> Reject</summary>
                                                 <div data-disclosure-content>
-                                                    <form method="POST" action="{{ route('admin.identity.review', $verification) }}" class="review-reason__form">
+                                                    <form method="POST" action="{{ route('admin.identity.review', $verification) }}" class="review-reason__form"
+                                                          data-confirm="Reject this ID? The buyer sees your reason and must upload a new one." data-confirm-title="Reject ID?" data-confirm-button="Reject" data-confirm-tone="danger">
                                                         @csrf
                                                         @method('PATCH')
                                                         <input type="hidden" name="decision" value="reject">

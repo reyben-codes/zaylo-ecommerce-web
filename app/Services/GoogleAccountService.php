@@ -50,6 +50,10 @@ class GoogleAccountService
                     }
 
                     $user = $byId ?? $byEmail;
+                    // Each sign-in page admits one account type; never link or sign in another type's account here.
+                    if ($user && User::portalOf($user->role) !== User::portalOf($role)) {
+                        throw new \App\Exceptions\WrongAccountTypeException($user->role);
+                    }
                     $new = ! $user;
                     if ($new) {
                         $user = new User;
@@ -70,7 +74,8 @@ class GoogleAccountService
                         throw new \DomainException('Google email does not verify the account email.');
                     }
                     $user->forceFill(['google_id' => $attributes['google_id']]);
-                    if ($avatar !== null) {
+                    // The Google photo fills in until the user uploads their own; it never replaces an upload.
+                    if ($avatar !== null && ! $user->hasUploadedAvatar()) {
                         $user->avatar = $avatar;
                     }
                     if ($newlyVerified) {

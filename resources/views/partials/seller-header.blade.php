@@ -7,8 +7,13 @@
         <img src="{{ asset('images/ZAYLO_LOGO_DARK.png') }}" alt="ZAYLO">
     </a>
     <div class="seller-site-header__actions">
+        <button type="button" class="theme-toggle" data-theme-toggle aria-label="Switch theme"></button>
         <a href="{{ route('seller.account') }}" class="seller-site-header__button" aria-label="Seller account">
-            <i class="fa-regular fa-user" aria-hidden="true"></i>
+            @if(auth()->user()->avatar_url)
+                @include('partials.user-avatar', ['user' => auth()->user(), 'class' => 'header-avatar'])
+            @else
+                <i class="fa-regular fa-user" aria-hidden="true"></i>
+            @endif
         </a>
         <form method="POST" action="{{ route('logout') }}" data-logout-confirm class="seller-site-header__logout">
             @csrf

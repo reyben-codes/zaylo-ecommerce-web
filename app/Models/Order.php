@@ -50,6 +50,20 @@ class Order extends Model
         return $this->hasOne(Shipment::class);
     }
 
+    /**
+     * The order's parcel on either schema: the deployed one links shipments to orders; the newer one to the order's
+     * seller orders (the parcel a rider carries, when there are several).
+     */
+    public function deliveryShipment(): ?Shipment
+    {
+        if (static::usesLegacySchema()) {
+            return $this->shipment;
+        }
+
+        return Shipment::whereIn('seller_order_id', $this->sellerOrders()->select('id'))
+            ->orderByRaw('rider_id IS NULL')->oldest('id')->first();
+    }
+
     public function statusHistory()
     {
         return $this->hasMany(OrderStatusHistory::class);

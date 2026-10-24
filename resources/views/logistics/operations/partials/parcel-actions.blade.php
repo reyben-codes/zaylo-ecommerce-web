@@ -29,7 +29,8 @@
         <details class="review-reason parcel-decline" data-smooth-disclosure>
             <summary class="seller-button seller-button--small seller-button--secondary">Decline</summary>
             <div data-disclosure-content>
-                <form method="POST" action="{{ route('logistics.parcels.pickup', $shipment) }}" class="review-reason__form">
+                <form method="POST" action="{{ route('logistics.parcels.pickup', $shipment) }}" class="review-reason__form"
+                      data-confirm="Decline the pickup of parcel {{ $tracking }}? The seller is told your reason." data-confirm-title="Decline pickup?" data-confirm-button="Decline pickup" data-confirm-tone="danger">
                     @csrf
                     @method('PATCH')
                     <input type="hidden" name="decision" value="decline">
@@ -75,7 +76,8 @@
     @foreach($steps as $status => $label)
         @php $danger = in_array($status, ['failed', 'returned'], true); @endphp
         <form method="POST" action="{{ route('logistics.parcels.advance', $shipment) }}"
-              @if($danger) data-confirm="{{ $label }} for parcel {{ $tracking }}?" @endif>
+              @if($danger) data-confirm="{{ $status === 'failed' ? 'Mark parcel '.$tracking.' as failed? The rider can try again or return it to the seller.' : 'Return parcel '.$tracking.' to the seller? This ends the delivery.' }}"
+                  data-confirm-title="{{ $label }}?" data-confirm-button="{{ $label }}" data-confirm-tone="danger" @endif>
             @csrf
             @method('PATCH')
             <input type="hidden" name="status" value="{{ $status }}">
@@ -85,5 +87,10 @@
 
     @if(! $steps && ! $awaitingRider && ! $awaitingConfirmation && ! $awaitingSort)
         <span class="seller-cell-note">{{ in_array($stage, ['delivered', 'returned', 'cancelled'], true) ? 'Done' : 'With the rider' }}</span>
+    @endif
+
+    @if(\App\Support\Waybill::available($shipment))
+        <a href="{{ route('logistics.parcels.waybill.print', $shipment) }}" class="seller-button seller-button--small seller-button--secondary" target="_blank" rel="noopener"
+           aria-label="Print waybill for parcel {{ $tracking }} (opens in a new tab)"><i class="fas fa-print" aria-hidden="true"></i> Print waybill</a>
     @endif
 </div>

@@ -14,12 +14,15 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 
+    @include('partials.theme-head')
+
     @stack('styles')
-    <link rel="stylesheet" href="{{ asset('css/logout-confirm.css') }}?v={{ filemtime(public_path('css/logout-confirm.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/confirm-dialog.css') }}?v={{ filemtime(public_path('css/confirm-dialog.css')) }}">
 </head>
 <body>
+    @include('partials.announcements')
     @yield('content')
     @stack('scripts')
-    <script src="{{ asset('js/logout-confirm.js') }}?v={{ filemtime(public_path('js/logout-confirm.js')) }}" defer></script>
+    <script src="{{ asset('js/confirm-dialog.js') }}?v={{ filemtime(public_path('js/confirm-dialog.js')) }}" defer></script>
 </body>
 </html>

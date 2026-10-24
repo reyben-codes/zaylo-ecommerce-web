@@ -110,7 +110,9 @@ class SellerApplicationTest extends TestCase
 
         $this->actingAs($admin)->get(route('admin.registrations'))->assertOk()->assertSee('Home &amp; Living', false)->assertSee(route('admin.seller-applications.show', $seller));
         $this->get(route('admin.seller-applications.show', $seller))->assertOk()
-            ->assertSee('123-456-789-000')->assertSee('Quezon City')->assertSee('DTI Certificate')->assertSee('Reason shown to the seller');
+            ->assertSee('123-456-789-000')->assertSee('Quezon City')->assertSee('DTI Certificate')->assertSee('Reason shown to the seller')
+            // Documents open in the viewer modal; the link still works as a new tab without JavaScript.
+            ->assertSee('js/document-viewer.js', false)->assertSee('data-document-gallery', false)->assertSee('data-document-title="DTI Certificate"', false);
         $this->get(route('admin.seller-applications.document', [$seller, 'dti_certificate']))->assertOk();
         $this->get(route('admin.seller-applications.document', [$seller, 'sec_certificate']))->assertNotFound();
 

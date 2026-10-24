@@ -1,0 +1,6 @@
+// Google sign-in on iOS: the iOS OAuth client's "reversed client ID"
+// (com.googleusercontent.apps.<numbers>-<letters>), registered as a URL scheme
+// in Info.plist so Google can return to the app. Leave it as is until the iOS
+// client exists; the Google button stays hidden without GOOGLE_IOS_CLIENT_ID.
+// See docs/google-authentication.md, "Mobile app".
+GOOGLE_REVERSED_CLIENT_ID = com.googleusercontent.apps.not-configured

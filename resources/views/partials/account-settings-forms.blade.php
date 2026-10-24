@@ -1,6 +1,16 @@
 {{-- Profile and password panels. Expects $user and $routePrefix (e.g. "admin.account"). --}}
 @php $hasPassword = filled($user->getAuthPassword()); @endphp
 
+<section class="seller-panel" aria-labelledby="photo-heading">
+    <header class="seller-panel__header">
+        <div>
+            <h2 id="photo-heading">Profile photo</h2>
+            <p>Shown on your account and in your conversations.</p>
+        </div>
+    </header>
+    <div class="seller-panel__body">@include('partials.profile-photo', ['user' => $user])</div>
+</section>
+
 <section class="seller-panel" aria-labelledby="profile-heading">
     <header class="seller-panel__header">
         <div>

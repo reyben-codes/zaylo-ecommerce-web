@@ -1,8 +1,6 @@
 <?php
 
 return [
-    'seller_managed_delivery' => env('SELLER_MANAGED_DELIVERY', true),
-
     // Products and options show as "Low stock" at or below this many units. Fixed for every seller.
     'low_stock_threshold' => 10,
 
@@ -97,11 +95,38 @@ return [
     // Colors offered as one-tap labels when a seller adds a product; any other color name can be typed.
     'color_presets' => ['Black', 'White', 'Gray', 'Navy', 'Blue', 'Red', 'Green', 'Pink', 'Beige', 'Brown', 'Yellow', 'Purple'],
 
+    // Who a product is for (the "For" field). Shoppers filtering by one group also see the groups listed for it,
+    // e.g. Unisex items appear under Men and Women, and Kids (boys or girls) items under Boys and Girls.
+    'genders' => [
+        'women' => 'Women',
+        'men' => 'Men',
+        'unisex' => 'Unisex',
+        'girls' => 'Girls',
+        'boys' => 'Boys',
+        'kids' => 'Kids (boys or girls)',
+    ],
+    'gender_matches' => [
+        'women' => ['women', 'unisex'],
+        'men' => ['men', 'unisex'],
+        'unisex' => ['unisex'],
+        'girls' => ['girls', 'kids'],
+        'boys' => ['boys', 'kids'],
+        'kids' => ['kids', 'girls', 'boys'],
+    ],
+    'kids_genders' => ['girls', 'boys', 'kids'],
+
     // Temporary standard sizes sellers can start from; they can rename, add or remove sizes per color.
     'size_presets' => [
         'shoes' => ['US 6', 'US 7', 'US 8', 'US 9', 'US 10', 'US 11'],
         'clothing' => ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
         'fashion' => ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+    ],
+    // Used instead when a product is for girls, boys or kids: toddler and kids clothing, and kids' shoe sizes
+    // (C = little kids, Y = big kids).
+    'kids_size_presets' => [
+        'shoes' => ['10C', '11C', '12C', '13C', '1Y', '2Y', '3Y', '4Y', '5Y', '6Y', '7Y'],
+        'clothing' => ['2T', '3T', '4T', '5', '6', '7', '8', '10', '12', '14'],
+        'fashion' => ['2T', '3T', '4T', '5', '6', '7', '8', '10', '12', '14'],
     ],
 
     'fashion_categories' => ['fashion', 'clothing', 'bags', 'shoes', 'watches', 'accessories'],

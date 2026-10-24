@@ -1,0 +1,99 @@
+/* Printing a page (loaded with media="print"): keep the content, drop the site chrome and controls. */
+@page {
+    margin: 14mm 12mm;
+}
+
+html,
+body {
+    background: #fff !important;
+    color: #000 !important;
+}
+
+/* Site chrome: headers, menus, sidebars, banners, chat and footers. */
+.navbar,
+.seller-site-header,
+.seller-sidebar,
+.sidebar,
+.nav-links,
+.announcement-bar,
+.notification-panel,
+.notifications,
+.chat-widget,
+.footer,
+footer.site-footer,
+.skip-link,
+/* Controls that mean nothing on paper. Filter bars are hidden as a whole; other forms (e.g. a table of
+   commissions to settle) stay, with only their buttons and boxes hidden. */
+button,
+input[type="checkbox"],
+input[type="radio"],
+.seller-button,
+.market-button,
+.seller-filter-bar,
+.catalog-filters,
+.admin-filter-panel,
+.report-presets,
+.report-filter,
+.order-actions,
+.review-actions,
+.seller-page-heading__actions,
+.page-hero-inner > i,
+[data-print],
+.no-print {
+    display: none !important;
+}
+
+.seller-shell,
+.seller-main,
+.page-content,
+main {
+    display: block !important;
+    width: auto !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.seller-panel,
+.seller-stat,
+.delivery-card,
+table,
+tr,
+img {
+    break-inside: avoid;
+    page-break-inside: avoid;
+}
+
+.seller-panel,
+.seller-stat,
+.delivery-card {
+    border: 1px solid #ccc !important;
+    box-shadow: none !important;
+}
+
+a {
+    color: inherit !important;
+    text-decoration: none !important;
+}
+
+/* A line printed only on paper: what this is and when it was printed (partials/print-header). */
+.print-only {
+    display: block !important;
+}
+
+.print-header {
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #000;
+    overflow: hidden;
+}
+
+.print-header__brand {
+    font-size: 16px;
+    letter-spacing: 2px;
+}
+
+.print-header__meta {
+    float: right;
+    font-size: 11px;
+}

@@ -69,7 +69,7 @@
             if (reducedMotion.matches) settle();
         });
         window.addEventListener('resize', settle);
-        const bounds = () => ({ min: Number(input.min) || 1, max: Math.min(99, input.max === '' ? 99 : Number(input.max)) });
+        const bounds = () => ({ min: Number(input.min) || 1, max: input.max === '' ? Infinity : Number(input.max) });
         const sync = () => {
             const { min, max } = bounds();
             const value = input.valueAsNumber;

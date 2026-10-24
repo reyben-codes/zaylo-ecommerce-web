@@ -1,0 +1,71 @@
+/* Admin review of seller listings: status pills and notices, shared by Seller Center, Admin Center and the product preview. */
+
+.review-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    width: max-content;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: .66rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.review-pill--pending {
+    background: var(--c-fff0d5);
+    color: var(--c-8f5b17);
+}
+
+.review-pill--rejected {
+    background: var(--c-fde4e1);
+    color: var(--c-a4413b);
+}
+
+.review-pill--approved {
+    background: var(--c-e6f2e7);
+    color: var(--c-2f6b3a);
+}
+
+.product-review-notice {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    margin: 0 0 18px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid var(--c-f0d9a8);
+    background: var(--c-fff7e6);
+    color: var(--c-6e4a12);
+    line-height: 1.45;
+}
+
+.product-review-notice i {
+    margin-top: 3px;
+}
+
+.product-review-notice strong,
+.product-review-notice span {
+    display: block;
+}
+
+.product-review-notice--rejected {
+    border-color: var(--c-f3c4bf);
+    background: var(--c-fdecea);
+    color: var(--c-8a332d);
+}
+
+.product-review-notice--hidden {
+    border-color: var(--c-e4ddd6);
+    background: var(--c-f5f1ed);
+    color: var(--c-5b4d41);
+}
+
+/* The preview notice above the product page, inside the page gutter. */
+.product-review-notice--page {
+    width: calc(100% - 32px);
+    max-width: 1200px;
+    margin: 18px auto 0;
+}

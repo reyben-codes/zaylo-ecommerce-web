@@ -27,9 +27,31 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    /**
+     * Each sign-in page admits one kind of account. Someone who signs in on the wrong page (with the right password)
+     * is turned away and pointed to their own page.
+     */
+    public const PORTALS = [
+        'buyer' => ['login' => 'login', 'dashboard' => 'buyer.dashboard', 'account' => 'buyer', 'page' => 'shop sign-in'],
+        'seller' => ['login' => 'seller.login', 'dashboard' => 'seller.dashboard', 'account' => 'seller', 'page' => 'Seller Center sign-in'],
+        'logistics' => ['login' => 'logistics.login', 'dashboard' => 'logistics.dashboard', 'account' => 'logistics partner', 'page' => 'Logistics Center sign-in'],
+        'rider' => ['login' => 'rider.login', 'dashboard' => 'courier.dashboard', 'account' => 'rider', 'page' => 'rider sign-in'],
+        'admin' => ['login' => 'admin.login', 'dashboard' => 'admin.dashboard', 'account' => 'admin', 'page' => 'Admin Center sign-in'],
+    ];
+
     public function showLogin()
     {
         return view('auth.login');
+    }
+
+    public function showRiderLogin()
+    {
+        return view('auth.login', ['portal' => 'rider']);
+    }
+
+    public function riderLogin(Request $request)
+    {
+        return $this->portalLogin($request, 'rider');
     }
 
     public function showSellerLogin()
@@ -37,49 +59,15 @@ class AuthController extends Controller
         return view('auth.login', ['portal' => 'seller']);
     }
 
+    /** The shop sign-in, for buyers only. */
     public function login(Request $request)
     {
-        $request->validate([
-            'email'    => 'required|email',
-            'password' => 'required',
-        ]);
-
-        $credentials = $request->only('email', 'password');
-        $remember    = $request->boolean('remember');
-
-        if (!Auth::attempt($credentials, $remember)) {
-            if ($resume = $this->resumePendingSignUp($request)) {
-                return $resume;
-            }
-
-            throw ValidationException::withMessages([
-                'email' => 'Incorrect email or password.',
-            ]);
-        }
-
-        $request->session()->regenerate();
-
-        if (! Auth::user()->hasVerifiedEmail()) {
-            return redirect()->route('verification.notice');
-        }
-
-        if ($route = Auth::user()->applicationRoute()) {
-            return redirect()->route($route);
-        }
-
-        if (! Auth::user()->isActive()) {
-            $message = $this->riderReviewMessage(Auth::user()) ?? 'This account is pending approval or has been suspended.';
-            Auth::logout();
-
-            throw ValidationException::withMessages(['email' => $message]);
-        }
-
-        return $this->redirectByRole(Auth::user());
+        return $this->portalLogin($request, 'buyer');
     }
 
     public function sellerLogin(Request $request)
     {
-        return $this->portalLogin($request, 'seller', 'seller.dashboard');
+        return $this->portalLogin($request, 'seller');
     }
 
     public function showLogisticsLogin()
@@ -89,7 +77,7 @@ class AuthController extends Controller
 
     public function logisticsLogin(Request $request)
     {
-        return $this->portalLogin($request, 'logistics', 'logistics.dashboard');
+        return $this->portalLogin($request, 'logistics');
     }
 
     public function showAdminLogin()
@@ -99,31 +87,33 @@ class AuthController extends Controller
 
     public function adminLogin(Request $request)
     {
-        return $this->portalLogin($request, 'admin', 'admin.dashboard');
+        return $this->portalLogin($request, 'admin');
     }
 
     /**
-     * Partner portals only admit their own role, with the same generic error for wrong credentials and wrong role.
+     * Signs in on one page, admitting only that page's kind of account. Wrong credentials get a generic error; the
+     * right password on the wrong page is refused with a pointer to the right page (the password proves the owner,
+     * so naming the account type reveals nothing to anyone else).
      */
-    private function portalLogin(Request $request, string $role, string $dashboardRoute)
+    private function portalLogin(Request $request, string $portal)
     {
         $request->validate([
             'email' => 'required|email',
             'password' => 'required',
         ]);
 
-        $rejected = "Incorrect {$role} email or password.";
         if (! Auth::attempt($request->only('email', 'password'), $request->boolean('remember'))) {
-            if ($resume = $this->resumePendingSignUp($request, $role)) {
+            if ($resume = $this->resumePendingSignUp($request, $portal)) {
                 return $resume;
             }
 
-            throw ValidationException::withMessages(['email' => $rejected]);
+            throw ValidationException::withMessages(['email' => 'Incorrect email or password.']);
         }
 
-        if (! Auth::user()->hasRole($role)) {
+        $accountPortal = Auth::user()->portal();
+        if ($accountPortal !== $portal) {
             Auth::logout();
-            throw ValidationException::withMessages(['email' => $rejected]);
+            $this->refuseWrongPortal($accountPortal);
         }
 
         $request->session()->regenerate();
@@ -138,16 +128,27 @@ class AuthController extends Controller
         }
 
         if (! Auth::user()->isActive()) {
+            $message = $this->riderReviewMessage(Auth::user())
+                ?? 'This '.$portal.' account is pending approval or has been suspended.';
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
-            throw ValidationException::withMessages([
-                'email' => "This {$role} account is pending approval or has been suspended.",
-            ]);
+            throw ValidationException::withMessages(['email' => $message]);
         }
 
-        return redirect()->route($dashboardRoute);
+        return redirect()->route(self::PORTALS[$portal]['dashboard']);
+    }
+
+    /** Refuses a sign-in on the wrong page and shows a link to the page this account belongs to. */
+    private function refuseWrongPortal(string $accountPortal): never
+    {
+        $target = self::PORTALS[$accountPortal] ?? self::PORTALS['buyer'];
+        session()->flash('portal_hint', ['url' => route($target['login']), 'label' => 'Go to the '.$target['page']]);
+
+        throw ValidationException::withMessages([
+            'email' => 'This is '.(preg_match('/^[aeiou]/i', $target['account']) ? 'an ' : 'a ').$target['account'].' account, so it can\'t sign in here. Please use the '.$target['page'].' page instead.',
+        ]);
     }
 
     public function showRegister()
@@ -217,7 +218,7 @@ class AuthController extends Controller
             'phone.unique' => 'This mobile number is already in use.',
             'date_of_birth.before_or_equal' => 'Enter a valid date of birth. It cannot be a future date.',
             'date_of_birth.required_if' => 'Enter your birthday.',
-            'terms.accepted' => 'Please accept the Terms and Privacy Policy to continue.',
+            'terms.accepted' => 'Please accept the Terms of Service and Privacy Policy to continue.',
             'logistics_provider_id.required' => 'Choose the logistics partner you are applying to.',
             'logistics_provider_id.exists' => 'That logistics partner is not accepting riders right now.',
             'plate_no.required_unless' => 'Enter your vehicle plate number.',
@@ -454,7 +455,7 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        $redirectRoute = $request->user()?->hasRole('seller', 'logistics', 'admin') ? $request->user()->portalLoginRoute() : 'home';
+        $redirectRoute = $request->user()?->hasRole('seller', 'logistics', 'admin', 'rider', 'courier') ? $request->user()->portalLoginRoute() : 'home';
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
@@ -475,9 +476,9 @@ class AuthController extends Controller
         if (! $pending || ! Hash::check((string) $request->input('password'), $pending->payload['password_hash'] ?? '')) {
             return null;
         }
-        $role = $pending->role === 'courier' ? 'rider' : $pending->role;
+        $role = User::portalOf($pending->role);
         if ($portalRole && $role !== $portalRole) {
-            return null;
+            $this->refuseWrongPortal($role);
         }
 
         $request->session()->regenerate();

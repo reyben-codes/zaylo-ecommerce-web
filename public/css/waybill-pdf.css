@@ -1,0 +1,326 @@
+/* Waybill label PDF (dompdf, 4 x 6 in). Black on white for thermal printers; table layout only (no flexbox or grid). */
+
+@page {
+    size: 4in 6in;
+    margin: 14px 14px 12px;
+}
+
+body {
+    margin: 0;
+    color: #000;
+    font-family: 'DejaVu Sans', sans-serif;
+    font-size: 8px;
+    line-height: 1.3;
+}
+
+p {
+    margin: 0;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.wb-head td {
+    vertical-align: middle;
+}
+
+.wb-logo {
+    height: 16px;
+}
+
+.wb-wordmark {
+    font-size: 14px;
+    font-weight: bold;
+    letter-spacing: 2px;
+}
+
+.wb-head__meta {
+    text-align: right;
+}
+
+.wb-title {
+    display: block;
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: 2px;
+}
+
+.wb-carrier {
+    display: block;
+    font-size: 7px;
+}
+
+.wb-barcode {
+    width: 100%;
+    margin: 5px 0 3px;
+    border-top: 2px solid #000;
+    border-bottom: 2px solid #000;
+    border-collapse: collapse;
+}
+
+.wb-barcode td {
+    padding: 3px 0 1px;
+    vertical-align: middle;
+}
+
+.wb-barcode__bars {
+    text-align: center;
+}
+
+.wb-barcode__qr {
+    width: 62px;
+    text-align: right;
+}
+
+.wb-barcode__qr img {
+    width: 58px;
+    height: 58px;
+}
+
+.wb-barcode__bars img {
+    width: 240px;
+    height: 40px;
+}
+
+.wb-tracking {
+    margin-top: 2px;
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.wb-label {
+    display: block;
+    margin-bottom: 1px;
+    font-size: 6px;
+    font-weight: bold;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+}
+
+.wb-grid {
+    margin-bottom: 3px;
+}
+
+.wb-cell {
+    padding: 2px 5px;
+    border: 1px solid #000;
+    font-size: 8px;
+    vertical-align: top;
+}
+
+.wb-cell--half {
+    width: 50%;
+}
+
+.wb-block {
+    margin-bottom: 3px;
+    padding: 3px 6px;
+    border: 1px solid #000;
+}
+
+.wb-block--to {
+    border-width: 2px;
+}
+
+.wb-name {
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.wb-phone {
+    font-size: 9px;
+    font-weight: bold;
+}
+
+.wb-address {
+    margin-top: 2px;
+    font-size: 9px;
+}
+
+.wb-area {
+    margin-top: 2px;
+    font-size: 8px;
+    font-weight: bold;
+}
+
+.wb-from-name {
+    font-size: 8px;
+    font-weight: bold;
+}
+
+.wb-from-address {
+    font-size: 7px;
+}
+
+.wb-cod {
+    margin-bottom: 3px;
+    padding: 3px 6px;
+    background: #000;
+    color: #fff;
+    text-align: center;
+}
+
+.wb-cod--paid {
+    border: 2px solid #000;
+    background: #fff;
+    color: #000;
+}
+
+.wb-cod__label {
+    display: block;
+    font-size: 7px;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.wb-cod__amount {
+    display: block;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+.wb-items {
+    margin-bottom: 3px;
+}
+
+.wb-items th,
+.wb-items td {
+    padding: 1px 5px;
+    border: 1px solid #000;
+    font-size: 7px;
+    text-align: left;
+    vertical-align: top;
+}
+
+.wb-items th {
+    font-size: 6px;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+}
+
+.wb-items .wb-qty {
+    width: 26px;
+    text-align: center;
+}
+
+.wb-variant,
+.wb-more {
+    color: #333;
+}
+
+.wb-notes {
+    margin-bottom: 2px;
+    font-size: 7px;
+}
+
+.wb-sign {
+    margin-top: 4px;
+}
+
+.wb-sign td {
+    padding-right: 8px;
+    vertical-align: bottom;
+}
+
+.wb-sign__date {
+    width: 30%;
+    padding-right: 0;
+}
+
+.wb-line {
+    display: block;
+    height: 12px;
+    border-bottom: 1px solid #000;
+}
+
+.wb-foot {
+    margin-top: 3px;
+    font-size: 6px;
+    text-align: center;
+}
+
+/* Browser print page (waybill/pdf.blade.php with $web): the label on a card, with a toolbar that does not print. */
+.wb-web {
+    min-height: 100vh;
+    padding: 16px;
+    background: #ece8e3;
+}
+
+.wb-sheet {
+    width: 4in;
+    max-width: 100%;
+    min-height: 6in;
+    margin: 0 auto;
+    padding: 14px;
+    background: #fff;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, .15);
+}
+
+.wb-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+    max-width: 4in;
+    margin: 0 auto 12px;
+    font-size: 12px;
+}
+
+.wb-toolbar__button {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    padding: 8px 14px;
+    border: 1px solid #1a1714;
+    border-radius: 6px;
+    background: #fff;
+    color: #1a1714;
+    font: inherit;
+    font-weight: bold;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.wb-toolbar__button--primary {
+    background: #1a1714;
+    color: #fff;
+}
+
+.wb-toolbar__button[hidden] {
+    display: none;
+}
+
+.wb-toolbar__button:focus-visible {
+    outline: 2px solid #9a755e;
+    outline-offset: 2px;
+}
+
+.wb-toolbar__hint {
+    flex-basis: 100%;
+    color: #555;
+    text-align: center;
+}
+
+@media print {
+    .wb-web {
+        min-height: 0;
+        padding: 0;
+        background: #fff;
+    }
+
+    .wb-toolbar {
+        display: none;
+    }
+
+    .wb-sheet {
+        width: auto;
+        min-height: 0;
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+    }
+}

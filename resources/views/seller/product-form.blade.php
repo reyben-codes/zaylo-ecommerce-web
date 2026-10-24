@@ -5,6 +5,7 @@
 @push('styles')
     <link rel="stylesheet" href="{{ asset('css/seller-products.css') }}?v={{ filemtime(public_path('css/seller-products.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/product-sales.css') }}?v={{ filemtime(public_path('css/product-sales.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/product-review.css') }}?v={{ filemtime(public_path('css/product-review.css')) }}">
 @endpush
 
 @section('content')
@@ -23,15 +24,51 @@
             <h1>{{ $product ? $product->name : 'Add product' }}</h1>
             <p>{{ $product ? 'Changes appear in your shop as soon as you save.' : 'Fill in the details buyers see. You can add sales after saving.' }}</p>
         </div>
-        @if($product?->is_active)
+        @if($product?->is_archived)
             <div class="seller-page-heading__actions">
-                <a href="{{ route('products.show', $product) }}" class="seller-button seller-button--secondary" target="_blank" rel="noopener"><i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i> View in shop</a>
+                <form method="POST" action="{{ route('seller.products.restore', $product) }}"
+                      data-confirm="Put {{ $product->name }} back in your shop? Buyers will see it again." data-confirm-title="Restore product?" data-confirm-button="Restore">
+                    @csrf
+                    @method('PATCH')
+                    <button type="submit" class="seller-button"><i class="fas fa-rotate-left" aria-hidden="true"></i> Restore to shop</button>
+                </form>
+            </div>
+        @endif
+        @if($product && ! $product->is_archived)
+            <div class="seller-page-heading__actions">
+                <a href="{{ route('products.show', $product) }}" class="seller-button seller-button--secondary" target="_blank" rel="noopener"><i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i> {{ $product->is_listed ? 'View in shop' : 'Preview' }}</a>
             </div>
         @endif
     </section>
 
+    @if($product && ! $product->is_archived && ($product->is_pending_review || $product->is_rejected))
+        <aside class="product-review-notice product-review-notice--{{ $product->review_status }}" role="status">
+            <i class="fas {{ $product->is_rejected ? 'fa-circle-xmark' : 'fa-hourglass-half' }}" aria-hidden="true"></i>
+            <div>
+                @if($product->is_rejected)
+                    <strong>An admin did not approve this product, so buyers can't see it.</strong>
+                    @if($product->review_note)<span>Reason: {{ $product->review_note }}</span>@endif
+                    <span>Fix it below and save; it goes back for review.</span>
+                @else
+                    <strong>Waiting for admin approval.</strong>
+                    <span>Buyers can't see this product yet. You'll get an email when it's reviewed.</span>
+                @endif
+            </div>
+        </aside>
+    @endif
+
+    @if($product?->is_archived)
+        <p class="product-form__archived" role="status">
+            <i class="fas fa-box-archive" aria-hidden="true"></i>
+            Archived {{ $product->archived_at->timezone('Asia/Manila')->format('M j, Y') }}. Buyers can't see or order it; its reviews, photos and order history are kept. You can still edit it before restoring.
+        </p>
+    @endif
+    @error('product')<p class="seller-field__error product-form__archived-error" role="alert">{{ $message }}</p>@enderror
+
     <div class="seller-panel-grid product-form-grid">
-        <form method="POST" action="{{ $product ? route('seller.products.update', $product) : route('seller.products.store') }}" enctype="multipart/form-data" class="product-form" id="productForm">
+        <form method="POST" action="{{ $product ? route('seller.products.update', $product) : route('seller.products.store') }}" enctype="multipart/form-data" class="product-form" id="productForm"
+              data-confirm="The photos you ticked will be deleted when you save." data-confirm-if="input[name='remove_photos[]']:checked"
+              data-confirm-title="Remove photos?" data-confirm-button="Save and remove" data-confirm-tone="danger">
             @csrf
             @if($product) @method('PUT') @endif
 
@@ -69,12 +106,20 @@
                     </fieldset>
                     <div class="seller-field">
                         <label for="productGender">For</label>
-                        <select id="productGender" name="gender">
+                        <select id="productGender" name="gender" data-product-gender aria-describedby="productGenderHelp">
                             <option value="">Not specified</option>
-                            @foreach(['women' => 'Women', 'men' => 'Men', 'unisex' => 'Unisex'] as $key => $label)
-                                <option value="{{ $key }}" @selected($value('gender', $product?->gender) === $key)>{{ $label }}</option>
-                            @endforeach
+                            <optgroup label="Adults">
+                                @foreach(['women', 'men', 'unisex'] as $key)
+                                    <option value="{{ $key }}" @selected($value('gender', $product?->gender) === $key)>{{ config('marketplace.genders')[$key] }}</option>
+                                @endforeach
+                            </optgroup>
+                            <optgroup label="Kids">
+                                @foreach(['girls', 'boys', 'kids'] as $key)
+                                    <option value="{{ $key }}" @selected($value('gender', $product?->gender) === $key)>{{ config('marketplace.genders')[$key] }}</option>
+                                @endforeach
+                            </optgroup>
                         </select>
+                        <p class="seller-field__help" id="productGenderHelp">Kids items use kids' sizes for Standard sizes. "Kids (boys or girls)" shows under both Girls and Boys.</p>
                     </div>
                     <div class="seller-field">
                         <label for="productBadge">Badge</label>
@@ -183,8 +228,11 @@
                 <div class="seller-panel__body">
                     <div class="seller-field">
                         <label for="productStatus">Shown in your shop</label>
-                        <select id="productStatus" name="is_active">
-                            <option value="1" @selected((string) $value('is_active', $product ? (int) $product->is_active : 1) === '1')>Active — visible to buyers</option>
+                        @if($product?->is_archived)
+                            <p class="seller-field__help" id="productStatusHelp">Archived products stay hidden. Restore it to show it again.</p>
+                        @endif
+                        <select id="productStatus" name="is_active" @if($product?->is_archived) disabled aria-describedby="productStatusHelp" @endif>
+                            <option value="1" @selected((string) $value('is_active', $product ? (int) $product->is_active : 1) === '1')>{{ $product && $product->review_status === \App\Models\Product::REVIEW_APPROVED ? 'Active — visible to buyers' : 'Active — visible once an admin approves it' }}</option>
                             <option value="0" @selected((string) $value('is_active', $product ? (int) $product->is_active : 1) === '0')>Hidden — only you can see it</option>
                         </select>
                     </div>
@@ -203,7 +251,7 @@
                     <header class="seller-panel__header"><h2 id="summary-heading">At a glance</h2></header>
                     <dl class="seller-panel__body product-form__summary">
                         <div><dt>Stock</dt><dd><span class="stock-pill stock-pill--{{ $stockState['state'] }}">{{ $stockState['total'] }} available</span></dd></div>
-                        <div><dt>Visibility</dt><dd>{{ $product->is_active ? 'Visible to buyers' : 'Hidden' }}</dd></div>
+                        <div><dt>Visibility</dt><dd>{{ match (true) { $product->is_archived => 'Archived', $product->is_pending_review => 'Pending admin review', $product->is_rejected => 'Rejected by admin', $product->is_active => 'Visible to buyers', default => 'Hidden' } }}</dd></div>
                         <div><dt>Sale</dt><dd>{{ $product->sale_status }}</dd></div>
                         <div><dt>Last updated</dt><dd>{{ $product->updated_at?->timezone('Asia/Manila')->format('M j, Y g:i A') }}</dd></div>
                     </dl>
@@ -218,14 +266,33 @@
                     </div>
                 </section>
 
-                <section class="seller-panel product-form__danger" aria-labelledby="delete-heading">
-                    <header class="seller-panel__header"><div><h2 id="delete-heading">Delete product</h2><p>Removes it from your shop. Past orders keep their records.</p></div></header>
-                    <form method="POST" action="{{ route('seller.products.destroy', $product) }}" class="seller-panel__body" data-confirm="Delete {{ $product->name }} from your shop? This cannot be undone.">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" class="seller-button seller-button--small product-form__delete"><i class="fas fa-trash" aria-hidden="true"></i> Delete product</button>
-                    </form>
-                </section>
+                @if(! $product->is_archived)
+                    <section class="seller-panel" aria-labelledby="archive-heading">
+                        <header class="seller-panel__header"><div><h2 id="archive-heading">Archive product</h2><p>Stop selling it without losing anything. Its reviews, photos and order history are kept, and you can restore it anytime.</p></div></header>
+                        <form method="POST" action="{{ route('seller.products.archive', $product) }}" class="seller-panel__body"
+                              data-confirm="Archive {{ $product->name }}? Buyers won't see it and it is removed from their carts. You can restore it from Archived anytime."
+                              data-confirm-title="Archive product?" data-confirm-button="Archive">
+                            @csrf
+                            @method('PATCH')
+                            <button type="submit" class="seller-button seller-button--small seller-button--secondary"><i class="fas fa-box-archive" aria-hidden="true"></i> Archive product</button>
+                        </form>
+                    </section>
+                @else
+                    <section class="seller-panel product-form__danger" aria-labelledby="delete-heading">
+                        @if($product->hasHistory())
+                            <header class="seller-panel__header"><div><h2 id="delete-heading">Delete permanently</h2><p>Buyers have ordered or reviewed this product, so it stays archived to keep their order history and reviews.</p></div></header>
+                        @else
+                            <header class="seller-panel__header"><div><h2 id="delete-heading">Delete permanently</h2><p>No one has ordered or reviewed it, so it can be removed for good, with its photos.</p></div></header>
+                            <form method="POST" action="{{ route('seller.products.destroy', $product) }}" class="seller-panel__body"
+                                  data-confirm="Delete {{ $product->name }} permanently? Its photos, colors and sizes are removed too. This cannot be undone."
+                                  data-confirm-title="Delete permanently?" data-confirm-button="Delete" data-confirm-tone="danger">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="seller-button seller-button--small product-form__delete"><i class="fas fa-trash" aria-hidden="true"></i> Delete permanently</button>
+                            </form>
+                        @endif
+                    </section>
+                @endif
             @else
                 <section class="seller-panel">
                     <header class="seller-panel__header"><h2>After you create it</h2></header>

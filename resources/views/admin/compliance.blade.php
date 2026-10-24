@@ -4,6 +4,7 @@
 
 @push('styles')
     <link rel="stylesheet" href="{{ asset('css/admin-modules.css') }}?v={{ filemtime(public_path('css/admin-modules.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/product-review.css') }}?v={{ filemtime(public_path('css/product-review.css')) }}">
 @endpush
 
 @section('content')
@@ -11,20 +12,20 @@
         <div>
             <p class="seller-eyebrow">Marketplace</p>
             <h1>Seller compliance</h1>
-            <p>Products are flagged when they are outside the seller's registered category or mention prohibited items. Warn the seller, hide the product, or suspend the seller. Every action is emailed to the seller.</p>
+            <p>New and edited listings wait under Pending review until you approve them; buyers cannot see them before. Products are also flagged when they are outside the seller's registered category or mention prohibited items. Warn the seller, hide the product, or suspend the seller. Every decision is emailed to the seller.</p>
         </div>
     </section>
 
     <section class="seller-panel">
         <nav class="workspace-tabs" aria-label="Compliance views">
-            @foreach(['flagged' => 'Flagged', 'all' => 'All products', 'hidden' => 'Hidden', 'warnings' => 'Warnings issued'] as $key => $label)
-                <a href="{{ route('admin.compliance', array_filter(['view' => $key === 'flagged' ? null : $key, 'search' => $search])) }}" class="workspace-tab{{ $view === $key ? ' is-active' : '' }}" @if($view === $key) aria-current="true" @endif>{{ $label }} <span>{{ $counts[$key] }}</span></a>
+            @foreach(['pending' => 'Pending review', 'flagged' => 'Flagged', 'all' => 'All products', 'hidden' => 'Hidden', 'rejected' => 'Rejected', 'warnings' => 'Warnings issued'] as $key => $label)
+                <a href="{{ route('admin.compliance', array_filter(['view' => $key === $defaultView ? null : $key, 'search' => $search])) }}" class="workspace-tab{{ $view === $key ? ' is-active' : '' }}" @if($view === $key) aria-current="true" @endif>{{ $label }} <span>{{ $counts[$key] }}</span></a>
             @endforeach
         </nav>
 
         @if($view !== 'warnings')
             <form method="GET" action="{{ route('admin.compliance') }}" class="seller-filter-bar" role="search">
-                @if($view !== 'flagged')<input type="hidden" name="view" value="{{ $view }}">@endif
+                @if($view !== $defaultView)<input type="hidden" name="view" value="{{ $view }}">@endif
                 <div class="seller-field seller-field--search">
                     <label class="seller-field__label" for="product-search">Product name</label>
                     <input type="search" id="product-search" name="search" value="{{ $search }}" maxlength="100" placeholder="Search products">
@@ -49,6 +50,12 @@
                                         <div>
                                             <a href="{{ route('products.show', $product) }}" target="_blank" rel="noopener" class="workspace-link"><strong>{{ $product->name }}</strong></a>
                                             <span class="seller-cell-note">{{ $product->category_label }} · ₱{{ number_format((float) $product->price, 2) }}</span>
+                                            @if($product->is_pending_review)
+                                                <span class="review-pill review-pill--pending"><i class="fas fa-hourglass-half" aria-hidden="true"></i> Pending review</span>
+                                            @elseif($product->is_rejected)
+                                                <span class="review-pill review-pill--rejected"><i class="fas fa-circle-xmark" aria-hidden="true"></i> Rejected</span>
+                                                @if($product->review_note)<span class="seller-cell-note">{{ Str::limit($product->review_note, 120) }}</span>@endif
+                                            @endif
                                             @unless($product->is_active)<span class="case-pill case-pill--rejected">Hidden</span>@endunless
                                         </div>
                                     </div>
@@ -73,7 +80,33 @@
                                 </td>
                                 <td>
                                     <div class="review-actions">
-                                        @if($row['owner'])
+                                        @if(! $product->is_archived && ($product->is_pending_review || $product->is_rejected))
+                                            <form method="POST" action="{{ route('admin.compliance.review', $product) }}">
+                                                @csrf
+                                                @method('PATCH')
+                                                <input type="hidden" name="decision" value="approve">
+                                                <button type="submit" class="seller-button seller-button--small"><i class="fas fa-check" aria-hidden="true"></i> Approve</button>
+                                            </form>
+                                        @endif
+                                        @if(! $product->is_archived && $product->is_pending_review)
+                                            @php $rejectError = $errors->has('reason') && old('review_product') == $product->id; @endphp
+                                            <details class="review-reason" data-smooth-disclosure @if($rejectError) open @endif>
+                                                <summary class="seller-button seller-button--small seller-button--danger"><i class="fas fa-xmark" aria-hidden="true"></i> Reject</summary>
+                                                <div data-disclosure-content>
+                                                    <form method="POST" action="{{ route('admin.compliance.review', $product) }}" class="review-reason__form">
+                                                        @csrf
+                                                        @method('PATCH')
+                                                        <input type="hidden" name="decision" value="reject">
+                                                        <input type="hidden" name="review_product" value="{{ $product->id }}">
+                                                        <label for="review-reason-{{ $product->id }}">Reason for the seller</label>
+                                                        <textarea id="review-reason-{{ $product->id }}" name="reason" minlength="10" maxlength="1000" required placeholder="What is not allowed and what to change.">{{ $rejectError ? old('reason') : ($row['flags'][0][1] ?? '') }}</textarea>
+                                                        @if($rejectError)<p class="seller-field__error" role="alert">{{ $errors->first('reason') }}</p>@endif
+                                                        <button type="submit" class="seller-button seller-button--small seller-button--danger">Reject listing</button>
+                                                    </form>
+                                                </div>
+                                            </details>
+                                        @endif
+                                        @if($row['owner'] && ! $product->is_pending_review)
                                             @php $errorHere = $errors->any() && old('product') == $product->id; @endphp
                                             <details class="review-reason" data-smooth-disclosure @if($errorHere) open @endif>
                                                 <summary class="seller-button seller-button--small seller-button--danger"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i> Warn</summary>
@@ -101,13 +134,19 @@
                                                 </div>
                                             </details>
                                         @endif
-                                        <form method="POST" action="{{ route('admin.compliance.toggle', $product) }}">
+                                        @if($product->is_archived)
+                                            <span class="seller-cell-note"><i class="fas fa-box-archive" aria-hidden="true"></i> Archived by the seller</span>
+                                        @else
+                                        <form method="POST" action="{{ route('admin.compliance.toggle', $product) }}"
+                                              data-confirm="{{ $product->is_active ? 'Hide '.$product->name.' from buyers? The seller can see it but buyers cannot order it.' : 'Show '.$product->name.' to buyers again?' }}"
+                                              data-confirm-title="{{ $product->is_active ? 'Hide product?' : 'Restore product?' }}" data-confirm-button="{{ $product->is_active ? 'Hide' : 'Restore' }}" @if($product->is_active) data-confirm-tone="danger" @endif>
                                             @csrf
                                             @method('PATCH')
                                             <button type="submit" class="seller-button seller-button--small seller-button--secondary">
                                                 <i class="fas {{ $product->is_active ? 'fa-eye-slash' : 'fa-eye' }}" aria-hidden="true"></i> {{ $product->is_active ? 'Hide' : 'Restore' }}
                                             </button>
                                         </form>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>
@@ -115,8 +154,12 @@
                             <tr><td colspan="4">
                                 <div class="seller-empty">
                                     <i class="fas fa-shield-halved" aria-hidden="true"></i>
-                                    <strong>{{ $view === 'flagged' ? 'No products flagged' : 'No products here' }}</strong>
-                                    <span>{{ $view === 'flagged' ? 'Every listed product matches its seller\'s category and mentions no prohibited items.' : 'Try another search.' }}</span>
+                                    <strong>{{ match ($view) { 'flagged' => 'No products flagged', 'pending' => 'No listings waiting', default => 'No products here' } }}</strong>
+                                    <span>{{ match ($view) {
+                                        'flagged' => 'Every listed product matches its seller\'s category and mentions no prohibited items.',
+                                        'pending' => 'New and edited seller listings appear here for approval.',
+                                        default => 'Try another search.',
+                                    } }}</span>
                                 </div>
                             </td></tr>
                         @endforelse

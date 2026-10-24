@@ -81,11 +81,12 @@ class RegistrationRulesTest extends TestCase
     {
         $data = $this->registration();
         unset($data['terms']);
-        $this->post(route('register'), $data)->assertSessionHasErrors(['terms' => 'Please accept the Terms and Privacy Policy to continue.']);
+        $this->post(route('register'), $data)->assertSessionHasErrors(['terms' => 'Please accept the Terms of Service and Privacy Policy to continue.']);
         $this->assertDatabaseMissing('users', ['email' => $data['email']]);
 
-        $this->get(route('register'))->assertSee('name="terms"', false)->assertSee(route('terms'), false);
-        $this->get(route('terms'))->assertOk()->assertSee('Terms and Privacy Policy');
+        $this->get(route('register'))->assertSee('name="terms"', false)
+            ->assertSee(route('policies.show', 'terms'), false)->assertSee(route('policies.show', 'privacy'), false);
+        $this->get(route('terms'))->assertOk()->assertSee('Terms of Service');
     }
 
     public function test_verification_code_expires_after_5_minutes(): void

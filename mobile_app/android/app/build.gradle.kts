@@ -1,5 +1,8 @@
 plugins {
     id("com.android.application")
+    // gradle.properties turns off AGP's built-in Kotlin (android.builtInKotlin=false), so the
+    // Kotlin plugin is applied here; it provides the kotlin { compilerOptions } block below.
+    id("org.jetbrains.kotlin.android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
@@ -12,6 +15,16 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    applicationVariants.all {
+        val variant = this
+        outputs.all {
+            val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
+            val projectName = "Zaylo Mobile"
+            val buildType = variant.buildType.name
+            output.outputFileName = "${projectName}-${buildType}.apk"
+        }
     }
 
     defaultConfig {

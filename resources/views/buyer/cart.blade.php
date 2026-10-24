@@ -36,8 +36,8 @@
                     <h2><a href="{{ route('products.show', $item->product) }}">{{ $item->product->name }}</a></h2>
                     @if($item->variant)<p>{{ $item->variant->name }}</p>@endif
                     <strong>&#8369;{{ number_format($item->unitPrice(), 2) }} each</strong>
-                    @if(!$item->product->is_active || $item->availableStock() < $item->quantity)
-                        <p class="cart-stock-warning">{{ $item->product->is_active ? 'Only '.$item->availableStock().' left in stock.' : 'This product is unavailable.' }}</p>
+                    @if(!$item->product->is_listed || $item->availableStock() < $item->quantity)
+                        <p class="cart-stock-warning">{{ $item->product->is_listed ? 'Only '.$item->availableStock().' left in stock.' : 'This product is unavailable.' }}</p>
                     @endif
                 </div>
                     <div class="cart-item-actions">

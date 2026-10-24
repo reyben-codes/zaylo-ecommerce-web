@@ -3,19 +3,19 @@
     max-width: 760px;
     margin: 0 auto;
     padding: 48px 20px 72px;
-    color: #2a241f;
+    color: var(--c-2a241f);
     line-height: 1.65;
 }
 
 .legal-page__header {
     margin-bottom: 32px;
     padding-bottom: 20px;
-    border-bottom: 1px solid #e5ddd4;
+    border-bottom: 1px solid var(--c-e5ddd4);
 }
 
 .legal-page__eyebrow {
     margin-bottom: 8px;
-    color: #806f61;
+    color: var(--c-806f61);
     font-size: .72rem;
     letter-spacing: .16em;
     text-transform: uppercase;
@@ -23,14 +23,14 @@
 
 .legal-page h1 {
     margin-bottom: 8px;
-    color: #1a1714;
+    color: var(--c-1a1714);
     font-family: 'Playfair Display', serif;
     font-size: 2.2rem;
 }
 
 .legal-page h2 {
     margin: 28px 0 10px;
-    color: #1a1714;
+    color: var(--c-1a1714);
     font-size: 1.05rem;
 }
 

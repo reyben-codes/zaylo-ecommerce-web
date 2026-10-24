@@ -35,6 +35,7 @@ class SellerSidebarConsistencyTest extends TestCase
             route('seller.chat') => 'Messages',
             route('seller.logistics-messages') => 'Logistics chat',
             route('support') => 'Help & support',
+            route('seller.activity') => 'Activity log',
             route('seller.account') => 'Account',
         ];
 
@@ -45,7 +46,7 @@ class SellerSidebarConsistencyTest extends TestCase
             $xpath = new DOMXPath($document);
 
             $this->assertSame(1, $xpath->query('//aside[contains(concat(" ", normalize-space(@class), " "), " seller-sidebar ")]')->length);
-            $this->assertSame(10, $xpath->query('//aside[contains(@class, "seller-sidebar")]//nav/a')->length);
+            $this->assertSame(11, $xpath->query('//aside[contains(@class, "seller-sidebar")]//nav/a')->length);
             $this->assertSame(1, $xpath->query('//aside[contains(@class, "seller-sidebar")]//a[@aria-current="page" and normalize-space(.)="'.$activeLabel.'"]')->length);
             $this->assertSame(1, $xpath->query('//aside[contains(@class, "seller-sidebar")]//a[@aria-current="page"]')->length);
             $this->assertSame(1, $xpath->query('//aside[contains(@class, "seller-sidebar")]//form[@action="'.route('logout').'"]//button')->length);

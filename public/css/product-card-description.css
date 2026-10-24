@@ -1,5 +1,4 @@
 .product-info .product-card-description,
-.home-product-info .product-card-description,
 .product-card-description {
     display: -webkit-box;
     -webkit-box-orient: vertical;
@@ -13,7 +12,7 @@
     max-height: 2.9em;
     flex-shrink: 0;
     margin: 2px 0 8px;
-    color: #6b5f54;
+    color: var(--c-6b5f54);
     font-size: .8rem;
     font-weight: 400;
     line-height: 1.45;

@@ -1,7 +1,7 @@
 {{-- Colors & sizes editor. Each color keeps its own sizes, each with its own price and stock; colors can be named, renamed and added.
      Expects $product, $variants, $multiVariant, $stockState. --}}
 @php
-    $presets = config('marketplace.size_presets')[$product->category_key] ?? [];
+    $presets = $product->sizePresets();
     // Products without options yet start with an empty list so the seller can give them sizes.
     $groups = $multiVariant ? $variants->groupBy(fn ($variant) => $variant->color_label ?? '') : collect(['' => collect()]);
     $newIndex = 0;
@@ -27,7 +27,9 @@
             </p>
         </div>
     </header>
-    <form method="POST" action="{{ route('seller.products.stock', $product) }}" class="seller-panel__body product-form__variations" data-size-editor>
+    <form method="POST" action="{{ route('seller.products.stock', $product) }}" class="seller-panel__body product-form__variations" data-size-editor
+          data-confirm="The sizes you ticked will be removed. Sizes with past orders are hidden instead." data-confirm-if="input[name='remove[]']:checked"
+          data-confirm-title="Remove sizes?" data-confirm-button="Save and remove" data-confirm-tone="danger">
         @csrf
         @method('PATCH')
         @if($groups->count() > 1)

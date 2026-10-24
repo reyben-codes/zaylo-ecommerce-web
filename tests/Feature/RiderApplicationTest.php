@@ -41,7 +41,7 @@ class RiderApplicationTest extends TestCase
         // Nothing is saved until the emailed code is entered.
         $this->assertDatabaseMissing('users', ['email' => 'pedrojose.garcia@example.com']);
         $this->assertDatabaseCount('riders', 0);
-        $this->post(route('verification.verify'), ['otp' => $this->signUpCode('pedrojose.garcia@example.com')])->assertRedirect(route('login'));
+        $this->post(route('verification.verify'), ['otp' => $this->signUpCode('pedrojose.garcia@example.com')])->assertRedirect(route('rider.login'));
 
         $user = User::where('email', 'pedrojose.garcia@example.com')->firstOrFail();
         $rider = Rider::where('user_id', $user->id)->firstOrFail();
@@ -88,19 +88,20 @@ class RiderApplicationTest extends TestCase
         $user = $this->applied();
         $rider = Rider::where('user_id', $user->id)->firstOrFail();
 
-        $this->post(route('login'), ['email' => $user->email, 'password' => 'Rider@2026'])
+        $this->post(route('rider.login.submit'), ['email' => $user->email, 'password' => 'Rider@2026'])
             ->assertSessionHasErrors(['email' => 'Your rider application is waiting for Bilis Hatid Express Inc. to review it.']);
 
         $other = $this->partner('Agila Cargo Movers Corp.');
         $this->actingAs($other->owner)->get(route('logistics.riders.document', [$rider, 'license_document']))->assertForbidden();
 
         $this->actingAs($this->partner->owner)->get(route('logistics.riders', ['status' => 'pending']))->assertOk()
-            ->assertSee('N01-23-456789')->assertSee('Expires')->assertSee('Age')->assertSee(route('logistics.riders.document', [$rider, 'or_cr_document']));
+            ->assertSee('N01-23-456789')->assertSee('Expires')->assertSee('Age')->assertSee(route('logistics.riders.document', [$rider, 'or_cr_document']))
+            ->assertSee('js/document-viewer.js', false)->assertSee('data-document-viewer', false)->assertSee('data-document-gallery', false);
         $this->get(route('logistics.riders.document', [$rider, 'license_document']))->assertOk();
         $this->patch(route('logistics.riders.update', $rider), ['action' => 'reject', 'reason' => 'The OR/CR photo is blurred.'])->assertSessionHasNoErrors();
         $this->post(route('logout'));
 
-        $this->post(route('login'), ['email' => $user->email, 'password' => 'Rider@2026'])
+        $this->post(route('rider.login.submit'), ['email' => $user->email, 'password' => 'Rider@2026'])
             ->assertSessionHasErrors(['email' => 'Bilis Hatid Express Inc. did not approve your rider application. Reason: The OR/CR photo is blurred.']);
     }
 

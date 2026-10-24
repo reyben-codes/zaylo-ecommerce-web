@@ -18,6 +18,9 @@
             <p>Here is what needs your attention today.</p>
         </div>
         <div class="seller-page-heading__actions">
+            @if($shopPage)
+                <a href="{{ $shopPage }}" class="seller-button seller-button--secondary" target="_blank" rel="noopener"><i class="fas fa-store" aria-hidden="true"></i> View my shop page</a>
+            @endif
             <a href="{{ route('seller.orders', ['status' => 'to_prepare']) }}" class="seller-button seller-button--secondary"><i class="fas fa-box" aria-hidden="true"></i> Orders to prepare</a>
             <a href="{{ route('seller.products.create') }}" class="seller-button"><i class="fas fa-plus" aria-hidden="true"></i> Add product</a>
         </div>
@@ -25,7 +28,7 @@
 
     @include('seller.partials.compliance-warnings')
 
-    <section class="seller-stat-grid" aria-label="Shop summary">
+    <section class="seller-stat-grid seller-stat-grid--five" aria-label="Shop summary">
         <a href="{{ route('seller.orders') }}" class="seller-stat">
             <span class="seller-stat__label"><i class="fas fa-box" aria-hidden="true"></i> Open orders</span>
             <strong class="seller-stat__value">{{ number_format($openOrders) }}</strong>
@@ -50,6 +53,19 @@
             <strong class="seller-stat__value">{{ $rating['average'] !== null ? number_format($rating['average'], 1) : '—' }}</strong>
             <span class="seller-stat__note">{{ $rating['count'] ? $rating['count'].' '.Str::plural('review', $rating['count']) : 'No reviews yet' }}</span>
         </article>
+        @if($shopPage)
+            <a href="{{ $shopPage }}" class="seller-stat" target="_blank" rel="noopener">
+                <span class="seller-stat__label"><i class="fas fa-user-group" aria-hidden="true"></i> Followers</span>
+                <strong class="seller-stat__value">{{ number_format($followers) }}</strong>
+                <span class="seller-stat__note">Buyers following your shop page</span>
+            </a>
+        @else
+            <article class="seller-stat">
+                <span class="seller-stat__label"><i class="fas fa-user-group" aria-hidden="true"></i> Followers</span>
+                <strong class="seller-stat__value">{{ number_format($followers) }}</strong>
+                <span class="seller-stat__note">Your shop page opens once your account is approved</span>
+            </article>
+        @endif
     </section>
 
     <div class="seller-panel-grid">

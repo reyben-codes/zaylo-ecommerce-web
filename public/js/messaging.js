@@ -229,6 +229,14 @@
     window.addEventListener('message', event => {
         if (event.origin === location.origin && event.source === window.parent && event.data?.type === 'zaylo-chat-open') refresh();
     });
+    // Inside the chat bubble, tell it who this conversation is with (or that the list is showing) so the minimized
+    // bubble can show that person instead of the chat icon.
+    if (root.dataset.compact && window.parent !== window) {
+        window.parent.postMessage({
+            type: 'zaylo-chat-partner',
+            partner: root.dataset.partnerName ? { name: root.dataset.partnerName, avatar: root.dataset.partnerAvatar || null } : null,
+        }, location.origin);
+    }
     if (root.dataset.compact) document.addEventListener('keydown', event => {
         if (event.key === 'Escape' && !event.isComposing) window.parent.postMessage({ type: 'zaylo-chat-minimize' }, location.origin);
     });

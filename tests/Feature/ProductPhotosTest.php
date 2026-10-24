@@ -29,6 +29,7 @@ class ProductPhotosTest extends TestCase
         $product->extra_photos->each(fn ($photo) => Storage::disk('public')->assertExists(Str::after($photo->path, '/storage/')));
         $this->get(route('seller.products.edit', $product))->assertOk()->assertSee('name="remove_photos[]"', false);
 
+        $product->forceFill(['review_status' => Product::REVIEW_APPROVED])->save(); // New listings wait for an admin.
         auth()->logout();
         $this->get(route('products.show', $product))->assertOk()->assertSee('View image 3 of 3');
         $this->get(route('products.index'))->assertOk()->assertSee('1 / 3');

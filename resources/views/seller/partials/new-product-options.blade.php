@@ -10,7 +10,7 @@
             <p>Sell this product in colors, sizes, or both. Each option gets its own price and stock. Leave it empty for a single item.</p>
         </div>
     </header>
-    <div class="seller-panel__body product-form__variations" data-new-options data-size-presets="{{ json_encode(config('marketplace.size_presets')) }}" data-next-color="{{ count($optionGroups) }}">
+    <div class="seller-panel__body product-form__variations" data-new-options data-size-presets="{{ json_encode(config('marketplace.size_presets')) }}" data-kids-size-presets="{{ json_encode(config('marketplace.kids_size_presets')) }}" data-kids-genders="{{ json_encode(config('marketplace.kids_genders')) }}" data-next-color="{{ count($optionGroups) }}">
         <div class="color-labels" data-option-chips hidden>
             <span class="product-form__chips-label">Quick add:</span>
             @foreach(config('marketplace.color_presets') as $preset)

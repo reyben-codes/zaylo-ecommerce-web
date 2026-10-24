@@ -11,6 +11,7 @@
         $maxSales = max(1, (float) $series->max('sales'));
         $percent = rtrim(rtrim(number_format($rate * 100, 2), '0'), '.');
     @endphp
+    @include('partials.print-header', ['title' => 'Marketplace reports · '.$range['label']])
     <section class="seller-page-heading">
         <div>
             <p class="seller-eyebrow">Finance</p>
@@ -18,6 +19,7 @@
             <p>Marketplace sales and platform commission for orders placed {{ $range['label'] }} (Philippine time).</p>
         </div>
         <div class="seller-page-heading__actions">
+            <button type="button" class="seller-button seller-button--secondary" data-print hidden><i class="fas fa-print" aria-hidden="true"></i> Print</button>
             <a href="{{ route('admin.reports.pdf', ['report' => 'sales', 'from' => $range['from'], 'to' => $range['to']]) }}" class="seller-button"><i class="fas fa-file-pdf" aria-hidden="true"></i> Sales summary PDF</a>
             <a href="{{ route('admin.reports.pdf', ['report' => 'commission', 'from' => $range['from'], 'to' => $range['to']]) }}" class="seller-button seller-button--secondary"><i class="fas fa-file-pdf" aria-hidden="true"></i> Commission PDF</a>
         </div>

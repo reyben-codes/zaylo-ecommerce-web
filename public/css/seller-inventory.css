@@ -23,7 +23,7 @@
     min-width: 180px;
     max-width: 320px;
     margin-top: 8px;
-    border-top: 1px solid #f1ebe5;
+    border-top: 1px solid var(--c-f1ebe5);
 }
 
 .stock-breakdown__summary {
@@ -62,13 +62,13 @@
 }
 
 .stock-breakdown__flag.is-out {
-    background: #f9e5e3;
-    color: #a4413b;
+    background: var(--c-f9e5e3);
+    color: var(--c-a4413b);
 }
 
 .stock-breakdown__flag.is-low {
-    background: #fbf0dc;
-    color: #8f5b17;
+    background: var(--c-fbf0dc);
+    color: var(--c-8f5b17);
 }
 
 .stock-breakdown__chevron {
@@ -102,11 +102,11 @@
 }
 
 .stock-breakdown__color-head > .is-low {
-    color: #8f5b17;
+    color: var(--c-8f5b17);
 }
 
 .stock-breakdown__color-head > .is-out {
-    color: #a4413b;
+    color: var(--c-a4413b);
 }
 
 .stock-breakdown__sizes {
@@ -123,9 +123,9 @@
     gap: 4px;
     align-items: baseline;
     padding: 2px 7px;
-    border: 1px solid #ebe3da;
+    border: 1px solid var(--c-ebe3da);
     border-radius: 6px;
-    background: #fbf9f6;
+    background: var(--c-fbf9f6);
     color: var(--zaylo-muted);
     font-size: .64rem;
 }
@@ -135,22 +135,22 @@
 }
 
 .stock-breakdown__sizes li.is-low {
-    border-color: #f0dcb8;
-    background: #fdf7ec;
+    border-color: var(--c-f0dcb8);
+    background: var(--c-fdf7ec);
 }
 
 .stock-breakdown__sizes li.is-low strong {
-    color: #8f5b17;
+    color: var(--c-8f5b17);
 }
 
 .stock-breakdown__sizes li.is-out {
     border-style: dashed;
-    background: #fdf5f4;
-    color: #b18a86;
+    background: var(--c-fdf5f4);
+    color: var(--c-b18a86);
 }
 
 .stock-breakdown__sizes li.is-out strong {
-    color: #a4413b;
+    color: var(--c-a4413b);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -168,7 +168,7 @@
 }
 
 .visibility.is-visible {
-    color: #2d6d3e;
+    color: var(--c-2d6d3e);
 }
 
 .inventory-table .seller-product-cell {
@@ -194,7 +194,7 @@
     width: 128px;
     height: 128px;
     border-radius: 12px;
-    box-shadow: 0 0 0 1px #ece4db;
+    box-shadow: 0 0 0 1px var(--c-ece4db);
 }
 
 .inventory-table tr:has(.stock-breakdown__summary[aria-expanded="true"]) .seller-product-cell strong,

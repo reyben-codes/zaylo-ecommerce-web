@@ -34,6 +34,7 @@ class ProductColorLabelsTest extends TestCase
 
         $this->get(route('seller.products.edit', $tote))->assertOk()
             ->assertSee('value="olive green"', false)->assertSee('Add a color');
+        $tote->forceFill(['review_status' => Product::REVIEW_APPROVED])->save(); // New listings wait for an admin.
         $this->actingAs(User::factory()->create(['role' => 'buyer', 'status' => 'active']))
             ->get(route('products.show', $tote))->assertOk()->assertSee('Color:', false)->assertSee('olive green');
     }

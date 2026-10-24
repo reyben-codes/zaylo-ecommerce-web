@@ -3,6 +3,7 @@
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/product-sales.css') }}?v={{ filemtime(public_path('css/product-sales.css')) }}">
 <link rel="stylesheet" href="{{ asset('css/product-variants.css') }}?v={{ filemtime(public_path('css/product-variants.css')) }}">
+<link rel="stylesheet" href="{{ asset('css/product-review.css') }}?v={{ filemtime(public_path('css/product-review.css')) }}">
 @endpush
 @push('scripts')
 <script src="{{ asset('js/product-pricing.js') }}?v={{ filemtime(public_path('js/product-pricing.js')) }}" defer></script>
@@ -14,6 +15,19 @@
     $displayRegular = $displayVariant?->regular_price ?? ($product->original_price ?? $product->regular_price);
     $availableStock = $product->variants->isNotEmpty() ? $product->variants->sum('stock') : (\App\Models\Product::usesLegacySchema() ? $product->stock : 0);
 @endphp
+@if($preview ?? false)
+    <aside class="product-review-notice product-review-notice--page product-review-notice--{{ $product->is_active ? $product->review_status : 'hidden' }}" role="status">
+        <i class="fas {{ $product->is_rejected ? 'fa-circle-xmark' : 'fa-eye-slash' }}" aria-hidden="true"></i>
+        <div>
+            <strong>Preview — buyers cannot see this product.</strong>
+            <span>{{ match (true) {
+                $product->is_pending_review => 'It is waiting for an admin to approve it.',
+                $product->is_rejected => 'An admin rejected it'.($product->review_note ? ': '.$product->review_note : '.'),
+                default => 'It is hidden from the shop.',
+            } }}</span>
+        </div>
+    </aside>
+@endif
 <main class="page-content product-detail">
     <div class="product-gallery" data-product-gallery role="region" aria-roledescription="carousel" aria-label="Photos of {{ $product->name }}">
         @php($mainImage = $galleryImages->first() ?? ['path' => asset('images/ZAYLO_ICON_DARK.png'), 'alt_text' => $product->name])
@@ -50,7 +64,7 @@
     </div>
     <section class="detail-copy">
         <div class="category-tags--detail">@include('partials.category-tags', ['href' => fn ($key) => route('products.index', ['category' => $key])])</div>
-        @if($product->gender)<p class="product-category">For {{ $product->gender === 'unisex' ? 'everyone' : $product->gender }}</p>@endif
+        @if($product->gender_label)<p class="product-category">{{ $product->gender_label }}</p>@endif
         <h1>{{ $product->name }}</h1>
         <p class="detail-price" aria-live="polite"><span data-sale-price>₱{{ number_format($displayPrice, 2) }}</span>
             <del class="sale-price-original" data-sale-regular @if($displayPrice >= $displayRegular) hidden @endif>₱{{ number_format($displayRegular, 2) }}</del>
@@ -63,7 +77,14 @@
             <h2 id="product-description-title">Product Description</h2>
             <p>{{ $product->description ?: 'The seller has not added a detailed description for this product yet.' }}</p>
         </section>
-        <p class="stock-note">{{ $availableStock > 0 ? $availableStock.' available' : 'Currently sold out' }} @if($product->seller) · Sold by {{ $product->seller->name }} @endif</p>
+        <p class="stock-note">{{ $availableStock > 0 ? $availableStock.' available' : 'Currently sold out' }}@if($shop) · Sold by <a href="{{ $shop->url() }}" class="product-shop-link">{{ $shop->name }}</a>@endif</p>
+        @if($shop)
+            <a href="{{ $shop->url() }}" class="product-shop-card">
+                <span class="product-shop-card__avatar" aria-hidden="true">{{ $shop->initials() }}</span>
+                <span class="product-shop-card__text"><strong>{{ $shop->name }}</strong><small>{{ number_format($shop->followerCount()) }} {{ Str::plural('follower', $shop->followerCount()) }}@if($shop->location) · {{ $shop->location }}@endif</small></span>
+                <span class="product-shop-card__cta">Visit shop <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
+            </a>
+        @endif
         @if($colorGroups)
             @include('partials.variant-picker-sizes', ['colorGroups' => $colorGroups, 'formId' => 'product-buy-form'])
         @elseif($product->variants->count())

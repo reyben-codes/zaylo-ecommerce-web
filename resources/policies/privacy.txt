@@ -1,0 +1,72 @@
+This Privacy Policy explains how ZAYLO collects, uses, shares and protects your personal information when you use our website and mobile app (the "Platform"), and the rights you have under the Data Privacy Act of 2012 (Republic Act No. 10173) and the rules of the National Privacy Commission. It applies to buyers, sellers, logistics partners, riders and visitors.
+
+## 1. Who we are
+ZAYLO operates the Platform and is the personal information controller for the information described here. You can reach us, including our Data Protection Officer, at zaylo.shop.dev@gmail.com.
+
+## 2. Information you give us
+- Account details: your name, email address, mobile number, date of birth, gender and password (stored only in scrambled, hashed form).
+- Google sign-in: if you choose it, your name, email address and profile photo from your Google account.
+- Profile photo: the photo you upload, if any. Sellers' photos appear on their shop page, and your photo may appear to the people you chat with. You can change or remove it at any time.
+- Delivery addresses, including the region, province, city and barangay you select.
+- Identity verification: the ID type and the photo or file of the government ID you upload.
+- Seller applications: shop name, business details, tax identification number and the permits or documents you submit.
+- Logistics partner and rider applications: company details, driver's license, vehicle and plate details and supporting documents.
+- Orders and payments: what you buy or sell, prices, vouchers, payment method and payment status. We do not receive or store your GCash PIN or card details.
+- Messages, complaints and reviews: chats with sellers, riders and support, complaint details with any photos you attach, and the reviews and ratings you post.
+
+## 3. Information collected automatically
+- Security and activity records: sign-ins, important account changes and admin actions, with the IP address and browser or device type used.
+- Delivery records: parcel scans, status updates and proof of delivery.
+- Cookies and storage: the website uses cookies that keep you signed in and protect forms from forgery. It also remembers your light or dark display choice in your own browser. The mobile app keeps your sign-in token in your phone's secure storage. We do not use advertising or tracking cookies.
+- Camera: the rider app uses the camera only to read parcel labels while you scan. Camera images are not saved or sent to us.
+
+## 4. How we use your information
+- To create and secure your account, verify your identity and prevent fraud (to perform our contract with you and for our legitimate interest in a safe marketplace).
+- To process orders, payments, deliveries, returns and refunds (contract).
+- To review seller, logistics partner and rider applications and product listings (contract and legitimate interest).
+- To provide customer support, handle complaints and enforce our Terms of Service (contract and legitimate interest).
+- To send verification codes, order updates and important notices about your account (contract).
+- To keep financial, tax and transaction records and to respond to lawful requests from authorities (legal obligation).
+- To understand how the Platform is used and improve it, using summarized information where we can (legitimate interest).
+We do not sell your personal information, and we do not use it for automated decisions that have legal effects on you.
+
+## 5. Who we share it with
+- Sellers: when you order, the seller receives your name, delivery address, phone number and order details so they can fulfill it.
+- Logistics partners and riders: your name, delivery address, phone number, parcel details and any cash on delivery amount, so they can deliver your order.
+- Buyers: sellers' shop names and public details; riders' first names and delivery status for orders in transit.
+- Service providers who run the Platform for us under confidentiality obligations, such as cloud database hosting, website delivery and security, email delivery, Google sign-in and GCash payments.
+- Government agencies, courts or law enforcement when the law requires it, or when needed to protect the rights, property or safety of ZAYLO, our users or the public.
+- A buyer or successor if ZAYLO is merged, acquired or reorganized, under the same protections.
+Some of these providers store information on servers outside the Philippines. When that happens we require them to protect it to the standard required by Philippine law.
+
+## 6. How long we keep it
+- Account information is kept while your account is open and for a reasonable period after it is closed to resolve disputes and prevent fraud.
+- Orders, payments, commissions and refunds are kept for as long as Philippine tax and accounting laws require.
+- Identity documents and application files are kept while they are needed for verification, compliance and fraud prevention.
+- Security and activity records are deleted after one year.
+- Sign-ups that are never completed, together with any files uploaded during them, are deleted within a day.
+When information is no longer needed, we delete it or make it anonymous.
+
+## 7. How we protect it
+We use encrypted connections, hashed passwords, access limited to people who need it, private storage for identity and application documents, and records of administrative actions. No system is perfectly secure; if a breach affects your information, we will notify you and the National Privacy Commission as the law requires.
+
+## 8. Your rights
+Under the Data Privacy Act you have the right to:
+- be informed about how your information is processed;
+- access the personal information we hold about you;
+- correct information that is inaccurate or incomplete;
+- object to processing, or withdraw consent where processing is based on consent;
+- ask us to delete or block information that is no longer needed or was processed unlawfully;
+- receive your information in a commonly used electronic format (data portability);
+- be compensated for damages caused by unlawful processing; and
+- file a complaint with the National Privacy Commission (privacy.gov.ph).
+You can update most account details yourself in your account settings. For other requests, including closing your account, email zaylo.shop.dev@gmail.com from the email address on your account. We may ask you to confirm your identity first, and we will respond within the period the law requires. Some information may have to be kept even after a request, for example transaction records required by law.
+
+## 9. Children
+ZAYLO is only for people 18 years old and above. We do not knowingly collect information from minors. If you believe a minor has created an account, please contact us so we can remove it.
+
+## 10. Changes to this policy
+We may update this Privacy Policy as the Platform or the law changes. We will post the new version here with its date and, for important changes, notify you in the app or by email.
+
+## 11. Contact us
+For questions, requests or concerns about your privacy, contact our Data Protection Officer at zaylo.shop.dev@gmail.com or through Help and support in the app or website.

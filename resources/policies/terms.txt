@@ -1,0 +1,76 @@
+These Terms of Service ("Terms") govern your use of ZAYLO, an online marketplace in the Philippines that connects buyers with independent sellers, logistics partners and delivery riders through our website and mobile app (together, the "Platform"). By creating an account or placing an order you agree to these Terms and to our Privacy Policy. If you do not agree, please do not use the Platform.
+
+## 1. Who can use ZAYLO
+- You must be at least 18 years old and able to enter into a binding contract under Philippine law.
+- The details you give us, including your name, contact details, date of birth and any documents you upload, must be true, current and your own.
+- Each person may keep one account per role. Accounts may not be sold, shared or transferred.
+- Seller, logistics partner and rider accounts are reviewed by ZAYLO before they are activated. We may ask for documents and may decline an application.
+
+## 2. Your account and security
+- Keep your password and any verification codes private. You are responsible for activity on your account until you tell us it has been compromised.
+- If you sign in with Google, Google's own terms also apply to that sign-in.
+- Some features, such as selling or delivering, require identity or document verification, and we may ask any user to verify their identity with a valid government ID.
+- Tell us right away at the contact address below if you notice activity you did not authorize.
+
+## 3. Our role
+ZAYLO provides the Platform. Unless a listing clearly says otherwise, products are sold by independent sellers, and the contract of sale is between you and the seller. ZAYLO is not the seller, manufacturer or importer of those products. We review listings and sellers, help with delivery and handle complaints, but we do not guarantee that every listing is accurate or that every seller will perform.
+
+## 4. Buying on ZAYLO
+- Prices are shown in Philippine pesos and include the seller's price, any sale or voucher discount, and the shipping fee shown at checkout.
+- An order is placed when you confirm checkout. The seller may still decline it, for example if an item is out of stock; any amount you paid for a declined order is refunded.
+- You can pay by cash on delivery or, where offered, online through GCash. For cash on delivery, please have the exact amount ready and pay only the amount shown in the app.
+- You may cancel an order before the seller ships it. After shipping, use the complaint process in Section 6.
+- Vouchers have their own conditions, cannot be exchanged for cash and may be withdrawn if they are misused.
+
+## 5. Delivery
+- Orders are delivered by ZAYLO logistics partners and their riders. Delivery times are estimates.
+- Give a complete and accurate delivery address and a reachable phone number. Repeated failed deliveries caused by wrong details or refused parcels may lead to restrictions on your account.
+- Check your parcel when it arrives. Delivery status and proof of delivery are recorded in your order history.
+
+## 6. Problems with an order
+- If an item is missing, damaged, defective, not as described or never arrived, file a complaint from your order or from Help and support, with photos where you can.
+- Returns and refunds follow our Returns and Refunds policy and your rights under the Consumer Act of the Philippines (Republic Act No. 7394). Nothing in these Terms limits rights you have by law.
+- ZAYLO reviews complaints, may ask the seller, rider or you for information, and decides the outcome. Refunds are returned through the original payment method or another method we agree on with you.
+
+## 7. Selling on ZAYLO
+- Sellers must be approved, keep their shop and business details current, and comply with the Seller Policy and the Prohibited Items list.
+- New and edited listings may be reviewed before buyers can see them. Listings must be accurate, show the real product and price, and list only stock you can ship.
+- Sellers must pack and hand over orders on time, honor confirmed prices and handle approved returns and refunds.
+- ZAYLO charges a commission on completed sales, shown in Seller Center. Payouts are the sale amount less commission and any refunds or adjustments.
+- Sellers are responsible for their own taxes, permits and product compliance.
+
+## 8. Logistics partners and riders
+Logistics partners and riders must also accept the ZAYLO Rider Terms and Conditions shown during their application. They must handle parcels with care, collect only the amount shown for cash on delivery, and use buyers' personal information only to complete deliveries.
+
+## 9. Reviews, messages and other content
+- Reviews must reflect a real purchase and your honest experience. Do not post offensive, misleading or paid reviews, or personal information about others.
+- Keep chats with sellers, riders and support respectful, and keep transactions on ZAYLO. Do not ask other users to pay or communicate outside the Platform to avoid fees or protections.
+- You keep ownership of what you post, but you allow ZAYLO to display, store and use it to run and promote the Platform. We may remove content that breaks these Terms.
+
+## 10. Things you must not do
+- Sell or buy prohibited, counterfeit, stolen or illegal items.
+- Commit fraud, place fake orders, abuse vouchers or refunds, or manipulate ratings.
+- Harass, threaten or discriminate against anyone.
+- Access other people's accounts, scrape the Platform, interfere with its security or operation, or upload malware.
+- Use the Platform in any way that breaks Philippine law, including the Cybercrime Prevention Act of 2012 and the Internet Transactions Act of 2023.
+
+## 11. Our intellectual property
+The ZAYLO name, logo, design and software belong to ZAYLO or its licensors. You may not copy or use them without our written permission, except as needed to use the Platform normally.
+
+## 12. Suspension and closing accounts
+- We may limit, suspend or close an account, remove listings or hold payouts if we reasonably believe these Terms or the law have been broken, or to protect users. Where we can, we will tell you why and how to respond.
+- You may ask us to close your account at any time. Open orders, complaints and amounts owed must be settled first, and we keep some records as described in the Privacy Policy.
+
+## 13. Disclaimers and limits on liability
+- The Platform is provided "as is". We work to keep it available and accurate but do not promise it will be uninterrupted or error-free.
+- To the extent the law allows, ZAYLO is not liable for indirect or consequential losses, or for the acts of sellers, riders or other users, beyond our own obligations under these Terms.
+- These limits do not apply to liability that cannot be limited under Philippine law, including your rights as a consumer.
+
+## 14. Changes to these Terms
+We may update these Terms as the Platform changes or the law requires. We will post the new version here with its date and, for important changes, notify you in the app or by email. Using ZAYLO after the change means you accept the updated Terms.
+
+## 15. Governing law
+These Terms are governed by the laws of the Republic of the Philippines. Disputes will first be handled through our complaint process; if that does not resolve them, they will be brought before the proper courts of the Philippines, without affecting your right to go to the Department of Trade and Industry or other agencies.
+
+## 16. Contact us
+Questions about these Terms can be sent through Help and support in the app or website, or by email to zaylo.shop.dev@gmail.com.

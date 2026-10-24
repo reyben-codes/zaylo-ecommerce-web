@@ -210,6 +210,30 @@ class LogisticsOperationsTest extends TestCase
         $this->actingAs($this->owner)->post(route('logistics.messages.start'), ['participant_id' => $otherOwner->id])->assertStatus(422);
     }
 
+    public function test_partner_prints_waybills_only_for_its_own_parcels(): void
+    {
+        $mine = $this->parcel('ZX-WAYBILL', 'ready');
+        [, $otherProvider] = $this->partner('Other Couriers');
+        $theirs = $this->parcel('ZX-THEIRS', 'ready', $otherProvider);
+        $this->actingAs($this->owner);
+
+        $this->get(route('logistics.scan', ['tracking' => 'ZX-WAYBILL']))->assertOk()->assertSee(route('logistics.parcels.waybill', $mine));
+        $response = $this->get(route('logistics.parcels.waybill', $mine))->assertOk()->assertHeader('Content-Type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF', $response->getContent());
+        $this->get(route('logistics.parcels.waybill', $theirs))->assertForbidden();
+
+        $waybill = \App\Support\Waybill::for($mine);
+        $this->assertSame('ZX-WAYBILL', $waybill['tracking']);
+        $this->assertSame('Express Delivery', $waybill['carrier']);
+        $this->assertSame('Juan Dela Cruz', $waybill['recipient']['name']);
+        $this->assertSame('Pasig City, Metro Manila', $waybill['recipient']['address']);
+        $this->assertSame('Northline Goods ZX-WAYBILL', $waybill['sender']['name']);
+        $this->assertSame(100.0, $waybill['cod']);
+
+        $mine->sellerOrder->update(['status' => 'cancelled']);
+        $this->get(route('logistics.parcels.waybill', $mine))->assertNotFound();
+    }
+
     private function partner(string $name): array
     {
         $owner = User::factory()->create(['role' => 'logistics', 'status' => 'active', 'email_verified_at' => now()]);

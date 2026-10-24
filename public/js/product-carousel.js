@@ -7,7 +7,7 @@
         const sources = JSON.parse(image.dataset.cardSlides);
         if (sources.length < 2) return;
 
-        const hoverTarget = image.closest('.product-card, .flash-product, .home-product-card') || image.parentElement;
+        const hoverTarget = image.closest('.shop-card, .product-card') || image.parentElement;
         const count = image.parentElement.querySelector('[data-photo-count]');
         let current = 0;
         let hovered = false;

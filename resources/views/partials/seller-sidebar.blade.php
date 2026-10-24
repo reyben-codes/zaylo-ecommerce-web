@@ -13,6 +13,7 @@
                 ['route' => 'seller.chat', 'label' => 'Messages', 'icon' => 'fa-comment'],
                 ['route' => 'seller.logistics-messages', 'label' => 'Logistics chat', 'icon' => 'fa-truck-fast'],
                 ['route' => 'support', 'label' => 'Help & support', 'icon' => 'fa-life-ring'],
+                ['route' => 'seller.activity', 'label' => 'Activity log', 'icon' => 'fa-clock-rotate-left'],
                 ['route' => 'seller.account', 'label' => 'Account', 'icon' => 'fa-user'],
             ];
         @endphp
@@ -33,6 +34,8 @@
         @endforeach
 
         <div class="seller-sidebar__divider" aria-hidden="true"></div>
+
+        <button type="button" class="seller-sidebar__link" data-theme-toggle data-theme-toggle-label aria-label="Switch theme"></button>
 
         <form method="POST" action="{{ route('logout') }}" data-logout-confirm class="seller-sidebar__logout-form">
             @csrf

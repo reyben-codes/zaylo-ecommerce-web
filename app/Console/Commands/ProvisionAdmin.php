@@ -68,7 +68,7 @@ class ProvisionAdmin extends Command
 
         $this->info($password ? 'Administrator account ready.' : 'Administrator account repaired. Its password was not changed.');
         $this->table(['Field', 'Value'], array_filter([
-            ['Login page', route('login')],
+            ['Login page', route('admin.login')],
             ['Email', $user->email],
             $password ? ['Password', $password] : null,
         ]));

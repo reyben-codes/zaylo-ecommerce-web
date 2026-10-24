@@ -23,5 +23,9 @@
     <i class="far fa-comment-dots" aria-hidden="true"></i>
 </a>
 <a href="{{ route('buyer.account') }}" class="buyer-nav-icon" aria-label="Profile settings" @if(request()->routeIs('buyer.account')) aria-current="page" @endif>
-    <i class="far fa-user" aria-hidden="true"></i>
+    @if(auth()->user()->avatar_url)
+        @include('partials.user-avatar', ['user' => auth()->user(), 'class' => 'nav-avatar'])
+    @else
+        <i class="far fa-user" aria-hidden="true"></i>
+    @endif
 </a>

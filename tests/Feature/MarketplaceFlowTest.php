@@ -59,6 +59,7 @@ class MarketplaceFlowTest extends TestCase
             'is_active' => 1,
         ])->assertSessionHasNoErrors();
         $cooker = Product::where('name', 'Digital Rice Cooker')->firstOrFail();
+        $cooker->forceFill(['review_status' => Product::REVIEW_APPROVED])->save(); // New listings wait for an admin.
         $shirt = $this->product(overrides: ['name' => 'Everyday Shirt']);
 
         // The main category is not stored again as an extra one.

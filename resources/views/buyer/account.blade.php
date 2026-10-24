@@ -2,6 +2,9 @@
 
 @section('title', 'Profile Settings · ZAYLO')
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/activity-log.css') }}?v={{ filemtime(public_path('css/activity-log.css')) }}">
+@endpush
 
 
 @section('content')
@@ -26,16 +29,18 @@
 <div class="page-content settings-layout">
     <aside class="settings-sidebar" aria-label="Profile settings navigation">
         <div class="profile-summary">
-            <span class="profile-avatar" aria-hidden="true">{{ mb_strtoupper(mb_substr($user->name, 0, 1)) }}</span>
+            @include('partials.user-avatar', ['user' => $user, 'class' => 'profile-avatar'])
             <div><strong>{{ $user->name }}</strong><small>{{ $user->email }}</small></div>
         </div>
         <nav>
             <a href="#personal-details"><i class="far fa-user"></i> Personal details</a>
             <a href="#delivery-addresses"><i class="fas fa-location-dot"></i> Delivery addresses</a>
             @if($identityEnabled)<a href="#identity-verification"><i class="far fa-id-card"></i> ID verification</a>@endif
+            <a href="{{ route('buyer.following') }}"><i class="fas fa-store"></i> Shops you follow</a>
             <a href="{{ route('disputes.index') }}"><i class="far fa-flag"></i> My complaints</a>
             <a href="{{ route('support') }}"><i class="far fa-life-ring"></i> Help &amp; support</a>
             <a href="#security"><i class="fas fa-lock"></i> Password</a>
+            <a href="#account-activity"><i class="fas fa-clock-rotate-left"></i> Account activity</a>
         </nav>
     </aside>
 
@@ -49,6 +54,7 @@
                     <a class="status-pill status-pill--warning" href="#identity-verification"><i class="fas fa-id-card"></i> ID not verified yet</a>
                 @endif
             </div>
+            <div class="settings-photo">@include('partials.profile-photo', ['user' => $user])</div>
             <form method="POST" action="{{ route('buyer.account.profile') }}" class="market-form stacked-form">
                 @csrf
                 @method('PATCH')
@@ -208,6 +214,39 @@
                 <div><button class="market-button" type="submit">{{ filled($user->getAuthPassword()) ? 'Update password' : 'Create password' }}</button></div>
             </form>
         </section>
+
+        <section class="settings-card" id="policies">
+            <div class="settings-card-heading">
+                <div>
+                    <span class="eyebrow">About ZAYLO</span>
+                    <h2>Policies</h2>
+                    <p>The rules for using ZAYLO and how we handle your information.</p>
+                </div>
+            </div>
+            <ul class="policy-links">
+                @foreach(['terms', 'privacy', 'returns', 'prohibited'] as $slug)
+                    @if($policy = \App\Models\PlatformPolicy::published($slug))
+                        <li><a href="{{ route('policies.show', $slug) }}"><span>{{ $policy->title }}</span><i class="fas fa-chevron-right" aria-hidden="true"></i></a></li>
+                    @endif
+                @endforeach
+            </ul>
+        </section>
+
+        <section class="settings-card" id="account-activity">
+            <div class="settings-card-heading">
+                <div>
+                    <span class="eyebrow">Security</span>
+                    <h2>Recent account activity</h2>
+                    <p>Sign-ins and changes to your account. If something here wasn't you, change your password and contact <a href="{{ route('support') }}">support</a>.</p>
+                </div>
+            </div>
+            <details class="account-activity" data-smooth-disclosure>
+                <summary>Show recent activity</summary>
+                <div data-disclosure-content>
+                    @include('partials.activity-log.feed', ['logs' => $activity, 'showDevice' => true, 'emptyText' => 'No activity recorded yet.'])
+                </div>
+            </details>
+        </section>
     </main>
 </div>
 @endsection
@@ -215,6 +254,7 @@
 @push('scripts')
 <script src="{{ asset('js/personal-details.js') }}?v={{ filemtime(public_path('js/personal-details.js')) }}" defer></script>
 <script src="{{ asset('js/password-requirements.js') }}?v={{ filemtime(public_path('js/password-requirements.js')) }}" defer></script>
+<script src="{{ asset('js/smooth-disclosure.js') }}?v={{ filemtime(public_path('js/smooth-disclosure.js')) }}" defer></script>
 <script>
 (() => {
     const birthday = document.getElementById('profile-birthday');

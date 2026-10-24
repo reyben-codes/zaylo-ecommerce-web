@@ -164,7 +164,10 @@ class MessagingTest extends TestCase
     {
         [$buyer, $seller, $product] = $this->accounts();
         $this->get(route('products.show', $product))->assertOk()->assertDontSee('data-chat-widget', false);
-        $this->actingAs($buyer)->get(route('products.show', $product))->assertOk()->assertSee('data-chat-widget', false);
+        $this->actingAs($buyer)->get(route('products.show', $product))->assertOk()->assertSee('data-chat-widget', false)
+            // The bubble checks who is typing so it can show typing dots while the chat is closed.
+            ->assertSee('data-typing-url="'.route('messages.typing-status').'"', false);
+        $this->getJson(route('messages.typing-status'))->assertOk()->assertExactJson(['typing' => []]);
         $this->get(route('home'))->assertOk()->assertSee('data-chat-widget', false);
         $buyer->forceFill(['email_verified_at' => null])->save();
         $this->actingAs($buyer->fresh())->get(route('products.show', $product))->assertOk()->assertDontSee('data-chat-widget', false);

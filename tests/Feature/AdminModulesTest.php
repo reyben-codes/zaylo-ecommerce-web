@@ -167,13 +167,21 @@ class AdminModulesTest extends TestCase
         $this->actingAs($this->admin)->patch(route('admin.announcements.update', Announcement::where('audience', 'buyer')->first()), ['toggle' => 1]);
         $this->actingAs($buyer)->get(route('support'))->assertDontSee('Holiday deliveries');
 
+        // Until the admin writes them, every policy page shows its built-in text, which the editor starts from.
+        $this->get(route('policies.show', 'privacy'))->assertOk()->assertSee('Data Privacy Act of 2012');
+        $this->actingAs($this->admin)->get(route('admin.policies.edit', 'privacy'))->assertSee('National Privacy Commission');
+        $this->get(route('policies.show', 'returns'))->assertOk()->assertSee('Report a problem');
+        $this->get(route('policies.show', 'prohibited'))->assertOk()->assertSee('Always prohibited');
+        $this->get(route('policies.show', 'seller'))->assertOk()->assertSee('10% of the item amount');
+        $this->get(route('policies.show', 'shipping'))->assertNotFound();
+
         $this->actingAs($this->admin)->put(route('admin.policies.update', 'privacy'), [
             'title' => 'Privacy Policy',
             'body' => "## What we collect\n- Your name and <b>address</b>\n- Your orders\n\nWe never sell your data to third parties.",
         ])->assertRedirect(route('admin.settings'));
         $this->get(route('policies.show', 'privacy'))->assertOk()
             ->assertSee('<h2>What we collect</h2>', false)->assertSee('&lt;b&gt;address&lt;/b&gt;', false)->assertDontSee('<b>address</b>', false);
-        $this->get(route('terms'))->assertOk()->assertSee('Terms and Privacy Policy');
+        $this->get(route('terms'))->assertOk()->assertSee('Terms of Service')->assertSee('1. Who can use ZAYLO');
         PlatformPolicy::create(['slug' => 'terms', 'title' => 'ZAYLO Terms 2027', 'body' => str_repeat('Use the marketplace fairly. ', 3)]);
         $this->get(route('terms'))->assertSee('ZAYLO Terms 2027');
     }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\UpdatesAccountSettings;
+use App\Models\ActivityLog;
 use App\Models\ComplianceWarning;
 use App\Models\Dispute;
 use App\Models\IdentityVerification;
@@ -62,7 +63,7 @@ class AdminController extends Controller
             'user' => auth()->user(),
             'roleCounts' => $roleCounts,
             'pendingCount' => $this->pendingApplications()->count(),
-            'productCount' => Product::where('is_active', true)->count(),
+            'productCount' => Product::visibleToBuyers()->count(),
             'orderCount' => Order::count(),
             'partnerCount' => Schema::hasTable('logistics_providers') ? LogisticsProvider::where('status', 'approved')->count() : 0,
             'pendingApplications' => $this->pendingApplications()->latest()->limit(6)->get(),
@@ -103,6 +104,7 @@ class AdminController extends Controller
             })() : null,
             'disputes' => Schema::hasTable('dispute_messages') ? Dispute::involving($user)->with('order')->latest()->limit(10)->get() : collect(),
             'warnings' => Schema::hasTable('compliance_warnings') ? ComplianceWarning::with('product')->where('seller_id', $user->id)->latest()->get() : collect(),
+            'activity' => Schema::hasTable('activity_logs') ? ActivityLog::where('user_id', $user->id)->latest('created_at')->latest('id')->limit(8)->get() : collect(),
         ]);
     }
 
@@ -124,6 +126,9 @@ class AdminController extends Controller
         }
         if (Schema::hasTable('identity_verifications')) {
             $add(IdentityVerification::where('status', 'pending')->count(), 'buyer IDs to check', route('admin.identity'), 'fa-id-card');
+        }
+        if (Product::usesReview() && Schema::hasTable('compliance_warnings')) {
+            $add(Product::where('review_status', Product::REVIEW_PENDING)->notArchived()->count(), 'product listings to approve', route('admin.compliance', ['view' => 'pending']), 'fa-box-open');
         }
         $unrecorded = app(MarketplaceLedger::class)->rows()->where('commission_status', 'unrecorded')->count();
         $add($unrecorded, 'completed orders without a recorded commission', route('admin.commissions', ['state' => 'unrecorded']), 'fa-percent');

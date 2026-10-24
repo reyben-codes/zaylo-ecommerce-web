@@ -7,22 +7,27 @@ environment:
   sdk: '>=3.3.0 <4.0.0'
 
 dependencies:
+  audioplayers: ^6.7.1
   file_picker: ^13.1.0
   flutter:
     sdk: flutter
   flutter_secure_storage: ^11.2.0
+  google_sign_in: 7.2.0
   image_picker: ^1.2.4
+  mobile_scanner: ^7.4.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
   uses-material-design: true
   assets:
     - assets/images/ZAYLO_LOGO_DARK.png
     - assets/images/ZAYLO_LOGO_LIGHT.png
+    - assets/sounds/
     - assets/fonts/OFL.txt
   fonts:
     - family: Inter
@@ -35,6 +40,20 @@ flutter:
         - asset: assets/fonts/PlayfairDisplay-Variable.ttf
         - asset: assets/fonts/PlayfairDisplay-Italic-Variable.ttf
           style: italic
+
+# App icon: the website's favicon (public/favicon.ico). After changing the image,
+# run `dart run flutter_launcher_icons` to regenerate the Android and iOS icons.
+flutter_launcher_icons:
+  image_path: "assets/icon/app_icon.png"
+  android: "ic_launcher"
+  min_sdk_android: 21
+  # Android 8+ shapes icons itself; the round logo sits on white, inset into the safe zone.
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/icon/app_icon.png"
+  ios: true
+  # The App Store rejects transparent icons; the corners are filled white.
+  remove_alpha_ios: true
+  background_color_ios: "#FFFFFF"
 
 # path_provider_android 2.3+ builds the native `jni` library, whose CMake step
 # fails on Windows with a locked timing file. 2.2.x has no native build.

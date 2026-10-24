@@ -5,6 +5,7 @@
 @push('styles')
     <link rel="stylesheet" href="{{ asset('css/admin-modules.css') }}?v={{ filemtime(public_path('css/admin-modules.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/disputes.css') }}?v={{ filemtime(public_path('css/disputes.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/activity-log.css') }}?v={{ filemtime(public_path('css/activity-log.css')) }}">
 @endpush
 
 @section('content')
@@ -89,6 +90,11 @@
                 <div class="admin-pad">
                     @include('admin.partials.account-actions', ['account' => $account])
                 </div>
+            </section>
+
+            <section class="seller-panel">
+                <header class="seller-panel__header"><div><h2>Recent activity</h2></div><a href="{{ route('admin.activity', ['user' => $account->id]) }}" class="seller-link">Full activity log</a></header>
+                @include('partials.activity-log.feed', ['logs' => $activity, 'showDevice' => true, 'emptyText' => 'No activity recorded for this account yet.'])
             </section>
 
             <section class="seller-panel">

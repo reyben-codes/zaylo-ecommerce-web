@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Validation\Rule;
 
 /**
  * A buyer's complaint about an order, reviewed by the admin with the buyer, seller and courier.
@@ -39,6 +40,43 @@ class Dispute extends Model
     protected $casts = ['evidence' => 'array', 'resolved_at' => 'datetime'];
 
     private ?array $partiesCache = null;
+
+    /** Validation for a buyer filing a complaint, on the website and in the app. */
+    public static function filingRules(): array
+    {
+        return [
+            'category' => ['required', Rule::in(array_keys(self::CATEGORIES))],
+            'details' => ['required', 'string', 'min:20', 'max:2000'],
+            'evidence' => ['nullable', 'array', 'max:'.self::MAX_EVIDENCE],
+            'evidence.*' => ['file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:'.self::MAX_EVIDENCE_KB],
+        ];
+    }
+
+    public static function filingMessages(): array
+    {
+        return [
+            'category.required' => 'Choose what went wrong.',
+            'details.required' => 'Describe the problem.',
+            'details.min' => 'Describe the problem in at least 20 characters so the team can act on it.',
+            'evidence.max' => 'Attach up to '.self::MAX_EVIDENCE.' files.',
+            'evidence.*.mimes' => 'Evidence must be photos (JPG, PNG, WebP) or PDF files.',
+            'evidence.*.max' => 'Each file must be 5 MB or smaller.',
+        ];
+    }
+
+    /** Validation for a reply in the case thread from the buyer, seller or rider. */
+    public static function replyRules(): array
+    {
+        return [
+            'body' => ['required', 'string', 'max:2000'],
+            'attachment' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:'.self::MAX_EVIDENCE_KB],
+        ];
+    }
+
+    public static function replyMessages(): array
+    {
+        return ['body.required' => 'Write a reply first.', 'attachment.mimes' => 'Attach a photo (JPG, PNG, WebP) or a PDF.'];
+    }
 
     public function order(): BelongsTo
     {

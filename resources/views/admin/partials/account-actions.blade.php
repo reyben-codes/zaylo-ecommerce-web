@@ -30,7 +30,9 @@
                 <details class="review-reason" data-smooth-disclosure @if($errorHere) open @endif>
                     <summary class="seller-button seller-button--small{{ $variant }}"><i class="fas {{ $icon }}" aria-hidden="true"></i> {{ $label }}</summary>
                     <div data-disclosure-content>
-                        <form method="POST" action="{{ route('admin.users.status', $account) }}" class="review-reason__form">
+                        <form method="POST" action="{{ route('admin.users.status', $account) }}" class="review-reason__form"
+                              data-confirm="{{ ['rejected' => 'Reject', 'suspended' => 'Suspend', 'deactivated' => 'Deactivate'][$status] }} {{ $account->name }}? They will be emailed{{ $status === 'rejected' ? '' : ' and signed out' }}."
+                              data-confirm-title="{{ $label }} account?" data-confirm-button="{{ $label }}" @if($status !== 'deactivated') data-confirm-tone="danger" @endif>
                             @csrf
                             @method('PATCH')
                             <input type="hidden" name="status" value="{{ $status }}">
@@ -44,7 +46,8 @@
                 </details>
                 @continue
             @endif
-            <form method="POST" action="{{ route('admin.users.status', $account) }}">
+            <form method="POST" action="{{ route('admin.users.status', $account) }}"
+                  data-confirm="{{ $label }} {{ $account->name }}? They will be able to sign in and use their account." data-confirm-title="{{ $label }} account?" data-confirm-button="{{ $label }}">
                 @csrf
                 @method('PATCH')
                 <input type="hidden" name="status" value="{{ $status }}">

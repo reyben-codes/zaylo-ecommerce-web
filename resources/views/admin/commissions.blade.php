@@ -15,7 +15,8 @@
             <p>ZAYLO earns {{ $percent }}% of each seller's order subtotal (shipping not included) when the order is completed. Orders placed {{ $range['label'] }}.</p>
         </div>
         <div class="seller-page-heading__actions">
-            <form method="POST" action="{{ route('admin.commissions.record') }}">
+            <form method="POST" action="{{ route('admin.commissions.record') }}"
+                  data-confirm="Record the commission for every completed order that does not have one yet?" data-confirm-title="Calculate commissions?" data-confirm-button="Calculate">
                 @csrf
                 <button type="submit" class="seller-button seller-button--secondary"><i class="fas fa-calculator" aria-hidden="true"></i> Calculate missing</button>
             </form>
@@ -92,7 +93,9 @@
                 <a href="{{ route('admin.commissions', ['state' => $key, 'from' => $range['from'], 'to' => $range['to']]) }}" class="workspace-tab{{ $state === $key ? ' is-active' : '' }}" @if($state === $key) aria-current="true" @endif>{{ $label }}</a>
             @endforeach
         </nav>
-        <form method="POST" action="{{ route('admin.commissions.settle') }}">
+        <form method="POST" action="{{ route('admin.commissions.settle') }}"
+              data-confirm="Mark the selected commissions as settled? Settled commissions are recorded as collected from the seller." data-confirm-if="input[name='commissions[]']:checked"
+              data-confirm-title="Settle commissions?" data-confirm-button="Mark settled">
             @csrf
             <div class="seller-table-wrap">
                 <table class="seller-table workspace-table admin-money">

@@ -1,18 +1,4 @@
 /* Order fulfillment and Delivery pages. Shared layout lives in seller-workspace.css. */
-.fulfillment-mode {
-    display: inline-flex;
-    flex: 0 0 auto;
-    gap: 8px;
-    align-items: center;
-    padding: 9px 13px;
-    border: 1px solid #cbdcc6;
-    border-radius: 999px;
-    background: #edf5ea;
-    color: #38603c;
-    font-size: .72rem;
-    font-weight: 700;
-}
-
 .orders-toolbar {
     display: flex;
     gap: 20px;
@@ -54,7 +40,7 @@
 .order-tab:hover,
 .order-tab.is-active {
     background: var(--zaylo-ink);
-    color: #fff;
+    color: var(--c-ffffff);
 }
 
 .order-tab.is-active span,
@@ -137,7 +123,7 @@
     padding: 18px;
     border: 1px solid var(--zaylo-border);
     border-radius: 10px;
-    background: #fff;
+    background: var(--c-ffffff);
     box-shadow: 0 16px 42px rgba(35, 27, 21, .16);
     white-space: normal;
 }
@@ -169,7 +155,7 @@
     gap: 12px;
     justify-content: space-between;
     padding: 7px 0;
-    border-bottom: 1px solid #f3eee9;
+    border-bottom: 1px solid var(--c-f3eee9);
     color: var(--zaylo-muted);
     font-size: .68rem;
 }
@@ -181,10 +167,10 @@
 .order-cancel {
     margin-top: 16px;
     padding: 7px 10px;
-    border: 1px solid #d8a7a3;
+    border: 1px solid var(--c-d8a7a3);
     border-radius: 7px;
-    background: #fff;
-    color: #98423d;
+    background: var(--c-ffffff);
+    color: var(--c-98423d);
     font-size: .68rem;
     font-weight: 700;
 }

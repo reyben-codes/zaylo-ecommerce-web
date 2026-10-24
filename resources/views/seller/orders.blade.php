@@ -20,32 +20,22 @@
             'placed' => ['status' => 'confirmed', 'label' => 'Confirm order', 'icon' => 'fa-check'],
             'confirmed' => ['status' => 'processing', 'label' => 'Start processing', 'icon' => 'fa-box-open'],
             'processing' => ['status' => 'ready_for_pickup', 'label' => 'Ready to ship', 'icon' => 'fa-box'],
-            'ready_for_pickup' => ['status' => 'picked_up', 'label' => 'Mark as shipped', 'icon' => 'fa-truck-fast'],
-            'picked_up' => ['status' => 'in_transit', 'label' => 'Mark in transit', 'icon' => 'fa-route'],
-            'in_transit' => ['status' => 'out_for_delivery', 'label' => 'Out for delivery', 'icon' => 'fa-location-arrow'],
-            'out_for_delivery' => ['status' => 'completed', 'label' => 'Mark delivered', 'icon' => 'fa-circle-check'],
         ];
-        if (! config('marketplace.seller_managed_delivery')) {
-            $nextActions = collect($nextActions)->except(['ready_for_pickup', 'picked_up', 'in_transit', 'out_for_delivery'])->all();
-        }
     @endphp
 
     <section class="seller-page-heading">
         <div>
             <p class="seller-eyebrow">Seller Center</p>
             <h1>{{ $isDelivery ? 'Delivery' : 'Order fulfillment' }}</h1>
-            <p>{{ $isDelivery ? 'Parcels that are packed or on the way to buyers.' : 'Prepare orders and manage delivery until your logistics integration is ready.' }}</p>
+            <p>{{ $isDelivery ? 'Parcels that are packed or on the way to buyers.' : 'Prepare orders and hand them over to the rider.' }}</p>
         </div>
-        @if(config('marketplace.seller_managed_delivery'))
-            <span class="fulfillment-mode"><i class="fas fa-route" aria-hidden="true"></i> Seller-managed delivery</span>
-        @endif
     </section>
 
     <aside class="seller-notice">
         <i class="fas fa-circle-info" aria-hidden="true"></i>
         <div>
-            <strong>Temporary self-delivery workflow</strong>
-            <p>You control each parcel after packing. Update stages only when they happen—the buyer sees every update in their order history.</p>
+            <strong>Riders handle delivery</strong>
+            <p>Once an order is ready to ship, print its waybill and attach it to the parcel. The rider scans it in the ZAYLO app and updates each delivery stage—the buyer sees every update in their order history.</p>
         </div>
     </aside>
 
@@ -122,7 +112,7 @@
                                 <div class="order-actions">
                                     @if($nextAction)
                                         <form method="POST" action="{{ route('seller.orders.status', $order) }}"
-                                              @if($nextAction['status'] === 'completed') data-confirm="Confirm that the buyer received this parcel? This will mark the payment paid and complete the order." @endif>
+                                              @if($nextAction['status'] === 'completed') data-confirm="Confirm that the buyer received order {{ $order->order_number }}? This marks the payment as paid and completes the order." data-confirm-title="Mark as delivered?" data-confirm-button="Mark delivered" @endif>
                                             @csrf
                                             @method('PATCH')
                                             <input type="hidden" name="status" value="{{ $nextAction['status'] }}">
@@ -132,6 +122,12 @@
                                         </form>
                                     @else
                                         <span class="seller-cell-note">No action needed</span>
+                                    @endif
+
+                                    {{-- The rider scans the waybill's barcode or QR code to start the delivery and again to confirm it. --}}
+                                    @if(\App\Support\Waybill::available($order->shipment))
+                                        <a href="{{ route('seller.orders.waybill.print', $order) }}" class="seller-button seller-button--small seller-button--secondary" target="_blank" rel="noopener"
+                                           aria-label="Print waybill for order {{ $order->order_number }} (opens in a new tab)"><i class="fas fa-print" aria-hidden="true"></i> Print waybill</a>
                                     @endif
 
                                     <details class="order-details">
@@ -161,7 +157,7 @@
                                                 @endforelse
                                             </ol>
                                             @if(in_array($order->status, ['placed', 'confirmed'], true))
-                                                <form method="POST" action="{{ route('seller.orders.status', $order) }}" data-confirm="Cancel this order and return its items to stock?">
+                                                <form method="POST" action="{{ route('seller.orders.status', $order) }}" data-confirm="Cancel order {{ $order->order_number }}? Its items go back into your stock and the buyer is told." data-confirm-title="Cancel order?" data-confirm-button="Cancel order" data-confirm-tone="danger">
                                                     @csrf
                                                     @method('PATCH')
                                                     <input type="hidden" name="status" value="cancelled">

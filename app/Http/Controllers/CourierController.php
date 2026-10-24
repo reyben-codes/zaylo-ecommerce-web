@@ -12,13 +12,11 @@ class CourierController extends Controller
 {
     public function dashboard()
     {
-        $sellerManaged = config('marketplace.seller_managed_delivery');
-
         return view('courier.dashboard', [
             'user' => auth()->user(),
             // The logistics partner this rider delivers for.
             'company' => Schema::hasTable('riders') ? auth()->user()->rider?->provider?->name : null,
-            'availableCount' => $sellerManaged ? 0 : Shipment::whereNull('courier_id')->where('status', 'ready')->count(),
+            'availableCount' => Shipment::whereNull('courier_id')->where('status', 'ready')->count(),
             'activeCount' => Shipment::where('courier_id', auth()->id())->whereNotIn('status', ['delivered', 'cancelled'])->count(),
             'completedCount' => Shipment::where('courier_id', auth()->id())->where('status', 'delivered')->count(),
         ]);
@@ -26,17 +24,13 @@ class CourierController extends Controller
 
     public function deliveries()
     {
-        $available = config('marketplace.seller_managed_delivery')
-            ? collect()
-            : Shipment::whereNull('courier_id')->where('status', 'ready')->with('order')->oldest()->get();
+        $available = Shipment::whereNull('courier_id')->where('status', 'ready')->with('order')->oldest()->get();
         $assigned = Shipment::where('courier_id', auth()->id())->with('order.items')->latest()->get();
         return view('courier.deliveries', compact('available', 'assigned'));
     }
 
     public function claim(Shipment $shipment)
     {
-        abort_if(config('marketplace.seller_managed_delivery'), 409, 'Courier claiming is disabled while sellers manage deliveries.');
-
         DB::transaction(function () use ($shipment) {
             $locked = Shipment::whereKey($shipment->id)->lockForUpdate()->firstOrFail();
             if ($locked->courier_id || $locked->status !== 'ready') {
@@ -53,7 +47,6 @@ class CourierController extends Controller
 
     public function updateDelivery(Request $request, Shipment $shipment)
     {
-        abort_if(config('marketplace.seller_managed_delivery'), 409, 'Courier updates are disabled while sellers manage deliveries.');
         abort_unless($shipment->courier_id === auth()->id(), 403);
         $data = $request->validate(['status' => 'required|in:picked_up,in_transit,delivered']);
         $allowed = ['assigned' => ['picked_up'], 'picked_up' => ['in_transit'], 'in_transit' => ['delivered']];

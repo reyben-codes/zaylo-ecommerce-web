@@ -2,6 +2,14 @@
 
 @section('title', 'Riders')
 
+@push('styles')
+    <link rel="stylesheet" href="{{ asset('css/document-viewer.css') }}?v={{ filemtime(public_path('css/document-viewer.css')) }}">
+@endpush
+
+@push('scripts')
+    <script src="{{ asset('js/document-viewer.js') }}?v={{ filemtime(public_path('js/document-viewer.js')) }}" defer></script>
+@endpush
+
 @section('content')
     <section class="seller-page-heading">
         <div>
@@ -60,9 +68,9 @@
                                 @endif
                                 @php $files = collect(\App\Models\Rider::DOCUMENTS)->filter(fn ($label, $field) => $rider->{$field.'_path'}); @endphp
                                 @if($files->isNotEmpty())
-                                    <span class="rider-documents">
+                                    <span class="rider-documents" data-document-gallery>
                                         @foreach($files as $field => $label)
-                                            <a href="{{ route('logistics.riders.document', [$rider, $field]) }}" target="_blank" rel="noopener" class="workspace-link"><i class="fas fa-file-lines" aria-hidden="true"></i> {{ $label }}</a>
+                                            <a href="{{ route('logistics.riders.document', [$rider, $field]) }}" target="_blank" rel="noopener" class="workspace-link" data-document-viewer data-document-title="{{ $label }} · {{ $rider->user?->name }}" data-document-type="{{ \App\Support\DocumentPreview::type($rider->{$field.'_path'}) }}"><i class="fas fa-file-lines" aria-hidden="true"></i> {{ $label }}</a>
                                         @endforeach
                                     </span>
                                 @endif

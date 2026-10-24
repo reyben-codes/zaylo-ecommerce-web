@@ -13,16 +13,29 @@
         </select></label>
     </div>
     @php
-        $extraFilterCount = collect(['gender', 'min_price', 'max_price'])->filter(fn ($key) => isset($filters[$key]) && $filters[$key] !== '')->count()
+        $extraFilterCount = collect(['gender', 'size', 'min_price', 'max_price'])->filter(fn ($key) => isset($filters[$key]) && $filters[$key] !== '')->count()
             + ($filters['availability'] !== 'all' ? 1 : 0) + (!empty($filters['on_sale']) ? 1 : 0);
     @endphp
     <details class="catalog-more-filters" data-smooth-disclosure>
         <summary>More filters @if($extraFilterCount)<span class="catalog-filter-count">{{ $extraFilterCount }} active</span>@endif<span class="catalog-disclosure-icon" aria-hidden="true">+</span></summary>
         <div class="catalog-extra-fields" data-disclosure-content>
         <div class="catalog-filter-fields">
-        <label>Gender<select name="gender"><option value="">All genders</option>
-            @foreach(['men', 'women', 'unisex'] as $gender)<option value="{{ $gender }}" @selected(($filters['gender'] ?? '') === $gender)>{{ ucfirst($gender) }}</option>@endforeach
+        <label>For<select name="gender"><option value="">Everyone</option>
+            <optgroup label="Adults">
+                @foreach(['women', 'men', 'unisex'] as $gender)<option value="{{ $gender }}" @selected(($filters['gender'] ?? '') === $gender)>{{ config('marketplace.genders')[$gender] }}</option>@endforeach
+            </optgroup>
+            <optgroup label="Kids">
+                <option value="kids" @selected(($filters['gender'] ?? '') === 'kids')>All kids</option>
+                @foreach(['girls', 'boys'] as $gender)<option value="{{ $gender }}" @selected(($filters['gender'] ?? '') === $gender)>{{ config('marketplace.genders')[$gender] }}</option>@endforeach
+            </optgroup>
         </select></label>
+        @if(! empty($sizes) || ! empty($filters['size']))
+            <label>Size<select name="size"><option value="">Any size</option>
+                @foreach(collect($sizes ?? [])->when(! empty($filters['size']) && ! in_array($filters['size'], $sizes ?? [], true), fn ($list) => $list->prepend($filters['size'])) as $size)
+                    <option value="{{ $size }}" @selected(($filters['size'] ?? '') === $size)>{{ $size }}</option>
+                @endforeach
+            </select></label>
+        @endif
         <label>Minimum price (₱)<input type="number" name="min_price" min="0" max="99999999.99" step="0.01" inputmode="decimal" placeholder="0" value="{{ $filters['min_price'] ?? '' }}"></label>
         <label>Maximum price (₱)<input type="number" name="max_price" min="0" max="99999999.99" step="0.01" inputmode="decimal" placeholder="No limit" value="{{ $filters['max_price'] ?? '' }}"></label>
         <label>Availability<select name="availability">

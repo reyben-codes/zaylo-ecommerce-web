@@ -36,7 +36,7 @@
                                 @unless($address->is_default)
                                     <form method="POST" action="{{ route('addresses.default', $address) }}">@csrf @method('PATCH')<button class="text-button">Set as delivery default</button></form>
                                 @endunless
-                                <form method="POST" action="{{ route('addresses.destroy', $address) }}" data-delete-address>@csrf @method('DELETE')<button class="text-button danger">Delete</button></form>
+                                <form method="POST" action="{{ route('addresses.destroy', $address) }}" data-confirm="Delete the &quot;{{ $address->label }}&quot; address? Orders that already used it will not change." data-confirm-title="Delete address?" data-confirm-button="Delete" data-confirm-tone="danger">@csrf @method('DELETE')<button class="text-button danger">Delete</button></form>
                             </div>
                         </article>
                     @endforeach
@@ -51,12 +51,4 @@
     @if(auth()->user()->role === 'buyer')<a class="manage-address-link" href="{{ route('buyer.cart') }}"><i class="fas fa-arrow-left"></i> Return to cart</a>@endif
 </div>
 @endsection
-@push('scripts')
-<script>
-document.querySelectorAll('[data-delete-address]').forEach(form => {
-    form.addEventListener('submit', event => {
-        if (!window.confirm('Delete this saved address? Existing orders will not change.')) event.preventDefault();
-    });
-});
-</script>
-@endpush
+

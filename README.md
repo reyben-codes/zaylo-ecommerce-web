@@ -1,17 +1,30 @@
 # ZAYLO Marketplace
 
-ZAYLO is a Laravel 12 ecommerce marketplace with buyer, seller, courier, and administrator workflows.
+ZAYLO is an online marketplace for the Philippines: a Laravel 12 website for buyers, sellers, logistics partners and administrators, and a Flutter Android app for buyers and delivery riders. Both use the same server and database.
+
+- **Website:** [zaylo-zyl.shop](https://zaylo-zyl.shop)
+- **Android app:** [**Download the latest APK**](https://github.com/reyben-codes/zaylo-ecommerce-web/releases/latest/download/zaylo.apk) ([all versions](https://github.com/reyben-codes/zaylo-ecommerce-web/releases))
+
+## Download the mobile app
+
+1. On your Android phone, open **[github.com/reyben-codes/zaylo-ecommerce-web/releases/latest/download/zaylo.apk](https://github.com/reyben-codes/zaylo-ecommerce-web/releases/latest/download/zaylo.apk)**. The download starts right away.
+2. Open the downloaded `zaylo.apk`. If Android asks, allow your browser or file manager to **install unknown apps**.
+3. Tap **Install**, then open **Zaylo Mobile** and sign in as a buyer or rider.
+
+The app is not on the Play Store yet, so Google Play Protect may show a warning the first time; choose **Install anyway**. To update, download the link again and install over the old version; your sign-in is kept. Android 7.0 or newer is required.
 
 ## Implemented workflows
 
-- Public product catalog, filtering, search, product details, and stock visibility
-- Persistent buyer cart and wishlist
-- Cash-on-delivery checkout with address snapshots, price snapshots, idempotency, and transactional stock reduction
-- Buyer order tracking and safe cancellation with stock restoration
-- Seller product management, inventory alerts, and controlled fulfilment states
-- Courier parcel claiming and delivery-state tracking
-- Administrator account approval and suspension
-- Email verification, password resets, login throttling, role middleware, and ownership policies
+- Public product catalog, filtering, search, product details, reviews, and shop pages
+- Persistent buyer cart and wishlist, shop following, and ID verification
+- Checkout with cash on delivery or GCash (manual, confirmed by the team), address and price snapshots, idempotency, and transactional stock reduction
+- Buyer order tracking, cancellation with stock restoration, and complaints with photo evidence
+- Seller applications, product management with options and listing review, inventory alerts, reports, and printable waybills
+- Logistics partners: pickups, sorting, rider assignment, deliveries, and monitoring; riders scan waybills in the app to start and confirm each delivery
+- Administrator approvals, identity checks, compliance, disputes, commissions, reports, and editable policies
+- Chat between buyers, sellers, riders and support; announcements; account activity logs
+- Profile photos with cropping, light and dark mode, and built-in Terms of Service, Privacy Policy, Returns, Prohibited Items and Seller Policy pages
+- Email verification, password resets, Google sign-in, login throttling, role middleware, and ownership policies
 
 ## Local setup
 
@@ -67,6 +80,29 @@ The feature suite covers public browsing, marketplace account approval, seller o
 
 - Set `APP_ENV=production`, `APP_DEBUG=false`, and HTTPS-only secure session cookies.
 - Configure a real mail provider before enabling registrations.
-- COD is the only payment method in this MVP. Add a gateway through signed, idempotent webhooks rather than trusting browser callbacks.
+- Payments are cash on delivery or GCash confirmed by hand. Add an online gateway through signed, idempotent webhooks rather than trusting browser callbacks.
 - Run queue workers for email and other asynchronous work after changing `QUEUE_CONNECTION` from `sync`.
 - Do not deploy seeded credentials or the legacy root-level `zaylo` SQLite development database.
+
+## Mobile app (development)
+
+The Flutter app is in [`mobile_app/`](mobile_app). It talks to `https://zaylo-zyl.shop/api` by default, so `flutter run` on a phone works against the live site.
+
+```bash
+cd mobile_app
+flutter pub get
+flutter run                                                   # live site
+flutter run --dart-define=ZAYLO_API_URL=http://10.0.2.2:8000/api   # local server from the Android emulator
+flutter test
+```
+
+## Publishing a new APK
+
+The download link above always points to the newest GitHub release that has a file named exactly `zaylo.apk`.
+
+1. Raise `version:` in `mobile_app/pubspec.yaml` (for example `1.0.1+2`; the number after `+` must go up for Android to install it as an update).
+2. Build it: `cd mobile_app && flutter build apk --release`. The file is `mobile_app/build/app/outputs/flutter-apk/app-release.apk`.
+3. Rename that file to `zaylo.apk`.
+4. On GitHub, open **Releases → Draft a new release**, create a tag such as `v1.0.1`, attach `zaylo.apk`, and publish it.
+
+Do not commit APK files to the repository; `mobile_app/build/` is ignored on purpose. Release builds are currently signed with the debug key, which is fine for direct downloads. Before publishing on the Play Store, create a release keystore, keep it out of git, and register its SHA-1 for Google sign-in.

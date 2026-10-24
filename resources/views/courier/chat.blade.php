@@ -8,6 +8,7 @@
     <a href="{{ route('courier.deliveries') }}" class="{{ request()->routeIs('courier.deliveries') ? 'active-link' : '' }}">Deliveries</a>
     <a href="{{ route('courier.earnings') }}" class="{{ request()->routeIs('courier.earnings') ? 'active-link' : '' }}">Earnings</a>
     <a href="{{ route('courier.history') }}" class="{{ request()->routeIs('courier.history') ? 'active-link' : '' }}">History</a>
+    <a href="{{ route('courier.activity') }}" class="{{ request()->routeIs('courier.activity') ? 'active-link' : '' }}">Activity</a>
 </div>
 @endsection
 @section('nav-icons')

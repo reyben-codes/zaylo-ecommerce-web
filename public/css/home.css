@@ -51,13 +51,13 @@
     border: 1px solid rgba(26, 23, 20, .18);
     border-radius: 50%;
     background: rgba(255, 255, 255, .88);
-    color: #1a1714;
+    color: var(--c-1a1714);
     cursor: pointer;
     place-items: center;
 }
 
 .home-hero .hero-carousel-arrow:hover {
-    background: #fff;
+    background: var(--c-ffffff);
 }
 
 .home-hero .hero-carousel-dots {
@@ -90,11 +90,11 @@
 .home-hero .hero-carousel-dot[aria-pressed="true"]::before {
     width: 20px;
     border-radius: 999px;
-    background: #1a1714;
+    background: var(--c-1a1714);
 }
 
 .home-hero .hero-carousel-controls button:focus-visible {
-    outline: 2px solid #1a1714;
+    outline: 2px solid var(--c-1a1714);
     outline-offset: 3px;
 }
 

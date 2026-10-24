@@ -31,7 +31,7 @@
 .report-preset:hover,
 .report-preset.is-active {
     background: var(--zaylo-ink);
-    color: #fff;
+    color: var(--c-ffffff);
 }
 
 .report-preset:focus-visible {
@@ -66,7 +66,7 @@
     height: var(--bar-height);
     min-height: 2px;
     border-radius: 5px 5px 2px 2px;
-    background: linear-gradient(180deg, #b48d74, var(--zaylo-accent));
+    background: linear-gradient(180deg, var(--c-b48d74), var(--zaylo-accent));
     transition: background-color .18s ease;
 }
 
@@ -136,5 +136,45 @@
 @media (prefers-reduced-motion: reduce) {
     .report-chart__bar {
         transition: none;
+    }
+}
+
+/* On paper the chart fits the page width instead of scrolling; only the first and last dates are labelled
+   (the PDF report lists every day). Bars keep their colour even when background printing is off. */
+@media print {
+    .report-chart {
+        gap: 1px;
+        height: 200px;
+        overflow: visible;
+    }
+
+    .report-chart__column {
+        flex: 1 1 0;
+        min-width: 0;
+        max-width: none;
+    }
+
+    .report-chart__bar {
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+    }
+
+    .report-chart__label {
+        visibility: hidden;
+    }
+
+    .report-chart__column:first-child .report-chart__label,
+    .report-chart__column:last-child .report-chart__label {
+        overflow: visible;
+        visibility: visible;
+    }
+
+    .report-chart__column:last-child .report-chart__label {
+        direction: rtl;
+    }
+
+    .report-categories__track span {
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
     }
 }

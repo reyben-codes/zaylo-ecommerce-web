@@ -8,6 +8,7 @@ use App\Models\SellerApplication;
 use App\Models\User;
 use App\Notifications\AccountReviewed;
 use App\Notifications\ComplianceWarningIssued;
+use App\Notifications\ProductReviewed;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -16,8 +17,9 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 
 /**
- * Admin Center: seller compliance. Products outside the seller's registered category or matching prohibited
- * words are flagged for review; the admin can warn the seller, hide the product, or suspend the seller.
+ * Admin Center: seller compliance. New and edited listings wait in "Pending review" until an admin approves
+ * them (buyers never see them before). Products outside the seller's registered category or matching prohibited
+ * words are flagged; the admin can warn the seller, hide the product, or suspend the seller.
  */
 class AdminComplianceController extends Controller
 {
@@ -27,27 +29,29 @@ class AdminComplianceController extends Controller
             return view('admin.setup-needed', ['title' => 'Seller compliance']);
         }
         $filters = $request->validate([
-            'view' => ['nullable', Rule::in(['flagged', 'all', 'hidden', 'warnings'])],
+            'view' => ['nullable', Rule::in(['pending', 'flagged', 'all', 'hidden', 'rejected', 'warnings'])],
             'search' => ['nullable', 'string', 'max:100'],
         ]);
-        $view = $filters['view'] ?? 'flagged';
         $search = trim($filters['search'] ?? '');
 
         $products = $this->reviewedProducts($search);
-        $counts = [
-            'flagged' => $products->filter(fn ($row) => $row['flags'] && $row['product']->is_active)->count(),
-            'all' => $products->count(),
-            'hidden' => $products->filter(fn ($row) => ! $row['product']->is_active)->count(),
-            'warnings' => ComplianceWarning::count(),
+        $groups = [
+            // Archived listings are the seller's to restore, so they never wait for a decision.
+            'pending' => fn ($row) => $row['product']->is_pending_review && ! $row['product']->is_archived,
+            'flagged' => fn ($row) => $row['flags'] && $row['product']->is_listed,
+            'all' => fn () => true,
+            'hidden' => fn ($row) => ! $row['product']->is_active && $row['product']->review_status === Product::REVIEW_APPROVED,
+            'rejected' => fn ($row) => $row['product']->is_rejected,
         ];
-        $listed = match ($view) {
-            'flagged' => $products->filter(fn ($row) => $row['flags'] && $row['product']->is_active),
-            'hidden' => $products->filter(fn ($row) => ! $row['product']->is_active),
-            default => $products,
-        };
+        $counts = array_map(fn ($test) => $products->filter($test)->count(), $groups) + ['warnings' => ComplianceWarning::count()];
+        // Open on the queue while listings are waiting; otherwise on what was flagged.
+        $default = $counts['pending'] > 0 ? 'pending' : 'flagged';
+        $view = $filters['view'] ?? $default;
+        $listed = $view === 'warnings' ? collect() : $products->filter($groups[$view]);
 
         return view('admin.compliance', [
             'view' => $view,
+            'defaultView' => $default,
             'search' => $search,
             'counts' => $counts,
             'products' => $view === 'warnings' ? null : $this->paginate($listed->values(), $request),
@@ -99,9 +103,41 @@ class AdminComplianceController extends Controller
         return back()->with('status', "{$seller->name} was {$done}.");
     }
 
+    /** Approve a listing so buyers can see it, or reject it with a reason the seller can fix. */
+    public function review(Request $request, Product $product)
+    {
+        abort_unless(Product::usesReview(), 404);
+        $data = $request->validate([
+            'decision' => ['required', Rule::in(['approve', 'reject'])],
+            'reason' => ['required_if:decision,reject', 'nullable', 'string', 'min:10', 'max:1000'],
+        ], [
+            'reason.required_if' => 'Tell the seller why the product was rejected and what to change.',
+            'reason.min' => 'Give the seller at least a sentence (10 characters) explaining the problem.',
+        ]);
+        $approved = $data['decision'] === 'approve';
+        $product->forceFill([
+            'review_status' => $approved ? Product::REVIEW_APPROVED : Product::REVIEW_REJECTED,
+            'review_note' => $approved ? null : $data['reason'],
+            'reviewed_at' => now(),
+            'reviewed_by' => $request->user()->id,
+        ])->save();
+
+        if ($seller = $this->ownerOf($product)) {
+            $this->mail($seller, new ProductReviewed($product));
+        }
+
+        return back()->with('status', $approved
+            ? ($product->is_active ? "{$product->name} is approved and now visible to buyers." : "{$product->name} is approved. Its seller has it hidden, so buyers see it once they switch it on.")
+            : "{$product->name} was rejected. The seller was emailed your reason.");
+    }
+
     /** Hide a product from buyers, or put a reviewed product back on sale. */
     public function toggle(Product $product)
     {
+        // The seller archived it; showing it again is the seller's call (they restore it from their archive).
+        if ($product->is_archived) {
+            return back()->with('status', "{$product->name} was archived by its seller, so only the seller can restore it.");
+        }
         $product->update(['is_active' => ! $product->is_active]);
 
         return back()->with('status', $product->name.($product->is_active ? ' is visible to buyers again.' : ' is hidden from buyers.'));

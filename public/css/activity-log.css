@@ -1,0 +1,255 @@
+/* Activity logs: the table in the seller, logistics and admin workspaces, and the compact feed
+   (rider page, an account's recent activity in Admin Center, the buyer account page). */
+
+.activity-log__date {
+    flex: 0 1 150px;
+}
+
+.activity-log__error {
+    margin: 12px 20px 0;
+    color: var(--c-a1372b);
+    font-size: .75rem;
+}
+
+.activity-log__when {
+    white-space: nowrap;
+}
+
+.activity-log__entry {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.activity-log__entry strong {
+    display: block;
+}
+
+.activity-log__icon,
+.activity-feed__icon {
+    display: inline-grid;
+    flex: none;
+    width: 30px;
+    height: 30px;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--c-f3ece5);
+    color: var(--c-6d5140);
+    font-size: .75rem;
+}
+
+.activity-log__icon--warning,
+.activity-feed__icon--warning {
+    background: var(--c-fbe3df);
+    color: var(--c-a1372b);
+}
+
+.activity-log__subject {
+    display: block;
+    margin-top: 3px;
+    color: var(--c-4a4037);
+    font-size: .74rem;
+    font-weight: 600;
+}
+
+.activity-log__details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 8px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.activity-log__details li {
+    max-width: 100%;
+    padding: 3px 8px;
+    overflow-wrap: anywhere;
+    border-radius: 6px;
+    background: var(--c-f7f3ef);
+    color: var(--c-4a4037);
+    font-size: .68rem;
+}
+
+.activity-log__details span {
+    color: var(--c-806f61);
+    font-weight: 600;
+}
+
+.activity-log__category {
+    display: inline-flex;
+    padding: 5px 9px;
+    border-radius: 999px;
+    background: var(--c-f3ece5);
+    color: var(--c-6d5140);
+    font-size: .62rem;
+    font-weight: 700;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.activity-log__agent {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Compact feed */
+.activity-feed {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.activity-feed__item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--c-efe8e1);
+}
+
+.activity-feed__item:last-child {
+    border-bottom: 0;
+}
+
+.activity-feed__main {
+    display: grid;
+    flex: 1;
+    gap: 3px;
+    min-width: 0;
+}
+
+.activity-feed__main strong {
+    color: var(--c-1a1714);
+    font-size: .8rem;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.activity-feed__subject {
+    font-weight: 500;
+}
+
+.activity-feed__main span:not(.activity-feed__subject) {
+    color: var(--c-806f61);
+    font-size: .72rem;
+    overflow-wrap: anywhere;
+}
+
+.activity-feed__time {
+    flex: none;
+    color: var(--c-806f61);
+    font-size: .7rem;
+    white-space: nowrap;
+}
+
+.activity-feed__empty {
+    padding: 28px 20px;
+    color: var(--c-806f61);
+    font-size: .78rem;
+    text-align: center;
+}
+
+/* Rider page (shop layout) */
+.activity-filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-end;
+    margin-bottom: 20px;
+}
+
+.activity-filter label {
+    display: grid;
+    flex: 1 1 150px;
+    gap: 6px;
+    color: var(--c-4a4037);
+    font-size: .75rem;
+    font-weight: 600;
+}
+
+.activity-filter__actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.activity-filter__reset {
+    color: var(--c-6d5140);
+    font-size: .78rem;
+}
+
+.activity-card {
+    border: 1px solid var(--c-e6ddd4);
+    background: var(--c-ffffff);
+}
+
+.activity-pagination {
+    margin-top: 20px;
+}
+
+/* Buyer account page */
+.account-activity > summary {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    color: var(--c-4a4037);
+    font-size: .82rem;
+    font-weight: 600;
+    cursor: pointer;
+    list-style: none;
+}
+
+.account-activity > summary::-webkit-details-marker {
+    display: none;
+}
+
+.account-activity > summary::before {
+    content: "\f054";
+    font-family: "Font Awesome 6 Free";
+    font-size: .65rem;
+    font-weight: 900;
+    transition: transform .3s ease-out;
+}
+
+.account-activity[open] > summary::before {
+    transform: rotate(90deg);
+}
+
+.account-activity > summary:focus-visible {
+    outline: 2px solid var(--c-7f604d);
+    outline-offset: 3px;
+}
+
+.account-activity .activity-feed {
+    margin-top: 12px;
+}
+
+.account-activity .activity-feed__item {
+    padding-inline: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .account-activity > summary::before {
+        transition: none;
+    }
+}
+
+@media (max-width: 640px) {
+    .activity-feed__item {
+        flex-wrap: wrap;
+        padding: 14px 16px;
+    }
+
+    .activity-feed__time {
+        width: 100%;
+        padding-left: 42px;
+    }
+
+    .activity-filter label {
+        flex-basis: 100%;
+    }
+}

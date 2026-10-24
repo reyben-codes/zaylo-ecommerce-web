@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\AdminComplianceController;
 use App\Http\Controllers\AdminController;
@@ -11,6 +12,7 @@ use App\Http\Controllers\BuyerController;
 use App\Http\Controllers\BuyerNotificationController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\PolicyController;
+use App\Http\Controllers\ProfilePhotoController;
 use App\Http\Controllers\ProductSaleController;
 use App\Http\Controllers\ComplianceWarningController;
 use App\Http\Controllers\CourierController;
@@ -24,7 +26,9 @@ use App\Http\Controllers\LogisticsController;
 use App\Http\Controllers\LogisticsOperationsController;
 use App\Http\Controllers\SellerApplicationController;
 use App\Http\Controllers\SellerController;
+use App\Http\Controllers\ShopController;
 use App\Http\Controllers\SupportChatController;
+use App\Http\Controllers\WaybillController;
 use App\Models\Product;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
@@ -33,7 +37,7 @@ Route::get('/', function () {
     $newArrivals = collect();
 
     if (Schema::hasTable('products')) {
-        $query = Product::withReviewSummary()->where('is_active', true);
+        $query = Product::withReviewSummary()->visibleToBuyers();
 
         if (Schema::hasColumn('products', 'stock')) {
             $query->where('stock', '>', 0)
@@ -54,6 +58,7 @@ Route::get('/terms', [PolicyController::class, 'show'])->name('terms');
 Route::get('/policies/{slug}', [PolicyController::class, 'show'])->name('policies.show');
 Route::get('/products', [BuyerController::class, 'products'])->name('products.index');
 Route::get('/products/{product}', [BuyerController::class, 'showProduct'])->name('products.show');
+Route::get('/shops/{shop}', [ShopController::class, 'show'])->whereNumber('shop')->name('shops.show');
 
 // Read-only public geography, using fixed upstream paths and rate limiting.
 Route::prefix('api/locations')->name('locations.')->middleware('throttle:60,1')->group(function () {
@@ -82,6 +87,8 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
     Route::get('/seller/login', [AuthController::class, 'showSellerLogin'])->name('seller.login');
     Route::post('/seller/login', [AuthController::class, 'sellerLogin'])->middleware('throttle:login')->name('seller.login.submit');
+    Route::get('/rider/login', [AuthController::class, 'showRiderLogin'])->name('rider.login');
+    Route::post('/rider/login', [AuthController::class, 'riderLogin'])->middleware('throttle:login')->name('rider.login.submit');
     Route::get('/logistics/login', [AuthController::class, 'showLogisticsLogin'])->name('logistics.login');
     Route::post('/logistics/login', [AuthController::class, 'logisticsLogin'])->middleware('throttle:login')->name('logistics.login.submit');
     Route::get('/admin/login', [AuthController::class, 'showAdminLogin'])->name('admin.login');
@@ -130,6 +137,9 @@ Route::middleware(['auth', 'active', 'verified', 'role:buyer', 'nocache'])->pref
     Route::post('/account/identity', [IdentityVerificationController::class, 'store'])->middleware('throttle:10,1')->name('identity.store');
     Route::get('/chat', [ChatController::class, 'index'])->name('chat');
     Route::post('/chat/products/{product}', [ChatController::class, 'start'])->middleware('throttle:20,1')->name('chat.start');
+    Route::post('/chat/shops/{shop}', [ShopController::class, 'chat'])->whereNumber('shop')->middleware('throttle:20,1')->name('chat.shop');
+    Route::post('/shops/{shop}/follow', [ShopController::class, 'follow'])->whereNumber('shop')->middleware('throttle:60,1')->name('shops.follow');
+    Route::get('/following', [ShopController::class, 'following'])->name('following');
 });
 
 // Pending and rejected sellers can still reach their application, so this group skips the active check.
@@ -147,12 +157,18 @@ Route::middleware(['auth', 'active', 'verified', 'role:seller', 'nocache'])->pre
     Route::patch('/products/{product}/stock', [SellerController::class, 'updateStock'])->name('products.stock');
     Route::put('/products/{product}/sale', [ProductSaleController::class, 'update'])->name('products.sale');
     Route::put('/products/{product}', [SellerController::class, 'updateProduct'])->name('products.update');
+    Route::patch('/products/{product}/archive', [SellerController::class, 'archiveProduct'])->name('products.archive');
+    Route::patch('/products/{product}/restore', [SellerController::class, 'restoreProduct'])->name('products.restore');
     Route::delete('/products/{product}', [SellerController::class, 'deleteProduct'])->name('products.destroy');
     Route::get('/orders', [SellerController::class, 'orders'])->name('orders');
     Route::patch('/orders/{order}/status', [SellerController::class, 'updateOrderStatus'])->name('orders.status');
+    Route::get('/orders/{order}/waybill', [WaybillController::class, 'seller'])->middleware('throttle:60,1')->name('orders.waybill');
+    Route::get('/orders/{order}/waybill/print', [WaybillController::class, 'sellerPrint'])->middleware('throttle:60,1')->name('orders.waybill.print');
+    Route::get('/reports/pdf', [SellerController::class, 'reportPdf'])->middleware('throttle:30,1')->name('reports.pdf');
     Route::get('/inventory', [SellerController::class, 'inventory'])->name('inventory');
     Route::get('/handover', [SellerController::class, 'handover'])->name('handover');
     Route::get('/reports', [SellerController::class, 'reports'])->name('reports');
+    Route::get('/activity', [ActivityLogController::class, 'seller'])->name('activity');
     Route::get('/account', [SellerController::class, 'account'])->name('account');
     Route::patch('/account/profile', [SellerController::class, 'updateProfile'])->name('account.profile');
     Route::patch('/account/store', [SellerController::class, 'updateStore'])->name('account.store');
@@ -165,6 +181,8 @@ Route::middleware(['auth', 'active', 'verified', 'role:seller', 'nocache'])->pre
 
 Route::middleware(['auth', 'active', 'verified', 'role:buyer,seller', 'nocache'])->prefix('messages')->name('messages.')->group(function () {
     Route::get('/inbox', [ChatController::class, 'inbox'])->middleware('throttle:120,1')->name('inbox');
+    // Polled by the floating chat bubble to show typing dots while the chat is closed.
+    Route::get('/typing', [ChatController::class, 'typingStatus'])->middleware('throttle:60,1')->name('typing-status');
     Route::get('/{conversation}', [ChatController::class, 'messages'])->whereNumber('conversation')->middleware('throttle:120,1')->name('list');
     Route::post('/{conversation}', [ChatController::class, 'send'])->whereNumber('conversation')->middleware('throttle:30,1')->name('send');
     Route::post('/{conversation}/typing', [ChatController::class, 'typing'])->whereNumber('conversation')->middleware('throttle:60,1')->name('typing');
@@ -176,8 +194,11 @@ Route::middleware(['auth', 'active', 'verified', 'role:courier', 'nocache'])->pr
     Route::get('/deliveries', [CourierController::class, 'deliveries'])->name('deliveries');
     Route::post('/deliveries/{shipment}/claim', [CourierController::class, 'claim'])->name('deliveries.claim');
     Route::patch('/deliveries/{shipment}', [CourierController::class, 'updateDelivery'])->name('deliveries.update');
+    Route::get('/deliveries/{shipment}/waybill', [WaybillController::class, 'rider'])->middleware('throttle:60,1')->name('deliveries.waybill');
+    Route::get('/deliveries/{shipment}/waybill/print', [WaybillController::class, 'riderPrint'])->middleware('throttle:60,1')->name('deliveries.waybill.print');
     Route::get('/earnings', [CourierController::class, 'earnings'])->name('earnings');
     Route::get('/history', [CourierController::class, 'history'])->name('history');
+    Route::get('/activity', [ActivityLogController::class, 'courier'])->name('activity');
     Route::get('/account', [CourierController::class, 'account'])->name('account');
     Route::get('/chat', [LogisticsChatController::class, 'rider'])->name('chat');
 });
@@ -199,15 +220,19 @@ Route::middleware(['auth', 'active', 'verified', 'role:admin', 'nocache'])->pref
     Route::patch('/account/profile', [AdminController::class, 'updateProfile'])->name('account.profile');
     Route::put('/account/password', [AdminController::class, 'updatePassword'])->name('account.password');
     Route::get('/users/{user}', [AdminController::class, 'showUser'])->name('users.show');
+    Route::get('/activity', [ActivityLogController::class, 'admin'])->name('activity');
 
     Route::get('/disputes', [AdminDisputeController::class, 'index'])->name('disputes');
     Route::get('/disputes/{dispute}', [AdminDisputeController::class, 'show'])->name('disputes.show');
+    Route::get('/parcels/{shipment}/waybill', [WaybillController::class, 'admin'])->middleware('throttle:60,1')->name('parcels.waybill');
+    Route::get('/parcels/{shipment}/waybill/print', [WaybillController::class, 'adminPrint'])->middleware('throttle:60,1')->name('parcels.waybill.print');
     Route::patch('/disputes/{dispute}', [AdminDisputeController::class, 'update'])->name('disputes.update');
     Route::post('/disputes/{dispute}/messages', [AdminDisputeController::class, 'reply'])->middleware('throttle:30,1')->name('disputes.reply');
 
     Route::get('/compliance', [AdminComplianceController::class, 'index'])->name('compliance');
     Route::post('/compliance/products/{product}/warnings', [AdminComplianceController::class, 'warn'])->middleware('throttle:30,1')->name('compliance.warn');
     Route::patch('/compliance/products/{product}/visibility', [AdminComplianceController::class, 'toggle'])->name('compliance.toggle');
+    Route::patch('/compliance/products/{product}/review', [AdminComplianceController::class, 'review'])->middleware('throttle:60,1')->name('compliance.review');
 
     Route::get('/commissions', [AdminFinanceController::class, 'commissions'])->name('commissions');
     Route::post('/commissions/record', [AdminFinanceController::class, 'recordCommissions'])->name('commissions.record');
@@ -237,6 +262,12 @@ Route::middleware(['auth', 'active', 'verified', 'role:buyer,seller,rider,admin'
     Route::post('/{dispute}/messages', [DisputeController::class, 'reply'])->middleware('throttle:30,1')->name('reply');
     Route::get('/{dispute}/evidence/{index}', [DisputeController::class, 'file'])->whereNumber('index')->name('evidence');
     Route::get('/messages/{message}/attachment', [DisputeController::class, 'attachment'])->name('attachment');
+});
+
+// Profile photo: every signed-in account can change it from its account page.
+Route::middleware(['auth', 'nocache'])->group(function () {
+    Route::post('/account/photo', [ProfilePhotoController::class, 'update'])->middleware('throttle:10,1')->name('account.photo.update');
+    Route::delete('/account/photo', [ProfilePhotoController::class, 'destroy'])->name('account.photo.destroy');
 });
 
 // Help & support: every account can message the ZAYLO admin team.
@@ -269,6 +300,9 @@ Route::middleware(['auth', 'active', 'verified', 'role:logistics', 'nocache'])->
     Route::get('/monitoring', [LogisticsOperationsController::class, 'monitoring'])->name('monitoring');
     Route::get('/reports', [LogisticsOperationsController::class, 'reports'])->name('reports');
     Route::get('/reports/export', [LogisticsOperationsController::class, 'exportReport'])->name('reports.export');
+    Route::get('/activity', [ActivityLogController::class, 'logistics'])->name('activity');
+    Route::get('/parcels/{shipment}/waybill', [WaybillController::class, 'logistics'])->middleware('throttle:120,1')->name('parcels.waybill');
+    Route::get('/parcels/{shipment}/waybill/print', [WaybillController::class, 'logisticsPrint'])->middleware('throttle:120,1')->name('parcels.waybill.print');
     Route::patch('/parcels/{shipment}/pickup', [LogisticsOperationsController::class, 'pickup'])->middleware('throttle:120,1')->name('parcels.pickup');
     Route::patch('/parcels/{shipment}/sort', [LogisticsOperationsController::class, 'sort'])->middleware('throttle:120,1')->name('parcels.sort');
     Route::patch('/parcels/{shipment}/status', [LogisticsOperationsController::class, 'advance'])->middleware('throttle:120,1')->name('parcels.advance');

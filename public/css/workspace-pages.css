@@ -32,7 +32,7 @@
 .workspace-tab:hover,
 .workspace-tab.is-active {
     background: var(--zaylo-ink);
-    color: #fff;
+    color: var(--c-ffffff);
 }
 
 .workspace-tab:hover span,
@@ -56,7 +56,7 @@
     gap: 14px;
     align-items: center;
     padding: 15px 20px;
-    border-bottom: 1px solid #f1ebe5;
+    border-bottom: 1px solid var(--c-f1ebe5);
 }
 
 .workspace-list__item:last-child {
@@ -93,7 +93,7 @@
     padding: 5px 9px;
     border-radius: 999px;
     background: var(--zaylo-accent-soft);
-    color: #6d5140;
+    color: var(--c-6d5140);
     font-size: .62rem;
     font-weight: 700;
     letter-spacing: .03em;
@@ -102,20 +102,20 @@
 }
 
 .account-status--active {
-    background: #dcebd8;
-    color: #2d6d3e;
+    background: var(--c-dcebd8);
+    color: var(--c-2d6d3e);
 }
 
 .account-status--pending {
-    background: #fff0d5;
-    color: #8f5b17;
+    background: var(--c-fff0d5);
+    color: var(--c-8f5b17);
 }
 
 .account-status--suspended,
 .account-status--deactivated,
 .account-status--rejected {
-    background: #fde4e1;
-    color: #a4413b;
+    background: var(--c-fde4e1);
+    color: var(--c-a4413b);
 }
 
 .review-actions {
@@ -130,15 +130,15 @@
 }
 
 .seller-button--danger {
-    border-color: #d8a7a3;
-    background: #fff;
-    color: #98423d;
+    border-color: var(--c-d8a7a3);
+    background: var(--c-ffffff);
+    color: var(--c-98423d);
 }
 
 .seller-button--danger:hover {
-    border-color: #a4413b;
-    background: #a4413b;
-    color: #fff;
+    border-color: var(--c-a4413b);
+    background: var(--c-a4413b);
+    color: var(--c-ffffff);
 }
 
 .review-reason {
@@ -161,14 +161,14 @@
     padding: 12px;
     border: 1px solid var(--zaylo-border);
     border-radius: 8px;
-    background: #fcfaf8;
+    background: var(--c-fcfaf8);
 }
 
 .review-reason__form textarea {
     width: 100%;
     min-height: 70px;
     padding: 8px 10px;
-    border: 1px solid #dcd2c8;
+    border: 1px solid var(--c-dcd2c8);
     border-radius: 7px;
     outline: 0;
     font-size: .74rem;
@@ -181,7 +181,7 @@
 }
 
 .review-reason__form label {
-    color: #4f453c;
+    color: var(--c-4f453c);
     font-size: .7rem;
     font-weight: 700;
 }
@@ -314,6 +314,6 @@
 }
 
 .rider-license--expired {
-    color: #a4413b;
+    color: var(--c-a4413b);
     font-weight: 700;
 }

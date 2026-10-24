@@ -14,6 +14,11 @@ class Product extends Model
 {
     use HasFactory;
 
+    // Admin review of seller listings; only approved products reach buyers (see scopeVisibleToBuyers).
+    public const REVIEW_PENDING = 'pending';
+    public const REVIEW_APPROVED = 'approved';
+    public const REVIEW_REJECTED = 'rejected';
+
     private array $variantInput = [];
     private ?string $coverImageInput = null;
 
@@ -35,9 +40,10 @@ class Product extends Model
         'weight_grams',
         'category_id',
         'sale_type', 'sale_value', 'sale_starts_at', 'sale_ends_at', 'sale_variant_id',
+        'archived_at',
     ];
 
-    protected $casts = ['is_active' => 'boolean', 'sale_value' => 'decimal:2', 'sale_starts_at' => 'datetime', 'sale_ends_at' => 'datetime', 'sale_variant_id' => 'integer'];
+    protected $casts = ['is_active' => 'boolean', 'sale_value' => 'decimal:2', 'sale_starts_at' => 'datetime', 'sale_ends_at' => 'datetime', 'sale_variant_id' => 'integer', 'archived_at' => 'datetime', 'reviewed_at' => 'datetime'];
 
     protected static function booted(): void
     {
@@ -220,6 +226,11 @@ class Product extends Model
         return $this->belongsTo(Category::class, 'category_id');
     }
 
+    public function orderItems(): HasMany
+    {
+        return $this->hasMany(OrderItem::class);
+    }
+
     /** Extra categories this product is also listed under, besides its main category. */
     public function additionalCategories(): HasMany
     {
@@ -290,6 +301,107 @@ class Product extends Model
     public function images(): HasMany
     {
         return $this->hasMany(ProductImage::class)->orderBy(static::usesLegacySchema() ? 'sort_order' : 'position');
+    }
+
+    /** "For women", "For kids", "Unisex"…, or null when the seller did not say. */
+    public function getGenderLabelAttribute(): ?string
+    {
+        return match ($this->gender) {
+            null, '' => null,
+            'unisex' => 'Unisex',
+            'kids' => 'For kids',
+            default => 'For '.$this->gender,
+        };
+    }
+
+    public function isForKids(): bool
+    {
+        return in_array($this->gender, config('marketplace.kids_genders'), true);
+    }
+
+    /** Standard sizes for this product's main category, in kids' sizes when it is for girls, boys or kids. */
+    public function sizePresets(): array
+    {
+        $presets = config($this->isForKids() ? 'marketplace.kids_size_presets' : 'marketplace.size_presets');
+
+        return $presets[$this->category_key] ?? [];
+    }
+
+    public function getIsArchivedAttribute(): bool
+    {
+        return $this->archived_at !== null;
+    }
+
+    public function scopeNotArchived($query)
+    {
+        return $query->whereNull('products.archived_at');
+    }
+
+    public function scopeArchived($query)
+    {
+        return $query->whereNotNull('products.archived_at');
+    }
+
+    /** Whether listings are moderated; false until the review_status migration has run. */
+    public static function usesReview(): bool
+    {
+        return Schema::hasColumn('products', 'review_status');
+    }
+
+    /** What buyers may see and order: switched on by the seller and approved by an admin. */
+    public function scopeVisibleToBuyers($query)
+    {
+        $query->where('products.is_active', true);
+
+        return static::usesReview() ? $query->where('products.review_status', self::REVIEW_APPROVED) : $query;
+    }
+
+    public function getReviewStatusAttribute(?string $value): string
+    {
+        return $value ?? self::REVIEW_APPROVED;
+    }
+
+    public function getIsListedAttribute(): bool
+    {
+        return (bool) $this->is_active && $this->review_status === self::REVIEW_APPROVED;
+    }
+
+    public function getIsPendingReviewAttribute(): bool
+    {
+        return $this->review_status === self::REVIEW_PENDING;
+    }
+
+    public function getIsRejectedAttribute(): bool
+    {
+        return $this->review_status === self::REVIEW_REJECTED;
+    }
+
+    /** Sends the listing (back) to the admin queue. Review fields are never mass assigned, so sellers cannot approve themselves. */
+    public function submitForReview(): void
+    {
+        if (static::usesReview()) {
+            $this->forceFill(['review_status' => self::REVIEW_PENDING, 'review_note' => null, 'reviewed_at' => null, 'reviewed_by' => null])->save();
+        }
+    }
+
+    public function reviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    /**
+     * Whether buyers have ordered or reviewed this product. Such products can only be archived: deleting them would
+     * erase their reviews and unlink past orders.
+     */
+    public function hasHistory(): bool
+    {
+        if (\Illuminate\Support\Facades\DB::table('order_items')->where('product_id', $this->id)->exists()) {
+            return true;
+        }
+
+        return collect(['product_reviews', 'reviews'])->contains(fn ($table) => Schema::hasTable($table)
+            && Schema::hasColumn($table, 'product_id')
+            && \Illuminate\Support\Facades\DB::table($table)->where('product_id', $this->id)->exists());
     }
 
     /** Gallery photos besides the main one, leaving out color photos ("<product> — <color>" alt text). */
