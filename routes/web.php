@@ -27,6 +27,7 @@ use App\Http\Controllers\LogisticsOperationsController;
 use App\Http\Controllers\SellerApplicationController;
 use App\Http\Controllers\SellerController;
 use App\Http\Controllers\ShopController;
+use App\Http\Controllers\SortingCenterController;
 use App\Http\Controllers\SupportChatController;
 use App\Http\Controllers\WaybillController;
 use App\Models\Product;
@@ -201,6 +202,11 @@ Route::middleware(['auth', 'active', 'verified', 'role:courier', 'nocache'])->pr
     Route::get('/activity', [ActivityLogController::class, 'courier'])->name('activity');
     Route::get('/account', [CourierController::class, 'account'])->name('account');
     Route::get('/chat', [LogisticsChatController::class, 'rider'])->name('chat');
+});
+
+Route::middleware(['auth', 'active', 'verified', 'role:sorting_center', 'nocache'])->prefix('sorting-center')->name('sorting-center.')->group(function () {
+    Route::get('/dashboard', [SortingCenterController::class, 'dashboard'])->name('dashboard');
+    Route::patch('/shipments/{shipment}/status', [SortingCenterController::class, 'updateStatus'])->name('shipments.status');
 });
 
 Route::middleware(['auth', 'active', 'verified', 'role:admin', 'nocache'])->prefix('admin')->name('admin.')->group(function () {
