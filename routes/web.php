@@ -55,6 +55,8 @@ Route::get('/', function () {
 
     return view('index', compact('newArrivals'));
 })->name('home');
+// Shoppers on Android land here instead of the web store (App\Http\Middleware\RequireAndroidApp).
+Route::view('/get-the-app', 'app-download', ['downloadUrl' => config('marketplace.android_app.download_url')])->name('app.download');
 Route::get('/terms', [PolicyController::class, 'show'])->name('terms');
 Route::get('/policies/{slug}', [PolicyController::class, 'show'])->name('policies.show');
 Route::get('/products', [BuyerController::class, 'products'])->name('products.index');
