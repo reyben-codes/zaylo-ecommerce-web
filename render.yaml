@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: my-laravel-app
+    env: php
+    buildCommand: composer install --no-dev --optimize-autoloader
+    startCommand: heroku-php-apache2 public/
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false

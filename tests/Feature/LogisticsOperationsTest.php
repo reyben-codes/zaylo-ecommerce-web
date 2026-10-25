@@ -55,7 +55,7 @@ class LogisticsOperationsTest extends TestCase
         $this->actingAs($this->owner);
 
         // Pickup must be confirmed before it can be collected.
-        $this->patch(route('logistics.parcels.advance', $shipment), ['status' => 'picked_up'])->assertSessionHasErrors('status');
+        $this->patch(route('logistics.parcels.advance', $shipment), ['status' => 'picked_up', 'tracking' => 'ZX-0002'])->assertSessionHasErrors('status');
         $this->patch(route('logistics.parcels.pickup', $shipment), ['decision' => 'confirm', 'pickup_date' => now('Asia/Manila')->subDay()->toDateString()])->assertSessionHasErrors('pickup_date');
         $this->patch(route('logistics.parcels.pickup', $shipment), ['decision' => 'confirm', 'pickup_date' => now('Asia/Manila')->addDay()->toDateString()])->assertSessionHasNoErrors();
         $this->assertSame('confirmed', ShipmentWorkflow::stageOf($shipment->fresh()));
@@ -63,7 +63,11 @@ class LogisticsOperationsTest extends TestCase
         $sellerThread = LogisticsThread::where('user_id', $shipment->sellerOrder->seller->user_id)->firstOrFail();
         $this->assertStringContainsString('Pickup confirmed for order ZAY-ZX-0002', $sellerThread->messages()->value('body'));
 
-        $this->patch(route('logistics.parcels.advance', $shipment), ['status' => 'picked_up'])->assertSessionHasNoErrors();
+        // Collecting needs the waybill in hand: its code, scanned or typed.
+        $this->patch(route('logistics.parcels.advance', $shipment), ['status' => 'picked_up'])->assertSessionHasErrors('tracking');
+        $this->patch(route('logistics.parcels.advance', $shipment), ['status' => 'picked_up', 'tracking' => 'ZX-9999'])->assertSessionHasErrors('tracking');
+        $this->assertSame('confirmed', ShipmentWorkflow::stageOf($shipment->fresh()));
+        $this->patch(route('logistics.parcels.advance', $shipment), ['status' => 'picked_up', 'tracking' => ' zx-0002 '])->assertSessionHasNoErrors();
         $this->assertSame('picked_up', $shipment->fresh()->status);
         $this->assertSame('shipped', $shipment->sellerOrder->fresh()->status);
         $this->get(route('logistics.incoming'))->assertSee('ZX-0002')->assertSee('Receive at hub');

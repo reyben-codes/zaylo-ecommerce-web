@@ -86,4 +86,10 @@ class LogisticsProvider extends Model
             ->whereHas('owner', fn ($owner) => $owner->where('status', 'active'))
             ->orderBy('name');
     }
+
+    /** Partners a seller can hand a parcel to: the same approved partners with an active account. */
+    public function scopeAcceptingParcels($query)
+    {
+        return $this->scopeAcceptingRiders($query);
+    }
 }

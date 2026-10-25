@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\UpdatesAccountSettings;
+use App\Models\LogisticsProvider;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
@@ -10,6 +11,7 @@ use App\Models\ProductReview;
 use App\Models\ProductVariant;
 use App\Models\SellerOrder;
 use App\Models\SellerProfile;
+use App\Models\Shipment;
 use App\Services\SellerApplicationService;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -246,13 +248,15 @@ class SellerController extends Controller
         }
 
         $orders = $baseQuery
-            ->with(['buyer', 'items', 'payment', 'shipment', 'statusHistory' => fn ($query) => $query->oldest()])
+            ->with(['buyer', 'items', 'payment', Shipment::tracksProvider() ? 'shipment.provider' : 'shipment', 'statusHistory' => fn ($query) => $query->oldest()])
             ->when($filter !== 'all', fn ($query) => $query->whereIn('status', self::ORDER_STATUS_GROUPS[$filter]))
             ->latest('placed_at')
             ->paginate(12)
             ->withQueryString();
+        $partners = $this->pickupPartners();
+        $suggestedPartner = $this->suggestedPartnerId($partners);
 
-        return view('seller.orders', compact('orders', 'filter', 'counts', 'statusLabels'));
+        return view('seller.orders', compact('orders', 'filter', 'counts', 'statusLabels', 'partners', 'suggestedPartner'));
     }
 
     public function updateOrderStatus(Request $request, Order $order)
@@ -263,8 +267,9 @@ class SellerController extends Controller
         ], [
             'status.in' => 'The rider updates this parcel from here on.',
         ]);
+        $partner = $data['status'] === 'ready_for_pickup' ? $this->chosenPartner($request) : null;
 
-        DB::transaction(function () use ($order, $data) {
+        DB::transaction(function () use ($order, $data, $partner) {
             $locked = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
             if (! in_array($data['status'], self::ORDER_TRANSITIONS[$locked->status] ?? [], true)) {
                 throw ValidationException::withMessages(['status' => 'That order status transition is not allowed.']);
@@ -289,22 +294,62 @@ class SellerController extends Controller
                 'note' => 'Updated by seller.',
             ]);
 
-            // Ready to ship opens the parcel: its tracking number is what the rider scans.
+            // Ready to ship opens the parcel for the chosen partner to pick up; its tracking number is what gets scanned.
             if ($data['status'] === 'ready_for_pickup') {
                 $locked->shipment()->firstOrCreate([], [
                     'tracking_number' => 'TRK-'.Str::upper(Str::random(12)),
                     'status' => 'ready',
-                ])->update(['status' => 'ready']);
+                ])->update(['status' => 'ready'] + (Shipment::tracksProvider() ? ['logistics_provider_id' => $partner?->id] : []));
             }
         });
 
         $message = match ($data['status']) {
-            'ready_for_pickup' => 'Parcel is ready for the rider to pick up.',
+            'ready_for_pickup' => $partner
+                ? "Pickup requested from {$partner->name}. Print the waybill and attach it to the parcel."
+                : 'Pickup requested. Print the waybill and attach it to the parcel.',
             'cancelled' => 'Order cancelled and stock restored.',
             default => 'Order status updated.',
         };
 
         return back()->with('status', $message);
+    }
+
+    /** Logistics partners this seller can hand a parcel to (none when parcels do not record a partner). */
+    private function pickupPartners(): Collection
+    {
+        return Shipment::tracksProvider() ? LogisticsProvider::acceptingParcels()->get(['id', 'name']) : collect();
+    }
+
+    /** The partner this seller used last, so repeat requests need no choice; otherwise the first one listed. */
+    private function suggestedPartnerId(Collection $partners): ?int
+    {
+        if ($partners->isEmpty()) {
+            return null;
+        }
+        $last = Shipment::whereIn('order_id', Order::where('seller_id', $this->shopId())->select('id'))
+            ->whereIn('logistics_provider_id', $partners->pluck('id'))
+            ->latest('id')->value('logistics_provider_id');
+
+        return (int) ($last ?? $partners->first()->id);
+    }
+
+    /**
+     * The partner picked on "Ready to ship". With a single partner the choice is made for the seller; with none
+     * the request is left open and the first partner to confirm it takes it.
+     */
+    private function chosenPartner(Request $request): ?LogisticsProvider
+    {
+        $partners = $this->pickupPartners();
+        if ($partners->isEmpty()) {
+            return null;
+        }
+        $chosen = $request->input('logistics_provider_id') ?? ($partners->count() === 1 ? $partners->first()->id : null);
+        $partner = $partners->firstWhere('id', (int) $chosen);
+        if (! $partner) {
+            throw ValidationException::withMessages(['logistics_provider_id' => 'Choose the logistics partner who will pick up this parcel.']);
+        }
+
+        return $partner;
     }
 
     /**

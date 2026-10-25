@@ -1,4 +1,5 @@
-{{-- The next steps for one parcel. Expects $shipment and optional $riders (assign a rider when it is waiting for one).
+{{-- The next steps for one parcel. Expects $shipment, optional $riders (assign a rider when it is waiting for one) and
+     optional $scanned (the tracking number just scanned on the Scan parcel page, which proves the waybill is in hand).
      Sorting suggestions come from a <datalist id="sort-areas"> on the page. --}}
 @php
     $workflow = \App\Services\ShipmentWorkflow::class;
@@ -10,6 +11,8 @@
     $riders = $riders ?? null;
     $tracking = $shipment->tracking_number ?? $shipment->tracking_code;
     $today = now('Asia/Manila');
+    $scanned = $scanned ?? null;
+    $thisParcel = (string) old('parcel') === (string) $shipment->id;
 @endphp
 
 <div class="parcel-actions">
@@ -81,7 +84,22 @@
             @csrf
             @method('PATCH')
             <input type="hidden" name="status" value="{{ $status }}">
+            <input type="hidden" name="parcel" value="{{ $shipment->id }}">
+            @if($status === 'picked_up')
+                {{-- Collecting from the seller: the waybill's code proves the parcel is in hand. --}}
+                @if($scanned)
+                    <input type="hidden" name="tracking" value="{{ $scanned }}">
+                @else
+                    <label class="sr-only" for="pickup-code-{{ $shipment->id }}">Scan or type the waybill code of parcel {{ $tracking }}</label>
+                    <input type="text" id="pickup-code-{{ $shipment->id }}" name="tracking" class="parcel-code-input" required maxlength="100"
+                           autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Scan waybill code"
+                           @if($thisParcel && $errors->has('tracking')) aria-invalid="true" aria-describedby="pickup-code-error-{{ $shipment->id }}" @endif>
+                @endif
+            @endif
             <button type="submit" class="seller-button seller-button--small{{ $danger ? ' seller-button--danger' : ($loop->first ? '' : ' seller-button--secondary') }}">{{ $label }}</button>
+            @if($status === 'picked_up' && $thisParcel && $errors->has('tracking'))
+                <p id="pickup-code-error-{{ $shipment->id }}" class="seller-field__error" role="alert">{{ $errors->first('tracking') }}</p>
+            @endif
         </form>
     @endforeach
 

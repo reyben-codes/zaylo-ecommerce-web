@@ -38,7 +38,7 @@ class SellerDeliveryHandoverTest extends TestCase
             ->assertOk()
             ->assertSee($order->order_number)
             ->assertSee('class="seller-sidebar__link is-active"', false)
-            ->assertSee('Riders handle delivery')
+            ->assertSee('Your logistics partner handles delivery')
             ->assertDontSee('Mark as shipped')
             ->assertDontSee('Temporary self-delivery workflow');
     }

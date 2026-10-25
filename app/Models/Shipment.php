@@ -44,6 +44,12 @@ class Shipment extends Model
         return $this->belongsTo(LogisticsProvider::class, 'logistics_provider_id');
     }
 
+    /** Whether parcels record their logistics partner (the newer schema, or the deployed one after 2026_10_24). */
+    public static function tracksProvider(): bool
+    {
+        return Schema::hasColumn('shipments', 'logistics_provider_id');
+    }
+
     public function rider(): BelongsTo
     {
         return $this->belongsTo(Rider::class);

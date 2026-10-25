@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -212,7 +213,7 @@ class LogisticsOperationsController extends Controller
     /** Confirm a seller's pickup request for a date, or decline it with a reason. */
     public function pickup(Request $request, Shipment $shipment)
     {
-        $this->ownsParcel($shipment);
+        $this->ownsParcel($shipment, orOpenRequest: true);
         abort_unless(ShipmentWorkflow::hasHubSteps(), 404);
         $data = $request->validate([
             'decision' => ['required', Rule::in(['confirm', 'decline'])],
@@ -231,7 +232,16 @@ class LogisticsOperationsController extends Controller
 
         if ($data['decision'] === 'confirm') {
             $date = Carbon::parse($data['pickup_date'], 'Asia/Manila');
-            $this->workflow->confirmPickup($shipment, $date, $request->user());
+            DB::transaction(function () use ($shipment, $date, $provider, $request) {
+                // An open request (no partner named) goes to the first partner to confirm it.
+                if ($provider && Shipment::tracksProvider() && $shipment->logistics_provider_id === null) {
+                    $taken = Shipment::whereKey($shipment->id)->whereNull('logistics_provider_id')->update(['logistics_provider_id' => $provider->id]);
+                    if (! $taken) {
+                        throw ValidationException::withMessages(['pickup_date' => 'Another logistics partner has already taken this pickup.']);
+                    }
+                }
+                $this->workflow->confirmPickup($shipment, $date, $request->user());
+            });
             $provider && $this->messenger->notify($provider, $sellerId, "Pickup confirmed for order {$parcel['order']} (parcel {$parcel['tracking']}). We will collect it on {$date->format('l, M j')}. Please have it packed and labeled.");
 
             return back()->with('status', "Pickup for {$parcel['tracking']} confirmed for {$date->format('M j')}.");
@@ -257,7 +267,16 @@ class LogisticsOperationsController extends Controller
     public function advance(Request $request, Shipment $shipment)
     {
         $this->ownsParcel($shipment);
-        $data = $request->validate(['status' => ['required', Rule::in(array_keys(ShipmentWorkflow::ACTION_LABELS))]]);
+        $data = $request->validate([
+            'status' => ['required', Rule::in(array_keys(ShipmentWorkflow::ACTION_LABELS))],
+            // Collecting from the seller needs the waybill in hand: its code is scanned or typed.
+            'tracking' => ['exclude_unless:status,picked_up', 'required', 'string', 'max:100'],
+        ], [
+            'tracking.required' => "Scan or type the tracking number on the parcel's waybill to confirm you have it.",
+        ]);
+        if ($data['status'] === 'picked_up' && strcasecmp(trim($data['tracking']), $this->tracking($shipment)) !== 0) {
+            throw ValidationException::withMessages(['tracking' => 'That code does not match parcel '.$this->tracking($shipment).'. Check that you have the right parcel.']);
+        }
         $this->workflow->advance($shipment, $data['status'], $request->user());
 
         return back()->with('status', 'Parcel '.$this->tracking($shipment).': '.ShipmentWorkflow::label($data['status']).'.');

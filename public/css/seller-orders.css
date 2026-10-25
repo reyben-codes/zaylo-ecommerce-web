@@ -186,3 +186,47 @@
         width: min(100%, 360px);
     }
 }
+
+/* Where the parcel stands with the logistics partner (seller/partials/pickup-status). */
+.pickup-status {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    max-width: 210px;
+    margin-top: 7px;
+    color: var(--c-6b5f54);
+    font-size: .72rem;
+    line-height: 1.35;
+}
+
+.pickup-status i {
+    margin-top: 2px;
+}
+
+.pickup-status--scheduled {
+    color: var(--c-1a1714);
+    font-weight: 600;
+}
+
+.pickup-status--scheduled i {
+    color: var(--c-2f6b38);
+}
+
+/* Logistics partner picked with "Ready to ship". */
+.order-actions form:has(.order-partner) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.order-partner {
+    max-width: 170px;
+    min-height: 32px;
+    padding: 0 8px;
+    border: 1px solid var(--c-d9d0c7);
+    border-radius: 8px;
+    background: var(--c-ffffff);
+    color: var(--c-1a1714);
+    font: inherit;
+    font-size: .74rem;
+}

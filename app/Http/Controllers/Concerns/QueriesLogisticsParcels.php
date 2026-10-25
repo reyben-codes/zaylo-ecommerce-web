@@ -9,8 +9,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Parcels handled by the signed-in logistics partner. Where the schema records the partner on a shipment the list is
- * limited to that partner; the deployed schema has one shared queue.
+ * Parcels handled by the signed-in logistics partner: the ones sellers sent to this partner, plus open pickup requests
+ * that name no partner (sent when none was available), which the first partner to confirm takes.
  */
 trait QueriesLogisticsParcels
 {
@@ -24,8 +24,10 @@ trait QueriesLogisticsParcels
         $provider = $this->logisticsProvider();
 
         return Shipment::query()->when(
-            $provider && Schema::hasColumn('shipments', 'logistics_provider_id'),
-            fn (Builder $query) => $query->where('logistics_provider_id', $provider->id),
+            $provider && Shipment::tracksProvider(),
+            fn (Builder $query) => $query->where(fn (Builder $visible) => $visible
+                ->where('logistics_provider_id', $provider->id)
+                ->orWhere(fn (Builder $open) => ShipmentWorkflow::whereStage($open->whereNull('logistics_provider_id'), ['ready']))),
         );
     }
 
@@ -54,9 +56,13 @@ trait QueriesLogisticsParcels
             ->all();
     }
 
-    protected function ownsParcel(Shipment $shipment): void
+    /** Another partner's parcel is off limits; an open pickup request may be confirmed or declined by any partner. */
+    protected function ownsParcel(Shipment $shipment, bool $orOpenRequest = false): void
     {
         $provider = $this->logisticsProvider();
-        abort_if($provider && Schema::hasColumn('shipments', 'logistics_provider_id') && (int) $shipment->logistics_provider_id !== (int) $provider->id, 403);
+        if (! $provider || ! Shipment::tracksProvider() || (int) $shipment->logistics_provider_id === (int) $provider->id) {
+            return;
+        }
+        abort_unless($orOpenRequest && $shipment->logistics_provider_id === null && ShipmentWorkflow::stageOf($shipment) === 'ready', 403);
     }
 }

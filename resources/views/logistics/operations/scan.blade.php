@@ -6,12 +6,16 @@
     <link rel="stylesheet" href="{{ asset('css/logistics-operations.css') }}?v={{ filemtime(public_path('css/logistics-operations.css')) }}">
 @endpush
 
+@push('scripts')
+    <script src="{{ asset('js/parcel-scan.js') }}?v={{ filemtime(public_path('js/parcel-scan.js')) }}" defer></script>
+@endpush
+
 @section('content')
     <section class="seller-page-heading">
         <div>
             <p class="seller-eyebrow">Sorting center</p>
             <h1>Scan parcel</h1>
-            <p>Scan the label with a barcode scanner, or type the tracking number, to see where the parcel is and move it to its next step.</p>
+            <p>Scan the waybill with your phone's camera or a barcode scanner, or type the tracking number, to see where the parcel is and move it to its next step. When collecting from a seller, scan the waybill here to mark it picked up.</p>
         </div>
     </section>
 
@@ -22,14 +26,25 @@
     </datalist>
 
     <section class="seller-panel">
-        <form method="GET" action="{{ route('logistics.scan') }}" class="parcel-scan" role="search">
+        <form method="GET" action="{{ route('logistics.scan') }}" class="parcel-scan" role="search" data-parcel-scan-form>
             <label for="tracking" class="seller-field__label">Tracking number</label>
             <div class="parcel-scan__row">
                 <i class="fas fa-barcode" aria-hidden="true"></i>
                 <input type="search" id="tracking" name="tracking" value="{{ $tracking }}" placeholder="e.g. TRK-OZIMZ8VNRMDW" autocomplete="off" autofocus required maxlength="100">
                 <button type="submit" class="seller-button"><i class="fas fa-magnifying-glass" aria-hidden="true"></i> Find parcel</button>
+                {{-- Shown by js/parcel-scan.js only where the browser can read barcodes from the camera. --}}
+                <button type="button" class="seller-button seller-button--secondary" data-camera-scan hidden><i class="fas fa-camera" aria-hidden="true"></i> Use camera</button>
             </div>
         </form>
+
+        <dialog class="camera-scan" aria-labelledby="camera-scan-title" data-camera-dialog>
+            <div class="camera-scan__panel">
+                <h2 id="camera-scan-title" class="camera-scan__title">Scan the waybill</h2>
+                <video class="camera-scan__video" playsinline muted data-camera-video></video>
+                <p class="camera-scan__status" role="status" data-camera-status>Point the camera at the barcode or QR code on the waybill.</p>
+                <button type="button" class="seller-button seller-button--secondary" data-camera-close>Cancel</button>
+            </div>
+        </dialog>
 
         @if($tracking !== '' && ! $shipment)
             <div class="seller-empty">
@@ -63,7 +78,7 @@
                 </dl>
                 <div class="parcel-result__actions">
                     <p class="seller-cell-note">Next step</p>
-                    @include('logistics.operations.partials.parcel-actions', ['shipment' => $shipment, 'riders' => $riders])
+                    @include('logistics.operations.partials.parcel-actions', ['shipment' => $shipment, 'riders' => $riders, 'scanned' => $tracking])
                 </div>
             </div>
         @else

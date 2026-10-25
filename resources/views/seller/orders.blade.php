@@ -21,21 +21,23 @@
             'confirmed' => ['status' => 'processing', 'label' => 'Start processing', 'icon' => 'fa-box-open'],
             'processing' => ['status' => 'ready_for_pickup', 'label' => 'Ready to ship', 'icon' => 'fa-box'],
         ];
+        $partners = $partners ?? collect();
+        $suggestedPartner = $suggestedPartner ?? null;
     @endphp
 
     <section class="seller-page-heading">
         <div>
             <p class="seller-eyebrow">Seller Center</p>
             <h1>{{ $isDelivery ? 'Delivery' : 'Order fulfillment' }}</h1>
-            <p>{{ $isDelivery ? 'Parcels that are packed or on the way to buyers.' : 'Prepare orders and hand them over to the rider.' }}</p>
+            <p>{{ $isDelivery ? 'Parcels that are packed or on the way to buyers.' : 'Prepare orders and hand them over to your logistics partner.' }}</p>
         </div>
     </section>
 
     <aside class="seller-notice">
         <i class="fas fa-circle-info" aria-hidden="true"></i>
         <div>
-            <strong>Riders handle delivery</strong>
-            <p>Once an order is ready to ship, print its waybill and attach it to the parcel. The rider scans it in the ZAYLO app and updates each delivery stage—the buyer sees every update in their order history.</p>
+            <strong>Your logistics partner handles delivery</strong>
+            <p>When an order is ready to ship, choose the logistics partner, then print the waybill and attach it to the parcel. The partner sets a pickup date, scans the waybill when they collect the parcel, and delivers it with their riders. The buyer sees every update in their order history.</p>
         </div>
     </aside>
 
@@ -107,6 +109,7 @@
                                 <span class="order-status order-status--{{ str($order->status)->replace('_', '-') }}">
                                     {{ $statusLabels[$order->status] ?? str($order->status)->replace('_', ' ')->title() }}
                                 </span>
+                                @include('seller.partials.pickup-status', ['shipment' => $order->shipment])
                             </td>
                             <td>
                                 <div class="order-actions">
@@ -116,7 +119,18 @@
                                             @csrf
                                             @method('PATCH')
                                             <input type="hidden" name="status" value="{{ $nextAction['status'] }}">
-                                            <button type="submit" class="seller-button seller-button--small">
+                                            @if($nextAction['status'] === 'ready_for_pickup' && $partners->count() > 1)
+                                                <label class="sr-only" for="partner-{{ $order->id }}">Logistics partner for order {{ $order->order_number }}</label>
+                                                <select id="partner-{{ $order->id }}" name="logistics_provider_id" class="order-partner" required>
+                                                    @foreach($partners as $partner)
+                                                        <option value="{{ $partner->id }}" @selected($partner->id === $suggestedPartner)>{{ $partner->name }}</option>
+                                                    @endforeach
+                                                </select>
+                                            @elseif($nextAction['status'] === 'ready_for_pickup' && $partners->count() === 1)
+                                                <input type="hidden" name="logistics_provider_id" value="{{ $partners->first()->id }}">
+                                            @endif
+                                            <button type="submit" class="seller-button seller-button--small"
+                                                    @if($nextAction['status'] === 'ready_for_pickup' && $partners->count() === 1) aria-label="Ready to ship: request pickup from {{ $partners->first()->name }}" @endif>
                                                 <i class="fas {{ $nextAction['icon'] }}" aria-hidden="true"></i> {{ $nextAction['label'] }}
                                             </button>
                                         </form>
