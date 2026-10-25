@@ -1176,7 +1176,7 @@ class SellerController extends Controller
         $order = (int) $product->images()->max(Product::usesLegacySchema() ? 'sort_order' : 'position');
         foreach ($request->file('photos', []) as $file) {
             $product->images()->create([
-                'path' => Storage::url($file->store('products/'.auth()->id(), 'public')),
+                'path' => '/storage/'.$file->store('products/'.auth()->id(), 'public'),
                 'alt_text' => $product->name,
                 'sort_order' => ++$order,
             ]);
@@ -1214,7 +1214,8 @@ class SellerController extends Controller
             Storage::disk('public')->delete($oldPath);
         }
 
-        $data['image_url'] = Storage::url($path);
+        // Saved as a "/storage/..." link so it keeps working wherever the file lives (see PublicFileController).
+        $data['image_url'] = '/storage/'.$path;
 
         return $data;
     }

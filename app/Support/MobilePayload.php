@@ -13,6 +13,7 @@ use App\Models\ProductVariant;
 use App\Models\User;
 use App\Services\ProductReviews;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
@@ -279,7 +280,12 @@ class MobilePayload
             return null;
         }
 
-        return Str::startsWith($path, ['http://', 'https://']) ? $path : url($path);
+        if (Str::startsWith($path, ['http://', 'https://'])) {
+            return $path;
+        }
+
+        // Uploaded photos go straight to where the file lives (Cloudflare R2), skipping the /storage redirect.
+        return Str::startsWith($path, '/storage/') ? Storage::disk('public')->url(Str::after($path, '/storage/')) : url($path);
     }
 
     /** The shop name buyers see for a product's seller_id (see App\Support\Shop). */

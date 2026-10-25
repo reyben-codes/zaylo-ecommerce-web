@@ -13,6 +13,7 @@ use App\Http\Controllers\BuyerNotificationController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\PolicyController;
 use App\Http\Controllers\ProfilePhotoController;
+use App\Http\Controllers\PublicFileController;
 use App\Http\Controllers\ProductSaleController;
 use App\Http\Controllers\ComplianceWarningController;
 use App\Http\Controllers\CourierController;
@@ -55,6 +56,8 @@ Route::get('/', function () {
 
     return view('index', compact('newArrivals'));
 })->name('home');
+// Uploaded photos saved as "/storage/..." links: redirected to Cloudflare R2, or sent from storage/app/public.
+Route::get('/storage/{path}', PublicFileController::class)->where('path', '.*')->name('storage.public');
 Route::get('/terms', [PolicyController::class, 'show'])->name('terms');
 Route::get('/policies/{slug}', [PolicyController::class, 'show'])->name('policies.show');
 Route::get('/products', [BuyerController::class, 'products'])->name('products.index');
