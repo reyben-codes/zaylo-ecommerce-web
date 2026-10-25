@@ -159,6 +159,19 @@ class BuyerController extends Controller
         }
         $query->orderByDesc('products.id');
 
+        // Search-as-you-type suggestions (public/js/live-search.js): the best few matches, ranked like the catalog.
+        if ($request->boolean('suggest')) {
+            return response()->json([
+                'products' => $query->limit(6)->get()->map(fn (Product $product) => [
+                    'name' => $product->name,
+                    'url' => route('products.show', $product),
+                    'image' => $product->image_url ?: $product->images->first()?->path ?: asset('images/ZAYLO_ICON_DARK.png'),
+                    'price' => '₱'.number_format($product->price, 2),
+                    'sold_out' => (bool) $product->is_sold_out,
+                ]),
+            ]);
+        }
+
         $chips = [];
         foreach (['search', 'category', 'gender', 'size', 'min_price', 'max_price', 'availability', 'on_sale'] as $key) {
             if (! isset($validated[$key]) || $validated[$key] === '' || ($key === 'availability' && $validated[$key] === 'all') || ($key === 'on_sale' && ! $validated[$key])) continue;

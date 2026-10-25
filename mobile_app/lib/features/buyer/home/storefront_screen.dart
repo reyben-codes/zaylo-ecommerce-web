@@ -33,7 +33,6 @@ class StorefrontScreen extends StatefulWidget {
 
 class _StorefrontScreenState extends State<StorefrontScreen> {
   Future<StorefrontHome>? _home;
-  final _searchController = TextEditingController();
   final _topBarVisibility = NavBarVisibility();
   int? _loadedForUser = -1;
 
@@ -50,7 +49,6 @@ class _StorefrontScreenState extends State<StorefrontScreen> {
 
   @override
   void dispose() {
-    _searchController.dispose();
     _topBarVisibility.dispose();
     super.dispose();
   }
@@ -63,9 +61,10 @@ class _StorefrontScreenState extends State<StorefrontScreen> {
     await home;
   }
 
-  void _openCatalog({String? category, String? search, String? title}) {
+  void _openCatalog({String? category, String? search, String? title, bool focusSearch = false}) {
     Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => ProductCatalogScreen(category: category, initialSearch: search, title: title),
+      builder: (_) => ProductCatalogScreen(
+          category: category, initialSearch: search, title: title, focusSearch: focusSearch),
     ));
   }
 
@@ -129,10 +128,7 @@ class _StorefrontScreenState extends State<StorefrontScreen> {
                             SliverToBoxAdapter(
                               child: Padding(
                                 padding: const EdgeInsets.fromLTRB(ZayloSpace.page, 0, ZayloSpace.page, 18),
-                                child: SearchField(
-                                  controller: _searchController,
-                                  onSearch: () => _openCatalog(search: _searchController.text),
-                                ),
+                                child: SearchField(onTap: () => _openCatalog(focusSearch: true)),
                               ),
                             ),
                             if (data.announcements.isNotEmpty)

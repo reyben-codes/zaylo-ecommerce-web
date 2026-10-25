@@ -1,9 +1,9 @@
 (() => {
     const slideDelay = 1800;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const controllers = [];
+    let controllers = [];
 
-    document.querySelectorAll('img[data-card-slides]').forEach((image) => {
+    const initCardSlides = (root) => root.querySelectorAll('img[data-card-slides]').forEach((image) => {
         const sources = JSON.parse(image.dataset.cardSlides);
         if (sources.length < 2) return;
 
@@ -82,6 +82,7 @@
         });
 
         controllers.push({
+            image,
             sync() {
                 if (hovered && hoverTarget.matches(':hover') && canPlay()) start();
                 else {
@@ -90,6 +91,13 @@
                 }
             },
         });
+    });
+
+    initCardSlides(document);
+    // Live search (live-search.js) replaces the catalog grid; start the new cards and forget the removed ones.
+    document.addEventListener('zaylo:products-updated', (event) => {
+        controllers = controllers.filter((controller) => !controller.image || controller.image.isConnected);
+        initCardSlides(event.target);
     });
 
     document.querySelectorAll('[data-product-gallery]').forEach((gallery) => {

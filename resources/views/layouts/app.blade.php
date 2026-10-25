@@ -26,6 +26,7 @@
     <link rel="stylesheet" href="{{ asset('css/product-rating.css') }}?v={{ filemtime(public_path('css/product-rating.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/category-tags.css') }}?v={{ filemtime(public_path('css/category-tags.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/shop-card.css') }}?v={{ filemtime(public_path('css/shop-card.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/live-search.css') }}?v={{ filemtime(public_path('css/live-search.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/confirm-dialog.css') }}?v={{ filemtime(public_path('css/confirm-dialog.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/print.css') }}?v={{ filemtime(public_path('css/print.css')) }}" media="print">
 </head>
@@ -60,9 +61,10 @@
         </a>
 
         <div class="nav-actions">
-            <form class="search-wrapper" method="GET" action="{{ route('products.index') }}" role="search">
+            <form class="search-wrapper" method="GET" action="{{ route('products.index') }}" role="search" data-live-search>
                 <span class="search-icon">⌕</span>
-                <input type="search" name="search" value="{{ request('search') }}" placeholder="Search products" aria-label="Search products" />
+                <input type="search" name="search" value="{{ request('search') }}" placeholder="Search products" aria-label="Search products" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="live-search-results" maxlength="100" />
+                <div class="live-search" id="live-search-results" role="listbox" aria-label="Matching products" hidden></div>
             </form>
             <div class="icon-group">
                 <button type="button" class="theme-toggle" data-theme-toggle aria-label="Switch theme"></button>
@@ -114,6 +116,7 @@
     <script src="{{ asset('js/navigation.js') }}?v={{ filemtime(public_path('js/navigation.js')) }}" defer></script>
     <script src="{{ asset('js/notifications.js') }}?v={{ filemtime(public_path('js/notifications.js')) }}" defer></script>
     <script src="{{ asset('js/product-carousel.js') }}?v={{ filemtime(public_path('js/product-carousel.js')) }}" defer></script>
+    <script src="{{ asset('js/live-search.js') }}?v={{ filemtime(public_path('js/live-search.js')) }}" defer></script>
     @stack('scripts')
     @if(auth()->user()?->role === 'buyer')
         <div class="wishlist-feedback" data-wishlist-feedback role="status" aria-live="polite" hidden></div>
