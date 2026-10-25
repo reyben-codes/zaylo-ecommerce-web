@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/auth/buyer/login_screen.dart';
+import 'package:zaylo_mobile/components/cart_flight.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
 import 'package:zaylo_mobile/features/buyer/catalog/product_detail_screen.dart';
 import 'package:zaylo_mobile/models/buyer/catalog_models.dart';
@@ -37,14 +38,17 @@ abstract final class ShopActions {
     }
   }
 
-  /// Adds one unit, or opens the product when an option must be chosen first.
-  static Future<void> quickAdd(BuildContext context, Product product) async {
+  /// Adds one unit, or opens the product when an option must be chosen first. The product's photo flies from
+  /// [from] (the tapped button) into the bag.
+  static Future<void> quickAdd(BuildContext context, Product product, {BuildContext? from}) async {
     if (product.hasOptions) return openProduct(context, product);
     if (!await ensureSignedIn(context) || !context.mounted) return;
+    final start = CartFlight.rectOf(from ?? context);
     try {
       await AppScope.read(context).addToBag(product);
       if (context.mounted) {
         showMessage(context, 'Added to your bag.', actionLabel: 'VIEW BAG', onAction: () => showTab(context, 2));
+        CartFlight.fly(context, from: start, imageUrl: product.imageUrl);
       }
     } on ApiException catch (error) {
       if (!context.mounted) return;

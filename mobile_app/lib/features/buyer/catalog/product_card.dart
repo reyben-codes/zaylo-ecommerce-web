@@ -136,12 +136,14 @@ class ProductCard extends StatelessWidget {
                 Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
                   Expanded(child: PriceLine(product: product, size: 15)),
                   const SizedBox(width: 6),
-                  _SquareIconButton(
-                    tooltip: product.hasOptions ? 'Choose options' : 'Add to bag',
-                    onPressed: () => ShopActions.quickAdd(context, product),
-                    background: ZayloColors.ink,
-                    size: 34,
-                    icon: CartIcon(size: 18, color: ZayloColors.white),
+                  Builder(
+                    builder: (button) => _SquareIconButton(
+                      tooltip: product.hasOptions ? 'Choose options' : 'Add to bag',
+                      onPressed: () => ShopActions.quickAdd(context, product, from: button),
+                      background: ZayloColors.ink,
+                      size: 34,
+                      icon: CartIcon(size: 18, color: ZayloColors.white),
+                    ),
                   ),
                 ]),
               ]),
