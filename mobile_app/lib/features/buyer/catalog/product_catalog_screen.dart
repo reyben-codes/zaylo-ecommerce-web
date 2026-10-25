@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'package:zaylo_mobile/api/api_exception.dart';
@@ -32,11 +34,15 @@ const _catalogCategories = {
 };
 
 class ProductCatalogScreen extends StatefulWidget {
-  const ProductCatalogScreen({super.key, this.category, this.initialSearch, this.title});
+  const ProductCatalogScreen(
+      {super.key, this.category, this.initialSearch, this.title, this.focusSearch = false});
 
   final String? category;
   final String? initialSearch;
   final String? title;
+
+  /// Opens with the keyboard up, as when tapping Home's search bar.
+  final bool focusSearch;
 
   @override
   State<ProductCatalogScreen> createState() => _ProductCatalogScreenState();
@@ -61,6 +67,10 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
   /// Ignores responses from superseded searches.
   int _generation = 0;
 
+  /// Waits for a pause in typing before searching, so results follow the text without a request per key.
+  Timer? _typingPause;
+  String _lastSearch = '';
+
   BuyerApi get _api => AppScope.read(context).api;
 
   @override
@@ -69,17 +79,30 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
     _scroll.addListener(() {
       if (_scroll.position.extentAfter < 600) _loadMore();
     });
+    _lastSearch = _search.text.trim();
     WidgetsBinding.instance.addPostFrameCallback((_) => _reload());
   }
 
   @override
   void dispose() {
+    _typingPause?.cancel();
     _search.dispose();
     _scroll.dispose();
     super.dispose();
   }
 
+  void _onSearchChanged(String text) {
+    _typingPause?.cancel();
+    _typingPause = Timer(const Duration(milliseconds: 300), () {
+      final search = text.trim().replaceAll(RegExp(r'\s+'), ' ');
+      if (!mounted || search == _lastSearch) return;
+      _reload();
+    });
+  }
+
   Future<void> _reload() async {
+    _typingPause?.cancel();
+    _lastSearch = _search.text.trim().replaceAll(RegExp(r'\s+'), ' ');
     _generation++;
     setState(() {
       _products.clear();
@@ -94,11 +117,12 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
   Future<void> _loadMore() async {
     if (_loading || !_hasMore) return;
     final generation = _generation;
+    final search = _lastSearch;
     setState(() => _loading = true);
     try {
       final page = await _api.products(
         category: _category,
-        search: _search.text,
+        search: search,
         sort: _sort,
         gender: _filters.gender,
         minPrice: _filters.minPrice,
@@ -175,7 +199,12 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
         body: Column(children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(ZayloSpace.page, 4, ZayloSpace.page, 10),
-            child: SearchField(controller: _search, onSearch: _reload),
+            child: SearchField(
+              controller: _search,
+              autofocus: widget.focusSearch,
+              onChanged: _onSearchChanged,
+              onSearch: _reload,
+            ),
           ),
           SizedBox(
             height: 40,

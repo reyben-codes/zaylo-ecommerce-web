@@ -1,7 +1,7 @@
-<form method="GET" action="{{ route('products.index') }}" class="catalog-filters" role="search" aria-label="Find products">
+<form method="GET" action="{{ route('products.index') }}" class="catalog-filters" role="search" aria-label="Find products" data-live-catalog>
     <div class="catalog-search-row">
         <label for="catalog-search">Find your next favorite
-            <input id="catalog-search" type="search" name="search" value="{{ $filters['search'] }}" maxlength="100" placeholder="What are you looking for?">
+            <input id="catalog-search" type="search" name="search" value="{{ $filters['search'] }}" maxlength="100" placeholder="What are you looking for?" autocomplete="off" aria-controls="catalog-live-results">
         </label>
     </div>
     <div class="catalog-filter-fields catalog-primary-fields">
@@ -48,14 +48,6 @@
     </div>
         </div>
     </details>
+    <p class="sr-only" aria-live="polite" data-live-catalog-status></p>
     <div class="catalog-submit-row"><button type="submit" class="market-button">Show products</button></div>
 </form>
-<div class="catalog-results-heading" id="catalog-results">
-    <p role="status"><strong>{{ number_format($products->total()) }}</strong> {{ Str::plural('product', $products->total()) }} found @if($products->count()) <span>· Showing {{ $products->firstItem() }}–{{ $products->lastItem() }}</span>@endif</p>
-    <a class="catalog-reset-button" href="{{ route('products.index') }}">Reset search & filters</a>
-</div>
-@if($filterChips)
-    <nav class="catalog-filter-chips" aria-label="Applied filters">
-        @foreach($filterChips as $chip)<a href="{{ $chip['url'] }}" aria-label="Remove {{ $chip['label'] }}">{{ $chip['label'] }} <span aria-hidden="true">×</span></a>@endforeach
-    </nav>
-@endif

@@ -30,6 +30,36 @@ class CatalogSearchTest extends TestCase
             ->assertViewHas('products', fn ($products) => $products->pluck('id')->all() === [$other->id]);
     }
 
+    public function test_search_as_you_type_suggests_partial_word_matches_as_json(): void
+    {
+        $exact = $this->product(['name' => 'Blue', 'price' => 499]);
+        $partial = $this->product(['name' => 'Bluetooth speaker']);
+        $this->product(['name' => 'Red shoes']);
+        $this->product(['name' => 'Blue hidden', 'is_active' => false]);
+        foreach (range(1, 6) as $number) $this->product(['name' => "Blueberry jam {$number}"]);
+
+        // Partial words match; an exact name ranks first, as in the catalog.
+        $suggestions = $this->getJson(route('products.index', ['search' => 'blue', 'suggest' => 1]))->assertOk()->json('products');
+        $this->assertCount(6, $suggestions);
+        $this->assertSame(route('products.show', $exact), $suggestions[0]['url']);
+        $this->assertSame('₱499.00', $suggestions[0]['price']);
+        $this->assertNotContains('Blue hidden', array_column($suggestions, 'name'));
+
+        $this->getJson(route('products.index', ['search' => 'bluet', 'suggest' => 1]))->assertOk()
+            ->assertExactJson(['products' => [[
+                'name' => 'Bluetooth speaker', 'url' => route('products.show', $partial),
+                'image' => asset('images/ZAYLO_ICON_DARK.png'), 'price' => '₱1,000.00', 'sold_out' => false,
+            ]]]);
+    }
+
+    public function test_catalog_page_marks_the_results_region_that_live_search_refreshes(): void
+    {
+        $this->product(['name' => 'Blue shoes']);
+        $this->get(route('products.index', ['search' => 'blu']))->assertOk()
+            ->assertSee('data-live-catalog', false)
+            ->assertSeeInOrder(['data-live-catalog-results', '<strong>1</strong> product found', 'Blue shoes'], false);
+    }
+
     public function test_search_treats_wildcards_as_literal_text_and_escapes_html(): void
     {
         $matching = $this->product(['name' => '100% cotton_shoe']);
