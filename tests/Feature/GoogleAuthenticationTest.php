@@ -131,7 +131,7 @@ class GoogleAuthenticationTest extends TestCase
         ]);
         $password = $local->getRawOriginal('password');
         $approval = $local->approved_at->toDateTimeString();
-        $state = $this->begin('courier');
+        $state = $this->begin('seller');
         $this->identity();
         $this->completeGoogle($state)->assertRedirect(route('seller.dashboard'));
         $this->assertAuthenticatedAs($local);
@@ -149,14 +149,24 @@ class GoogleAuthenticationTest extends TestCase
         $this->assertDatabaseCount('courier_profiles', 0);
         $this->assertSame('https://lh3.googleusercontent.com/test-avatar', $local->avatar);
         $this->post(route('logout'));
-        $this->post(route('login'), ['email' => $local->email, 'password' => 'password'])->assertRedirect(route('seller.dashboard'));
+        $this->post(route('seller.login.submit'), ['email' => $local->email, 'password' => 'password'])->assertRedirect(route('seller.dashboard'));
+    }
+
+    public function test_google_sign_in_never_replaces_an_uploaded_profile_photo(): void
+    {
+        $user = User::factory()->create(['email' => 'original@gmail.com', 'role' => 'buyer', 'status' => 'active']);
+        $user->forceFill(['google_id' => 'google-sub-123', 'auth_provider' => 'google', 'avatar' => "avatars/{$user->id}/mine.webp"])->save();
+        $state = $this->begin('buyer');
+        $this->identity();
+        $this->completeGoogle($state)->assertRedirect(route('buyer.dashboard'));
+        $this->assertSame("avatars/{$user->id}/mine.webp", $user->fresh()->avatar);
     }
 
     public function test_returning_google_id_reuses_account_even_if_google_email_changes(): void
     {
         $user = User::factory()->create(['email' => 'original@gmail.com', 'role' => 'buyer', 'status' => 'active']);
         $user->forceFill(['google_id' => 'google-sub-123', 'auth_provider' => 'google', 'password' => null])->save();
-        $state = $this->begin('seller');
+        $state = $this->begin('buyer');
         $this->identity(['email' => 'changed@gmail.com']);
         $this->completeGoogle($state)->assertRedirect(route('buyer.dashboard'));
         $this->assertAuthenticatedAs($user);
@@ -263,13 +273,17 @@ class GoogleAuthenticationTest extends TestCase
 
     public function test_existing_admin_role_is_preserved_not_publicly_created(): void
     {
+        // The shop's Google button only signs in buyers: an admin's email is refused and the account is not linked.
         $admin = User::factory()->create(['email' => 'shopper@gmail.com', 'role' => 'admin', 'status' => 'active']);
         $state = $this->begin('buyer');
         $this->identity();
-        $this->completeGoogle($state)->assertRedirect(route('admin.dashboard'));
-        $this->assertAuthenticatedAs($admin);
+        $this->completeGoogle($state)->assertRedirect(route('login'))
+            ->assertSessionHasErrors(['google' => "This Google email belongs to an admin account, so it can't sign in here. Please use the Admin Center sign-in page instead."])
+            ->assertSessionHas('portal_hint.url', route('admin.login'));
+        $this->assertGuest();
         $this->assertDatabaseCount('users', 1);
         $this->assertSame('admin', $admin->fresh()->role);
+        $this->assertNull($admin->fresh()->google_id);
     }
 
     public function test_unconfigured_google_is_safe_and_both_pages_show_the_button(): void

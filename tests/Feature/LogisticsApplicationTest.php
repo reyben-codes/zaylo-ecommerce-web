@@ -116,7 +116,8 @@ class LogisticsApplicationTest extends TestCase
         $this->actingAs($admin)->get(route('admin.logistics'))->assertOk()->assertSee(route('admin.logistics.show', $provider));
         $this->get(route('admin.logistics.show', $provider))->assertOk()
             ->assertSee('CS202012345')->assertSee('234-567-890-000')->assertSee('Operations Manager')->assertSee('Quezon City')
-            ->assertSee(route('admin.logistics.document', [$provider, 'business_permit']));
+            ->assertSee(route('admin.logistics.document', [$provider, 'business_permit']))
+            ->assertSee('js/document-viewer.js', false)->assertSee('data-document-viewer', false)->assertSee('data-document-gallery', false);
         $this->get(route('admin.logistics.document', [$provider, 'business_permit']))->assertOk();
 
         // The partner sees the reason, so rejecting needs one.

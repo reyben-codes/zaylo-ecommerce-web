@@ -7,8 +7,8 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Token-authenticated counterpart of the web's active + verified + role:courier
- * stack, for the rider app. Answers with JSON instead of redirects.
+ * The mobile API's version of the web's active + verified + role:courier checks for the rider app,
+ * answering with JSON instead of redirects.
  */
 class EnsureMobileRider
 {
@@ -16,14 +16,14 @@ class EnsureMobileRider
     {
         $user = $request->user();
 
-        if (! $user->hasRole('rider')) {
-            return response()->json(['message' => 'This area is for rider accounts.', 'code' => 'not_rider'], 403);
+        if (! $user->hasRole('rider', 'courier') || ! $user->rider) {
+            return response()->json(['message' => 'This part of the app is for rider accounts.', 'code' => 'not_rider'], 403);
         }
 
-        if (! $user->isActive()) {
+        if (! $user->isActive() || $user->rider->status !== 'approved') {
             $user->currentAccessToken()?->delete();
 
-            return response()->json(['message' => 'Your rider account is not active.', 'code' => 'inactive'], 403);
+            return response()->json(['message' => 'Your rider account is not active. Contact your logistics partner.', 'code' => 'inactive'], 403);
         }
 
         if (! $user->hasVerifiedEmail()) {

@@ -14,11 +14,24 @@ use Illuminate\Support\Facades\Schema;
 class Announcement extends Model
 {
     public const AUDIENCES = [
-        'all' => 'Everyone',
-        'buyer' => 'Buyers',
-        'seller' => 'Sellers',
-        'rider' => 'Riders',
-        'logistics' => 'Logistics partners',
+        'all' => 'Everyone (public)',
+        'buyer' => 'Buyers only',
+        'seller' => 'Sellers only',
+        'logistics' => 'Logistics partners only',
+        'rider' => 'Riders only',
+    ];
+
+    /** Who sees an announcement for each audience, shown beside the choice on the admin form. */
+    public const AUDIENCE_HINTS = [
+        'all' => 'Every buyer, seller, logistics partner and rider, plus visitors who are not signed in.',
+        'buyer' => 'Shown on the shop, cart, orders and account pages of buyers.',
+        'seller' => 'Shown across the Seller Center.',
+        'logistics' => 'Shown across the logistics partner portal.',
+        'rider' => 'Shown on the rider dashboard and delivery pages.',
+    ];
+
+    public const AUDIENCE_ICONS = [
+        'all' => 'fa-globe', 'buyer' => 'fa-bag-shopping', 'seller' => 'fa-store', 'logistics' => 'fa-warehouse', 'rider' => 'fa-motorcycle',
     ];
 
     protected $fillable = ['title', 'body', 'audience', 'is_published', 'starts_at', 'ends_at', 'created_by'];

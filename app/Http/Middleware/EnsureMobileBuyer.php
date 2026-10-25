@@ -7,8 +7,8 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Token-authenticated counterpart of the web's active + verified + role:buyer
- * stack. It answers with JSON instead of redirects or session changes.
+ * The mobile API's version of the web's active + verified + role:buyer checks, answering with JSON
+ * instead of redirects. A suspended account also loses the token it used.
  */
 class EnsureMobileBuyer
 {
@@ -16,18 +16,18 @@ class EnsureMobileBuyer
     {
         $user = $request->user();
 
+        if (! $user->hasRole('buyer')) {
+            return response()->json(['message' => 'This part of the app is for buyer accounts.', 'code' => 'not_buyer'], 403);
+        }
+
         if (! $user->isActive()) {
             $user->currentAccessToken()?->delete();
 
-            return response()->json(['message' => 'Your account is pending approval or has been suspended.', 'code' => 'inactive'], 403);
+            return response()->json(['message' => 'Your account is suspended. Contact ZAYLO support for help.', 'code' => 'inactive'], 403);
         }
 
         if (! $user->hasVerifiedEmail()) {
             return response()->json(['message' => 'Verify your email address to continue.', 'code' => 'unverified', 'email' => $user->email], 403);
-        }
-
-        if (! $user->hasRole('buyer')) {
-            return response()->json(['message' => 'The ZAYLO app is for buyer accounts. Sellers and couriers can use the website.', 'code' => 'not_buyer'], 403);
         }
 
         return $next($request);

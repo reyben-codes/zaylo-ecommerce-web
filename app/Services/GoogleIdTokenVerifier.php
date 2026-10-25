@@ -2,110 +2,61 @@
 
 namespace App\Services;
 
-use Firebase\JWT\JWK;
-use Firebase\JWT\JWT;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Laravel\Socialite\Two\User as GoogleUser;
 
 /**
- * Checks a Google ID token from the mobile app's native Google sign-in: its
- * RS256 signature against Google's published keys, the issuer, that it was
- * issued to one of ZAYLO's OAuth clients, and that it has not expired.
+ * Checks a Google ID token sent by the mobile app (Google Sign-In on the phone) and turns it into the same
+ * identity the website's Socialite callback produces, so GoogleAccountService applies one set of rules.
  *
- * @see https://developers.google.com/identity/sign-in/android/backend-auth
+ * Google's tokeninfo endpoint checks the signature and expiry; here we also require that the token was issued to
+ * this site's Google client (the app requests tokens for it as "serverClientId"), by Google, with a verified email.
  */
 class GoogleIdTokenVerifier
 {
-    public const CERTS_URL = 'https://www.googleapis.com/oauth2/v3/certs';
+    public const ENDPOINT = 'https://oauth2.googleapis.com/tokeninfo';
 
     private const ISSUERS = ['accounts.google.com', 'https://accounts.google.com'];
 
-    private const CACHE_KEY = 'google-id-token-certs';
-
-    /** Seconds of clock difference tolerated between this server and Google. */
-    private const LEEWAY = 60;
-
-    /** OAuth client IDs whose tokens are accepted: the web client the app names as serverClientId, plus any iOS client. */
-    public static function audiences(): array
+    public function configured(): bool
     {
-        return array_values(array_filter(array_map('trim', [
-            (string) config('services.google.client_id'),
-            ...explode(',', (string) config('services.google.mobile_client_ids')),
-        ])));
+        return $this->audiences() !== [];
     }
 
-    public static function configured(): bool
+    /** The verified identity, or null when the token is invalid, expired, or meant for another app. */
+    public function verify(string $idToken): ?GoogleUser
     {
-        return self::audiences() !== [];
+        $response = Http::timeout(10)->connectTimeout(3)->get(self::ENDPOINT, ['id_token' => $idToken]);
+        if (! $response->ok()) {
+            return null;
+        }
+        $claims = $response->json();
+        if (! is_array($claims)
+            || ! in_array($claims['aud'] ?? null, $this->audiences(), true)
+            || ! in_array($claims['iss'] ?? null, self::ISSUERS, true)
+            || (int) ($claims['exp'] ?? 0) <= now()->timestamp
+            || ! is_string($claims['sub'] ?? null) || $claims['sub'] === ''
+            || ! is_string($claims['email'] ?? null)) {
+            return null;
+        }
+
+        // tokeninfo returns booleans as strings.
+        $claims['email_verified'] = in_array($claims['email_verified'] ?? null, [true, 'true'], true);
+
+        return (new GoogleUser)->setRaw($claims)->map([
+            'id' => $claims['sub'],
+            'name' => $claims['name'] ?? null,
+            'email' => $claims['email'],
+            'avatar' => $claims['picture'] ?? null,
+        ]);
     }
 
-    /**
-     * Returns the token's claims (sub, email, email_verified, name, picture, ...).
-     *
-     * @throws \DomainException when the token is not a valid Google ID token for ZAYLO
-     */
-    public function verify(string $idToken): array
+    /** Client IDs a token may be issued to: the website's, plus any extra app clients (GOOGLE_MOBILE_CLIENT_IDS). */
+    private function audiences(): array
     {
-        try {
-            $claims = $this->decode($idToken, $this->certs());
-        } catch (\UnexpectedValueException $exception) {
-            // A key we have not seen yet usually means Google rotated its keys: fetch them once more.
-            if (! str_contains($exception->getMessage(), '"kid"')) {
-                throw new \DomainException('Invalid Google ID token.', previous: $exception);
-            }
-            try {
-                $claims = $this->decode($idToken, $this->certs(refresh: true));
-            } catch (\UnexpectedValueException $retry) {
-                throw new \DomainException('Invalid Google ID token.', previous: $retry);
-            }
-        }
-
-        if (! in_array($claims['iss'] ?? null, self::ISSUERS, true)) {
-            throw new \DomainException('Google ID token has the wrong issuer.');
-        }
-        $audience = (array) ($claims['aud'] ?? []);
-        if (array_intersect($audience, self::audiences()) === []) {
-            throw new \DomainException('Google ID token was issued to another app.');
-        }
-        if (! is_string($claims['sub'] ?? null) || $claims['sub'] === '') {
-            throw new \DomainException('Google ID token has no subject.');
-        }
-
-        return $claims;
-    }
-
-    private function decode(string $idToken, array $certs): array
-    {
-        $previousLeeway = JWT::$leeway;
-        JWT::$leeway = self::LEEWAY;
-        try {
-            // parseKeySet only accepts the algorithms Google publishes (RS256), so "none" and HS256 tokens fail.
-            $payload = JWT::decode($idToken, JWK::parseKeySet($certs, 'RS256'));
-        } finally {
-            JWT::$leeway = $previousLeeway;
-        }
-
-        return json_decode(json_encode($payload), true);
-    }
-
-    /** Google's signing keys, cached for as long as Google's Cache-Control allows. */
-    private function certs(bool $refresh = false): array
-    {
-        if ($refresh) {
-            Cache::forget(self::CACHE_KEY);
-        }
-        $cached = Cache::get(self::CACHE_KEY);
-        if (is_array($cached)) {
-            return $cached;
-        }
-
-        $response = Http::acceptJson()->connectTimeout(3)->timeout(10)->get(self::CERTS_URL);
-        if (! $response->successful() || ! is_array($response->json('keys'))) {
-            throw new \RuntimeException('Google signing keys are unavailable.');
-        }
-        preg_match('/max-age=(\d+)/', (string) $response->header('Cache-Control'), $maxAge);
-        Cache::put(self::CACHE_KEY, $response->json(), now()->addSeconds(min((int) ($maxAge[1] ?? 3600), 86400)));
-
-        return $response->json();
+        return array_values(array_filter(array_merge(
+            [config('services.google.client_id')],
+            array_map('trim', explode(',', (string) config('services.google.mobile_client_ids'))),
+        )));
     }
 }

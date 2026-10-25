@@ -7,6 +7,7 @@ import 'package:zaylo_mobile/components/complaints.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
 import 'package:zaylo_mobile/components/layout.dart';
 import 'package:zaylo_mobile/components/policies.dart';
+import 'package:zaylo_mobile/components/profile_photo.dart';
 import 'package:zaylo_mobile/components/theme_toggle.dart';
 import 'package:zaylo_mobile/features/rider/account/rider_address_screen.dart';
 import 'package:zaylo_mobile/features/rider/account/rider_change_password_screen.dart';
@@ -125,11 +126,12 @@ class _RiderAccountTabState extends State<RiderAccountTab> {
               padding: EdgeInsets.fromLTRB(20, 12, 20, 32 + MediaQuery.paddingOf(context).bottom),
               children: [
                 Row(children: [
-                  CircleAvatar(
+                  ProfilePhotoEditor(
+                    api: widget.api,
+                    name: rider.name,
+                    photoUrl: rider.avatarUrl,
                     radius: 30,
-                    backgroundColor: ZayloColors.ink,
-                    foregroundColor: ZayloColors.white,
-                    child: Text(_initials(rider.name), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+                    onChanged: (_) => _reload(),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -262,12 +264,6 @@ class _RiderAccountTabState extends State<RiderAccountTab> {
           );
         },
       );
-
-  static String _initials(String name) {
-    final parts = name.trim().split(RegExp(r'\s+')).where((part) => part.isNotEmpty).toList();
-    if (parts.isEmpty) return '?';
-    return (parts.first[0] + (parts.length > 1 ? parts.last[0] : '')).toUpperCase();
-  }
 }
 
 class _Heading extends StatelessWidget {

@@ -89,7 +89,8 @@
                 <strong>Total: &#8369;{{ number_format($order->total, 2) }}</strong>
                 <span>{{ strtoupper($order->payment_method) }} · Payment {{ str($order->payment?->status ?? 'pending')->replace('_', ' ')->title() }}</span>
                 @if(in_array($order->status, ['placed', 'confirmed'], true))
-                    <form method="POST" action="{{ route('buyer.orders.cancel', $order) }}">
+                    <form method="POST" action="{{ route('buyer.orders.cancel', $order) }}"
+                          data-confirm="Cancel order {{ $order->order_number }}? This cannot be undone." data-confirm-title="Cancel order?" data-confirm-button="Cancel order" data-confirm-tone="danger">
                         @csrf
                         <button class="text-button danger" type="submit">Cancel order</button>
                     </form>

@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\ProductReview;
 use App\Support\MobilePayload;
 use App\Support\ProductCatalog;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -15,6 +16,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
+/** The mobile app's public storefront: home sections, the catalog, product pages, reviews and policies. */
 class MobileStorefrontController extends Controller
 {
     /** Policy pages that apply to buyers and riders; the seller policy stays on the website. */
@@ -27,9 +29,9 @@ class MobileStorefrontController extends Controller
             fn (Product $product) => MobilePayload::product($product, saved: isset($savedIds[$product->id]))
         )->values();
 
-        // Signed-in buyers also get the web dashboard's sections, using its queries.
+        // Signed-in buyers also get the web dashboard's sale and suggestion sections.
         $dashboard = [];
-        if ($request->user('sanctum')) {
+        if ($request->user('mobile')) {
             $flash = $this->availableProducts();
             ProductCatalog::onSale($flash);
             $dashboard = [
@@ -39,7 +41,7 @@ class MobileStorefrontController extends Controller
         }
 
         return response()->json($dashboard + [
-            'announcements' => MobilePayload::announcements(Announcement::for($request->user('sanctum')?->role)),
+            'announcements' => MobilePayload::announcements(Announcement::for($request->user('mobile')?->role)),
             'categories' => collect(config('marketplace.browse_categories'))->map(
                 fn (array $details, string $slug) => ['id' => $slug] + $details
             )->values(),
@@ -59,7 +61,7 @@ class MobileStorefrontController extends Controller
     {
         $validated = $request->validate([
             'category' => ['nullable', Rule::in(array_keys(config('marketplace.categories')))],
-            'gender' => ['nullable', Rule::in(['men', 'women', 'unisex'])],
+            'gender' => ['nullable', Rule::in(array_keys(config('marketplace.genders', [])))],
             'search' => ['nullable', 'string', 'max:100'],
             'sort' => ['nullable', Rule::in(['relevance', 'newest', 'price_low', 'price_high'])],
             'min_price' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],
@@ -92,9 +94,9 @@ class MobileStorefrontController extends Controller
 
     public function show(Request $request, Product $product): JsonResponse
     {
-        abort_unless($product->is_active && $product->stock > 0, 404);
+        abort_unless($this->availableProducts()->whereKey($product->id)->exists(), 404);
 
-        $product->load([...$this->relations(), 'seller', 'variants' => fn ($query) => $query->where('is_active', true)])
+        $product->load([...$this->relations(), 'variants' => fn ($query) => $query->where('is_active', true)])
             ->loadCount('reviews')->loadAvg('reviews', 'rating');
         $product->active_variants_count = $product->variants->count();
 
@@ -106,7 +108,7 @@ class MobileStorefrontController extends Controller
     /** Verified-purchase reviews, newest first, with the buyer's first name only. */
     public function reviews(Product $product): JsonResponse
     {
-        abort_unless($product->is_active, 404);
+        abort_unless($product->is_listed, 404);
         $query = ProductReview::where('product_id', $product->id);
         $perRating = (clone $query)->selectRaw('rating, COUNT(*) as total')->groupBy('rating')->pluck('total', 'rating');
         $count = (int) $perRating->sum();
@@ -142,70 +144,45 @@ class MobileStorefrontController extends Controller
     }
 
     /**
-     * A policy as the plain text the admin wrote ("## " headings, "- " bullets). Until the
-     * admin writes the Terms, the website's built-in Terms are sent in the same format.
+     * A policy as the plain text the admin wrote ("## " headings, "- " bullets). Until the admin writes them,
+     * the Terms of Service and Privacy Policy send their built-in text, the same the website shows.
      */
     public function policy(string $slug): JsonResponse
     {
         abort_unless(in_array($slug, self::APP_POLICIES, true), 404);
-        $policy = PlatformPolicy::forSlug($slug);
-        if (! $policy) {
-            abort_unless($slug === 'terms', 404, 'This policy has not been published yet.');
-        }
+        $policy = PlatformPolicy::published($slug);
+        abort_unless($policy, 404, 'This policy has not been published yet.');
 
         return response()->json(['policy' => [
             'slug' => $slug,
-            'title' => $policy?->title ?? 'Terms and Privacy Policy',
-            'body' => $policy?->body ?? $this->builtInTerms(),
-            'updated_at' => $policy?->updated_at?->toIso8601String(),
+            'title' => $policy->title,
+            'body' => $policy->body,
+            'updated_at' => $policy->updated_at?->toIso8601String(),
             'url' => route('policies.show', $slug),
         ]]);
     }
 
-    private function availableProducts()
+    /** Approved, switched-on, in-stock products with what the cards need (ratings included). */
+    private function availableProducts(): Builder
     {
-        $query = Product::withReviewSummary()->where('is_active', true)->with($this->relations());
-
-        if (Product::usesLegacySchema()) {
-            return $query->where('stock', '>', 0)
-                ->withCount(['variants as active_variants_count' => fn ($builder) => $builder->where('is_active', true)]);
-        }
-
-        return $query->whereHas('variants', fn ($builder) => $builder->where('is_active', true)->where('stock', '>', 0))
+        $query = Product::withReviewSummary()->visibleToBuyers()->with($this->relations())
             ->withCount(['variants as active_variants_count' => fn ($builder) => $builder->where('is_active', true)]);
+
+        return Product::usesLegacySchema()
+            ? $query->where('stock', '>', 0)
+            : $query->whereHas('variants', fn ($builder) => $builder->where('is_active', true)->where('stock', '>', 0));
     }
 
     private function relations(): array
     {
-        return Product::usesLegacySchema()
-            ? ['images']
-            : ['images', 'defaultVariant', 'category'];
+        return Product::usesLegacySchema() ? ['images'] : ['images', 'defaultVariant', 'category'];
     }
 
     /** Public endpoints still mark saved products when the app sends a token. */
     private function savedIds(Request $request): array
     {
-        $user = $request->user('sanctum');
+        $user = $request->user('mobile');
 
         return $user ? array_flip($user->wishlistItems()->pluck('product_id')->all()) : [];
-    }
-
-    /** The website's built-in Terms sections as policy text. */
-    private function builtInTerms(): string
-    {
-        $html = view('legal.partials.terms-sections')->render();
-        $document = new \DOMDocument();
-        @$document->loadHTML('<?xml encoding="utf-8"?><body>'.$html.'</body>', LIBXML_NOERROR | LIBXML_NOWARNING);
-        $text = fn (\DOMNode $node) => trim(preg_replace('/\s+/u', ' ', $node->textContent));
-        $lines = [];
-        foreach ((new \DOMXPath($document))->query('//h2 | //li | //section/p') as $node) {
-            $lines[] = match ($node->nodeName) {
-                'h2' => "\n## ".$text($node),
-                'li' => '- '.$text($node),
-                default => "\n".$text($node),
-            };
-        }
-
-        return trim(implode("\n", $lines));
     }
 }

@@ -169,3 +169,8 @@ html:has(> .seller-workspace) {
         display: none;
     }
 }
+
+/* Profile photos (partials/user-avatar): a round photo, or initials when there is none. */
+.user-avatar { display: inline-grid; place-items: center; border-radius: 50%; object-fit: cover; overflow: hidden; background: var(--c-2f2721); color: var(--c-ffffff); font-family: 'Playfair Display', serif; line-height: 1; }
+img.user-avatar { background: var(--c-eee8e2); }
+.seller-site-header__button .header-avatar { width: 100%; height: 100%; font-size: .8rem; }

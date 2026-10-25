@@ -23,6 +23,7 @@
                 ['route' => 'admin.reports', 'label' => 'Reports', 'icon' => 'fa-chart-column'],
                 ['heading' => 'Platform'],
                 ['route' => 'admin.settings', 'label' => 'Settings', 'icon' => 'fa-sliders'],
+                ['route' => 'admin.activity', 'label' => 'Activity log', 'icon' => 'fa-clock-rotate-left'],
                 ['route' => 'admin.chat', 'label' => 'Messages', 'icon' => 'fa-comments'],
                 ['route' => 'admin.account', 'label' => 'Account', 'icon' => 'fa-user'],
             ],
@@ -48,6 +49,7 @@
                 ['route' => 'logistics.messages', 'label' => 'Messages', 'icon' => 'fa-comments'],
                 ['route' => 'support', 'label' => 'ZAYLO support', 'icon' => 'fa-life-ring'],
                 ['route' => 'logistics.reports', 'label' => 'Reports', 'icon' => 'fa-chart-column'],
+                ['route' => 'logistics.activity', 'label' => 'Activity log', 'icon' => 'fa-clock-rotate-left'],
                 ['route' => 'logistics.account', 'label' => 'Account', 'icon' => 'fa-user'],
             ],
         ],
@@ -65,12 +67,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    @include('partials.theme-head')
     @foreach(['seller-sidebar', 'seller-header', 'seller-workspace', 'workspace-pages'] as $stylesheet)
         <link rel="stylesheet" href="{{ asset("css/{$stylesheet}.css") }}?v={{ filemtime(public_path("css/{$stylesheet}.css")) }}">
     @endforeach
     @stack('styles')
-    <link rel="stylesheet" href="{{ asset('css/logout-confirm.css') }}?v={{ filemtime(public_path('css/logout-confirm.css')) }}">
-    @include('partials.theme-head')
+    <link rel="stylesheet" href="{{ asset('css/confirm-dialog.css') }}?v={{ filemtime(public_path('css/confirm-dialog.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/print.css') }}?v={{ filemtime(public_path('css/print.css')) }}" media="print">
 </head>
 <body class="seller-workspace workspace-{{ $workspace }}">
     <header class="seller-site-header">
@@ -82,8 +85,13 @@
             <img src="{{ asset('images/ZAYLO_LOGO_DARK.png') }}" alt="ZAYLO">
         </a>
         <div class="seller-site-header__actions">
+            <button type="button" class="theme-toggle" data-theme-toggle aria-label="Switch theme"></button>
             <a href="{{ route($portal['account']) }}" class="seller-site-header__button" aria-label="Account">
-                <i class="fa-regular fa-user" aria-hidden="true"></i>
+                @if(auth()->user()->avatar_url)
+                    @include('partials.user-avatar', ['user' => auth()->user(), 'class' => 'header-avatar'])
+                @else
+                    <i class="fa-regular fa-user" aria-hidden="true"></i>
+                @endif
             </a>
             <form method="POST" action="{{ route('logout') }}" data-logout-confirm class="seller-site-header__logout">
                 @csrf
@@ -113,7 +121,7 @@
                     </a>
                 @endforeach
                 <div class="seller-sidebar__divider" aria-hidden="true"></div>
-                <button type="button" class="seller-sidebar__link" data-theme-toggle data-theme-toggle-label aria-label="Switch color theme"></button>
+                <button type="button" class="seller-sidebar__link" data-theme-toggle data-theme-toggle-label aria-label="Switch theme"></button>
                 <form method="POST" action="{{ route('logout') }}" data-logout-confirm class="seller-sidebar__logout-form">
                     @csrf
                     <button type="submit" class="seller-sidebar__link seller-sidebar__logout">
@@ -133,6 +141,7 @@
     <script src="{{ asset('js/smooth-disclosure.js') }}?v={{ filemtime(public_path('js/smooth-disclosure.js')) }}" defer></script>
     <script src="{{ asset('js/seller-workspace.js') }}?v={{ filemtime(public_path('js/seller-workspace.js')) }}" defer></script>
     @stack('scripts')
-    <script src="{{ asset('js/logout-confirm.js') }}?v={{ filemtime(public_path('js/logout-confirm.js')) }}" defer></script>
+    <script src="{{ asset('js/confirm-dialog.js') }}?v={{ filemtime(public_path('js/confirm-dialog.js')) }}" defer></script>
+    <script src="{{ asset('js/print.js') }}?v={{ filemtime(public_path('js/print.js')) }}" defer></script>
 </body>
 </html>

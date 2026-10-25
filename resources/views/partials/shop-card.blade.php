@@ -48,12 +48,12 @@
                     <form data-cart-add method="POST" action="{{ route('buyer.cart.add', $product) }}">
                         @csrf
                         <input type="hidden" name="quantity" value="1">
-                        <button class="shop-card__button shop-card__button--ink" aria-label="Add {{ $product->name }} to cart" title="Add to cart"><i class="fas fa-shopping-bag" aria-hidden="true"></i></button>
+                        <button class="shop-card__button shop-card__button--ink" aria-label="Add {{ $product->name }} to cart" title="Add to cart"><i class="fas fa-cart-shopping" aria-hidden="true"></i></button>
                     </form>
                 @elseif($isBuyer)
-                    <a class="shop-card__button shop-card__button--ink" href="{{ $url }}" aria-label="Choose options for {{ $product->name }}" title="Choose options"><i class="fas fa-shopping-bag" aria-hidden="true"></i></a>
+                    <a class="shop-card__button shop-card__button--ink" href="{{ $url }}" aria-label="Choose options for {{ $product->name }}" title="Choose options"><i class="fas fa-cart-shopping" aria-hidden="true"></i></a>
                 @elseif(! $viewer)
-                    <a class="shop-card__button shop-card__button--ink" href="{{ route('login') }}" aria-label="Sign in to buy {{ $product->name }}" title="Sign in to buy"><i class="fas fa-shopping-bag" aria-hidden="true"></i></a>
+                    <a class="shop-card__button shop-card__button--ink" href="{{ route('login') }}" aria-label="Sign in to buy {{ $product->name }}" title="Sign in to buy"><i class="fas fa-cart-shopping" aria-hidden="true"></i></a>
                 @endif
             @endunless
         </div>

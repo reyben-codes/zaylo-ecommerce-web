@@ -5,6 +5,7 @@ import 'package:zaylo_mobile/components/buttons.dart';
 import 'package:zaylo_mobile/components/complaints.dart';
 import 'package:zaylo_mobile/components/layout.dart';
 import 'package:zaylo_mobile/components/policies.dart';
+import 'package:zaylo_mobile/components/profile_photo.dart';
 import 'package:zaylo_mobile/components/theme_toggle.dart';
 import 'package:zaylo_mobile/features/buyer/account/identity_screen.dart';
 import 'package:zaylo_mobile/features/buyer/account/notifications_screen.dart';
@@ -12,6 +13,7 @@ import 'package:zaylo_mobile/features/buyer/account/password_screen.dart';
 import 'package:zaylo_mobile/features/buyer/account/profile_screen.dart';
 import 'package:zaylo_mobile/features/buyer/account/support_screen.dart';
 import 'package:zaylo_mobile/features/buyer/address/addresses_screen.dart';
+import 'package:zaylo_mobile/features/buyer/messages/seller_inbox_screen.dart';
 import 'package:zaylo_mobile/features/buyer/orders/orders_screen.dart';
 import 'package:zaylo_mobile/features/buyer/widgets/shop_actions.dart';
 import 'package:zaylo_mobile/features/buyer/widgets/signed_out_prompt.dart';
@@ -71,8 +73,10 @@ class _AccountScreenState extends State<AccountScreen> {
     }
   }
 
-  void _push(Widget screen) =>
-      Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen)).then((_) => _loadUnread());
+  void _push(Widget screen) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen)).then((_) {
+        _loadUnread();
+        if (mounted) AppScope.read(context).refreshChatUnread();
+      });
 
   static Widget? _badge(int count) => count > 0 ? Badge(label: Text('$count'), backgroundColor: Colors.redAccent) : null;
 
@@ -113,11 +117,11 @@ class _AccountScreenState extends State<AccountScreen> {
         children: [
           SectionCard(
             child: Row(children: [
-              CircleAvatar(
-                radius: 28,
-                backgroundColor: ZayloColors.ink,
-                child: Text(user.initials,
-                    style: TextStyle(color: ZayloColors.white, fontWeight: FontWeight.w700, fontSize: 18)),
+              ProfilePhotoEditor(
+                api: state.api,
+                name: user.name,
+                photoUrl: user.avatarUrl,
+                onChanged: (url) => state.updateUser(user.withAvatar(url)),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -151,6 +155,12 @@ class _AccountScreenState extends State<AccountScreen> {
           SectionCard(
             padding: EdgeInsets.zero,
             child: Column(children: [
+              _MenuTile(
+                icon: Icons.chat_bubble_outline,
+                label: 'Messages',
+                trailing: _badge(AppScope.of(context).chatUnread),
+                onTap: () => _push(const SellerInboxScreen()),
+              ),
               _MenuTile(
                 icon: Icons.notifications_none,
                 label: 'Notifications',

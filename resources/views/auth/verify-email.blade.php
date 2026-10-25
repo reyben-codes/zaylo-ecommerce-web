@@ -6,7 +6,7 @@
 <main class="auth-container">
     <aside class="auth-image" aria-label="ZAYLO marketplace">
         <div class="auth-image-content">
-            <a class="auth-brand" href="{{ route('home') }}"><img data-theme-fixed src="{{ asset('images/ZAYLO_LOGO_LIGHT.png') }}" alt="ZAYLO home"></a>
+            <a class="auth-brand" href="{{ route('home') }}"><img src="{{ asset('images/ZAYLO_LOGO_LIGHT.png') }}" alt="ZAYLO home"></a>
             <div class="auth-image-text"><p>Driven by passion.</p><p>Defined by your origin</p></div>
         </div>
     </aside>
@@ -51,7 +51,7 @@
             <footer class="auth-footer">
                 @if($pending)
                     <p>Wrong email address?</p>
-                    <form method="POST" action="{{ route('registration.cancel') }}">@csrf<button type="submit" class="btn-back">Start over</button></form>
+                    <form method="POST" action="{{ route('registration.cancel') }}" data-confirm="Your sign-up details will be discarded and you will need to fill in the form again." data-confirm-title="Start over?" data-confirm-button="Start over">@csrf<button type="submit" class="btn-back">Start over</button></form>
                 @else
                     <p>Using the wrong account?</p>
                     <form method="POST" action="{{ route('logout') }}" data-logout-confirm>@csrf<button type="submit" class="btn-back">Sign out</button></form>

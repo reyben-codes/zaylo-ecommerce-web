@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasMobileTokens;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,13 +12,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasFactory, HasMobileTokens, Notifiable;
+
+    public const GENDERS = ['male' => 'Male', 'female' => 'Female'];
 
     private ?string $pendingRole = null;
 
@@ -26,9 +29,6 @@ class User extends Authenticatable implements MustVerifyEmail
      *
      * @var list<string>
      */
-    /** Gender options offered at rider sign-up, keyed by stored value. */
-    public const GENDERS = ['male' => 'Male', 'female' => 'Female'];
-
     protected $fillable = [
         'name',
         'email',
@@ -91,6 +91,36 @@ class User extends Authenticatable implements MustVerifyEmail
         } else {
             $this->pendingRole = $role;
         }
+    }
+
+    /**
+     * The profile photo to show, or null for the initials fallback. `avatar` holds either a photo the user
+     * uploaded (a path on the public disk, see ProfilePhotos) or the https URL of their Google photo.
+     */
+    public function getAvatarUrlAttribute(): ?string
+    {
+        $avatar = $this->attributes['avatar'] ?? null;
+        if (blank($avatar)) {
+            return null;
+        }
+
+        return $this->hasUploadedAvatar() ? Storage::disk('public')->url($avatar) : $avatar;
+    }
+
+    /** True when the photo was uploaded on ZAYLO rather than copied from Google. */
+    public function hasUploadedAvatar(): bool
+    {
+        $avatar = $this->attributes['avatar'] ?? null;
+
+        return filled($avatar) && ! Str::startsWith($avatar, ['http://', 'https://']);
+    }
+
+    /** One or two letters for the avatar when there is no photo. */
+    public function initials(): string
+    {
+        $parts = preg_split('/\s+/u', trim((string) $this->name), -1, PREG_SPLIT_NO_EMPTY) ?: ['?'];
+
+        return mb_strtoupper(mb_substr($parts[0], 0, 1).(count($parts) > 1 ? mb_substr(end($parts), 0, 1) : ''));
     }
 
     public function getRoleAttribute(): string
@@ -163,8 +193,20 @@ class User extends Authenticatable implements MustVerifyEmail
             $this->hasRole('seller') => 'seller.login',
             $this->hasRole('logistics') => 'logistics.login',
             $this->hasRole('admin') => 'admin.login',
+            $this->hasRole('rider', 'courier') => 'rider.login',
             default => 'login',
         };
+    }
+
+    /** Which sign-in page this account belongs to: buyer, seller, logistics, rider or admin. */
+    public function portal(): string
+    {
+        return self::portalOf($this->role);
+    }
+
+    public static function portalOf(?string $role): string
+    {
+        return $role === 'courier' ? 'rider' : ($role ?: 'buyer');
     }
 
     public function sellerStoreName(): string

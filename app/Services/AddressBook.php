@@ -7,7 +7,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Saved-address mutations shared by the web account pages and the mobile API.
+ * Saved-address changes shared by the web account pages (AddressController) and the mobile API.
  * Every write locks the owning user so only one default address can exist.
  */
 class AddressBook

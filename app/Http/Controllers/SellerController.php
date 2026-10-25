@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\UpdatesAccountSettings;
+use App\Models\LogisticsProvider;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
@@ -10,11 +11,9 @@ use App\Models\ProductReview;
 use App\Models\ProductVariant;
 use App\Models\SellerOrder;
 use App\Models\SellerProfile;
-use App\Services\RiderDeliveries;
+use App\Models\Shipment;
 use App\Services\SellerApplicationService;
 use Carbon\CarbonImmutable;
-use chillerlan\QRCode\QRCode;
-use chillerlan\QRCode\QROptions;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -38,19 +37,8 @@ class SellerController extends Controller
     private const ORDER_TRANSITIONS = [
         'placed' => ['confirmed', 'cancelled'],
         'confirmed' => ['processing', 'cancelled'],
+        // Sellers stop at ready to ship; the rider takes every delivery step in the mobile app.
         'processing' => ['ready_for_pickup'],
-        'ready_for_pickup' => ['picked_up'],
-        'picked_up' => ['in_transit'],
-        'in_transit' => ['out_for_delivery'],
-        'out_for_delivery' => ['completed'],
-    ];
-
-    private const DELIVERY_STATUSES = [
-        'ready_for_pickup' => 'ready',
-        'picked_up' => 'picked_up',
-        'in_transit' => 'in_transit',
-        'out_for_delivery' => 'out_for_delivery',
-        'completed' => 'delivered',
     ];
 
     private const ORDER_STATUS_GROUPS = [
@@ -94,12 +82,16 @@ class SellerController extends Controller
     public function dashboard()
     {
         $shopId = $this->shopId();
-        $products = Product::where('seller_id', $shopId);
+        $products = Product::where('seller_id', $shopId)->notArchived();
         $orders = $this->orderSummary($shopId);
+
+        $publicShop = \App\Support\Shop::find($shopId);
 
         return view('seller.dashboard', [
             'user' => auth()->user(),
             'storeName' => $this->storeName(),
+            'shopPage' => $publicShop?->url(),
+            'followers' => \App\Support\Shop::followersOf($shopId),
             'productCount' => (clone $products)->count(),
             'activeProductCount' => (clone $products)->where('is_active', true)->count(),
             'lowStockCount' => $this->whereStock(clone $products, 'low')->count(),
@@ -133,6 +125,8 @@ class SellerController extends Controller
         $extraCategories = Arr::pull($data, 'additional_categories') ?? [];
         $product = DB::transaction(function () use ($data, $options, $request, $extraCategories) {
             $product = Product::create($data + ['seller_id' => $this->shopId(), 'is_active' => $request->boolean('is_active', true)]);
+            // Buyers only see it once an admin approves it.
+            $product->submitForReview();
             $product->syncAdditionalCategories($extraCategories);
             $this->saveExtraPhotos($request, $product);
             $this->createProductOptions($product, $options);
@@ -141,10 +135,11 @@ class SellerController extends Controller
         });
 
         $count = count($options);
+        $review = Product::usesReview() ? ' It goes live once an admin approves it, usually within a day.' : '';
 
-        return redirect()->route('seller.products.edit', $product)->with('status', $count
-            ? 'Product created with '.$count.' '.Str::plural('option', $count).'. You can change sizes, prices and stock below anytime.'
-            : 'Product created. You can schedule a sale or add colors and sizes below.');
+        return redirect()->route('seller.products.edit', $product)->with('status', ($count
+            ? 'Product submitted with '.$count.' '.Str::plural('option', $count).'.'
+            : 'Product submitted.').$review.' You can change sizes, prices and stock below anytime.');
     }
 
     public function updateProduct(Request $request, Product $product)
@@ -154,21 +149,76 @@ class SellerController extends Controller
         $data = $this->storeProductImage($request, $data, $product);
         $extraCategories = Arr::pull($data, 'additional_categories') ?? [];
         $removePhotos = array_map('intval', Arr::pull($data, 'remove_photos') ?? []);
-        DB::transaction(function () use ($product, $data, $request, $extraCategories, $removePhotos) {
-            $product->update($data + ['is_active' => $request->boolean('is_active')]);
+        $categoriesBefore = $product->category_keys;
+        $resubmitted = DB::transaction(function () use ($product, $data, $request, $extraCategories, $removePhotos, $categoriesBefore) {
+            $product->update($data + ['is_active' => ! $product->is_archived && $request->boolean('is_active')]);
             $product->syncAdditionalCategories($extraCategories);
             $this->saveExtraPhotos($request, $product, $removePhotos);
+
+            // What buyers read or see changed (or a rejected listing was fixed): an admin checks it again.
+            // Price, stock, sales and visibility changes stay live.
+            $contentChanged = $product->wasChanged(['name', 'description', 'gender', 'image_url'])
+                || $request->hasFile('image') || $request->hasFile('photos')
+                || $product->fresh()->category_keys != $categoriesBefore;
+            if (Product::usesReview() && ! $product->is_archived && ($product->is_rejected || ($contentChanged && ! $product->is_pending_review))) {
+                $product->submitForReview();
+
+                return true;
+            }
+
+            return false;
         });
 
-        return back()->with('status', 'Product updated successfully.');
+        return back()->with('status', $resubmitted
+            ? 'Product updated and sent for review. Buyers see it again once an admin approves the changes.'
+            : 'Product updated successfully.');
     }
 
+    /**
+     * Archive: hidden from buyers and taken out of carts, but reviews, photos, options and order links are kept.
+     */
+    public function archiveProduct(Product $product)
+    {
+        $this->authorize('update', $product);
+        if (! $product->is_archived) {
+            DB::transaction(function () use ($product) {
+                $product->update(['archived_at' => now(), 'is_active' => false]);
+                // Deployed carts point at the product; the newer schema's carts point at its options.
+                Schema::hasColumn('cart_items', 'product_id')
+                    ? \App\Models\CartItem::where('product_id', $product->id)->delete()
+                    : \App\Models\CartItem::whereIn('product_variant_id', $product->variants()->select('id'))->delete();
+            });
+        }
+
+        return redirect()->route('seller.products')->with('status', "{$product->name} was archived. Find it under Archived to restore it.");
+    }
+
+    public function restoreProduct(Product $product)
+    {
+        $this->authorize('update', $product);
+        $product->update(['archived_at' => null, 'is_active' => true]);
+
+        return redirect()->route('seller.products.edit', $product)->with('status', "{$product->name} is back in your shop.");
+    }
+
+    /**
+     * Permanent delete, only for archived products nobody has ordered or reviewed (e.g. a test listing).
+     */
     public function deleteProduct(Product $product)
     {
         $this->authorize('delete', $product);
-        $product->delete();
+        if (! $product->is_archived) {
+            return back()->withErrors(['product' => 'Archive this product first. Only archived products can be deleted.']);
+        }
+        if ($product->hasHistory()) {
+            return back()->withErrors(['product' => "{$product->name} has orders or reviews, so it stays archived to keep that history."]);
+        }
 
-        return redirect()->route('seller.products')->with('status', 'Product removed. Existing order records were preserved.');
+        $files = collect([$product->getRawOriginal('image_url')])->concat($product->images()->pluck('path'))->filter()->unique();
+        $product->delete();
+        $files->each(fn ($path) => $this->deleteStoredProductPhoto($path));
+
+        return redirect()->route('seller.products', ['view' => 'archived'])->with('status', "{$product->name} was deleted permanently.");
     }
 
     public function orders(Request $request)
@@ -198,46 +248,31 @@ class SellerController extends Controller
         }
 
         $orders = $baseQuery
-            ->with(['buyer', 'items', 'payment', 'shipment', 'statusHistory' => fn ($query) => $query->oldest()])
+            ->with(['buyer', 'items', 'payment', Shipment::tracksProvider() ? 'shipment.provider' : 'shipment', 'statusHistory' => fn ($query) => $query->oldest()])
             ->when($filter !== 'all', fn ($query) => $query->whereIn('status', self::ORDER_STATUS_GROUPS[$filter]))
             ->latest('placed_at')
             ->paginate(12)
             ->withQueryString();
+        $partners = $this->pickupPartners();
+        $suggestedPartner = $this->suggestedPartnerId($partners);
 
-        return view('seller.orders', compact('orders', 'filter', 'counts', 'statusLabels'));
-    }
-
-    /** A printable label for the parcel; the rider scans its QR code (the tracking number) to deliver it. */
-    public function parcelLabel(Order $order)
-    {
-        abort_unless((int) $order->seller_id === $this->shopId(), 403);
-        $order->load(['shipment', 'items']);
-        abort_unless($order->shipment, 404, 'Mark the order ready to ship to get its parcel label.');
-        $code = RiderDeliveries::labelCode($order->shipment);
-
-        return view('seller.parcel-label', [
-            'order' => $order,
-            'code' => $code,
-            'store' => $this->storeName(),
-            'qr' => (new QRCode(new QROptions(['outputBase64' => false, 'addQuietzone' => true])))->render($code),
-        ]);
+        return view('seller.orders', compact('orders', 'filter', 'counts', 'statusLabels', 'partners', 'suggestedPartner'));
     }
 
     public function updateOrderStatus(Request $request, Order $order)
     {
         abort_unless((int) $order->seller_id === $this->shopId(), 403);
         $data = $request->validate([
-            'status' => ['required', Rule::in(['confirmed', 'processing', 'ready_for_pickup', 'picked_up', 'in_transit', 'out_for_delivery', 'completed', 'cancelled'])],
+            'status' => ['required', Rule::in(['confirmed', 'processing', 'ready_for_pickup', 'cancelled'])],
+        ], [
+            'status.in' => 'The rider updates this parcel from here on.',
         ]);
+        $partner = $data['status'] === 'ready_for_pickup' ? $this->chosenPartner($request) : null;
 
-        DB::transaction(function () use ($order, $data) {
+        DB::transaction(function () use ($order, $data, $partner) {
             $locked = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
             if (! in_array($data['status'], self::ORDER_TRANSITIONS[$locked->status] ?? [], true)) {
                 throw ValidationException::withMessages(['status' => 'That order status transition is not allowed.']);
-            }
-            if (! config('marketplace.seller_managed_delivery')
-                && in_array($data['status'], ['picked_up', 'in_transit', 'out_for_delivery', 'completed'], true)) {
-                throw ValidationException::withMessages(['status' => 'The assigned logistics provider must update this delivery.']);
             }
 
             if ($data['status'] === 'cancelled') {
@@ -252,62 +287,69 @@ class SellerController extends Controller
                 $locked->shipment?->update(['status' => 'cancelled']);
             }
 
-            $orderAttributes = ['status' => $data['status']];
-            if ($data['status'] === 'completed') {
-                $orderAttributes['completed_at'] = now();
-            }
-            $locked->update($orderAttributes);
+            $locked->update(['status' => $data['status']]);
             $locked->statusHistory()->create([
                 'changed_by' => auth()->id(),
                 'status' => $data['status'],
-                'note' => in_array($data['status'], ['picked_up', 'in_transit', 'out_for_delivery', 'completed'], true)
-                    ? 'Updated by seller in self-managed delivery mode.'
-                    : 'Updated by seller.',
+                'note' => 'Updated by seller.',
             ]);
 
-            if (isset(self::DELIVERY_STATUSES[$data['status']])) {
-                $shipment = $locked->shipment()->firstOrCreate([], [
+            // Ready to ship opens the parcel for the chosen partner to pick up; its tracking number is what gets scanned.
+            if ($data['status'] === 'ready_for_pickup') {
+                $locked->shipment()->firstOrCreate([], [
                     'tracking_number' => 'TRK-'.Str::upper(Str::random(12)),
                     'status' => 'ready',
-                ]);
-                $shipmentAttributes = ['status' => self::DELIVERY_STATUSES[$data['status']]];
-                if ($data['status'] === 'picked_up' && ! $shipment->picked_up_at) {
-                    $shipmentAttributes['picked_up_at'] = now();
-                }
-                if ($data['status'] === 'completed') {
-                    $shipmentAttributes['delivered_at'] = now();
-                }
-                $shipment->update($shipmentAttributes);
-            }
-
-            if ($data['status'] === 'completed') {
-                $locked->payment?->update(['status' => 'paid', 'paid_at' => now()]);
-                if (Schema::hasTable('commissions')) {
-                    DB::table('commissions')->updateOrInsert(
-                        ['order_id' => $locked->id],
-                        [
-                            'seller_id' => $locked->seller_id,
-                            'rate' => self::COMMISSION_RATE * 100,
-                            'amount' => round((float) $locked->subtotal * self::COMMISSION_RATE, 2),
-                            'status' => 'earned',
-                            'created_at' => now(),
-                            'updated_at' => now(),
-                        ]
-                    );
-                }
+                ])->update(['status' => 'ready'] + (Shipment::tracksProvider() ? ['logistics_provider_id' => $partner?->id] : []));
             }
         });
 
         $message = match ($data['status']) {
-            'picked_up' => 'Parcel marked as shipped.',
-            'in_transit' => 'Parcel marked as in transit.',
-            'out_for_delivery' => 'Parcel marked as out for delivery.',
-            'completed' => 'Order marked as delivered and completed.',
+            'ready_for_pickup' => $partner
+                ? "Pickup requested from {$partner->name}. Print the waybill and attach it to the parcel."
+                : 'Pickup requested. Print the waybill and attach it to the parcel.',
             'cancelled' => 'Order cancelled and stock restored.',
             default => 'Order status updated.',
         };
 
         return back()->with('status', $message);
+    }
+
+    /** Logistics partners this seller can hand a parcel to (none when parcels do not record a partner). */
+    private function pickupPartners(): Collection
+    {
+        return Shipment::tracksProvider() ? LogisticsProvider::acceptingParcels()->get(['id', 'name']) : collect();
+    }
+
+    /** The partner this seller used last, so repeat requests need no choice; otherwise the first one listed. */
+    private function suggestedPartnerId(Collection $partners): ?int
+    {
+        if ($partners->isEmpty()) {
+            return null;
+        }
+        $last = Shipment::whereIn('order_id', Order::where('seller_id', $this->shopId())->select('id'))
+            ->whereIn('logistics_provider_id', $partners->pluck('id'))
+            ->latest('id')->value('logistics_provider_id');
+
+        return (int) ($last ?? $partners->first()->id);
+    }
+
+    /**
+     * The partner picked on "Ready to ship". With a single partner the choice is made for the seller; with none
+     * the request is left open and the first partner to confirm it takes it.
+     */
+    private function chosenPartner(Request $request): ?LogisticsProvider
+    {
+        $partners = $this->pickupPartners();
+        if ($partners->isEmpty()) {
+            return null;
+        }
+        $chosen = $request->input('logistics_provider_id') ?? ($partners->count() === 1 ? $partners->first()->id : null);
+        $partner = $partners->firstWhere('id', (int) $chosen);
+        if (! $partner) {
+            throw ValidationException::withMessages(['logistics_provider_id' => 'Choose the logistics partner who will pick up this parcel.']);
+        }
+
+        return $partner;
     }
 
     /**
@@ -316,7 +358,7 @@ class SellerController extends Controller
     public function inventory(Request $request)
     {
         $filters = $this->productFilters($request, withStock: true);
-        $base = Product::where('seller_id', $this->shopId());
+        $base = Product::where('seller_id', $this->shopId())->notArchived();
         $summary = [
             'total' => (clone $base)->count(),
             'in' => $this->whereStock(clone $base, 'in')->count(),
@@ -341,7 +383,9 @@ class SellerController extends Controller
     public function products(Request $request)
     {
         $filters = $this->productFilters($request, withStock: false);
-        $products = $this->filteredProducts($filters)->latest()->paginate(12)->withQueryString();
+        $filters['view'] = $request->validate(['view' => ['nullable', Rule::in(['archived'])]])['view'] ?? null;
+        $products = $this->filteredProducts($filters)->latest($filters['view'] === 'archived' ? 'archived_at' : 'created_at')->paginate(12)->withQueryString();
+        $mine = Product::where('seller_id', $this->shopId());
 
         return view('seller.products', [
             'products' => $products,
@@ -349,7 +393,8 @@ class SellerController extends Controller
             'categories' => config('marketplace.categories'),
             'stockStates' => $this->stockStatesFor($products),
             'storeName' => $this->storeName(),
-            'total' => Product::where('seller_id', $this->shopId())->count(),
+            'total' => $filters['view'] === 'archived' ? (clone $mine)->archived()->count() : (clone $mine)->notArchived()->count(),
+            'counts' => ['active' => (clone $mine)->notArchived()->count(), 'archived' => (clone $mine)->archived()->count()],
         ]);
     }
 
@@ -701,6 +746,24 @@ class SellerController extends Controller
 
     public function reports(Request $request)
     {
+        return view('seller.reports', $this->salesReport($request));
+    }
+
+    /** The same sales report as a printable PDF (A4), shown in the browser so it can be printed or saved. */
+    public function reportPdf(Request $request)
+    {
+        $report = $this->salesReport($request) + [
+            'storeName' => $this->storeName(),
+            'generatedAt' => now(self::REPORT_TIMEZONE),
+            'generatedBy' => auth()->user()->name,
+        ];
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('seller.report-pdf', $report)->setPaper('a4', 'portrait');
+
+        return $pdf->stream('zaylo-sales-report-'.$report['from']->format('Y-m-d').'-to-'.$report['to']->format('Y-m-d').'.pdf');
+    }
+
+    private function salesReport(Request $request): array
+    {
         $input = $request->validate([
             'from' => 'nullable|date_format:Y-m-d',
             'to' => 'nullable|date_format:Y-m-d',
@@ -720,12 +783,12 @@ class SellerController extends Controller
             ? $this->legacyReport($this->shopId(), $from, $to)
             : $this->sellerOrderReport($this->shopId(), $from, $to);
 
-        return view('seller.reports', $report + [
+        return $report + [
             'from' => $from,
             'to' => $to,
             'seriesMonthly' => $this->seriesIsMonthly($from, $to),
             'commissionPercent' => (int) round(self::COMMISSION_RATE * 100),
-        ]);
+        ];
     }
 
     public function account()
@@ -810,6 +873,7 @@ class SellerController extends Controller
         $legacy = Product::usesLegacySchema();
 
         return $this->withStockDetails(Product::where('seller_id', $this->shopId()))
+            ->when(($filters['view'] ?? null) === 'archived', fn (Builder $query) => $query->archived(), fn (Builder $query) => $query->notArchived())
             ->when(filled($filters['q']), function (Builder $query) use ($filters, $legacy) {
                 $term = '%'.addcslashes($filters['q'], '%_\\').'%';
                 $query->where(fn (Builder $nested) => $nested->where('name', 'like', $term)
@@ -1039,7 +1103,7 @@ class SellerController extends Controller
                 : "nullable|string|max:80|unique:product_variants,sku,{$variantId}",
             'categories' => 'required|array|min:1|max:6',
             'categories.*' => ['distinct', Rule::in(array_keys(config('marketplace.categories')))],
-            'gender' => 'nullable|in:men,women,unisex',
+            'gender' => ['nullable', Rule::in(array_keys(config('marketplace.genders')))],
             'description' => 'nullable|string|max:2000',
             'price' => ($product ? 'sometimes|' : '').'required|numeric|min:0|max:99999999.99',
             'original_price' => 'nullable|numeric|gte:price|max:99999999.99',

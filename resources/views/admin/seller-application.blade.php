@@ -2,6 +2,14 @@
 
 @section('title', 'Seller application')
 
+@push('styles')
+    <link rel="stylesheet" href="{{ asset('css/document-viewer.css') }}?v={{ filemtime(public_path('css/document-viewer.css')) }}">
+@endpush
+
+@push('scripts')
+    <script src="{{ asset('js/document-viewer.js') }}?v={{ filemtime(public_path('js/document-viewer.js')) }}" defer></script>
+@endpush
+
 @section('content')
     <section class="seller-page-heading">
         <div>
@@ -43,13 +51,13 @@
             </section>
 
             <section class="seller-panel" aria-labelledby="documents-heading">
-                <header class="seller-panel__header"><div><h2 id="documents-heading">Documents</h2><p>Required for a {{ Str::lower($application->seller_type_label) }}. Each opens in a new tab.</p></div></header>
-                <div class="seller-panel__body"><ul class="workspace-documents">
+                <header class="seller-panel__header"><div><h2 id="documents-heading">Documents</h2><p>Required for a {{ Str::lower($application->seller_type_label) }}. Open one to view it here.</p></div></header>
+                <div class="seller-panel__body"><ul class="workspace-documents" data-document-gallery>
                     @foreach($application->requiredDocuments() as $field)
                         <li>
                             <span><i class="fas fa-file-lines" aria-hidden="true"></i> {{ $documents[$field] }}</span>
                             @if($application->{$field.'_path'})
-                                <a href="{{ route('admin.seller-applications.document', [$applicant, $field]) }}" target="_blank" rel="noopener" class="seller-button seller-button--small seller-button--secondary">Open</a>
+                                <a href="{{ route('admin.seller-applications.document', [$applicant, $field]) }}" target="_blank" rel="noopener" class="seller-button seller-button--small seller-button--secondary" data-document-viewer data-document-title="{{ $documents[$field] }}" data-document-type="{{ \App\Support\DocumentPreview::type($application->{$field.'_path'}) }}">Open<span class="sr-only"> {{ $documents[$field] }}</span></a>
                             @else
                                 <span class="seller-cell-note">Missing</span>
                             @endif

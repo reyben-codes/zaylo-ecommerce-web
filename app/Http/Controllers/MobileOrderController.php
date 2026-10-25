@@ -7,11 +7,13 @@ use App\Models\OrderItem;
 use App\Services\CheckoutService;
 use App\Services\ProductReviews;
 use App\Support\MobilePayload;
+use App\Support\OrderParties;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 
+/** A buyer's orders in the mobile app: the list by status, one order with its history, cancelling, and reviews. */
 class MobileOrderController extends Controller
 {
     public function index(Request $request): JsonResponse
@@ -43,14 +45,14 @@ class MobileOrderController extends Controller
 
     public function show(Request $request, Order $order): JsonResponse
     {
-        abort_unless($order->user_id === $request->user()->id, 404);
+        abort_unless(OrderParties::for($order)['buyer'] === (int) $request->user()->id, 404);
 
         return response()->json(['order' => $this->detailed($order)]);
     }
 
     public function cancel(Request $request, Order $order, CheckoutService $checkout): JsonResponse
     {
-        abort_unless($order->user_id === $request->user()->id, 404);
+        abort_unless(OrderParties::for($order)['buyer'] === (int) $request->user()->id, 404);
         $checkout->cancel($order, $request->user());
 
         return response()->json([
@@ -64,7 +66,7 @@ class MobileOrderController extends Controller
     {
         $reviews->authorize($request->user(), $orderItem);
         $data = $request->validate(ProductReviews::rules());
-        $reviews->publish($request->user(), $orderItem, $data['rating'], $data['comment'] ?? null, $request->file('photos', []));
+        $reviews->publish($request->user(), $orderItem, (int) $data['rating'], $data['comment'] ?? null, $request->file('photos', []));
 
         return response()->json(['message' => 'Thank you! Your product review has been published.'], 201);
     }
@@ -72,8 +74,9 @@ class MobileOrderController extends Controller
     private function detailed(Order $order): array
     {
         $order->load(array_filter([
-            'items.product.images', 'items.review', 'payment', 'shipment',
-            'statusHistory' => fn ($query) => $query->oldest(),
+            'items.product.images', 'items.review', 'payment',
+            Order::usesLegacySchema() ? 'shipment' : null,
+            ...(Schema::hasTable('order_status_histories') ? ['statusHistory' => fn ($query) => $query->oldest()] : []),
             // Complaints arrive with the admin modules migration.
             Schema::hasTable('dispute_messages') ? 'disputes' : null,
         ]));

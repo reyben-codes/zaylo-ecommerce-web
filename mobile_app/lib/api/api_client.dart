@@ -23,9 +23,11 @@ import 'package:zaylo_mobile/utils/ids.dart';
 class ApiClient {
   ApiClient({String? baseUrl})
       : baseUrl = (baseUrl ??
+                // The live site by default, so a plain `flutter run` on a phone works. For a local
+                // server use e.g. --dart-define=ZAYLO_API_URL=http://10.0.2.2:8000/api (Android emulator).
                 const String.fromEnvironment(
                   'ZAYLO_API_URL',
-                  defaultValue: 'http://10.0.2.2:8000/api',
+                  defaultValue: 'https://zaylo-zyl.shop/api',
                 ))
             .replaceFirst(RegExp(r'/$'), '');
 
@@ -99,6 +101,14 @@ class ApiClient {
 
   Future<Policy> policy(String slug) async =>
       Policy.fromJson((await send('GET', '/mobile/policies/$slug'))['policy'] as Map<String, dynamic>);
+
+  // ------------------------------------------------------------ Profile photo
+
+  /// Uploads a new profile photo (buyers and riders alike) and returns its URL.
+  Future<String?> uploadProfilePhoto(File photo) async =>
+      (await sendMultipart('/mobile/account/photo', fields: const {}, files: {'photo': photo}))['avatar_url'] as String?;
+
+  Future<void> removeProfilePhoto() => send('DELETE', '/mobile/account/photo');
 
   /// For loading private files, such as complaint evidence, with this session.
   Map<String, String> get authHeaders => {if (token != null) HttpHeaders.authorizationHeader: 'Bearer $token'};

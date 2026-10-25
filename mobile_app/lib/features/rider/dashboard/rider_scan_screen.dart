@@ -3,7 +3,9 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 
-/// Reads the QR code on a parcel label and pops with its text. When [accept]
+import 'scan_feedback.dart';
+
+/// Reads the QR code or barcode on a parcel's waybill and pops with its text. When [accept]
 /// is given, codes it rejects (another parcel's label) are ignored with a
 /// message and scanning goes on. A damaged label can be typed in instead.
 class RiderScanScreen extends StatefulWidget {
@@ -22,13 +24,34 @@ class RiderScanScreen extends StatefulWidget {
 }
 
 class _RiderScanScreenState extends State<RiderScanScreen> {
-  final _controller = MobileScannerController(formats: const [BarcodeFormat.qrCode]);
+  // Waybills carry both a 1D barcode and a QR code. The higher resolution
+  // keeps the thin bars of a 1D code sharp enough to read on Android.
+  final _controller = MobileScannerController(
+    formats: const [
+      BarcodeFormat.qrCode,
+      BarcodeFormat.code128,
+      BarcodeFormat.code39,
+      BarcodeFormat.code93,
+      BarcodeFormat.itf14,
+      BarcodeFormat.ean13,
+      BarcodeFormat.ean8,
+      BarcodeFormat.upcA,
+      BarcodeFormat.codabar,
+    ],
+    cameraResolution: const Size(1920, 1080),
+  );
 
   /// Set once a code is accepted, so a label held in view is not read twice.
   bool _done = false;
 
   /// Why the last code was turned away, shown above the manual entry button.
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    ScanFeedback.preload();
+  }
 
   @override
   void dispose() {
@@ -45,10 +68,15 @@ class _RiderScanScreenState extends State<RiderScanScreen> {
     if (_done) return;
     final error = widget.accept?.call(code);
     if (error != null) {
-      if (_error != error) setState(() => _error = error);
+      // Buzz once per new message, not on every frame a wrong label stays in view.
+      if (_error != error) {
+        ScanFeedback.rejected();
+        setState(() => _error = error);
+      }
       return;
     }
     _done = true;
+    ScanFeedback.accepted();
     Navigator.of(context).pop(code);
   }
 
@@ -87,9 +115,10 @@ class _RiderScanScreenState extends State<RiderScanScreen> {
               ),
               IgnorePointer(
                 child: Center(
+                  // Wide enough to frame a waybill barcode, tall enough for a QR code.
                   child: Container(
-                    width: 240,
-                    height: 240,
+                    width: 300,
+                    height: 220,
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.white, width: 3),
                       borderRadius: BorderRadius.circular(20),
@@ -115,7 +144,7 @@ class _RiderScanScreenState extends State<RiderScanScreen> {
               ],
               Text(widget.hint, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
               const SizedBox(height: 4),
-              Text('Point the camera at the QR code on the parcel label.',
+              Text('Point the camera at the QR code or barcode on the waybill.',
                   textAlign: TextAlign.center, style: TextStyle(color: Colors.white.withValues(alpha: .7), fontSize: 12)),
               const SizedBox(height: 10),
               TextButton.icon(

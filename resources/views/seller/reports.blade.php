@@ -19,11 +19,16 @@
         $maxCategory = max(1, (float) $categories->max('amount'));
     @endphp
 
+    @include('partials.print-header', ['title' => 'Sales report · '.$from->format('M j, Y').' – '.$to->format('M j, Y')])
     <section class="seller-page-heading">
         <div>
             <p class="seller-eyebrow">Seller Center</p>
             <h1>Sales reports</h1>
             <p>Orders placed {{ $from->format('M j, Y') }} – {{ $to->format('M j, Y') }} (Philippine time).</p>
+        </div>
+        <div class="seller-page-heading__actions">
+            <button type="button" class="seller-button seller-button--secondary" data-print hidden><i class="fas fa-print" aria-hidden="true"></i> Print</button>
+            <a href="{{ route('seller.reports.pdf', ['from' => $from->format('Y-m-d'), 'to' => $to->format('Y-m-d')]) }}" class="seller-button" target="_blank" rel="noopener"><i class="fas fa-file-pdf" aria-hidden="true"></i> PDF report</a>
         </div>
     </section>
 

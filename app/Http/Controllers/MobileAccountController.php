@@ -21,6 +21,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
 
+/** A buyer's profile, password, saved addresses and notifications in the mobile app (same rules as the website). */
 class MobileAccountController extends Controller
 {
     public function updateProfile(Request $request): JsonResponse
@@ -34,9 +35,7 @@ class MobileAccountController extends Controller
         ]);
 
         if ($user->google_id && $validated['email'] !== $user->email) {
-            throw ValidationException::withMessages([
-                'email' => 'The email address linked to Google cannot be changed here.',
-            ]);
+            throw ValidationException::withMessages(['email' => 'The email address linked to Google cannot be changed here.']);
         }
 
         $emailChanged = $validated['email'] !== $user->email;
@@ -69,20 +68,17 @@ class MobileAccountController extends Controller
         $user = $request->user();
         $hasPassword = filled($user->getAuthPassword());
         $validated = $request->validate([
-            'current_password' => $hasPassword ? ['required', 'current_password'] : ['nullable'],
+            'current_password' => $hasPassword ? ['required', 'current_password:mobile'] : ['nullable'],
             'password' => ['required', 'string', 'confirmed', new StrongPassword],
         ]);
 
-        $user->forceFill([
-            'password' => $validated['password'],
-            'remember_token' => Str::random(60),
-        ])->save();
+        $user->forceFill(['password' => $validated['password'], 'remember_token' => Str::random(60)])->save();
 
-        // Sign out every other device; this phone keeps its session.
-        $user->tokens()->whereKeyNot($user->currentAccessToken()->getKey())->delete();
+        // Sign out every other device; this phone stays signed in.
+        $user->tokens()->whereKeyNot($user->currentAccessToken()?->getKey())->delete();
 
         return response()->json([
-            'message' => $hasPassword ? 'Password updated.' : 'Password created. You can now also sign in with email.',
+            'message' => $hasPassword ? 'Password updated. Other devices were signed out.' : 'Password created. You can now also sign in with email.',
             'user' => MobilePayload::user($user),
         ]);
     }
@@ -151,11 +147,11 @@ class MobileAccountController extends Controller
                 'type' => $item['type'],
                 'title' => $item['title'],
                 'message' => $item['message'],
-                'action' => $item['action'],
+                'action' => $item['action'] ?? null,
                 'at' => $item['at']->toIso8601String(),
                 'read' => $item['read'],
                 // Lets the app open the product screen for "New product" items.
-                'product_slug' => $item['type'] === 'product' ? Str::afterLast($item['url'], '/') : null,
+                'product_slug' => $item['type'] === 'product' ? Str::afterLast($item['url'] ?? '', '/') : null,
             ])->values(),
         ]);
     }
@@ -163,14 +159,17 @@ class MobileAccountController extends Controller
     public function markNotificationsRead(Request $request, BuyerNotificationFeed $feed): JsonResponse
     {
         $validated = $request->validate(['key' => ['nullable', 'string', 'max:100']]);
-        $unread = $feed->forUser($request->user())->where('read', false)
-            ->when($validated['key'] ?? null, fn ($items, $key) => $items->where('key', $key));
-
-        $unread->map(fn ($notification) => [
-            'user_id' => $request->user()->id,
-            'notification_key' => $notification['key'],
-            'read_at' => now(),
-        ])->chunk(200)->each(fn ($chunk) => DB::table('buyer_notification_reads')->insertOrIgnore($chunk->values()->all()));
+        if (Schema::hasTable('buyer_notification_reads')) {
+            $feed->forUser($request->user())->where('read', false)
+                ->when($validated['key'] ?? null, fn ($items, $key) => $items->where('key', $key))
+                ->map(fn ($notification) => [
+                    'user_id' => $request->user()->id,
+                    'notification_key' => $notification['key'],
+                    'read_at' => now(),
+                ])
+                ->chunk(200)
+                ->each(fn ($chunk) => DB::table('buyer_notification_reads')->insertOrIgnore($chunk->values()->all()));
+        }
 
         return $this->notifications($request, $feed);
     }

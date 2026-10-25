@@ -66,6 +66,7 @@ class AdminSettingsController extends Controller
             'slug' => $slug,
             'title' => PlatformPolicy::PAGES[$slug],
             'policy' => PlatformPolicy::forSlug($slug),
+            'builtIn' => PlatformPolicy::builtIn($slug),
         ]);
     }
 

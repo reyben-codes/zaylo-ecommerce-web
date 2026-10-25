@@ -15,11 +15,13 @@ import 'package:zaylo_mobile/auth/rider/widgets/rider_terms_dialog.dart';
 import 'package:zaylo_mobile/auth/token_store.dart';
 import 'package:zaylo_mobile/components/announcement_banner.dart';
 import 'package:zaylo_mobile/components/chat/delivery_chat.dart';
+import 'package:zaylo_mobile/components/chat/typing_dots.dart';
 import 'package:zaylo_mobile/components/policies.dart';
-import 'package:zaylo_mobile/features/buyer/messages/seller_messages_button.dart';
 import 'package:zaylo_mobile/features/buyer/checkout/checkout_screen.dart';
 import 'package:zaylo_mobile/features/buyer/orders/order_detail_screen.dart';
 import 'package:zaylo_mobile/features/buyer/home/widgets/home_header.dart';
+import 'package:zaylo_mobile/features/buyer/messages/seller_chat_screen.dart';
+import 'package:zaylo_mobile/features/buyer/messages/seller_inbox_screen.dart';
 import 'package:zaylo_mobile/models/auth_models.dart';
 import 'package:zaylo_mobile/models/buyer/account_models.dart';
 import 'package:zaylo_mobile/models/buyer/cart_models.dart';
@@ -100,6 +102,45 @@ class FakeApi extends BuyerApi {
 
   @override
   Future<int> sellerUnreadCount() async => 3;
+
+  /// Who is typing to the buyer right now, as GET /mobile/chat/typing sends it.
+  final typingNow = <Map<String, dynamic>>[];
+
+  /// Whether the seller is typing inside the open chat.
+  bool sellerTyping = false;
+
+  @override
+  Future<List<ChatTyping>> chatTyping() async => typingNow.map(ChatTyping.fromJson).toList();
+
+  @override
+  Future<List<SellerConversation>> sellerConversations() async => [
+        SellerConversation.fromJson({
+          'id': 5,
+          'name': 'Happy Heels',
+          'product_name': 'Watering Can 1',
+          'preview': 'Yes, we have 3 left.',
+          'unread': 3,
+        }),
+      ];
+
+  @override
+  Future<SellerChatBatch> sellerMessages(int conversationId, {int? after, int? before}) async =>
+      SellerChatBatch.fromJson({
+        'messages': after != null || before != null
+            ? []
+            : [
+                {'id': 1, 'body': 'Is it still available?', 'mine': true, 'created_at': '2026-10-20T09:00:00+08:00'},
+                {'id': 2, 'body': 'Yes, we have 3 left.', 'mine': false, 'created_at': '2026-10-20T09:01:00+08:00'},
+              ],
+        'has_older': false,
+        'typing': sellerTyping,
+      });
+
+  @override
+  Future<void> markSellerChatRead(int conversationId, int through) async {}
+
+  @override
+  Future<void> sendTyping(int conversationId, bool typing) async {}
 
   @override
   Future<int> supportUnreadCount() async => 0;
@@ -843,6 +884,105 @@ void main() {
     });
   });
 
+  group('floating chat bubble', () {
+    Finder bubble() => find.byKey(const ValueKey('chat-head'));
+
+    testWidgets('floats over the shop with the unread count and opens Messages', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await pumpApp(tester, token: 'stored-token');
+      expect(bubble(), findsOneWidget);
+      expect(find.descendant(of: bubble(), matching: find.text('3')), findsOneWidget, reason: 'unread badge');
+      expect(find.bySemanticsLabel(RegExp('^Open messages, 3 unread')), findsOneWidget,
+          reason: 'screen readers hear it too');
+      semantics.dispose();
+
+      await tester.tap(bubble());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byType(SellerInboxScreen), findsOneWidget);
+      expect(find.text('Happy Heels'), findsOneWidget);
+      expect(bubble(), findsNothing, reason: 'it steps aside inside Messages');
+
+      await tester.pageBack();
+      await tester.pumpAndSettle(); // let the page close; the bubble returns the frame after
+      expect(find.byType(SellerInboxScreen), findsNothing);
+      expect(bubble(), findsOneWidget);
+    });
+
+    testWidgets('dragging it onto the close target hides it until Messages is opened', (tester) async {
+      await pumpApp(tester, token: 'stored-token');
+      final start = tester.getCenter(bubble());
+      // The close target sits at the bottom centre while dragging.
+      final size = tester.view.physicalSize / tester.view.devicePixelRatio;
+      final gesture = await tester.startGesture(start);
+      await gesture.moveBy(const Offset(-40, 0));
+      await tester.pump();
+      expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+      await gesture.moveTo(Offset(size.width / 2, size.height - 72));
+      await tester.pump();
+      await gesture.up();
+      await tester.pump();
+      expect(bubble(), findsNothing);
+      expect(find.textContaining('Chat bubble hidden'), findsOneWidget);
+
+      // Opening Messages brings it back, as on the website.
+      await tester.tap(find.descendant(of: find.byType(HomeTopBar), matching: find.byTooltip('Messages, 3 unread')));
+      await tester.pumpAndSettle();
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(bubble(), findsOneWidget);
+    });
+
+    testWidgets('shows typing dots beside the head while a seller types, and opens that chat', (tester) async {
+      final api = FakeApi();
+      final tokens = MemoryTokenStore();
+      await tokens.write('stored-token');
+      final state = AppState(api: api, tokens: tokens);
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(400, 900);
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(ZayloApp(state: state, theme: ThemeController(store: MemoryThemeModeStore())));
+      await state.restore();
+      await tester.pump();
+      final dots = find.byKey(const ValueKey('chat-head-typing'));
+      expect(dots, findsNothing);
+
+      // The seller starts typing on the website: the next check shows the dots.
+      api.typingNow.add({'conversation_id': 5, 'name': 'Happy Heels'});
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(dots, findsOneWidget);
+      expect(find.descendant(of: dots, matching: find.byType(TypingDots)), findsOneWidget);
+      expect(tester.getCenter(dots).dx, lessThan(tester.getCenter(bubble()).dx),
+          reason: 'beside the head, toward the middle');
+
+      // ...and they go when the seller stops.
+      api.typingNow.clear();
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pump();
+      expect(dots, findsNothing);
+
+      // Tapping while someone types opens straight into that conversation, which shows its own typing bubble.
+      api.typingNow.add({'conversation_id': 5, 'name': 'Happy Heels'});
+      api.sellerTyping = true;
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(bubble());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byType(SellerChatScreen), findsOneWidget);
+      expect(find.text('Yes, we have 3 left.'), findsOneWidget);
+      expect(find.text('Happy Heels is typing…'), findsOneWidget);
+      expect(find.descendant(of: find.byType(TypingIndicator), matching: find.byType(TypingDots)), findsOneWidget);
+      expect(bubble(), findsNothing, reason: 'the chat shows its own typing indicator');
+    });
+
+    testWidgets('is not shown to guests', (tester) async {
+      await pumpApp(tester);
+      expect(bubble(), findsNothing);
+    });
+  });
+
   group('website features', () {
     /// Opens [screen] on top of the signed-in app.
     Future<void> open(WidgetTester tester, Widget screen) async {
@@ -855,52 +995,31 @@ void main() {
 
       await tester.tap(find.text('Account'));
       await tester.pumpAndSettle();
-      // Seller messages moved to the floating button on Home.
-      expect(find.text('Messages with sellers'), findsNothing);
+      // Messages with sellers, with the unread badge, first under Settings.
+      expect(find.text('Messages'), findsOneWidget);
+      expect(find.descendant(of: find.ancestor(of: find.text('Messages'), matching: find.byType(InkWell)).first, matching: find.text('3')),
+          findsOneWidget, reason: 'unread seller messages badge');
       expect(find.text('Help & support'), findsOneWidget);
       expect(find.text('Complaints'), findsOneWidget);
       expect(find.text('ID verification'), findsOneWidget);
       expect(find.text('Terms & policies'), findsOneWidget);
       double top(String text) => tester.getTopLeft(find.text(text)).dy;
-      expect(top('To ship'), lessThan(top('Notifications')), reason: 'Settings under My orders');
+      expect(top('To ship'), lessThan(top('Messages')), reason: 'Settings under My orders');
+      expect(top('Messages'), lessThan(top('Notifications')));
       expect(top('Notifications'), lessThan(top('Terms & policies')));
       expect(top('Terms & policies'), lessThan(top('Help & support')), reason: 'Help last');
       expect(top('Complaints'), lessThan(top('SIGN OUT')));
     });
 
-    testWidgets('home has a floating button for messages with sellers', (tester) async {
+    testWidgets('the home top bar has a messages icon with the unread badge', (tester) async {
       await pumpApp(tester, token: 'stored-token');
 
-      final button = find.byTooltip('Messages with sellers, 3 unread');
-      expect(button, findsOneWidget);
-      expect(find.descendant(of: button, matching: find.text('3')), findsOneWidget, reason: 'unread badge');
-      await tester.tap(button);
+      final icon = find.descendant(of: find.byType(HomeTopBar), matching: find.byTooltip('Messages, 3 unread'));
+      expect(icon, findsOneWidget);
+      expect(find.descendant(of: icon, matching: find.text('3')), findsOneWidget, reason: 'unread badge');
+      await tester.tap(icon);
       await tester.pumpAndSettle();
-      expect(find.text('Messages'), findsOneWidget, reason: 'seller inbox title');
-    });
-
-    testWidgets('the seller messages button hides while Home scrolls', (tester) async {
-      await pumpApp(tester, token: 'stored-token');
-      double opacity() => tester
-          .widget<AnimatedOpacity>(
-              find.ancestor(of: find.byType(FloatingActionButton), matching: find.byType(AnimatedOpacity)).first)
-          .opacity;
-      expect(opacity(), 1);
-
-      // A phone-height screen, so the page has room to scroll.
-      tester.view.physicalSize = const Size(400, 800);
-      await tester.pumpAndSettle();
-      final gesture = await tester.startGesture(tester.getCenter(find.byType(CustomScrollView)));
-      for (var step = 0; step < 5; step++) {
-        await gesture.moveBy(const Offset(0, -40));
-        await tester.pump();
-      }
-      await tester.pump();
-      expect(opacity(), 0, reason: 'hidden mid-scroll');
-
-      await gesture.up();
-      await tester.pumpAndSettle();
-      expect(opacity(), 1, reason: 'back once the scroll stops');
+      expect(find.widgetWithText(AppBar, 'Messages'), findsOneWidget, reason: 'seller inbox');
     });
 
     testWidgets('the home top bar has a notifications bell instead of the bag', (tester) async {
@@ -943,10 +1062,11 @@ void main() {
       expect(home().pixels, 0);
     });
 
-    testWidgets('guests do not see the seller messages button', (tester) async {
+    testWidgets('guests see no chat head or messages icon', (tester) async {
       await pumpApp(tester);
 
-      expect(find.byType(SellerMessagesButton), findsNothing);
+      expect(find.bySemanticsLabel(RegExp(r'^Open messages')), findsNothing);
+      expect(find.descendant(of: find.byType(HomeTopBar), matching: find.byTooltip('Messages')), findsNothing);
     });
 
     testWidgets('checkout asks for an approved ID before placing an order', (tester) async {

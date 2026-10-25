@@ -1,7 +1,18 @@
 /* Complaints and disputes: case pages for buyers, sellers, couriers and admins, plus Help & support pages.
    Uses the workspace tokens, with fallbacks for storefront pages. */
 
+/* On storefront pages (buyers, riders) the workspace tokens are not defined, so the shared workspace buttons and panels
+   would lose their colors (e.g. a white-on-white Send button). Define them here; workspace pages already match. */
 .case-page {
+    --zaylo-ink: var(--c-1a1714);
+    --zaylo-text: var(--c-1e1e1e);
+    --zaylo-muted: var(--c-6b5f54);
+    --zaylo-accent: var(--c-9a755e);
+    --zaylo-accent-soft: var(--c-eee6de);
+    --zaylo-surface: var(--c-ffffff);
+    --zaylo-background: var(--c-faf7f2);
+    --zaylo-hover: var(--c-f5f0ea);
+    --zaylo-border: var(--c-ece4db);
     max-width: 960px;
     margin: 0 auto;
     padding: 28px 16px 56px;
@@ -200,7 +211,7 @@
 .case-form textarea:focus {
     border-color: var(--zaylo-accent, var(--c-9a755e));
     outline: 0;
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-9a755e) 14%, transparent);
+    box-shadow: 0 0 0 3px rgba(154, 117, 94, .14);
 }
 
 .case-reply__row {

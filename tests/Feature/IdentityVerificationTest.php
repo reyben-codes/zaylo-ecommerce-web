@@ -38,7 +38,8 @@ class IdentityVerificationTest extends TestCase
         // Buyers cannot open the review area or documents; admins can.
         $this->get(route('admin.identity.document', $submission))->assertForbidden();
         $admin = User::factory()->create(['role' => 'admin', 'status' => 'active']);
-        $this->actingAs($admin)->get(route('admin.identity'))->assertOk()->assertSee($buyer->name)->assertSee('PhilSys National ID');
+        $this->actingAs($admin)->get(route('admin.identity'))->assertOk()->assertSee($buyer->name)->assertSee('PhilSys National ID')
+            ->assertSee('js/document-viewer.js', false)->assertSee('data-document-viewer', false)->assertSee('data-document-type="image"', false);
         $this->get(route('admin.identity.document', $submission))->assertOk()->assertHeader('X-Content-Type-Options', 'nosniff');
         $this->assertStringContainsString('no-store', $this->get(route('admin.identity.document', $submission))->headers->get('Cache-Control'));
         $this->get(route('admin.dashboard'))->assertSee('1 buyer ID waiting for review');

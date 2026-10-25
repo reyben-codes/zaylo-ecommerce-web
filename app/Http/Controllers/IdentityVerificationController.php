@@ -6,7 +6,8 @@ use App\Services\IdentityVerifications;
 use Illuminate\Http\Request;
 
 /**
- * Buyer side of ID verification: upload a government ID for an administrator to review.
+ * Buyer side of ID verification: upload a government ID for an administrator to review. The rules live in
+ * IdentityVerifications, shared with the mobile app.
  */
 class IdentityVerificationController extends Controller
 {

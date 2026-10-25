@@ -37,7 +37,7 @@
 
 .workspace-tab:hover span,
 .workspace-tab.is-active span {
-    background: color-mix(in srgb, var(--c-ffffff) 16%, transparent);
+    background: rgba(255, 255, 255, .16);
 }
 
 .workspace-tab:focus-visible {
@@ -177,7 +177,7 @@
 
 .review-reason__form textarea:focus {
     border-color: var(--zaylo-accent);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-9a755e) 12%, transparent);
+    box-shadow: 0 0 0 3px rgba(154, 117, 94, .12);
 }
 
 .review-reason__form label {

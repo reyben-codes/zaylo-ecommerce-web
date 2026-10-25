@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    @include('partials.theme-head')
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Inter', sans-serif; background: var(--c-faf7f2); color: var(--c-1a1714); display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
@@ -23,8 +24,7 @@
         .btn-secondary:hover { background: var(--c-1a1714); color: var(--c-ffffff); }
         .divider { width: 48px; height: 2px; background: var(--c-ece4db); margin: 24px auto; }
     </style>
-    <link rel="stylesheet" href="{{ asset('css/logout-confirm.css') }}?v={{ filemtime(public_path('css/logout-confirm.css')) }}">
-    @include('partials.theme-head')
+    <link rel="stylesheet" href="{{ asset('css/confirm-dialog.css') }}?v={{ filemtime(public_path('css/confirm-dialog.css')) }}">
 </head>
 <body>
     <div class="error-container">
@@ -43,6 +43,6 @@
             @endauth
         </div>
     </div>
-    <script src="{{ asset('js/logout-confirm.js') }}?v={{ filemtime(public_path('js/logout-confirm.js')) }}" defer></script>
+    <script src="{{ asset('js/confirm-dialog.js') }}?v={{ filemtime(public_path('js/confirm-dialog.js')) }}" defer></script>
 </body>
 </html>

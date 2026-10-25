@@ -16,14 +16,14 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 /**
- * JSON shapes returned by the mobile API. Keep these stable: the Flutter
- * models in mobile_app/lib/models parse exactly these keys.
+ * JSON shapes returned by the mobile API (routes/api.php). Keep the keys stable: the Flutter models in the
+ * mobile app parse exactly these.
  */
 class MobilePayload
 {
     public const STATUS_GROUPS = [
         'to_ship' => ['placed', 'confirmed', 'processing', 'ready_for_pickup', 'assigned'],
-        'shipped' => ['picked_up', 'in_transit'],
+        'shipped' => ['picked_up', 'in_transit', 'out_for_delivery'],
         'delivered' => ['completed'],
         'cancelled' => ['cancelled'],
     ];
@@ -36,9 +36,13 @@ class MobilePayload
         'assigned' => 'A courier has been assigned to your order.',
         'picked_up' => 'The courier has picked up your order.',
         'in_transit' => 'Your order is on its way.',
+        'out_for_delivery' => 'Your order is out for delivery today.',
         'completed' => 'Your order has been delivered.',
         'cancelled' => 'This order was cancelled.',
     ];
+
+    /** @var array<int, ?string> shop names already looked up in this request */
+    private static array $shopNames = [];
 
     public static function user(User $user): array
     {
@@ -47,12 +51,13 @@ class MobilePayload
             'name' => $user->name,
             'email' => $user->email,
             'phone' => $user->phone,
+            'role' => User::portalOf($user->role),
             'date_of_birth' => $user->date_of_birth?->toDateString(),
             'email_verified' => $user->hasVerifiedEmail(),
+            'identity_verified' => $user->isIdentityVerified(),
             'has_password' => filled($user->getAuthPassword()),
             'google_linked' => filled($user->google_id ?? null),
-            // Buyers need an approved ID to check out, as on the website.
-            'identity_verified' => $user->isIdentityVerified(),
+            'avatar_url' => $user->avatar_url,
         ];
     }
 
@@ -87,7 +92,7 @@ class MobilePayload
             'price' => (float) $product->price,
             'original_price' => $product->original_price === null ? null : (float) $product->original_price,
             'badge' => $product->badge,
-            'image_url' => self::imageUrl($product->image_url ?: optional($product->images->first())->path),
+            'image_url' => self::imageUrl($product->image_url ?: $product->images->first()?->path),
             'has_options' => (int) ($product->active_variants_count ?? 0) > 1,
             'saved' => $saved,
         ];
@@ -101,15 +106,15 @@ class MobilePayload
         if ($detailed) {
             $data += [
                 'description' => $product->description,
-                'stock' => $product->stock,
-                'seller_name' => $product->relationLoaded('seller') ? self::sellerName($product) : null,
+                'stock' => (int) $product->stock,
+                'seller_name' => self::shopName($product->seller_id),
                 'images' => collect([$product->image_url])
                     ->concat($product->images->pluck('path'))
                     ->filter()->unique()->map(fn ($path) => self::imageUrl($path))->values(),
                 'variants' => $product->variants->map(fn (ProductVariant $variant) => [
                     'id' => $variant->id,
                     'name' => $variant->name,
-                    'price' => (float) $variant->price,
+                    'price' => (float) $product->priceFor($variant),
                     'stock' => (int) $variant->stock,
                 ])->values(),
             ];
@@ -130,7 +135,7 @@ class MobilePayload
             'available_stock' => $item->availableStock(),
             'variant_name' => $item->variant?->name,
             'seller_id' => $product?->seller_id,
-            'seller_name' => $product && $product->relationLoaded('seller') ? self::sellerName($product) : null,
+            'seller_name' => self::shopName($product?->seller_id),
             'product' => $product ? self::product($product) : null,
         ];
     }
@@ -156,7 +161,7 @@ class MobilePayload
                 'id' => $item->id,
                 'product_slug' => $item->product?->slug,
                 'product_name' => $item->product_name,
-                'image_url' => $item->product ? self::imageUrl($item->product->image_url ?: optional($item->product->images->first())->path) : null,
+                'image_url' => $item->product ? self::imageUrl($item->product->image_url ?: $item->product->images->first()?->path) : null,
                 'unit_price' => (float) $item->unit_price,
                 'quantity' => (int) $item->quantity,
                 'line_total' => (float) $item->line_total,
@@ -172,11 +177,11 @@ class MobilePayload
                     : $order->shipping_address,
                 'notes' => $order->notes,
                 'payment_status' => $order->payment?->status,
-                'tracking_number' => $order->shipment?->tracking_number,
+                'tracking_number' => ($shipment = $order->deliveryShipment())?->tracking_number ?? $shipment?->tracking_code,
                 'rider_chat' => self::riderChat($order),
                 'complaint' => self::complaint($order),
                 'can_complain' => $order->relationLoaded('disputes') && $order->status !== 'cancelled' && $order->disputes->isEmpty(),
-                'history' => $order->statusHistory->map(fn ($entry) => [
+                'history' => ($order->relationLoaded('statusHistory') ? $order->statusHistory : collect())->map(fn ($entry) => [
                     'status' => $entry->status,
                     'label' => Str::headline($entry->status),
                     'note' => $entry->note,
@@ -216,7 +221,7 @@ class MobilePayload
     /** The buyer's chat with the rider, once one is assigned to the delivery. */
     private static function riderChat(Order $order): ?array
     {
-        $shipment = $order->shipment;
+        $shipment = $order->deliveryShipment();
         $riderUserId = $shipment?->riderUserId();
         if ($riderUserId === null) {
             return null;
@@ -227,6 +232,21 @@ class MobilePayload
             'open' => $shipment->chatIsOpen(),
             'unread' => $shipment->unreadMessagesFor(rider: false),
         ];
+    }
+
+    /**
+     * Live admin announcements. The key changes when the admin edits one, so a notice the user dismissed shows again
+     * after an update, as on the website.
+     *
+     * @param  iterable<Announcement>  $announcements
+     */
+    public static function announcements(iterable $announcements): array
+    {
+        return collect($announcements)->map(fn (Announcement $notice) => [
+            'key' => $notice->id.'-'.$notice->updated_at?->timestamp,
+            'title' => $notice->title,
+            'body' => $notice->body,
+        ])->values()->all();
     }
 
     public static function address(Address $address): array
@@ -253,21 +273,6 @@ class MobilePayload
         ];
     }
 
-    /**
-     * Live admin announcements. The key changes when the admin edits one, so a
-     * notice the user dismissed shows again after an update, as on the website.
-     *
-     * @param  iterable<Announcement>  $announcements
-     */
-    public static function announcements(iterable $announcements): array
-    {
-        return collect($announcements)->map(fn (Announcement $notice) => [
-            'key' => $notice->id.'-'.$notice->updated_at?->timestamp,
-            'title' => $notice->title,
-            'body' => $notice->body,
-        ])->values()->all();
-    }
-
     public static function imageUrl(?string $path): ?string
     {
         if (! $path) {
@@ -277,10 +282,13 @@ class MobilePayload
         return Str::startsWith($path, ['http://', 'https://']) ? $path : url($path);
     }
 
-    private static function sellerName(Product $product): ?string
+    /** The shop name buyers see for a product's seller_id (see App\Support\Shop). */
+    public static function shopName(?int $sellerId): ?string
     {
-        $seller = $product->seller;
+        if (! $sellerId) {
+            return null;
+        }
 
-        return $seller?->name;
+        return self::$shopNames[$sellerId] ??= Shop::find($sellerId)?->name;
     }
 }

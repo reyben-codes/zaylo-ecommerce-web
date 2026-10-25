@@ -55,7 +55,7 @@ class LogisticsOperationsTest extends TestCase
         $this->actingAs($this->owner);
 
         // Pickup must be confirmed before it can be collected.
-        $this->patch(route('logistics.parcels.advance', $shipment), ['status' => 'picked_up'])->assertSessionHasErrors('status');
+        $this->patch(route('logistics.parcels.advance', $shipment), ['status' => 'picked_up', 'tracking' => 'ZX-0002'])->assertSessionHasErrors('status');
         $this->patch(route('logistics.parcels.pickup', $shipment), ['decision' => 'confirm', 'pickup_date' => now('Asia/Manila')->subDay()->toDateString()])->assertSessionHasErrors('pickup_date');
         $this->patch(route('logistics.parcels.pickup', $shipment), ['decision' => 'confirm', 'pickup_date' => now('Asia/Manila')->addDay()->toDateString()])->assertSessionHasNoErrors();
         $this->assertSame('confirmed', ShipmentWorkflow::stageOf($shipment->fresh()));
@@ -63,7 +63,11 @@ class LogisticsOperationsTest extends TestCase
         $sellerThread = LogisticsThread::where('user_id', $shipment->sellerOrder->seller->user_id)->firstOrFail();
         $this->assertStringContainsString('Pickup confirmed for order ZAY-ZX-0002', $sellerThread->messages()->value('body'));
 
-        $this->patch(route('logistics.parcels.advance', $shipment), ['status' => 'picked_up'])->assertSessionHasNoErrors();
+        // Collecting needs the waybill in hand: its code, scanned or typed.
+        $this->patch(route('logistics.parcels.advance', $shipment), ['status' => 'picked_up'])->assertSessionHasErrors('tracking');
+        $this->patch(route('logistics.parcels.advance', $shipment), ['status' => 'picked_up', 'tracking' => 'ZX-9999'])->assertSessionHasErrors('tracking');
+        $this->assertSame('confirmed', ShipmentWorkflow::stageOf($shipment->fresh()));
+        $this->patch(route('logistics.parcels.advance', $shipment), ['status' => 'picked_up', 'tracking' => ' zx-0002 '])->assertSessionHasNoErrors();
         $this->assertSame('picked_up', $shipment->fresh()->status);
         $this->assertSame('shipped', $shipment->sellerOrder->fresh()->status);
         $this->get(route('logistics.incoming'))->assertSee('ZX-0002')->assertSee('Receive at hub');
@@ -208,6 +212,30 @@ class LogisticsOperationsTest extends TestCase
         $this->actingAs($this->owner)->get(route('logistics.messages', ['thread' => $riderThread->id]))->assertSee('On my way to the hub.');
         // Partners can only start conversations with sellers and their own riders.
         $this->actingAs($this->owner)->post(route('logistics.messages.start'), ['participant_id' => $otherOwner->id])->assertStatus(422);
+    }
+
+    public function test_partner_prints_waybills_only_for_its_own_parcels(): void
+    {
+        $mine = $this->parcel('ZX-WAYBILL', 'ready');
+        [, $otherProvider] = $this->partner('Other Couriers');
+        $theirs = $this->parcel('ZX-THEIRS', 'ready', $otherProvider);
+        $this->actingAs($this->owner);
+
+        $this->get(route('logistics.scan', ['tracking' => 'ZX-WAYBILL']))->assertOk()->assertSee(route('logistics.parcels.waybill', $mine));
+        $response = $this->get(route('logistics.parcels.waybill', $mine))->assertOk()->assertHeader('Content-Type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF', $response->getContent());
+        $this->get(route('logistics.parcels.waybill', $theirs))->assertForbidden();
+
+        $waybill = \App\Support\Waybill::for($mine);
+        $this->assertSame('ZX-WAYBILL', $waybill['tracking']);
+        $this->assertSame('Express Delivery', $waybill['carrier']);
+        $this->assertSame('Juan Dela Cruz', $waybill['recipient']['name']);
+        $this->assertSame('Pasig City, Metro Manila', $waybill['recipient']['address']);
+        $this->assertSame('Northline Goods ZX-WAYBILL', $waybill['sender']['name']);
+        $this->assertSame(100.0, $waybill['cod']);
+
+        $mine->sellerOrder->update(['status' => 'cancelled']);
+        $this->get(route('logistics.parcels.waybill', $mine))->assertNotFound();
     }
 
     private function partner(string $name): array

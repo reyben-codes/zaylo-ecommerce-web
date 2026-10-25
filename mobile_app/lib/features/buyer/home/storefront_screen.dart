@@ -13,7 +13,6 @@ import 'package:zaylo_mobile/features/buyer/catalog/search_field.dart';
 import 'package:zaylo_mobile/features/buyer/home/widgets/home_header.dart';
 import 'package:zaylo_mobile/features/buyer/home/widgets/home_menu_drawer.dart';
 import 'package:zaylo_mobile/features/buyer/home/widgets/home_sections.dart';
-import 'package:zaylo_mobile/features/buyer/messages/seller_messages_button.dart';
 import 'package:zaylo_mobile/features/buyer/orders/orders_screen.dart';
 import 'package:zaylo_mobile/models/buyer/catalog_models.dart';
 import 'package:zaylo_mobile/navigation/floating_nav_bar.dart';
@@ -36,7 +35,6 @@ class _StorefrontScreenState extends State<StorefrontScreen> {
   Future<StorefrontHome>? _home;
   final _searchController = TextEditingController();
   final _topBarVisibility = NavBarVisibility();
-  final _messagesVisibility = ScrollIdleVisibility();
   int? _loadedForUser = -1;
 
   @override
@@ -54,7 +52,6 @@ class _StorefrontScreenState extends State<StorefrontScreen> {
   void dispose() {
     _searchController.dispose();
     _topBarVisibility.dispose();
-    _messagesVisibility.dispose();
     super.dispose();
   }
 
@@ -119,10 +116,7 @@ class _StorefrontScreenState extends State<StorefrontScreen> {
                   // bubble up to the app shell.
                   return Stack(children: [
                     NotificationListener<ScrollNotification>(
-                      onNotification: (notification) {
-                        _messagesVisibility.handleScroll(notification);
-                        return _topBarVisibility.handleScroll(notification);
-                      },
+                      onNotification: _topBarVisibility.handleScroll,
                       child: RefreshIndicator(
                         color: ZayloColors.ink,
                         edgeOffset: HomeTopBar.height,
@@ -200,13 +194,6 @@ class _StorefrontScreenState extends State<StorefrontScreen> {
                         child: const HomeTopBar(),
                       ),
                     ),
-                    // Messages with sellers, kept above the floating nav bar.
-                    if (state.signedIn)
-                      Positioned(
-                        right: ZayloSpace.page,
-                        bottom: MediaQuery.paddingOf(context).bottom + 16,
-                        child: SellerMessagesButton(visibility: _messagesVisibility),
-                      ),
                   ]);
                 },
               ),

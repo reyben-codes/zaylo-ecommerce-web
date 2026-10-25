@@ -6,27 +6,67 @@
 .chat-widget svg { display: block; width: 20px; height: 20px; pointer-events: none; }
 .chat-widget button:focus-visible, .chat-widget a:focus-visible { outline: 3px solid var(--c-b18c6b); outline-offset: 3px; }
 .chat-widget-bubble { position: fixed; right: 24px; bottom: max(24px, env(safe-area-inset-bottom)); display: grid; place-items: center; width: 60px; height: 60px; padding: 0; border: 3px solid var(--c-fffdfb); border-radius: 50%; background: var(--c-2b241f); color: var(--c-ffffff); box-shadow: 0 5px 22px #241a1638; pointer-events: auto; touch-action: none; user-select: none; z-index: 3; }
+.chat-widget-bubble { transition: opacity .3s ease-out, transform .3s cubic-bezier(.22, 1, .36, 1), visibility 0s linear 0s, background-color .18s ease; }
+.chat-widget-bubble.is-tucked { opacity: 0; transform: scale(.55); visibility: hidden; pointer-events: none; transition: opacity .26s ease-out, transform .3s cubic-bezier(.22, 1, .36, 1), visibility 0s linear .3s, background-color .18s ease; }
 .chat-widget-bubble svg { width: 28px; height: 28px; }
+/* Minimized after opening a conversation: that person's photo or initials, with a small chat badge. */
+.chat-widget-face { position: absolute; inset: 0; display: grid; place-items: center; overflow: hidden; border-radius: 50%; background: linear-gradient(135deg, var(--c-3a2f28), var(--c-785840)); color: var(--c-ffffff); font: 600 1.15rem/1 'Playfair Display', serif; letter-spacing: .02em; animation: chat-face-in .3s ease-out; }
+/* The photo is only a picture: pointer presses go to the bubble, which does the dragging. */
+.chat-widget-face img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+.chat-widget-face-badge { position: absolute; right: -5px; bottom: -5px; display: grid; place-items: center; width: 24px; height: 24px; border: 2px solid var(--c-fffdfb); border-radius: 50%; background: var(--c-9a755e); color: var(--c-ffffff); box-shadow: 0 2px 6px #241a1640; }
+.chat-widget-bubble .chat-widget-face-badge svg { width: 13px; height: 13px; }
+.chat-widget-bubble.has-partner:hover .chat-widget-face { filter: brightness(1.08); }
+@keyframes chat-face-in { from { opacity: 0; transform: scale(.85); } to { opacity: 1; transform: none; } }
+/* Someone is typing to you while the chat is closed: a little speech bubble of dots beside the chat head. */
+.chat-widget-typing { position: absolute; top: 50%; right: calc(100% + 10px); display: flex; align-items: center; gap: 4px; padding: 10px 13px; border: 1px solid var(--c-e7ded5); border-radius: 16px 16px 4px 16px; background: var(--c-fffdfb); box-shadow: 0 4px 16px #241a1633; transform: translateY(-50%); pointer-events: none; animation: chat-typing-in .25s ease-out; }
+.chat-widget-typing.is-right { right: auto; left: calc(100% + 10px); border-radius: 16px 16px 16px 4px; }
+.chat-widget-typing i { display: block; width: 7px; height: 7px; border-radius: 50%; background: var(--c-785840); animation: chat-typing-dot 1.2s ease-in-out infinite; }
+.chat-widget-typing i:nth-child(2) { animation-delay: .15s; }
+.chat-widget-typing i:nth-child(3) { animation-delay: .3s; }
+.chat-widget-bubble.is-dragging .chat-widget-typing, .chat-widget-bubble.is-tucked .chat-widget-typing { display: none; }
+@keyframes chat-typing-dot { 0%, 60%, 100% { opacity: .4; transform: none; } 30% { opacity: 1; transform: translateY(-4px); } }
+@keyframes chat-typing-in { from { opacity: 0; transform: translateY(-50%) scale(.8); } to { opacity: 1; transform: translateY(-50%); } }
 .chat-widget-bubble:hover { background: var(--c-785840); }
 .chat-widget-bubble.is-dragging { cursor: grabbing; box-shadow: 0 8px 28px #241a1655; }
 .chat-widget-bubble.is-over-drop { background: var(--c-963e38); }
-.chat-widget-panel { position: fixed; right: 24px; bottom: max(100px, calc(env(safe-area-inset-bottom) + 84px)); display: flex; flex-direction: column; width: min(400px, calc(100vw - 24px)); height: min(580px, calc(100dvh - 120px)); min-height: 0; overflow: hidden; border: 1px solid var(--c-e7ded5); border-radius: 18px; background: var(--c-fffdfb); box-shadow: 0 16px 64px #241a1633; pointer-events: auto; z-index: 2; }
+.chat-widget-panel { position: fixed; right: 24px; bottom: max(24px, env(safe-area-inset-bottom)); display: flex; flex-direction: column; width: min(400px, calc(100vw - 24px)); height: min(600px, calc(100dvh - 48px)); transform-origin: bottom right; min-height: 0; overflow: hidden; border: 1px solid var(--c-e7ded5); border-radius: 18px; background: var(--c-fffdfb); box-shadow: 0 16px 64px #241a1633; pointer-events: auto; z-index: 2; }
 .chat-widget-toolbar { display: flex; flex-shrink: 0; align-items: center; gap: 3px; margin: 0; padding: 12px; background: var(--c-2b241f); color: var(--c-ffffff); }
 .chat-widget-toolbar > div { flex: 1; min-width: 0; }
 .chat-widget-toolbar strong { display: block; font-size: .95rem; font-weight: 600; }
 .chat-widget-toolbar span { display: block; font-size: .65rem; color: var(--c-dbcab9); margin-top: 3px; }
 .chat-widget-toolbar button, .chat-widget-toolbar a { display: grid; place-items: center; flex: 0 0 34px; width: 34px; height: 36px; border: 0; border-radius: 8px; background: transparent; color: var(--c-ffffff); text-decoration: none; }
-.chat-widget-toolbar button:hover, .chat-widget-toolbar a:hover { background: color-mix(in srgb, var(--c-ffffff) 10.2%, transparent); }
+.chat-widget-toolbar button:hover, .chat-widget-toolbar a:hover { background: #ffffff1a; }
 .chat-widget-panel iframe { flex: 1; width: 100%; min-height: 0; border: 0; background: var(--c-fffdfb); }
-.chat-widget-drop { position: fixed; inset: auto 0 0; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 30px 0 max(20px, env(safe-area-inset-bottom)); background: linear-gradient(transparent, color-mix(in srgb, var(--c-211811) 60%, transparent)); z-index: 1; }
+/* Moving and resizing: drag the header; the grip sits on the corner away from the one the panel is snapped to. */
+.chat-widget-toolbar[data-chat-drag-handle] { cursor: grab; touch-action: none; user-select: none; }
+.chat-widget-panel.is-moving .chat-widget-toolbar { cursor: grabbing; }
+.chat-widget-panel.is-moving { box-shadow: 0 22px 70px #241a1647; }
+.chat-widget.is-adjusting iframe { pointer-events: none; }
+.chat-widget-toolbar .chat-widget-move { flex: 0 0 22px; width: 22px; cursor: grab; color: var(--c-dbcab9); }
+.chat-widget-toolbar .chat-widget-move svg { width: 16px; height: 16px; }
+.chat-widget-resize { position: absolute; z-index: 1; width: 18px; height: 18px; padding: 0; border: 0; background: transparent; touch-action: none; }
+.chat-widget-resize::after { content: ''; position: absolute; inset: 4px; border: solid var(--c-b49a85); border-width: 0 2px 2px 0; border-radius: 0 0 3px 0; opacity: .75; transition: opacity .15s, border-color .15s; }
+.chat-widget-resize:hover::after, .chat-widget-resize:focus-visible::after, .chat-widget-panel.is-resizing .chat-widget-resize::after { border-color: var(--c-785840); opacity: 1; }
+.chat-widget-panel[data-corner="br"] .chat-widget-resize, .chat-widget-panel:not([data-corner]) .chat-widget-resize { top: 0; left: 0; cursor: nwse-resize; transform: rotate(180deg); }
+.chat-widget-panel[data-corner="bl"] .chat-widget-resize { top: 0; right: 0; cursor: nesw-resize; transform: rotate(270deg); }
+.chat-widget-panel[data-corner="tr"] .chat-widget-resize { bottom: 0; left: 0; cursor: nesw-resize; transform: rotate(90deg); }
+.chat-widget-panel[data-corner="tl"] .chat-widget-resize { right: 0; bottom: 0; cursor: nwse-resize; }
+/* Keep the header's buttons clear of a resize grip in its corner. */
+.chat-widget-panel[data-corner="br"] .chat-widget-toolbar, .chat-widget-panel:not([data-corner]) .chat-widget-toolbar { padding-left: 20px; }
+.chat-widget-panel[data-corner="bl"] .chat-widget-toolbar { padding-right: 20px; }
+/* The top grips sit over the dark header, so they use a lighter line. */
+.chat-widget-panel[data-corner="br"] .chat-widget-resize::after, .chat-widget-panel[data-corner="bl"] .chat-widget-resize::after, .chat-widget-panel:not([data-corner]) .chat-widget-resize::after { border-color: var(--c-dbcab9); }
+.chat-widget-drop { position: fixed; inset: auto 0 0; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 30px 0 max(20px, env(safe-area-inset-bottom)); background: linear-gradient(transparent, #21181199); z-index: 1; }
 .chat-widget-drop-label { padding: 6px 12px; border-radius: 20px; background: var(--c-2b241f); color: var(--c-ffffff); font-size: .75rem; }
-.chat-widget-drop-target { display: grid; place-items: center; width: 84px; height: 84px; border: 2px solid color-mix(in srgb, var(--c-ffffff) 70.2%, transparent); border-radius: 50%; background: color-mix(in srgb, var(--c-30231f) 80%, transparent); color: var(--c-ffffff); font-size: 28px; transition: background .15s, transform .15s; }
+.chat-widget-drop-target { display: grid; place-items: center; width: 84px; height: 84px; border: 2px solid #ffffffb3; border-radius: 50%; background: #30231fcc; color: var(--c-ffffff); font-size: 28px; transition: background .15s, transform .15s; }
 .chat-widget-drop.is-active .chat-widget-drop-target { background: var(--c-963e38); transform: scale(1.12); }
 .chat-widget-drop-target svg { width: 32px; height: 32px; }
 .chat-widget-notice { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); width: max-content; max-width: calc(100vw - 32px); padding: 12px 18px; margin: 0; border-radius: 10px; background: var(--c-2b241f); color: var(--c-ffffff); box-shadow: 0 4px 18px #241a1622; text-align: center; }
 .chat-widget-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media (max-width: 600px) {
-    .chat-widget-panel { right: 12px; bottom: max(88px, calc(env(safe-area-inset-bottom) + 72px)); height: min(580px, calc(100dvh - 104px)); }
+    .chat-widget-panel { right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); height: min(600px, calc(100dvh - 24px)); }
     .chat-widget-bubble { right: 16px; bottom: max(16px, env(safe-area-inset-bottom)); }
+    .chat-widget-toolbar[data-chat-drag-handle] { cursor: default; }
+    .chat-widget-move, .chat-widget-resize { display: none !important; }
 }
-@media (prefers-reduced-motion: reduce) { .chat-widget-drop-target { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .chat-widget-drop-target, .chat-widget-bubble, .chat-widget-bubble.is-tucked { transition: none; } .chat-widget-face, .chat-widget-typing, .chat-widget-typing i { animation: none; } .chat-widget-typing i { opacity: .8; } }

@@ -42,6 +42,12 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        // Mobile app: "Authorization: Bearer {token}" (registered in AppServiceProvider, see App\Models\MobileToken).
+        'mobile' => [
+            'driver' => 'mobile-token',
+            'provider' => 'users',
+        ],
     ],
 
     /*

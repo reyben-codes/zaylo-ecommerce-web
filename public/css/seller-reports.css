@@ -138,3 +138,43 @@
         transition: none;
     }
 }
+
+/* On paper the chart fits the page width instead of scrolling; only the first and last dates are labelled
+   (the PDF report lists every day). Bars keep their colour even when background printing is off. */
+@media print {
+    .report-chart {
+        gap: 1px;
+        height: 200px;
+        overflow: visible;
+    }
+
+    .report-chart__column {
+        flex: 1 1 0;
+        min-width: 0;
+        max-width: none;
+    }
+
+    .report-chart__bar {
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+    }
+
+    .report-chart__label {
+        visibility: hidden;
+    }
+
+    .report-chart__column:first-child .report-chart__label,
+    .report-chart__column:last-child .report-chart__label {
+        overflow: visible;
+        visibility: visible;
+    }
+
+    .report-chart__column:last-child .report-chart__label {
+        direction: rtl;
+    }
+
+    .report-categories__track span {
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+    }
+}

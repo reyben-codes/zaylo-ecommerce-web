@@ -9,6 +9,9 @@
         @case('close')
             <path d="m6 6 12 12M18 6 6 18" />
             @break
+        @case('grip')
+            <path d="M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01" stroke-width="3" />
+            @break
         @default
             <path d="M7 4h10a4 4 0 0 1 4 4v7a4 4 0 0 1-4 4H8l-5 3V8a4 4 0 0 1 4-4Z" />
             <path d="M8 11h.01M12 11h.01M16 11h.01" stroke-width="3" />

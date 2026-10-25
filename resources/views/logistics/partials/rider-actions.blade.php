@@ -28,7 +28,9 @@
                 <i class="fas {{ $action === 'reject' ? 'fa-xmark' : 'fa-ban' }}" aria-hidden="true"></i> {{ $action === 'reject' ? 'Reject' : 'Suspend' }}
             </summary>
             <div data-disclosure-content>
-                <form method="POST" action="{{ route('logistics.riders.update', $rider) }}" class="review-reason__form">
+                <form method="POST" action="{{ route('logistics.riders.update', $rider) }}" class="review-reason__form"
+                      data-confirm="{{ $action === 'reject' ? 'Reject '.$rider->user?->name.'\'s application?' : 'Suspend '.$rider->user?->name.'? They will not get new parcels until reinstated.' }}"
+                      data-confirm-title="{{ $action === 'reject' ? 'Reject rider?' : 'Suspend rider?' }}" data-confirm-button="{{ ucfirst($action) }}" data-confirm-tone="danger">
                     @csrf
                     @method('PATCH')
                     <input type="hidden" name="action" value="{{ $action }}">

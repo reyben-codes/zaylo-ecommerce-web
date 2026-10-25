@@ -115,7 +115,7 @@ class MobileComplaintController extends Controller
     private function detail(Dispute $dispute, User $viewer): array
     {
         $dispute->loadMissing(['order', 'messages.sender']);
-        $routes = $viewer->hasRole('rider') ? 'mobile.rider.complaints.' : 'mobile.complaints.';
+        $routes = $viewer->hasRole('rider', 'courier') ? 'mobile.rider.complaints.' : 'mobile.complaints.';
 
         return $this->summary($dispute) + [
             'details' => $dispute->reason,

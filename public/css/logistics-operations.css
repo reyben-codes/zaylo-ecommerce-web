@@ -101,7 +101,7 @@
 .parcel-inline-form input:focus {
     border-color: var(--zaylo-accent);
     outline: 0;
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-9a755e) 14%, transparent);
+    box-shadow: 0 0 0 3px rgba(154, 117, 94, .14);
 }
 
 .parcel-decline .review-reason__form {
@@ -139,7 +139,7 @@
 
 .parcel-bin.is-active {
     border-color: var(--zaylo-accent);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-9a755e) 12%, transparent);
+    box-shadow: 0 0 0 3px rgba(154, 117, 94, .12);
 }
 
 .parcel-bin__head {
@@ -235,7 +235,7 @@
 .parcel-scan__row input:focus {
     border-color: var(--zaylo-accent);
     outline: 0;
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-9a755e) 14%, transparent);
+    box-shadow: 0 0 0 3px rgba(154, 117, 94, .14);
 }
 
 .parcel-result {
@@ -386,5 +386,86 @@
 
     .parcel-inline-form {
         flex-wrap: wrap;
+    }
+}
+
+/* "Mark picked up" needs the waybill code (partials/parcel-actions). */
+.parcel-actions form:has(.parcel-code-input) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+
+.parcel-code-input {
+    width: 160px;
+    min-height: 34px;
+    padding: 6px 10px;
+    border: 1px solid var(--c-dcd2c8);
+    border-radius: 7px;
+    background: var(--c-ffffff);
+    color: var(--c-1a1714);
+    font: inherit;
+    font-size: .76rem;
+    text-transform: uppercase;
+}
+
+.parcel-code-input:focus {
+    border-color: var(--c-9a755e);
+    outline: 0;
+    box-shadow: 0 0 0 3px rgba(154, 117, 94, .14);
+}
+
+.parcel-actions .seller-field__error {
+    flex-basis: 100%;
+    margin: 0;
+}
+
+/* Camera scanner on the Scan parcel page (js/parcel-scan.js). */
+.camera-scan {
+    width: min(420px, calc(100vw - 32px));
+    padding: 0;
+    border: 0;
+    border-radius: 14px;
+    background: var(--c-ffffff);
+    color: var(--c-1a1714);
+}
+
+.camera-scan::backdrop {
+    background: rgba(20, 17, 15, .7);
+}
+
+.camera-scan__panel {
+    display: grid;
+    gap: 12px;
+    padding: 18px;
+}
+
+.camera-scan__title {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.camera-scan__video {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    border-radius: 10px;
+    background: #000;
+    object-fit: cover;
+}
+
+.camera-scan__status {
+    margin: 0;
+    color: var(--c-6b5f54);
+    font-size: .8rem;
+}
+
+@media (max-width: 640px) {
+    .parcel-scan__row {
+        flex-wrap: wrap;
+    }
+
+    .parcel-scan__row input {
+        flex-basis: 100%;
     }
 }

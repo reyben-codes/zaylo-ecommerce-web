@@ -8,6 +8,7 @@
 
 @section('content')
     @php $largest = max(1, $byStage->max('total')); @endphp
+    @include('partials.print-header', ['title' => 'Logistics report'])
     <section class="seller-page-heading">
         <div>
             <p class="seller-eyebrow">Sorting center</p>
@@ -15,6 +16,7 @@
             <p>Parcels handled {{ $from || $to ? 'between the dates below' : 'so far' }}, counted by the day they entered the system.</p>
         </div>
         <div class="seller-page-heading__actions">
+            <button type="button" class="seller-button seller-button--secondary" data-print hidden><i class="fas fa-print" aria-hidden="true"></i> Print</button>
             <a href="{{ route('logistics.reports.export', array_filter(['from' => $from, 'to' => $to])) }}" class="seller-button seller-button--secondary"><i class="fas fa-file-pdf" aria-hidden="true"></i> Download PDF</a>
         </div>
     </section>

@@ -54,6 +54,16 @@
                 </form>
             </section>
 
+            <section class="seller-panel" aria-labelledby="photo-heading">
+                <header class="seller-panel__header">
+                    <div>
+                        <h2 id="photo-heading">Profile photo</h2>
+                        <p>Shown on your account and to buyers on your shop page.</p>
+                    </div>
+                </header>
+                <div class="seller-panel__body">@include('partials.profile-photo', ['user' => $user])</div>
+            </section>
+
             <section class="seller-panel" aria-labelledby="profile-heading">
                 <header class="seller-panel__header">
                     <div>
@@ -163,6 +173,20 @@
                     <div><dt>Sign-in</dt><dd>{{ $user->google_id ? ($hasPassword ? 'Google and email' : 'Google') : 'Email and password' }}</dd></div>
                     <div><dt>Seller since</dt><dd>{{ $user->created_at?->timezone('Asia/Manila')->format('F j, Y') ?? '—' }}</dd></div>
                 </dl>
+            </section>
+
+            <section class="seller-panel" aria-labelledby="policies-heading">
+                <header class="seller-panel__header">
+                    <h2 id="policies-heading">Policies</h2>
+                    <p>The rules for selling on ZAYLO and how buyer information must be handled.</p>
+                </header>
+                <ul class="seller-panel__body seller-policy-links">
+                    @foreach(['seller', 'prohibited', 'returns', 'terms', 'privacy'] as $slug)
+                        @if($policy = \App\Models\PlatformPolicy::published($slug))
+                            <li><a href="{{ route('policies.show', $slug) }}" target="_blank" rel="noopener"><span>{{ $policy->title }}</span><i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i></a></li>
+                        @endif
+                    @endforeach
+                </ul>
             </section>
         </div>
     </div>

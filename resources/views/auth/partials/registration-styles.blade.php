@@ -11,13 +11,13 @@
     [hidden] { display: none !important; }
     body { font-family: 'Inter', sans-serif; color: var(--ink); background: var(--c-ffffff); }
     .auth-container { display: flex; min-height: 100vh; min-height: 100svh; }
-    .auth-image { flex: 0 0 50%; position: sticky; top: 0; align-self: flex-start; height: 100vh; min-height: 720px; background: #39291d url('{{ asset('images/login-marketplace.png') }}') center/cover no-repeat; border-radius: 0 24px 24px 0; overflow: hidden; }
-    .auth-image::before { content: ''; position: absolute; inset: 0; background: linear-gradient(to bottom, transparent 60%, color-mix(in srgb, #1a1714 70%, transparent)); }
+    .auth-image { flex: 0 0 50%; position: sticky; top: 0; align-self: flex-start; height: 100vh; min-height: 720px; background: var(--c-39291d) url('{{ asset('images/login-marketplace.png') }}') center/cover no-repeat; border-radius: 0 24px 24px 0; overflow: hidden; }
+    .auth-image::before { content: ''; position: absolute; inset: 0; background: linear-gradient(to bottom, transparent 60%, rgba(26,23,20,.7)); }
     .auth-image-content { position: absolute; inset: 0; padding: 40px; display: flex; flex-direction: column; justify-content: space-between; }
     .auth-brand { display: flex; align-items: center; gap: 16px; }
-    .auth-brand::before { content: ''; width: 40px; height: 2px; background: color-mix(in srgb, #ffffff 60%, transparent); }
+    .auth-brand::before { content: ''; width: 40px; height: 2px; background: #fff9; }
     .auth-brand img { height: 36px; width: auto; display: block; }
-    .auth-image-text { color: #ffffff; font-family: 'Playfair Display', serif; font-size: 1.6rem; line-height: 1.4; }
+    .auth-image-text { color: var(--c-ffffff); font-family: 'Playfair Display', serif; font-size: 1.6rem; line-height: 1.4; }
     .auth-image-text p:last-child { font-style: italic; opacity: .8; }
     .auth-form { flex: 1; min-width: 0; padding: 100px 64px 48px; position: relative; display: flex; align-items: center; }
     .auth-form-content { width: 100%; max-width: 520px; margin: auto; }
@@ -136,7 +136,7 @@
     @media (max-width: 820px) {
         .auth-container { flex-direction: column; }
         .auth-image { flex: none; position: relative; align-self: stretch; height: 260px; min-height: 0; border-radius: 0 0 24px 24px; background-size: 55% auto; background-position: right 65%; }
-        .auth-image::before { background: linear-gradient(90deg, #39291d 35%, transparent 85%); }
+        .auth-image::before { background: linear-gradient(90deg, var(--c-39291d) 35%, transparent 85%); }
         .auth-image-content { padding: 28px; }
         .auth-image-text { max-width: 55%; font-size: 1.4rem; }
         .auth-form { padding: 84px 28px 40px; }

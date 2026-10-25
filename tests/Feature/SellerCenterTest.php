@@ -38,10 +38,11 @@ class SellerCenterTest extends TestCase
             ->assertSee($buyer->name)
             ->assertSee('Confirm order');
 
-        foreach (['confirmed', 'processing', 'ready_for_pickup', 'picked_up', 'in_transit', 'out_for_delivery', 'completed'] as $status) {
+        foreach (['confirmed', 'processing', 'ready_for_pickup'] as $status) {
             $this->patch(route('seller.orders.status', $order), ['status' => $status])->assertSessionHasNoErrors();
         }
-        $this->assertSame('completed', $order->fresh()->status);
+        // The rider delivers it from the mobile app.
+        $order->update(['status' => 'completed', 'completed_at' => now()]);
 
         $this->get(route('seller.dashboard'))
             ->assertOk()
@@ -121,7 +122,7 @@ class SellerCenterTest extends TestCase
             ->assertSee(route('seller.products.edit', $product));
         $this->get(route('seller.products.create'))->assertOk()->assertSee('Create product');
         $this->get(route('seller.products.edit', $product))->assertOk()
-            ->assertSee('value="Leather Heel"', false)->assertSee('Manage sale')->assertSee('Delete product');
+            ->assertSee('value="Leather Heel"', false)->assertSee('Manage sale')->assertSee('Archive product');
         $this->get(route('seller.products.edit', $foreign))->assertForbidden();
 
         $this->post(route('seller.products.store'), [
@@ -141,7 +142,10 @@ class SellerCenterTest extends TestCase
         $this->assertSame('Soft Italian suede.', $created->fresh()->description);
         $this->assertSame([7, 3], $created->variants()->orderBy('id')->pluck('stock')->all());
 
-        $this->delete(route('seller.products.destroy', $created))->assertRedirect(route('seller.products'));
+        // Products are archived first; one nobody ordered can then be deleted for good.
+        $this->patch(route('seller.products.archive', $created))->assertRedirect(route('seller.products'));
+        $this->delete(route('seller.products.destroy', $created))->assertRedirect(route('seller.products', ['view' => 'archived']));
+        $this->assertModelMissing($created);
     }
 
     public function test_seller_can_update_store_profile_and_password(): void
@@ -149,7 +153,8 @@ class SellerCenterTest extends TestCase
         [$seller] = $this->sellerWithProduct();
         $seller->forceFill(['password' => 'Original#Pass1'])->save();
 
-        $this->actingAs($seller)->get(route('seller.account'))->assertOk()->assertSee('Happy Heels')->assertSee(route('addresses.index'));
+        $this->actingAs($seller)->get(route('seller.account'))->assertOk()->assertSee('Happy Heels')->assertSee(route('addresses.index'))
+            ->assertSee(route('policies.show', 'seller'));
 
         $this->patch(route('seller.account.store'), ['store_name' => 'Happy Heels Manila', 'store_description' => 'Handmade heels.'])
             ->assertSessionHasNoErrors();

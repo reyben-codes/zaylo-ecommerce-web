@@ -5,12 +5,13 @@ namespace Tests\Feature;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
-use Laravel\Sanctum\Sanctum;
 use Tests\Support\LegacyOrderTables;
+use Tests\Support\SignsInMobile;
 use Tests\TestCase;
 
 class DeliveryChatTest extends TestCase
 {
+    use SignsInMobile;
     use LegacyOrderTables;
     use RefreshDatabase;
 
@@ -23,7 +24,7 @@ class DeliveryChatTest extends TestCase
         parent::setUp();
         $this->useLegacyOrderTables();
         $this->buyer = User::factory()->create(['role' => 'buyer', 'status' => 'active']);
-        $this->rider = User::factory()->create(['role' => 'rider', 'status' => 'active', 'name' => 'Jun Reyes']);
+        $this->rider = $this->approvedRider(['name' => 'Jun Reyes']);
     }
 
     /** Returns [orderId, shipmentId]. */
@@ -44,12 +45,12 @@ class DeliveryChatTest extends TestCase
 
     private function asRider(): void
     {
-        Sanctum::actingAs($this->rider);
+        $this->signInMobile($this->rider);
     }
 
     private function asBuyer(?User $buyer = null): void
     {
-        Sanctum::actingAs($buyer ?? $this->buyer);
+        $this->signInMobile($buyer ?? $this->buyer);
     }
 
     public function test_rider_and_buyer_exchange_messages_and_unread_counts_clear_when_read(): void
@@ -119,7 +120,7 @@ class DeliveryChatTest extends TestCase
     {
         [$orderId, $shipmentId] = $this->delivery();
 
-        Sanctum::actingAs(User::factory()->create(['role' => 'rider', 'status' => 'active']));
+        $this->signInMobile($this->approvedRider());
         $this->getJson("/api/mobile/rider/deliveries/$shipmentId/chat")->assertNotFound();
         $this->postJson("/api/mobile/rider/deliveries/$shipmentId/chat", ['body' => 'Hello'])->assertNotFound();
 

@@ -101,3 +101,16 @@ class SellerChatBatch {
         typing: json['typing'] as bool? ?? false,
       );
 }
+
+/// Someone typing to the buyer right now (GET /mobile/chat/typing), for the chat head.
+class ChatTyping {
+  const ChatTyping({required this.conversationId, required this.name});
+
+  final int conversationId;
+  final String name;
+
+  factory ChatTyping.fromJson(Map<String, dynamic> json) => ChatTyping(
+        conversationId: (json['conversation_id'] as num).toInt(),
+        name: (json['name'] as String?)?.trim().isNotEmpty == true ? json['name'] as String : 'Someone',
+      );
+}

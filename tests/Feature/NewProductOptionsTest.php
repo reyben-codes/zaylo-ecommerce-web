@@ -36,6 +36,8 @@ class NewProductOptionsTest extends TestCase
         $this->assertSame([4, 6, 3], $variants->pluck('stock')->all());
         $this->assertSame(13, (int) $tee->variants()->sum('stock'));
 
+        $this->assertTrue($tee->is_pending_review, 'buyers wait for an admin to approve it');
+        $tee->forceFill(['review_status' => Product::REVIEW_APPROVED])->save(); // New listings wait for an admin.
         auth()->logout();
         $this->get(route('products.show', $tee))->assertOk()->assertSee('Olive')->assertSee('Black');
     }

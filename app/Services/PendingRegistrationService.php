@@ -61,7 +61,7 @@ class PendingRegistrationService
     /**
      * Keep validated sign-up details (password hashed) and park any uploads in a temporary folder.
      */
-    public function begin(Request $request, array $validated, ?array $pickupNames): PendingRegistration
+    public function begin(Request $request, array $validated, ?array $pickupNames, array $files = []): PendingRegistration
     {
         $this->prune();
         // Starting over with the same email replaces the earlier unfinished sign-up.
@@ -70,8 +70,10 @@ class PendingRegistrationService
         $token = Str::random(64);
         $documents = [];
         foreach (self::documentFields() as $field) {
-            if ($request->hasFile($field) && array_key_exists($field, $validated)) {
-                $documents[$field] = $request->file($field)->store("pending-registrations/{$token}", 'local');
+            // $files lets a caller pass uploads sent under other field names (the mobile app's).
+            $upload = $files[$field] ?? ($request->hasFile($field) ? $request->file($field) : null);
+            if ($upload && array_key_exists($field, $validated)) {
+                $documents[$field] = $upload->store("pending-registrations/{$token}", 'local');
             }
         }
 
@@ -232,7 +234,12 @@ class PendingRegistrationService
             'date_of_birth' => in_array($role, ['buyer', 'courier'], true) ? ($data['date_of_birth'] ?? null) : null,
             'status' => $role === 'buyer' ? 'active' : 'pending',
         ]);
-        $user->forceFill(['email_verified_at' => now()])->save();
+        $user->forceFill(['email_verified_at' => now()] + (! empty($data['gender']) && Schema::hasColumn('users', 'gender') ? ['gender' => $data['gender']] : []))->save();
+
+        // Rider sign-ups from the mobile app include a home address (location names already looked up).
+        if (! empty($data['home_address']) && is_array($data['home_address'])) {
+            app(AddressBook::class)->save($user, $data['home_address'] + ['recipient_name' => $user->name, 'phone' => $user->phone, 'is_default' => true]);
+        }
 
         $documents = $this->moveDocuments($pending, match ($role) {
             'seller' => "seller-applications/{$user->id}",

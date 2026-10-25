@@ -9,6 +9,7 @@ class UserProfile {
     this.hasPassword = true,
     this.googleLinked = false,
     this.identityVerified = true,
+    this.avatarUrl,
   });
 
   final int id;
@@ -22,6 +23,9 @@ class UserProfile {
 
   /// Buyers need an approved government ID before they can place orders.
   final bool identityVerified;
+
+  /// The profile photo, or null to show [initials].
+  final String? avatarUrl;
 
   String get firstName => name.split(' ').first;
 
@@ -41,6 +45,20 @@ class UserProfile {
         hasPassword: json['has_password'] as bool? ?? true,
         googleLinked: json['google_linked'] as bool? ?? false,
         identityVerified: json['identity_verified'] as bool? ?? true,
+        avatarUrl: json['avatar_url'] as String?,
+      );
+
+  UserProfile withAvatar(String? url) => UserProfile(
+        id: id,
+        name: name,
+        email: email,
+        phone: phone,
+        dateOfBirth: dateOfBirth,
+        emailVerified: emailVerified,
+        hasPassword: hasPassword,
+        googleLinked: googleLinked,
+        identityVerified: identityVerified,
+        avatarUrl: url,
       );
 }
 

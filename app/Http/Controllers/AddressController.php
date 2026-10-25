@@ -11,6 +11,10 @@ use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
 
 class AddressController extends Controller
 {
+    public function __construct(private readonly AddressBook $book)
+    {
+    }
+
     public function index(Request $request)
     {
         return view('addresses.index', [
@@ -57,7 +61,7 @@ class AddressController extends Controller
         } catch (ServiceUnavailableHttpException $exception) {
             return back()->withInput()->withErrors(['region_code' => $exception->getMessage()]);
         }
-        $saved = app(AddressBook::class)->save($request->user(), $data, $address);
+        $saved = $this->book->save($request->user(), $data, $address);
 
         if ($request->input('return_to') === 'checkout' && $request->user()->role === 'buyer') {
             return redirect()->route('buyer.checkout.show')->with('selected_address_id', $saved->id)->with('status', 'Address saved.');
@@ -69,7 +73,7 @@ class AddressController extends Controller
     public function makeDefault(Request $request, Address $address)
     {
         $this->owned($request, $address);
-        app(AddressBook::class)->makeDefault($request->user(), $address);
+        $this->book->makeDefault($request->user(), $address);
 
         return back()->with('status', 'Default address updated.');
     }
@@ -77,7 +81,7 @@ class AddressController extends Controller
     public function destroy(Request $request, Address $address)
     {
         $this->owned($request, $address);
-        app(AddressBook::class)->delete($request->user(), $address);
+        $this->book->delete($request->user(), $address);
 
         return redirect()->route('addresses.index')->with('status', 'Address deleted. Existing orders are unchanged.');
     }

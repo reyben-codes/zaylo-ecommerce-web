@@ -45,9 +45,13 @@ class RiderProfile {
     this.licenseExpiresOn,
     this.licenseDaysLeft,
     this.licenseExpiringSoon = false,
+    this.avatarUrl,
   });
 
   final String name;
+
+  /// The profile photo, or null to show initials.
+  final String? avatarUrl;
   final String email;
   final String? phone;
   final String? gender;
@@ -81,6 +85,7 @@ class RiderProfile {
         licenseExpiresOn: _date(json['license_expires_on']),
         licenseDaysLeft: json['license_days_left'] as int?,
         licenseExpiringSoon: json['license_expiring_soon'] as bool? ?? false,
+        avatarUrl: json['avatar_url'] as String?,
       );
 }
 
@@ -121,7 +126,7 @@ class RiderDeliveryAction {
   final String status;
   final String label;
 
-  /// Taken by scanning the QR code on the parcel label (starting and finishing a delivery).
+  /// Taken by scanning the waybill's barcode or QR code (starting and finishing a delivery).
   final bool needsScan;
 
   factory RiderDeliveryAction.fromJson(Map<String, dynamic> json) => RiderDeliveryAction(
@@ -185,7 +190,7 @@ class RiderDelivery {
   final int id;
   final String trackingNumber;
 
-  /// The code in the parcel label's QR code.
+  /// The tracking number in the waybill's barcode and QR code.
   final String scanCode;
   final String status;
   final String statusLabel;
@@ -220,7 +225,7 @@ class RiderDelivery {
   /// Whether the main next step is taken by scanning the parcel.
   bool get nextNeedsScan => actions.isNotEmpty && actions.first.needsScan;
 
-  /// Whether [code], read from a parcel label, is this delivery's.
+  /// Whether [code], read from a waybill, is this delivery's.
   bool matchesCode(String code) {
     final scanned = code.trim().toUpperCase();
     return scanned.isNotEmpty && (scanned == scanCode.toUpperCase() || scanned == trackingNumber.toUpperCase());

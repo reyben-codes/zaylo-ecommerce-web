@@ -11,8 +11,8 @@ use App\Notifications\ParcelDeliveryUpdate;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
-use Laravel\Sanctum\Sanctum;
 use Tests\Support\LegacyOrderTables;
+use Tests\Support\SignsInMobile;
 use Tests\TestCase;
 
 /**
@@ -21,6 +21,7 @@ use Tests\TestCase;
  */
 class MobileRiderDashboardTest extends TestCase
 {
+    use SignsInMobile;
     use LegacyOrderTables;
     use RefreshDatabase;
 
@@ -70,11 +71,10 @@ class MobileRiderDashboardTest extends TestCase
         $mine = $this->parcel('assigned', $rider);
         $this->parcel('assigned', $this->rider('Other Rider'));
         $this->parcel('in_transit'); // at the hub, not assigned yet
-        Sanctum::actingAs($rider);
+        $this->signInMobile($rider);
 
         $this->getJson('/api/mobile/rider/dashboard')
             ->assertOk()
-            ->assertJsonPath('delivery_mode', 'logistics')
             ->assertJsonPath('rider.logistics_partner', 'Express Delivery')
             ->assertJsonPath('rider.vehicle_label', 'Motorcycle')
             ->assertJsonPath('rider.plate_number', 'NBC1234')
@@ -83,7 +83,7 @@ class MobileRiderDashboardTest extends TestCase
             ->assertJsonPath('stats.active', 1)
             ->assertJsonCount(0, 'available')
             ->assertJsonPath('active.0.id', $mine)
-            ->assertJsonPath('active.0.status_label', 'Rider assigned')
+            ->assertJsonPath('active.0.status_label', 'Assigned to you')
             ->assertJsonPath('active.0.recipient_name', 'Maria Santos')
             ->assertJsonPath('active.0.next_status', 'out_for_delivery')
             ->assertJsonPath('active.0.chat_open', true);
@@ -95,7 +95,7 @@ class MobileRiderDashboardTest extends TestCase
         $admin = User::factory()->create(['role' => 'admin', 'status' => 'active']);
         Announcement::create(['title' => 'Rider meeting', 'body' => 'Friday at 9.', 'audience' => 'rider', 'created_by' => $admin->id]);
         Announcement::create(['title' => 'Buyer sale', 'body' => 'Shop now.', 'audience' => 'buyer', 'created_by' => $admin->id]);
-        Sanctum::actingAs($rider);
+        $this->signInMobile($rider);
 
         $this->getJson('/api/mobile/rider/dashboard')
             ->assertJsonCount(1, 'announcements')
@@ -107,7 +107,7 @@ class MobileRiderDashboardTest extends TestCase
         $rider = $this->rider();
         $shipmentId = $this->parcel('assigned', $rider);
         $orderId = DB::table('shipments')->where('id', $shipmentId)->value('order_id');
-        Sanctum::actingAs($rider);
+        $this->signInMobile($rider);
 
         $this->patchJson("/api/mobile/rider/deliveries/$shipmentId", ['status' => 'delivered'])->assertUnprocessable();
         $this->postJson('/api/mobile/rider/deliveries/scan', ['code' => "TRK-$orderId"])
@@ -133,7 +133,7 @@ class MobileRiderDashboardTest extends TestCase
     {
         $rider = $this->rider();
         $shipmentId = $this->parcel('out_for_delivery', $rider);
-        Sanctum::actingAs($rider);
+        $this->signInMobile($rider);
 
         $this->patchJson("/api/mobile/rider/deliveries/$shipmentId", ['status' => 'failed'])
             ->assertOk()
@@ -147,7 +147,7 @@ class MobileRiderDashboardTest extends TestCase
     {
         $rider = $this->rider();
         $shipmentId = $this->parcel('assigned', $rider);
-        Sanctum::actingAs($rider);
+        $this->signInMobile($rider);
 
         $this->patchJson("/api/mobile/rider/deliveries/$shipmentId", ['status' => 'out_for_delivery'])
             ->assertUnprocessable()
@@ -164,7 +164,7 @@ class MobileRiderDashboardTest extends TestCase
         DB::table('orders')->update(['seller_id' => $seller->id]);
         $buyer = User::find(DB::table('orders')->value('user_id'));
         $code = DB::table('shipments')->where('id', $shipmentId)->value('tracking_number');
-        Sanctum::actingAs($rider);
+        $this->signInMobile($rider);
 
         $this->postJson('/api/mobile/rider/deliveries/scan', ['code' => " $code "])->assertOk();
         Notification::assertSentTo($buyer, ParcelDeliveryUpdate::class, fn ($n) => $n->step === 'out_for_delivery' && ! $n->forSeller);
@@ -186,7 +186,7 @@ class MobileRiderDashboardTest extends TestCase
     {
         $shipmentId = $this->parcel('assigned', $this->rider('Other Rider'));
         $code = DB::table('shipments')->where('id', $shipmentId)->value('tracking_number');
-        Sanctum::actingAs($this->rider());
+        $this->signInMobile($this->rider());
 
         $this->postJson('/api/mobile/rider/deliveries/scan', ['code' => $code])->assertUnprocessable()->assertJsonValidationErrors('code');
         $this->postJson('/api/mobile/rider/deliveries/scan', ['code' => 'TRK-NOPE'])->assertUnprocessable();
@@ -196,22 +196,12 @@ class MobileRiderDashboardTest extends TestCase
     public function test_riders_cannot_update_parcels_of_other_riders_or_claim_parcels(): void
     {
         $shipmentId = $this->parcel('assigned', $this->rider('Other Rider'));
-        Sanctum::actingAs($this->rider());
+        $this->signInMobile($this->rider());
 
         $this->patchJson("/api/mobile/rider/deliveries/$shipmentId", ['status' => 'out_for_delivery'])->assertForbidden();
-        $this->postJson("/api/mobile/rider/deliveries/$shipmentId/claim")->assertNotFound();
-    }
-
-    public function test_seller_managed_delivery_turns_rider_updates_off(): void
-    {
-        config(['marketplace.seller_managed_delivery' => true]);
-        $rider = $this->rider();
-        $shipmentId = $this->parcel('assigned', $rider);
-        Sanctum::actingAs($rider);
-
-        $this->getJson('/api/mobile/rider/dashboard')
-            ->assertJsonPath('delivery_mode', 'seller_managed')
-            ->assertJsonPath('active.0.next_status', null);
-        $this->patchJson("/api/mobile/rider/deliveries/$shipmentId", ['status' => 'out_for_delivery'])->assertStatus(409);
+        // The logistics partner assigns parcels; riders cannot pick them up themselves.
+        $this->postJson("/api/mobile/rider/deliveries/$shipmentId/claim")
+            ->assertStatus(409)
+            ->assertJsonPath('code', 'assigned_by_partner');
     }
 }

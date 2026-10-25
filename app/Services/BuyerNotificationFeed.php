@@ -20,7 +20,7 @@ class BuyerNotificationFeed
         $notifications = collect();
 
         $products = Product::query()
-            ->where('is_active', true)
+            ->visibleToBuyers()
             ->where('created_at', '>=', $cutoff);
 
         Product::usesLegacySchema()

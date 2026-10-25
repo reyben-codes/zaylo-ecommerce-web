@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 
+import 'package:zaylo_mobile/features/buyer/messages/chat_head_overlay.dart';
 import 'package:zaylo_mobile/navigation/buyer_shell.dart';
 import 'package:zaylo_mobile/state/app_state.dart';
 import 'package:zaylo_mobile/theme/theme_controller.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
+
+/// Lets the floating chat bubble, which sits above every screen, open Messages.
+final zayloNavigatorKey = GlobalKey<NavigatorState>();
 
 class ZayloApp extends StatefulWidget {
   ZayloApp({super.key, required this.state, ThemeController? theme}) : theme = theme ?? ThemeController();
@@ -62,6 +66,9 @@ class _ZayloAppState extends State<ZayloApp> with WidgetsBindingObserver {
           state: widget.state,
           child: MaterialApp(
             title: 'ZAYLO',
+            navigatorKey: zayloNavigatorKey,
+            // The Messenger-style chat bubble floats above every buyer screen (HideChatHead hides it).
+            builder: (context, child) => ChatHeadOverlay(navigatorKey: zayloNavigatorKey, child: child!),
             debugShowCheckedModeBanner: false,
             theme: zayloTheme(),
             // MaterialApp's own theme animation would interpolate from the

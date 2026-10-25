@@ -1,5 +1,11 @@
+@php
+    // The person on the other side of the open conversation; the chat bubble shows them while minimized.
+    $partner = $conversation ? ($sellerView ? $conversation->buyer : $conversation->seller) : null;
+    $partnerName = $partner ? ($sellerView ? $partner->name : ($partner->sellerProfile?->store_name ?? $partner->sellerProfile?->name ?? $partner->name)) : null;
+@endphp
 <section class="messaging" data-messaging
          @if($compact ?? false) data-compact="true" @endif
+         @if($partner) data-partner-name="{{ $partnerName }}" data-partner-avatar="{{ $partner->avatar_url }}" @endif
          data-inbox-url="{{ route('messages.inbox') }}"
          data-conversation="{{ $conversation?->id }}"
          @if($conversation)

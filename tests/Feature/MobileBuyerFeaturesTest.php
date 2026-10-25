@@ -16,8 +16,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Laravel\Sanctum\Sanctum;
 use Tests\Support\LegacyOrderTables;
+use Tests\Support\SignsInMobile;
 use Tests\TestCase;
 
 /**
@@ -27,6 +27,7 @@ use Tests\TestCase;
  */
 class MobileBuyerFeaturesTest extends TestCase
 {
+    use SignsInMobile;
     use LegacyOrderTables;
     use RefreshDatabase;
 
@@ -103,7 +104,7 @@ class MobileBuyerFeaturesTest extends TestCase
         $product = $this->product();
         [$orderId, $itemId] = $this->order($product);
         [$pendingOrderId, $pendingItemId] = $this->order($product, 'in_transit');
-        Sanctum::actingAs($this->buyer);
+        $this->signInMobile($this->buyer);
 
         $this->getJson("/api/mobile/orders/$orderId")->assertOk()
             ->assertJsonPath('order.items.0.can_review', true)
@@ -129,7 +130,7 @@ class MobileBuyerFeaturesTest extends TestCase
             ->assertJsonPath('reviews.0.comment', 'Sturdy hose.')
             ->assertJsonCount(1, 'reviews.0.photos');
 
-        Sanctum::actingAs(User::factory()->create(['role' => 'buyer', 'status' => 'active']));
+        $this->signInMobile(User::factory()->create(['role' => 'buyer', 'status' => 'active']));
         $this->postJson("/api/mobile/order-items/$itemId/review", ['rating' => 5])->assertForbidden();
     }
 
@@ -137,7 +138,7 @@ class MobileBuyerFeaturesTest extends TestCase
     {
         Storage::fake('local');
         $buyer = User::factory()->identityUnverified()->create(['role' => 'buyer', 'status' => 'active']);
-        Sanctum::actingAs($buyer);
+        $this->signInMobile($buyer);
 
         $this->getJson('/api/mobile/me')->assertJsonPath('user.identity_verified', false);
         $this->getJson('/api/mobile/account/identity')->assertOk()
@@ -153,7 +154,7 @@ class MobileBuyerFeaturesTest extends TestCase
             ->assertJsonPath('identity.submission.id_type_label', 'Passport');
         Storage::disk('local')->assertExists(IdentityVerification::firstOrFail()->document_path);
 
-        Sanctum::actingAs($this->buyer);
+        $this->signInMobile($this->buyer);
         $this->post('/api/mobile/account/identity', ['id_type' => 'passport', 'document' => $this->photo('id.png')], ['Accept' => 'application/json'])
             ->assertUnprocessable()->assertJsonValidationErrors('document');
     }
@@ -161,10 +162,10 @@ class MobileBuyerFeaturesTest extends TestCase
     public function test_buyer_files_a_complaint_and_the_rider_on_the_delivery_follows_it(): void
     {
         Storage::fake('local');
-        $rider = User::factory()->create(['role' => 'rider', 'status' => 'active', 'name' => 'Jun Reyes']);
+        $rider = $this->approvedRider(['name' => 'Jun Reyes']);
         [$orderId] = $this->order($this->product(), 'completed', $rider);
         [$cancelledId] = $this->order($this->product('Rake'), 'cancelled');
-        Sanctum::actingAs($this->buyer);
+        $this->signInMobile($this->buyer);
 
         $this->getJson("/api/mobile/orders/$orderId")->assertJsonPath('order.can_complain', true)->assertJsonPath('order.complaint', null);
         $this->getJson('/api/mobile/complaints/categories')->assertOk()->assertJsonPath('categories.0.id', 'not_received');
@@ -183,7 +184,7 @@ class MobileBuyerFeaturesTest extends TestCase
         $this->postJson("/api/mobile/orders/$orderId/complaint", ['category' => 'other', 'details' => str_repeat('y', 30)])->assertUnprocessable();
         $this->getJson("/api/mobile/orders/$orderId")->assertJsonPath('order.can_complain', false)->assertJsonPath('order.complaint.id', $complaintId);
 
-        Sanctum::actingAs($rider);
+        $this->signInMobile($rider);
         $this->getJson('/api/mobile/rider/complaints')->assertOk()->assertJsonPath('complaints.0.id', $complaintId);
         $this->postJson("/api/mobile/rider/complaints/$complaintId/messages", ['body' => 'I handed it over in one piece.'])
             ->assertCreated()
@@ -191,7 +192,7 @@ class MobileBuyerFeaturesTest extends TestCase
             ->assertJsonPath('complaint.messages.0.mine', true);
         $this->getJson("/api/mobile/rider/complaints/$complaintId")->assertJsonPath('complaint.evidence.0.url', route('mobile.rider.complaints.evidence', [$complaintId, 0]));
 
-        Sanctum::actingAs($this->buyer);
+        $this->signInMobile($this->buyer);
         $this->getJson("/api/mobile/complaints/$complaintId")
             ->assertJsonPath('complaint.messages.0.sender', 'Jun · Rider')
             ->assertJsonPath('complaint.messages.0.mine', false);
@@ -199,7 +200,7 @@ class MobileBuyerFeaturesTest extends TestCase
         Dispute::findOrFail($complaintId)->update(['status' => 'resolved']);
         $this->postJson("/api/mobile/complaints/$complaintId/messages", ['body' => 'Thanks'])->assertUnprocessable();
 
-        Sanctum::actingAs(User::factory()->create(['role' => 'buyer', 'status' => 'active']));
+        $this->signInMobile(User::factory()->create(['role' => 'buyer', 'status' => 'active']));
         $this->getJson("/api/mobile/complaints/$complaintId")->assertNotFound();
         $this->get(route('mobile.complaints.evidence', [$complaintId, 0]), ['Accept' => 'application/json'])->assertNotFound();
         $this->getJson('/api/mobile/complaints')->assertJsonCount(0, 'complaints');
@@ -208,7 +209,7 @@ class MobileBuyerFeaturesTest extends TestCase
     public function test_buyer_chats_with_the_seller_of_a_product(): void
     {
         $product = $this->product();
-        Sanctum::actingAs($this->buyer);
+        $this->signInMobile($this->buyer);
 
         $started = $this->postJson("/api/mobile/products/{$product->slug}/chat")->assertOk()
             ->assertJsonPath('conversation.product_name', 'Garden Hose');
@@ -229,13 +230,13 @@ class MobileBuyerFeaturesTest extends TestCase
         $this->postJson("/api/mobile/messages/$chatId/read", ['through' => $reply->id])->assertNoContent();
         $this->getJson('/api/mobile/messages/unread')->assertJsonPath('unread', 0);
 
-        Sanctum::actingAs(User::factory()->create(['role' => 'buyer', 'status' => 'active']));
+        $this->signInMobile(User::factory()->create(['role' => 'buyer', 'status' => 'active']));
         $this->getJson("/api/mobile/messages/$chatId")->assertNotFound();
     }
 
     public function test_buyer_messages_zaylo_support_in_the_website_thread(): void
     {
-        Sanctum::actingAs($this->buyer);
+        $this->signInMobile($this->buyer);
         $this->postJson('/api/mobile/support/messages', ['body' => 'Where is my refund?', 'client_id' => (string) Str::uuid()])
             ->assertCreated()->assertJsonPath('message.from_staff', false);
         $thread = SupportThread::where('user_id', $this->buyer->id)->firstOrFail();
@@ -251,8 +252,8 @@ class MobileBuyerFeaturesTest extends TestCase
     {
         $this->getJson('/api/mobile/policies')->assertOk()->assertJsonPath('policies.0.slug', 'terms');
         $terms = $this->getJson('/api/mobile/policies/terms')->assertOk()->json('policy.body');
-        $this->assertStringStartsWith('## 1. Your account', $terms);
-        $this->assertStringContainsString('- Buyers must be at least 18 years old.', $terms);
+        $this->assertStringStartsWith('These Terms of Service', $terms);
+        $this->assertStringContainsString('- You must be at least 18 years old', $terms);
         $this->getJson('/api/mobile/policies/seller')->assertNotFound();
 
         $admin = User::factory()->create(['role' => 'admin', 'status' => 'active']);
@@ -260,7 +261,7 @@ class MobileBuyerFeaturesTest extends TestCase
         Announcement::create(['title' => 'Rider meeting', 'body' => 'Friday at 9.', 'audience' => 'rider', 'created_by' => $admin->id]);
 
         $this->getJson('/api/mobile/home')->assertJsonCount(0, 'announcements');
-        Sanctum::actingAs($this->buyer);
+        $this->signInMobile($this->buyer);
         $this->getJson('/api/mobile/home')->assertJsonCount(1, 'announcements')->assertJsonPath('announcements.0.title', 'Holiday delivery');
     }
 }

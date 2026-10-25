@@ -78,7 +78,7 @@
     width: 26px;
     height: 26px;
     margin-left: 6px;
-    border: 1px solid color-mix(in srgb, var(--c-1a1714) 18%, transparent);
+    border: 1px solid rgba(26, 23, 20, .18);
     border-radius: 50%;
     background: var(--swatch);
 }

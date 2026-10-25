@@ -1,4 +1,5 @@
-{{-- The next steps for one parcel. Expects $shipment and optional $riders (assign a rider when it is waiting for one).
+{{-- The next steps for one parcel. Expects $shipment, optional $riders (assign a rider when it is waiting for one) and
+     optional $scanned (the tracking number just scanned on the Scan parcel page, which proves the waybill is in hand).
      Sorting suggestions come from a <datalist id="sort-areas"> on the page. --}}
 @php
     $workflow = \App\Services\ShipmentWorkflow::class;
@@ -10,6 +11,8 @@
     $riders = $riders ?? null;
     $tracking = $shipment->tracking_number ?? $shipment->tracking_code;
     $today = now('Asia/Manila');
+    $scanned = $scanned ?? null;
+    $thisParcel = (string) old('parcel') === (string) $shipment->id;
 @endphp
 
 <div class="parcel-actions">
@@ -29,7 +32,8 @@
         <details class="review-reason parcel-decline" data-smooth-disclosure>
             <summary class="seller-button seller-button--small seller-button--secondary">Decline</summary>
             <div data-disclosure-content>
-                <form method="POST" action="{{ route('logistics.parcels.pickup', $shipment) }}" class="review-reason__form">
+                <form method="POST" action="{{ route('logistics.parcels.pickup', $shipment) }}" class="review-reason__form"
+                      data-confirm="Decline the pickup of parcel {{ $tracking }}? The seller is told your reason." data-confirm-title="Decline pickup?" data-confirm-button="Decline pickup" data-confirm-tone="danger">
                     @csrf
                     @method('PATCH')
                     <input type="hidden" name="decision" value="decline">
@@ -75,15 +79,36 @@
     @foreach($steps as $status => $label)
         @php $danger = in_array($status, ['failed', 'returned'], true); @endphp
         <form method="POST" action="{{ route('logistics.parcels.advance', $shipment) }}"
-              @if($danger) data-confirm="{{ $label }} for parcel {{ $tracking }}?" @endif>
+              @if($danger) data-confirm="{{ $status === 'failed' ? 'Mark parcel '.$tracking.' as failed? The rider can try again or return it to the seller.' : 'Return parcel '.$tracking.' to the seller? This ends the delivery.' }}"
+                  data-confirm-title="{{ $label }}?" data-confirm-button="{{ $label }}" data-confirm-tone="danger" @endif>
             @csrf
             @method('PATCH')
             <input type="hidden" name="status" value="{{ $status }}">
+            <input type="hidden" name="parcel" value="{{ $shipment->id }}">
+            @if($status === 'picked_up')
+                {{-- Collecting from the seller: the waybill's code proves the parcel is in hand. --}}
+                @if($scanned)
+                    <input type="hidden" name="tracking" value="{{ $scanned }}">
+                @else
+                    <label class="sr-only" for="pickup-code-{{ $shipment->id }}">Scan or type the waybill code of parcel {{ $tracking }}</label>
+                    <input type="text" id="pickup-code-{{ $shipment->id }}" name="tracking" class="parcel-code-input" required maxlength="100"
+                           autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Scan waybill code"
+                           @if($thisParcel && $errors->has('tracking')) aria-invalid="true" aria-describedby="pickup-code-error-{{ $shipment->id }}" @endif>
+                @endif
+            @endif
             <button type="submit" class="seller-button seller-button--small{{ $danger ? ' seller-button--danger' : ($loop->first ? '' : ' seller-button--secondary') }}">{{ $label }}</button>
+            @if($status === 'picked_up' && $thisParcel && $errors->has('tracking'))
+                <p id="pickup-code-error-{{ $shipment->id }}" class="seller-field__error" role="alert">{{ $errors->first('tracking') }}</p>
+            @endif
         </form>
     @endforeach
 
     @if(! $steps && ! $awaitingRider && ! $awaitingConfirmation && ! $awaitingSort)
         <span class="seller-cell-note">{{ in_array($stage, ['delivered', 'returned', 'cancelled'], true) ? 'Done' : 'With the rider' }}</span>
+    @endif
+
+    @if(\App\Support\Waybill::available($shipment))
+        <a href="{{ route('logistics.parcels.waybill.print', $shipment) }}" class="seller-button seller-button--small seller-button--secondary" target="_blank" rel="noopener"
+           aria-label="Print waybill for parcel {{ $tracking }} (opens in a new tab)"><i class="fas fa-print" aria-hidden="true"></i> Print waybill</a>
     @endif
 </div>

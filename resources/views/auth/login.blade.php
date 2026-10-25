@@ -21,6 +21,12 @@
             'subtitle' => 'Sign in to review rider applications and manage your delivery team.',
             'action' => route('logistics.login.submit'), 'button' => 'Enter Logistics Center',
         ],
+        'rider' => [
+            'title' => 'ZAYLO · Rider Sign In', 'tagline' => ['Every parcel counts.', 'Ride with ZAYLO'],
+            'back' => [route('home'), 'Back to ZAYLO'], 'label' => 'ZAYLO RIDERS', 'heading' => 'Welcome, Rider',
+            'subtitle' => 'Sign in to see your deliveries, print waybills, and track your earnings.',
+            'action' => route('rider.login.submit'), 'button' => 'Start Delivering',
+        ],
         'admin' => [
             'title' => 'ZAYLO · Admin Sign In', 'tagline' => ['Keep the marketplace running.', 'Lead with ZAYLO'],
             'back' => [route('home'), 'Back to ZAYLO'], 'label' => 'ZAYLO ADMIN CENTER', 'heading' => 'Welcome, Admin',
@@ -53,12 +59,12 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: var(--font-sans); background: var(--color-cream); color: var(--color-primary); }
     .auth-container { display: flex; min-height: 100vh; min-height: 100svh; width: 100%; background: var(--c-ffffff); }
-    .auth-image { flex: 0 0 50%; min-height: 720px; position: relative; overflow: hidden; background: #39291d url('{{ asset('images/login-marketplace.png') }}') center/cover no-repeat; border-radius: 0 24px 24px 0; }
-    .auth-image-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, transparent 60%, color-mix(in srgb, #1a1714 70%, transparent)); }
+    .auth-image { flex: 0 0 50%; min-height: 720px; position: relative; overflow: hidden; background: var(--c-39291d) url('{{ asset('images/login-marketplace.png') }}') center/cover no-repeat; border-radius: 0 24px 24px 0; }
+    .auth-image-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, transparent 60%, rgba(26, 23, 20, 0.7)); }
     .auth-image-content { position: absolute; top: 0; left: 0; width: 100%; height: 100%; padding: 40px; display: flex; flex-direction: column; justify-content: space-between; z-index: 2; }
     .auth-brand { display: flex; align-items: center; gap: 16px; }
-    .auth-brand-line { width: 40px; height: 2px; background: #ffffff; opacity: 0.6; }
-    .auth-image-text { color: #ffffff; }
+    .auth-brand-line { width: 40px; height: 2px; background: var(--c-ffffff); opacity: 0.6; }
+    .auth-image-text { color: var(--c-ffffff); }
     .auth-image-text p { font-family: var(--font-serif); font-size: 1.6rem; font-weight: 300; line-height: 1.4; opacity: 0.9; }
     .auth-image-text p:last-child { font-style: italic; opacity: 0.7; }
     .auth-form { flex: 1; min-width: 0; padding: 100px 64px 64px; display: flex; flex-direction: column; justify-content: center; background: var(--c-ffffff); position: relative; }
@@ -103,7 +109,7 @@
     @media (max-width: 820px) {
         .auth-container { flex-direction: column; }
         .auth-image { flex: none; min-height: 260px; border-radius: 0 0 24px 24px; background-size: 55% auto; background-position: right 65%; }
-        .auth-image-overlay { background: linear-gradient(90deg, #39291d 35%, transparent 85%); }
+        .auth-image-overlay { background: linear-gradient(90deg, var(--c-39291d) 35%, transparent 85%); }
         .auth-image-content { padding: 28px; }
         .auth-image-text { max-width: 55%; }
         .auth-image-text p { font-size: 1.4rem; }
@@ -132,7 +138,7 @@
             <div class="auth-brand">
                 <span class="auth-brand-line"></span>
                 <span class="auth-brand-name">
-                    <img data-theme-fixed src="{{ asset('images/ZAYLO_LOGO_LIGHT.png') }}" alt="ZAYLO" style="height:36px;width:auto;display:block;">
+                    <img src="{{ asset('images/ZAYLO_LOGO_LIGHT.png') }}" alt="ZAYLO" style="height:36px;width:auto;display:block;">
                 </span>
             </div>
             <div class="auth-image-text">
@@ -157,8 +163,11 @@
             </div>
 
             @if ($errors->any())
-                <div class="alert-error">
+                <div class="alert-error" role="alert">
                     {{ $errors->first() }}
+                    @if(session('portal_hint'))
+                        <a href="{{ session('portal_hint.url') }}">{{ session('portal_hint.label') }} &rarr;</a>
+                    @endif
                 </div>
             @endif
 
@@ -204,10 +213,11 @@
                 <button type="submit" class="btn-auth-primary">{{ $copy['button'] }}</button>
             </form>
 
-            @unless($partnerPortal)
+            {{-- Google sign-in exists for buyer and seller accounts, each on its own page. --}}
+            @if(in_array($portal, ['shop', 'seller'], true))
             <div class="auth-divider"><span>or</span></div>
             <div class="social-login">
-                <a href="{{ route('google.redirect') }}" class="btn-social btn-google">
+                <a href="{{ route('google.redirect', $portal === 'seller' ? ['role' => 'seller'] : []) }}" class="btn-social btn-google">
                     <svg
                         class="google-icon"
                         width="20"
@@ -239,7 +249,7 @@
                     Continue with Google
                 </a>
             </div>
-            @endunless
+            @endif
 
             <div class="auth-footer">
                 @if($portal === 'seller')
@@ -247,6 +257,9 @@
                     <p style="margin-top:8px;">Shopping on ZAYLO? <a href="{{ route('login') }}">Use the shop sign in</a></p>
                 @elseif($portal === 'admin')
                     <p>Not an administrator? <a href="{{ route('login') }}">Use the shop sign in</a></p>
+                @elseif($portal === 'rider')
+                    <p>New rider? <a href="{{ route('register', ['role' => 'courier']) }}">Apply to deliver with ZAYLO</a></p>
+                    <p style="margin-top:8px;">Shopping on ZAYLO? <a href="{{ route('login') }}">Use the shop sign in</a></p>
                 @elseif($portal === 'logistics')
                     <p>New partner? <a href="{{ route('register', ['role' => 'logistics']) }}">Apply to become a logistics partner</a></p>
                     <p style="margin-top:8px;">Shopping on ZAYLO? <a href="{{ route('login') }}">Use the shop sign in</a></p>
@@ -254,6 +267,7 @@
                     <p>Don't have an account? <a href="{{ route('register') }}">Create new account</a></p>
                     <p style="margin-top:8px;">Selling on ZAYLO? <a href="{{ route('seller.login') }}">Sign in to Seller Center</a></p>
                     <p style="margin-top:4px;">Delivery partner? <a href="{{ route('logistics.login') }}">Sign in to Logistics Center</a></p>
+                    <p style="margin-top:4px;">Rider? <a href="{{ route('rider.login') }}">Sign in to your deliveries</a></p>
                 @endif
             </div>
         </div>

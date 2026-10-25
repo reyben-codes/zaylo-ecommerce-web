@@ -7,8 +7,11 @@ use App\Models\Order;
 use App\Models\Shipment;
 use App\Models\User;
 use App\Services\ShipmentWorkflow;
+use App\Support\OrderParties;
+use App\Support\ParcelView;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -46,14 +49,16 @@ class MobileDeliveryChatController extends Controller
 
     private function authorizeRider(Request $request, Shipment $shipment): void
     {
-        abort_unless($shipment->riderUserId() === $request->user()->id, 404, 'This delivery is not assigned to you.');
+        abort_unless($shipment->riderUserId() === (int) $request->user()->id, 404, 'This delivery is not assigned to you.');
+        abort_unless(Schema::hasTable('delivery_messages'), 503, 'Delivery chat is being set up. Please try again later.');
     }
 
-    /** The order's delivery, once a rider has accepted it. */
+    /** The order's delivery, once a rider is assigned to it. */
     private function buyerShipment(Request $request, Order $order): Shipment
     {
-        abort_unless($order->user_id === $request->user()->id, 404);
-        $shipment = $order->shipment;
+        abort_unless(OrderParties::for($order)['buyer'] === (int) $request->user()->id, 404);
+        abort_unless(Schema::hasTable('delivery_messages'), 503, 'Delivery chat is being set up. Please try again later.');
+        $shipment = $order->deliveryShipment();
         abort_unless($shipment?->riderUserId() !== null, 404, 'No rider has been assigned to this order yet.');
 
         return $shipment;
@@ -84,13 +89,13 @@ class MobileDeliveryChatController extends Controller
 
         return [
             'shipment_id' => $shipment->id,
-            'order_number' => $shipment->order?->order_number,
+            'order_number' => ($shipment->order ?? $shipment->sellerOrder?->order)?->order_number,
             'status' => ShipmentWorkflow::stageOf($shipment),
             'open' => $open,
             'closed_reason' => $open ? null : $this->closedReason($shipment),
             // Each side sees the other's first name only.
             'other_name' => $rider
-                ? Str::of($shipment->order?->recipient_name ?? 'Buyer')->before(' ')->toString()
+                ? Str::of(str_replace('—', 'Buyer', ParcelView::for($shipment)['recipient']))->before(' ')->toString()
                 : Str::of(User::find($shipment->riderUserId())?->name ?? 'Your rider')->before(' ')->toString(),
             'other_role' => $rider ? 'Buyer' : 'Rider',
             'messages' => $shipment->messages()->get()

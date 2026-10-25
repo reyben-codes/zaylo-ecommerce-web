@@ -1,0 +1,270 @@
+/* Profile photo picker on the account pages (partials/profile-photo). */
+.profile-photo {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+}
+
+.profile-photo__avatar {
+    flex: none;
+    width: 84px;
+    height: 84px;
+    font-size: 1.6rem;
+}
+
+.profile-photo__body {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+}
+
+.profile-photo__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.profile-photo__actions form {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+}
+
+.profile-photo__button,
+.profile-photo__submit,
+.profile-photo__remove {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 38px;
+    padding: 0 14px;
+    border: 1px solid var(--c-1a1714);
+    border-radius: 8px;
+    font: inherit;
+    font-size: .8rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.profile-photo__button,
+.profile-photo__submit {
+    position: relative;
+    background: var(--c-1a1714);
+    color: var(--c-ffffff);
+}
+
+.profile-photo__button:hover,
+.profile-photo__submit:hover {
+    border-color: var(--c-9a755e);
+    background: var(--c-9a755e);
+}
+
+.profile-photo__remove {
+    background: transparent;
+    color: var(--c-1a1714);
+}
+
+.profile-photo__remove:hover {
+    background: var(--c-f5f0ea);
+}
+
+/* The file input stays in the tab order; its label shows the focus ring. */
+.profile-photo__input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    overflow: hidden;
+}
+
+.profile-photo__button:focus-within,
+.profile-photo__remove:focus-visible,
+.profile-photo__submit:focus-visible {
+    outline: 2px solid var(--c-9a755e);
+    outline-offset: 2px;
+}
+
+/* With JavaScript, choosing a file uploads it, so the separate button is not needed. */
+.profile-photo.is-enhanced .profile-photo__submit {
+    display: none;
+}
+
+.profile-photo.is-uploading .profile-photo__button {
+    opacity: .6;
+    pointer-events: none;
+}
+
+.profile-photo__hint {
+    margin: 0;
+    color: var(--c-6b5f54);
+    font-size: .75rem;
+}
+
+.profile-photo__error {
+    margin: 0;
+    color: var(--c-a02d28);
+    font-size: .78rem;
+    font-weight: 600;
+}
+
+@media (max-width: 480px) {
+    .profile-photo {
+        align-items: flex-start;
+    }
+
+    .profile-photo__avatar {
+        width: 64px;
+        height: 64px;
+        font-size: 1.25rem;
+    }
+}
+
+/* Crop dialog: the photo moves and zooms behind a circle the size of the stage; outside the circle is dimmed. */
+.photo-cropper {
+    width: min(420px, calc(100vw - 32px));
+    max-height: calc(100dvh - 32px);
+    padding: 0;
+    border: 0;
+    border-radius: 16px;
+    background: var(--c-ffffff);
+    color: var(--c-1a1714);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, .3);
+}
+
+.photo-cropper::backdrop {
+    background: rgba(20, 17, 15, .6);
+}
+
+.photo-cropper__panel {
+    display: grid;
+    gap: 14px;
+    padding: 22px;
+}
+
+.photo-cropper__title {
+    margin: 0;
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+}
+
+.photo-cropper__help {
+    margin: 0;
+    color: var(--c-6b5f54);
+    font-size: .8rem;
+    line-height: 1.5;
+}
+
+.photo-cropper__stage {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    overflow: hidden;
+    border-radius: 12px;
+    background: var(--c-1a1714);
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+}
+
+.photo-cropper__stage:active {
+    cursor: grabbing;
+}
+
+.photo-cropper__stage:focus-visible {
+    outline: 3px solid var(--c-9a755e);
+    outline-offset: 3px;
+}
+
+.photo-cropper__stage::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 2px solid rgba(255, 255, 255, .9);
+    border-radius: 50%;
+    box-shadow: 0 0 0 999px rgba(0, 0, 0, .55);
+    pointer-events: none;
+}
+
+.photo-cropper__image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    max-width: none;
+    transform-origin: 0 0;
+    pointer-events: none;
+}
+
+.photo-cropper__zoom {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.photo-cropper__zoom input {
+    flex: 1;
+    accent-color: var(--c-1a1714);
+}
+
+.photo-cropper__zoom-step {
+    display: inline-grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--c-e5dfd8);
+    border-radius: 50%;
+    background: transparent;
+    color: var(--c-1a1714);
+    cursor: pointer;
+}
+
+.photo-cropper__zoom-step:hover {
+    background: var(--c-f5f0ea);
+}
+
+.photo-cropper__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.photo-cropper__button {
+    min-height: 40px;
+    padding: 0 18px;
+    border: 1px solid var(--c-1a1714);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--c-1a1714);
+    font: inherit;
+    font-size: .82rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.photo-cropper__button--primary {
+    background: var(--c-1a1714);
+    color: var(--c-ffffff);
+}
+
+.photo-cropper__button:hover {
+    border-color: var(--c-9a755e);
+    background: var(--c-9a755e);
+    color: var(--c-ffffff);
+}
+
+.photo-cropper__zoom-step:focus-visible,
+.photo-cropper__button:focus-visible {
+    outline: 2px solid var(--c-9a755e);
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .photo-cropper[open] {
+        animation: photo-cropper-in .2s ease-out;
+    }
+}
+
+@keyframes photo-cropper-in {
+    from { opacity: 0; transform: translateY(8px) scale(.98); }
+}

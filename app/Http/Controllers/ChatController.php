@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Product;
+use App\Services\ChatStarter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -13,6 +14,9 @@ class ChatController extends Controller
 {
     // A typing signal lasts a little longer than the client's ping interval so the indicator does not flicker.
     private const TYPING_SECONDS = 6;
+
+    // How many of the most recent conversations the bubble's typing check covers.
+    private const TYPING_STATUS_CONVERSATIONS = 30;
 
     public function index(Request $request)
     {
@@ -28,9 +32,9 @@ class ChatController extends Controller
         return view($sellerView ? 'seller.chat' : 'buyer.chat', compact('conversation', 'sellerView'));
     }
 
-    public function start(Request $request, Product $product)
+    public function start(Request $request, Product $product, ChatStarter $chats)
     {
-        $conversation = Conversation::startAbout($request->user(), $product);
+        $conversation = $chats->forProduct($request->user(), $product);
 
         return redirect()->route('buyer.chat', ['conversation' => $conversation->id]);
     }
@@ -46,13 +50,8 @@ class ChatController extends Controller
 
         return response()->json([
             'conversations' => $conversations->map(function ($chat) use ($userId) {
-                $other = $chat->buyer_id == $userId ? $chat->seller : $chat->buyer;
-                $name = $chat->buyer_id == $userId
-                    ? ($other->sellerProfile?->store_name ?? $other->sellerProfile?->name ?? $other->name)
-                    : $other->name;
-
                 return [
-                    'id' => $chat->id, 'name' => $name,
+                    'id' => $chat->id, 'name' => $this->partnerName($chat, $userId),
                     'preview' => $chat->latestMessage?->body ?? 'Start the conversation',
                     'unread' => $chat->unread_count,
                     'updated_at' => $chat->last_message_at?->toIso8601String(),
@@ -60,6 +59,27 @@ class ChatController extends Controller
                 ];
             }),
             'page' => $conversations->currentPage(), 'last_page' => $conversations->lastPage(),
+        ]);
+    }
+
+    /**
+     * Who is typing to this account right now, across its recent conversations. The floating chat bubble
+     * (website and mobile app) polls this to show typing dots while the chat itself is closed.
+     */
+    public function typingStatus(Request $request)
+    {
+        $userId = (int) $request->user()->id;
+        $chats = Conversation::forUser($userId)->with(['buyer', 'seller.sellerProfile'])
+            ->orderByDesc('last_message_at')->orderByDesc('id')->limit(self::TYPING_STATUS_CONVERSATIONS)->get();
+        $keys = $chats->mapWithKeys(fn (Conversation $chat) => [$this->typingKey($chat, $this->otherParticipantId($chat, $userId)) => $chat]);
+        $signals = $keys->isEmpty() ? [] : Cache::many($keys->keys()->all());
+
+        return response()->json([
+            'typing' => $keys->filter(fn (Conversation $chat, string $key) => ! empty($signals[$key]))->map(fn (Conversation $chat) => [
+                'conversation_id' => $chat->id,
+                'name' => $this->partnerName($chat, $userId),
+                'url' => route($chat->buyer_id == $userId ? 'buyer.chat' : 'seller.chat', ['conversation' => $chat->id]),
+            ])->values(),
         ]);
     }
 
@@ -133,6 +153,16 @@ class ChatController extends Controller
             ->where('sender_id', '!=', $request->user()->id)->whereNull('read_at')->update(['read_at' => now()]);
 
         return response()->noContent();
+    }
+
+    /** The other person as this account sees them: the shop's name for a buyer, the buyer's name for a seller. */
+    private function partnerName(Conversation $chat, int $userId): string
+    {
+        $other = $chat->buyer_id == $userId ? $chat->seller : $chat->buyer;
+
+        return (string) ($chat->buyer_id == $userId
+            ? ($other?->sellerProfile?->store_name ?? $other?->sellerProfile?->name ?? $other?->name)
+            : $other?->name);
     }
 
     private function typingKey(Conversation $chat, int $userId): string

@@ -44,6 +44,12 @@ class Shipment extends Model
         return $this->belongsTo(LogisticsProvider::class, 'logistics_provider_id');
     }
 
+    /** Whether parcels record their logistics partner (the newer schema, or the deployed one after 2026_10_24). */
+    public static function tracksProvider(): bool
+    {
+        return Schema::hasColumn('shipments', 'logistics_provider_id');
+    }
+
     public function rider(): BelongsTo
     {
         return $this->belongsTo(Rider::class);
@@ -71,13 +77,14 @@ class Shipment extends Model
     /** The rider and buyer can message each other while the parcel is with the rider. */
     public function chatIsOpen(): bool
     {
-        return $this->riderUserId() !== null
+        return Schema::hasTable('delivery_messages')
+            && $this->riderUserId() !== null
             && in_array(ShipmentWorkflow::stageOf($this), RiderDeliveries::ACTIVE_STAGES, true);
     }
 
     /**
-     * Adds a message; a repeated [$clientId] returns the existing one, so a
-     * send retried after a dropped connection is not stored twice.
+     * Adds a message; a repeated [$clientId] returns the existing one, so a send retried after a dropped connection
+     * is not stored twice.
      */
     public function postMessage(User $sender, string $body, bool $fromRider, ?string $clientId = null): DeliveryMessage
     {
@@ -95,6 +102,8 @@ class Shipment extends Model
 
     public function unreadMessagesFor(bool $rider): int
     {
-        return $this->messages()->where('from_rider', ! $rider)->whereNull('read_at')->count();
+        return Schema::hasTable('delivery_messages')
+            ? $this->messages()->where('from_rider', ! $rider)->whereNull('read_at')->count()
+            : 0;
     }
 }

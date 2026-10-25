@@ -3,21 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\UpdatesAccountSettings;
-use App\Models\Address;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Order;
 use App\Models\Product;
-use App\Models\ProductVariant;
-use App\Models\User;
 use App\Models\Voucher;
-use App\Rules\PersonName;
-use App\Rules\PhoneNumber;
-use App\Rules\StrongPassword;
 use App\Models\Wishlist;
 use App\Services\CartService;
 use App\Services\CheckoutService;
-use App\Support\ProductCatalog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -29,11 +22,15 @@ class BuyerController extends Controller
 {
     use UpdatesAccountSettings;
 
-    private const SHIPPING_PER_SELLER = 120.00;
+    private const SHIPPING_PER_SELLER = CheckoutService::SHIPPING_PER_SELLER;
+
+    public function __construct(private readonly CartService $carts, private readonly CheckoutService $checkoutService)
+    {
+    }
 
     public function dashboard()
     {
-        $base = Product::withReviewSummary()->where('is_active', true);
+        $base = Product::withReviewSummary()->visibleToBuyers();
         if (Product::usesLegacySchema()) {
             $base->where('stock', '>', 0)->with(['images', 'additionalCategories'])
                 ->withCount(['variants as active_variants_count' => fn ($query) => $query->where('is_active', true)]);
@@ -60,7 +57,8 @@ class BuyerController extends Controller
     {
         $validated = $request->validate([
             'category' => ['nullable', Rule::in(array_keys(config('marketplace.categories')))],
-            'gender' => 'nullable|in:men,women,unisex',
+            'gender' => ['nullable', Rule::in(array_keys(config('marketplace.genders')))],
+            'size' => 'nullable|string|max:40',
             'search' => 'nullable|string|max:100',
             'sort' => 'nullable|in:relevance,newest,price_low,price_high',
             'min_price' => 'nullable|numeric|min:0|max:99999999.99',
@@ -71,14 +69,14 @@ class BuyerController extends Controller
         if (isset($validated['min_price'], $validated['max_price']) && $validated['max_price'] < $validated['min_price']) {
             throw ValidationException::withMessages(['max_price' => 'Maximum price must be greater than or equal to minimum price.']);
         }
-        $validated['search'] = ProductCatalog::normalizeSearch($validated['search'] ?? null);
+        $validated['search'] = trim(preg_replace('/\s+/u', ' ', $validated['search'] ?? ''));
         $validated['sort'] = $validated['sort'] ?? ($validated['search'] !== '' ? 'relevance' : 'newest');
         // Show everything by default; sold-out products are grayed out and listed after available ones.
         $validated['availability'] = $validated['availability'] ?? 'all';
         $query = Product::withReviewSummary()->with(['seller', 'images', 'additionalCategories'])
             ->withCount(['variants as active_variants_count' => fn ($builder) => $builder->where('is_active', true)])
             ->withSum(['variants as catalog_variant_stock' => fn ($builder) => $builder->where('is_active', true)], 'stock')
-            ->where('is_active', true);
+            ->visibleToBuyers();
         if (! Product::usesLegacySchema()) $query->with(['defaultVariant', 'category']);
         $available = function ($builder) {
             $builder->whereHas('variants', fn ($variant) => $variant->where('is_active', true)->where('stock', '>', 0));
@@ -89,12 +87,59 @@ class BuyerController extends Controller
         if ($validated['availability'] === 'in_stock') $query->where($available);
         if ($validated['availability'] === 'out_of_stock') $query->whereNot($available);
 
-        ProductCatalog::category($query, $validated['category'] ?? null);
-        ProductCatalog::gender($query, $validated['gender'] ?? null);
-        ProductCatalog::search($query, $validated['search']);
-        ProductCatalog::priceRange($query, $validated['min_price'] ?? null, $validated['max_price'] ?? null);
+        if (! empty($validated['category'])) {
+            $query->inCategories($validated['category'] === 'fashion'
+                ? config('marketplace.fashion_categories')
+                : [$validated['category']]);
+        }
+        if (! empty($validated['gender'])) {
+            // Unisex items also appear under Men and Women; Kids (boys or girls) items under Boys and Girls.
+            $query->whereIn('products.gender', config('marketplace.gender_matches')[$validated['gender']]);
+        }
+        $validated['size'] = trim((string) ($validated['size'] ?? '')) ?: null;
+        if ($validated['size'] !== null) {
+            $size = $validated['size'];
+            $query->whereHas('variants', fn ($variant) => $variant->where('is_active', true)
+                ->where(Product::usesLegacySchema() ? 'size' : 'options->size', $size));
+        }
+        $escapeLike = fn ($text) => str_replace(['!', '%', '_'], ['!!', '!%', '!_'], mb_strtolower($text));
+        if ($validated['search'] !== '') {
+            foreach (array_unique(explode(' ', $validated['search'])) as $word) {
+                $pattern = '%'.$escapeLike($word).'%';
+                $forGroup = self::genderForWord($word);
+                $query->where(function ($match) use ($pattern, $forGroup) {
+                    if ($forGroup) {
+                        $match->whereIn('products.gender', config('marketplace.gender_matches')[$forGroup]);
+                    }
+                    $match->orWhereRaw("LOWER(products.name) LIKE ? ESCAPE '!'", [$pattern])
+                        ->orWhereRaw("LOWER(products.description) LIKE ? ESCAPE '!'", [$pattern]);
+                    if (Product::usesLegacySchema()) {
+                        $match->orWhereRaw("LOWER(products.sku) LIKE ? ESCAPE '!'", [$pattern])
+                            ->orWhereRaw("LOWER(products.category) LIKE ? ESCAPE '!'", [$pattern]);
+                    } else {
+                        $match->orWhereHas('category', fn ($category) => $category->whereRaw("LOWER(name) LIKE ? ESCAPE '!'", [$pattern]));
+                    }
+                    $match->orWhereHas('additionalCategories', fn ($extra) => $extra->whereRaw("LOWER(category) LIKE ? ESCAPE '!'", [$pattern]));
+                    $match->orWhereHas('variants', fn ($variant) => $variant->where('is_active', true)->whereRaw("LOWER(sku) LIKE ? ESCAPE '!'", [$pattern]));
+                });
+            }
+        }
+
+        $priceSql = Product::sellingPriceSql();
+        $priceTime = now();
+        foreach (['min_price' => '>=', 'max_price' => '<='] as $field => $operator) {
+            if (isset($validated[$field])) $query->whereRaw("({$priceSql}) {$operator} CAST(? AS DECIMAL(12, 2))", [$priceTime, $priceTime, $validated[$field]]);
+        }
         if (! empty($validated['on_sale'])) {
-            ProductCatalog::onSale($query);
+            $query->where(function ($sale) use ($priceSql, $priceTime) {
+                $sale->whereRaw('('.$priceSql.') < ('.Product::regularPriceSql().')', [$priceTime, $priceTime])
+                    ->orWhere(function ($legacy) {
+                        $legacy->whereNull('sale_type');
+                        Product::usesLegacySchema()
+                            ? $legacy->whereColumn('original_price', '>', 'price')
+                            : $legacy->whereHas('defaultVariant', fn ($variant) => $variant->whereColumn('original_price_minor', '>', 'price_minor'));
+                    });
+            });
         }
 
         if ($validated['availability'] === 'all') {
@@ -104,15 +149,24 @@ class BuyerController extends Controller
             }
             $query->orderByRaw("CASE WHEN {$inStockSql} THEN 0 ELSE 1 END");
         }
-        ProductCatalog::sort($query, $validated['sort'], $validated['search']);
+        if (in_array($validated['sort'] ?? '', ['price_low', 'price_high'], true)) {
+            $direction = $validated['sort'] === 'price_high' ? 'DESC' : 'ASC';
+            $query->orderByRaw(Product::sellingPriceSql()." {$direction}", [now(), now()]);
+        } elseif ($validated['sort'] === 'relevance' && $validated['search'] !== '') {
+            $query->orderByRaw("CASE WHEN LOWER(products.name) = ? THEN 0 WHEN LOWER(products.name) LIKE ? ESCAPE '!' THEN 1 ELSE 2 END", [mb_strtolower($validated['search']), $escapeLike($validated['search']).'%'])->latest();
+        } else {
+            $query->latest();
+        }
+        $query->orderByDesc('products.id');
 
         $chips = [];
-        foreach (['search', 'category', 'gender', 'min_price', 'max_price', 'availability', 'on_sale'] as $key) {
+        foreach (['search', 'category', 'gender', 'size', 'min_price', 'max_price', 'availability', 'on_sale'] as $key) {
             if (! isset($validated[$key]) || $validated[$key] === '' || ($key === 'availability' && $validated[$key] === 'all') || ($key === 'on_sale' && ! $validated[$key])) continue;
             $label = match ($key) {
                 'search' => 'Search: '.$validated[$key],
                 'category' => config('marketplace.categories')[$validated[$key]],
-                'gender' => ucfirst($validated[$key]),
+                'gender' => $validated[$key] === 'kids' ? 'All kids' : config('marketplace.genders')[$validated[$key]],
+                'size' => 'Size: '.$validated[$key],
                 'min_price' => 'From ₱'.number_format($validated[$key], 2),
                 'max_price' => 'Up to ₱'.number_format($validated[$key], 2),
                 'availability' => $validated[$key] === 'in_stock' ? 'In stock only' : 'Sold out',
@@ -127,12 +181,48 @@ class BuyerController extends Controller
             'products' => $query->paginate(15)->appends($validated),
             'category' => $validated['category'] ?? null,
             'filters' => $validated, 'filterChips' => $chips,
+            'sizes' => $this->catalogSizes(),
         ]);
+    }
+
+    /** The "For" group a search word means, e.g. "kids" or "toddler" → kids, "girls" → girls. */
+    private static function genderForWord(string $word): ?string
+    {
+        return match (mb_strtolower($word)) {
+            'kid', 'kids', 'child', 'children', 'toddler', 'toddlers', 'baby', 'babies' => 'kids',
+            'girl', 'girls' => 'girls',
+            'boy', 'boys' => 'boys',
+            default => null,
+        };
+    }
+
+    /**
+     * Sizes buyers can filter by: every size of an option on sale, kids' sizes first, then adult sizes in their
+     * usual order, then anything else alphabetically.
+     */
+    private function catalogSizes(): array
+    {
+        $variants = \Illuminate\Support\Facades\DB::table('product_variants')
+            ->join('products', 'products.id', '=', 'product_variants.product_id')
+            ->where('products.is_active', true)->where('product_variants.is_active', true);
+        $sizes = (Product::usesLegacySchema()
+            ? $variants->whereNotNull('product_variants.size')->distinct()->pluck('product_variants.size')
+            : $variants->whereNotNull('product_variants.options')->pluck('product_variants.options')
+                ->map(fn ($options) => data_get(json_decode((string) $options, true), 'size')))
+            ->map(fn ($size) => trim((string) $size))->filter()->unique(fn ($size) => mb_strtolower($size));
+
+        $order = collect(config('marketplace.kids_size_presets'))->flatten()
+            ->concat(collect(config('marketplace.size_presets'))->flatten())
+            ->unique()->values()->flip();
+
+        return $sizes->sortBy(fn ($size) => [$order->get($size, PHP_INT_MAX), mb_strtolower($size)])->values()->take(80)->all();
     }
 
     public function showProduct(Product $product)
     {
-        abort_unless($product->is_active, 404);
+        // Unapproved or hidden listings exist only for their seller and admins, who see a preview notice.
+        $preview = ! $product->is_listed;
+        abort_if($preview && ! auth()->user()?->can('update', $product), 404);
         $relations = ['seller', 'variants' => fn ($query) => $query->where('is_active', true), 'images'];
         if (! Product::usesLegacySchema()) {
             $relations[] = 'category';
@@ -181,7 +271,9 @@ class BuyerController extends Controller
         $reviewCount = (clone $reviewQuery)->count();
         $reviewAverage = (clone $reviewQuery)->avg('rating');
         $reviews = $reviewQuery->with('buyer')->latest()->paginate(5, ['*'], 'reviews_page');
-        return view('buyer.product-show', compact('product', 'galleryImages', 'reviews', 'reviewCount', 'reviewAverage', 'optionLabel', 'variantImages', 'colorGroups'));
+        $shop = $product->seller_id ? \App\Support\Shop::find((int) $product->seller_id) : null;
+
+        return view('buyer.product-show', compact('product', 'galleryImages', 'reviews', 'reviewCount', 'reviewAverage', 'optionLabel', 'variantImages', 'colorGroups', 'shop', 'preview'));
     }
 
     public function orders(Request $request)
@@ -216,9 +308,9 @@ class BuyerController extends Controller
         return view('buyer.orders', compact('orders', 'filter', 'counts'));
     }
 
-    public function cancelOrder(Order $order, CheckoutService $checkout)
+    public function cancelOrder(Order $order)
     {
-        $checkout->cancel($order, auth()->user());
+        $this->checkoutService->cancel($order, auth()->user());
 
         return back()->with('status', 'Order cancelled and stock restored.');
     }
@@ -268,21 +360,25 @@ class BuyerController extends Controller
             return redirect()->route('buyer.cart')->withErrors(['cart' => 'Select products from your cart to continue.']);
         }
 
-        $checkout = app(CheckoutService::class);
-        try {
-            $voucher = $checkout->voucher($checkout->normalizeVoucherCode($request->query('voucher', '')));
-        } catch (ValidationException $exception) {
-            return redirect()->route('buyer.checkout.show')->withErrors($exception->errors());
+        $voucherCode = Str::upper(trim((string) $request->query('voucher', '')));
+        $voucher = null;
+        if ($voucherCode !== '') {
+            $voucher = Voucher::where('code', $voucherCode)->first();
+            if (! $voucher?->isAvailable() || $voucher->type !== 'free_shipping') {
+                return redirect()->route('buyer.checkout.show')->withErrors(['voucher_code' => 'This voucher is invalid or no longer available.']);
+            }
         }
-        $totals = $checkout->quote($items, $voucher);
+
+        $subtotal = $items->sum(fn (CartItem $item) => $item->unitPrice() * $item->quantity);
+        $shipping = $items->pluck('product.seller_id')->unique()->count() * self::SHIPPING_PER_SELLER;
 
         return view('buyer.checkout', [
             'identityVerified' => $request->user()->isIdentityVerified(),
             'identityStatus' => Schema::hasTable('identity_verifications') ? $request->user()->latestIdentityVerification()->value('status') : null,
             'items' => $items,
-            'subtotal' => $totals['subtotal'],
-            'shipping' => $totals['shipping'],
-            'shippingDiscount' => $totals['shipping_discount'],
+            'subtotal' => $subtotal,
+            'shipping' => $shipping,
+            'shippingDiscount' => $voucher ? $shipping : 0,
             'voucher' => $voucher,
             'addresses' => $request->user()->addresses()->orderByDesc('is_default')->orderBy('id')->get(),
             'estimatedShipStart' => now()->addWeekdays(2),
@@ -293,13 +389,12 @@ class BuyerController extends Controller
     public function addToCart(Request $request, Product $product)
     {
         $validated = $request->validate([
-            'quantity' => 'required|integer|min:1|max:99',
+            'quantity' => 'required|integer|min:1|max:1000000',
             'product_variant_id' => 'nullable|integer|exists:product_variants,id',
             'purchase_action' => ['nullable', Rule::in(['add_to_cart', 'buy_now'])],
         ]);
-        $item = app(CartService::class)->add(
-            $request->user(), $product, $validated['quantity'], $validated['product_variant_id'] ?? null,
-        );
+        $item = $this->carts->add($request->user(), $product, (int) $validated['quantity'], ! empty($validated['product_variant_id']) ? (int) $validated['product_variant_id'] : null);
+        $cart = $this->carts->cartFor($request->user());
 
         if (($validated['purchase_action'] ?? 'add_to_cart') === 'buy_now') {
             $request->session()->put('checkout_cart_item_ids', [$item->id]);
@@ -308,7 +403,7 @@ class BuyerController extends Controller
         }
 
         if ($request->expectsJson()) {
-            return response()->json(['message' => 'Product added to your cart.', 'cart_url' => route('buyer.cart'), 'cart_quantity' => (int) $item->cart->items()->sum('quantity')]);
+            return response()->json(['message' => 'Product added to your cart.', 'cart_url' => route('buyer.cart'), 'cart_quantity' => (int) $cart->items()->sum('quantity')]);
         }
 
         return back()->with('status', 'Product added to your cart.');
@@ -317,8 +412,8 @@ class BuyerController extends Controller
     public function updateCart(Request $request, CartItem $cartItem)
     {
         abort_unless($cartItem->cart->user_id === auth()->id(), 403);
-        $validated = $request->validate(['quantity' => 'required|integer|min:1|max:99']);
-        app(CartService::class)->updateQuantity($cartItem, $validated['quantity']);
+        $validated = $request->validate(['quantity' => 'required|integer|min:1|max:1000000']);
+        $this->carts->updateQuantity($cartItem, (int) $validated['quantity']);
 
         return back()->with('status', 'Cart updated.');
     }
@@ -331,11 +426,11 @@ class BuyerController extends Controller
         $cart = Cart::firstOrCreate(['user_id' => $request->user()->id]);
         $validated = $request->validate([
             'quantities' => 'required|array|min:1|max:200',
-            'quantities.*' => 'required|integer|min:1|max:99',
+            'quantities.*' => 'required|integer|min:1|max:1000000',
         ], [
             'quantities.required' => 'Change a quantity first, then choose Update all.',
             'quantities.*.min' => 'Quantities must be at least 1. Use Remove to take an item out of your cart.',
-            'quantities.*.max' => 'You can add up to 99 of each item.',
+            'quantities.*.max' => 'That quantity is more than any seller can stock.',
         ]);
 
         $items = $cart->items()->with(['product', 'variant'])->whereIn('id', array_keys($validated['quantities']))->get()->keyBy('id');
@@ -346,7 +441,7 @@ class BuyerController extends Controller
         $problems = [];
         foreach ($items as $id => $item) {
             $available = $item->availableStock();
-            if (! $item->product->is_active) {
+            if (! $item->product->is_listed) {
                 $problems["quantities.{$id}"] = "{$item->product->name} is no longer available.";
             } elseif ($validated['quantities'][$id] > $available) {
                 $problems["quantities.{$id}"] = "{$item->product->name}: only {$available} left in stock.";
@@ -372,11 +467,7 @@ class BuyerController extends Controller
 
     public function checkout(Request $request)
     {
-        if (! $request->user()->isIdentityVerified()) {
-            throw ValidationException::withMessages([
-                'identity' => 'Your ID needs to be approved before you can place an order. Upload it in Profile Settings.',
-            ]);
-        }
+        $this->checkoutService->ensureCanOrder($request->user());
 
         $validated = $request->validate([
             'address_id' => ['required', 'integer', Rule::exists('addresses', 'id')->where('user_id', $request->user()->id)],
@@ -389,8 +480,8 @@ class BuyerController extends Controller
             'quoted_unit_prices' => ['nullable', 'array'],
             'quoted_unit_prices.*' => ['required', 'numeric', 'min:0', 'decimal:0,2'],
         ]);
-        $checkout = app(CheckoutService::class);
-        if ($checkout->alreadyPlaced($validated['idempotency_key'])) {
+        $validated['payment_method'] ??= 'cod';
+        if ($this->checkoutService->alreadyPlaced($validated['idempotency_key'])) {
             return redirect()->route('buyer.orders')->with('status', 'This checkout was already completed.');
         }
         $cart = Cart::where('user_id', auth()->id())->with(['items.product', 'items.variant'])->first();
@@ -399,7 +490,9 @@ class BuyerController extends Controller
         }
 
         $selectedIds = $validated['cart_item_ids'] ?? $request->session()->get('checkout_cart_item_ids') ?? $cart->items->pluck('id')->all();
-        $checkout->place($request->user(), $selectedIds, $validated, $checkout->normalizeVoucherCode($validated['voucher_code'] ?? null));
+        $voucherCode = Str::upper(trim((string) ($validated['voucher_code'] ?? '')));
+
+        $this->checkoutService->place($request->user(), array_map('intval', $selectedIds), $validated, $voucherCode);
 
         $request->session()->forget('checkout_cart_item_ids');
 
@@ -408,9 +501,10 @@ class BuyerController extends Controller
 
     public function wishlist()
     {
-        $items = auth()->user()->wishlistItems()->with(['product' => fn ($product) => $product->withReviewSummary()
-            ->with(['images', 'additionalCategories'])
-            ->withCount(['variants as active_variants_count' => fn ($variants) => $variants->where('is_active', true)])])
+        $items = auth()->user()->wishlistItems()->whereHas('product', fn ($product) => $product->visibleToBuyers())
+            ->with(['product' => fn ($product) => $product->withReviewSummary()
+                ->with(['images', 'additionalCategories'])
+                ->withCount(['variants as active_variants_count' => fn ($variants) => $variants->where('is_active', true)])])
             ->latest()->get();
 
         return view('buyer.wishlist', compact('items'));
@@ -442,6 +536,9 @@ class BuyerController extends Controller
             'identitySubmission' => $verificationEnabled ? $request->user()->latestIdentityVerification()->first() : null,
             'idTypes' => \App\Models\IdentityVerification::ID_TYPES,
             'addresses' => $request->user()->addresses()->orderByDesc('is_default')->orderBy('label')->orderBy('id')->get(),
+            'activity' => Schema::hasTable('activity_logs')
+                ? \App\Models\ActivityLog::where('user_id', $request->user()->id)->latest('created_at')->latest('id')->limit(10)->get()
+                : collect(),
         ]);
     }
 

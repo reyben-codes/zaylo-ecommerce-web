@@ -73,6 +73,13 @@ class GoogleAuthController extends Controller
                 'admin' => 'admin.dashboard',
                 default => 'home',
             });
+        } catch (\App\Exceptions\WrongAccountTypeException $exception) {
+            $target = AuthController::PORTALS[\App\Models\User::portalOf($exception->accountRole)] ?? AuthController::PORTALS['buyer'];
+            $article = preg_match('/^[aeiou]/i', $target['account']) ? 'an' : 'a';
+            session()->flash('portal_hint', ['url' => route($target['login']), 'label' => 'Go to the '.$target['page']]);
+
+            return redirect()->route(($context['role'] ?? 'buyer') === 'seller' ? 'seller.login' : 'login')
+                ->withErrors(['google' => "This Google email belongs to {$article} {$target['account']} account, so it can't sign in here. Please use the {$target['page']} page instead."]);
         } catch (\Throwable $exception) {
             return $this->failed($exception);
         } finally {

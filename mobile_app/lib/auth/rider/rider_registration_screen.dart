@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
+import 'package:zaylo_mobile/state/chat_head_state.dart';
 import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/api/rider_api.dart';
 import 'package:zaylo_mobile/auth/rider/rider_login_screen.dart';
@@ -9,6 +10,7 @@ import 'package:zaylo_mobile/components/document_upload_field.dart';
 import 'package:zaylo_mobile/auth/rider/widgets/rider_terms_dialog.dart';
 import 'package:zaylo_mobile/auth/widgets/auth_layout.dart';
 import 'package:zaylo_mobile/auth/widgets/registration_progress.dart';
+import 'package:zaylo_mobile/auth/widgets/verification_form.dart';
 import 'package:zaylo_mobile/components/address/ph_address_section.dart';
 import 'package:zaylo_mobile/components/buttons.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
@@ -24,8 +26,9 @@ import 'package:zaylo_mobile/utils/validators.dart';
 
 /// Rider sign-up, laid out like buyer registration:
 /// 1. personal details, 2. rider details and documents (checked with the
-/// server, nothing uploaded yet), 3. Rider Terms, then the upload, and
-/// 4. a confirmation. The rider applies to a logistics partner, which
+/// server, nothing uploaded yet), 3. Rider Terms, then the upload, 4. the
+/// emailed code, which creates the application (as on the website), and
+/// 5. a confirmation. The rider applies to a logistics partner, which
 /// approves the account from its Riders page on the website.
 class RiderRegistrationScreen extends StatefulWidget {
   const RiderRegistrationScreen({super.key, this.api});
@@ -52,7 +55,8 @@ class _RiderRegistrationScreenState extends State<RiderRegistrationScreen> {
     'postal_code',
   ];
   static const _termsStep = 3;
-  static const _successStep = 4;
+  static const _codeStep = 4;
+  static const _successStep = 5;
 
   // Same server as the buyer client; a separate instance keeps sessions apart.
   late final _api = widget.api ?? RiderApi(baseUrl: AppScope.read(context).api.baseUrl);
@@ -203,7 +207,8 @@ class _RiderRegistrationScreenState extends State<RiderRegistrationScreen> {
     });
   }
 
-  /// Step 3 -> 4: uploads the documents and creates the pending application.
+  /// Step 3 -> 4: uploads the documents and emails the code; the application
+  /// is created once the code is entered.
   Future<void> _submitApplication() async {
     if (!_termsAccepted) {
       setState(() => _errors = {'terms_accepted': 'Read and accept the Rider Terms and Conditions to continue.'});
@@ -211,7 +216,7 @@ class _RiderRegistrationScreenState extends State<RiderRegistrationScreen> {
     }
     await _run(() async {
       await _api.register(_registration());
-      if (mounted) setState(() => _step = _successStep);
+      if (mounted) setState(() => _step = _codeStep);
     });
   }
 
@@ -256,7 +261,10 @@ class _RiderRegistrationScreenState extends State<RiderRegistrationScreen> {
   // ------------------------------------------------------------------ Build
 
   @override
-  Widget build(BuildContext context) => PopScope(
+  Widget build(BuildContext context) => HideChatHead(child: _screen(context));
+
+  // The buyer app's floating chat bubble is hidden in the rider app.
+  Widget _screen(BuildContext context) => PopScope(
         // After submitting there is nothing to go back to; back leaves sign-up.
         canPop: _step != _successStep,
         onPopInvokedWithResult: (didPop, _) {
@@ -264,7 +272,7 @@ class _RiderRegistrationScreenState extends State<RiderRegistrationScreen> {
         },
         child: AuthScaffold(
           onBack: switch (_step) {
-            2 || _termsStep => () => setState(() => _step--),
+            2 || _termsStep || _codeStep => () => setState(() => _step--),
             _successStep => _finish,
             _ => null,
           },
@@ -280,7 +288,8 @@ class _RiderRegistrationScreenState extends State<RiderRegistrationScreen> {
                 switch (_step) {
                   1 => 'Register as a rider',
                   2 => 'Your rider details',
-                  _ => 'Terms and conditions',
+                  _termsStep => 'Terms and conditions',
+                  _ => 'Check your email',
                 },
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
@@ -289,17 +298,29 @@ class _RiderRegistrationScreenState extends State<RiderRegistrationScreen> {
                 switch (_step) {
                   1 => 'Tell us who you are and where you live. You must be at least $minimumAge years old to ride with ZAYLO.',
                   2 => 'Choose the logistics partner you will ride for, then add your contact details and vehicle.',
-                  _ => 'Read the Rider Terms and Conditions, then submit your application.',
+                  _termsStep => 'Read the Rider Terms and Conditions, then submit your application.',
+                  _ => 'Enter the six-digit code we sent to ${_email.text.trim()}. Your application goes to '
+                      '${_partnerName ?? 'your logistics partner'} once the code is confirmed.',
                 },
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 25),
-              RegistrationProgress(step: _step, labels: const ['Personal details', 'Rider details', 'Terms']),
-              const SizedBox(height: 24),
+              // A fourth label does not fit a phone's width; the code step is self-explanatory.
+              if (_step < _codeStep) ...[
+                RegistrationProgress(step: _step, labels: const ['Personal details', 'Rider details', 'Terms']),
+                const SizedBox(height: 24),
+              ],
               switch (_step) {
                 1 => _personalDetailsForm(),
                 2 => _riderDetailsForm(),
-                _ => _termsForm(),
+                _termsStep => _termsForm(),
+                _ => VerificationForm(
+                    api: _api,
+                    email: _email.text.trim(),
+                    onVerified: (_) async {
+                      if (mounted) setState(() => _step = _successStep);
+                    },
+                  ),
               },
               const SizedBox(height: 25),
               Center(
@@ -640,8 +661,7 @@ class _ApplicationSubmitted extends StatelessWidget {
             Icon(Icons.schedule_outlined),
             SizedBox(width: 12),
             Expanded(
-              child: Text('You can sign in as a rider after approval. We will ask you to confirm your email '
-                  'with a code the first time you sign in.'),
+              child: Text('Your email is confirmed. You can sign in as a rider once your application is approved.'),
             ),
           ]),
         ),

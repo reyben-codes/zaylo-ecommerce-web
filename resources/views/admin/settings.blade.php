@@ -27,7 +27,7 @@
                         </div>
                         <p>{{ $announcement->body }}</p>
                         <span class="seller-cell-note">
-                            For {{ Str::lower($audiences[$announcement->audience] ?? $announcement->audience) }}
+                            <span class="announcement-audience announcement-audience--{{ $announcement->audience }}"><i class="fas {{ \App\Models\Announcement::AUDIENCE_ICONS[$announcement->audience] ?? 'fa-users' }}" aria-hidden="true"></i> {{ $audiences[$announcement->audience] ?? $announcement->audience }}</span>
                             @if($announcement->starts_at) · from {{ $announcement->starts_at->timezone('Asia/Manila')->format('M j, g:i A') }}@endif
                             @if($announcement->ends_at) · until {{ $announcement->ends_at->timezone('Asia/Manila')->format('M j, g:i A') }}@endif
                             · by {{ $announcement->author?->name }}
@@ -39,7 +39,7 @@
                                 <input type="hidden" name="toggle" value="1">
                                 <button type="submit" class="seller-button seller-button--small seller-button--secondary">{{ $announcement->is_published ? 'Unpublish' : 'Publish' }}</button>
                             </form>
-                            <form method="POST" action="{{ route('admin.announcements.destroy', $announcement) }}" data-confirm="Delete the announcement &quot;{{ $announcement->title }}&quot;?">
+                            <form method="POST" action="{{ route('admin.announcements.destroy', $announcement) }}" data-confirm="Delete the announcement &quot;{{ $announcement->title }}&quot;? Users will no longer see it." data-confirm-title="Delete announcement?" data-confirm-button="Delete" data-confirm-tone="danger">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="seller-button seller-button--small seller-button--danger">Delete</button>
@@ -67,15 +67,23 @@
                     <textarea id="announcement-body" name="body" rows="3" maxlength="1000" required placeholder="What people need to know.">{{ old('body') }}</textarea>
                     @error('body')<p class="seller-field__error" role="alert">{{ $message }}</p>@enderror
                 </div>
-                <div class="admin-form__row">
-                    <div class="seller-field">
-                        <label class="seller-field__label" for="announcement-audience">Show to</label>
-                        <select id="announcement-audience" name="audience">
-                            @foreach($audiences as $key => $label)
-                                <option value="{{ $key }}" @selected(old('audience', 'all') === $key)>{{ $label }}</option>
-                            @endforeach
-                        </select>
+                <fieldset class="seller-field announcement-audiences">
+                    <legend class="seller-field__label">Who should see it?</legend>
+                    <div class="announcement-audiences__options">
+                        @foreach($audiences as $key => $label)
+                            <label class="announcement-audience-option{{ $key === 'all' ? ' announcement-audience-option--public' : '' }}">
+                                <input type="radio" name="audience" value="{{ $key }}" @checked(old('audience', 'all') === $key) required>
+                                <span class="announcement-audience-option__icon" aria-hidden="true"><i class="fas {{ \App\Models\Announcement::AUDIENCE_ICONS[$key] }}"></i></span>
+                                <span class="announcement-audience-option__text">
+                                    <strong>{{ $label }}</strong>
+                                    <small>{{ \App\Models\Announcement::AUDIENCE_HINTS[$key] }}</small>
+                                </span>
+                            </label>
+                        @endforeach
                     </div>
+                    @error('audience')<p class="seller-field__error" role="alert">{{ $message }}</p>@enderror
+                </fieldset>
+                <div class="admin-form__row">
                     <div class="seller-field">
                         <label class="seller-field__label" for="announcement-starts">Starts (optional)</label>
                         <input type="datetime-local" id="announcement-starts" name="starts_at" value="{{ old('starts_at') }}">

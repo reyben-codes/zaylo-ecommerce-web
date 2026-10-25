@@ -12,6 +12,9 @@
             <p class="seller-eyebrow"><a href="{{ route('admin.settings') }}" class="workspace-link"><i class="fas fa-arrow-left" aria-hidden="true"></i> Platform settings</a></p>
             <h1>{{ $policy?->title ?? $title }}</h1>
             <p>Write in plain text. Start a line with <code>## </code> for a heading and <code>- </code> for a bullet point; leave a blank line between paragraphs.</p>
+            @if(! $policy && $builtIn)
+                <p>This page currently shows ZAYLO's built-in text, filled in below. Publishing saves your version, which then replaces it on the website and in the app.</p>
+            @endif
         </div>
     </section>
 
@@ -26,7 +29,7 @@
             </div>
             <div class="seller-field">
                 <label class="seller-field__label" for="policy-body">Text</label>
-                <textarea id="policy-body" name="body" rows="22" class="policy-editor" required>{{ old('body', $policy?->body) }}</textarea>
+                <textarea id="policy-body" name="body" rows="22" class="policy-editor" required>{{ old('body', $policy?->body ?? $builtIn?->body) }}</textarea>
                 @error('body')<p class="seller-field__error" role="alert">{{ $message }}</p>@enderror
             </div>
             <div class="admin-form-footer">

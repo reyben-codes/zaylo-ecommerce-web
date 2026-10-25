@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:zaylo_mobile/components/layout.dart';
 import 'package:zaylo_mobile/components/theme_toggle.dart';
 import 'package:zaylo_mobile/features/buyer/account/notification_bell_button.dart';
+import 'package:zaylo_mobile/features/buyer/messages/seller_inbox_screen.dart';
+import 'package:zaylo_mobile/state/app_state.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 
 class HomeTopBar extends StatelessWidget {
@@ -12,6 +14,10 @@ class HomeTopBar extends StatelessWidget {
 
   /// The bar floats over the page, which reserves this much space for it.
   static const height = 70.0;
+
+  /// Narrower than this, the centred logo leaves too little room for three icons on the right, so the theme
+  /// toggle stays in Account > Settings only.
+  static const _roomyWidth = 400.0;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -34,8 +40,9 @@ class HomeTopBar extends StatelessWidget {
               height: 38, fit: BoxFit.contain, color: ZayloAssets.logoTint, colorBlendMode: BlendMode.srcIn),
           Expanded(
             child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-              const ThemeToggleButton(),
-              // The bag is in the bottom nav bar.
+              if (MediaQuery.sizeOf(context).width >= _roomyWidth) const ThemeToggleButton(),
+              // Messages with sellers (the floating chat head opens them too); the bag is in the bottom nav bar.
+              const _MessagesButton(),
               const NotificationBellButton(),
             ]),
           ),
@@ -345,4 +352,28 @@ class _HeroDots extends StatelessWidget {
           ),
         ],
       ]);
+}
+
+/// The chat icon in the Home top bar, with a badge for unread seller messages. Signed-in buyers only.
+class _MessagesButton extends StatelessWidget {
+  const _MessagesButton();
+
+  @override
+  Widget build(BuildContext context) {
+    final state = AppScope.of(context);
+    if (!state.signedIn) return const SizedBox.shrink();
+    final unread = state.chatUnread;
+    return IconButton(
+      tooltip: unread > 0 ? 'Messages, $unread unread' : 'Messages',
+      onPressed: () => Navigator.of(context)
+          .push(MaterialPageRoute(builder: (_) => const SellerInboxScreen()))
+          .then((_) => state.refreshChatUnread()),
+      icon: Badge(
+        isLabelVisible: unread > 0,
+        label: Text(unread > 99 ? '99+' : '$unread'),
+        backgroundColor: ZayloColors.ink,
+        child: const Icon(Icons.chat_bubble_outline),
+      ),
+    );
+  }
 }

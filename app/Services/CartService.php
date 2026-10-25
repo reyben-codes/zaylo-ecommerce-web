@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Buyer cart rules shared by the web storefront and the mobile API.
+ * Buyer cart rules shared by the web storefront (BuyerController) and the mobile API.
  */
 class CartService
 {
@@ -19,9 +19,13 @@ class CartService
         return Cart::firstOrCreate(['user_id' => $user->id]);
     }
 
+    /**
+     * Adds a product (or one of its options) to the buyer's cart, merging with a line already there.
+     * A product with several options needs one chosen; a single option is picked automatically.
+     */
     public function add(User $user, Product $product, int $quantity, ?int $variantId = null): CartItem
     {
-        abort_unless($product->is_active, 404);
+        abort_unless($product->is_listed, 404);
         $legacyCart = Schema::hasColumn('cart_items', 'product_id');
         $variant = $variantId
             ? $product->variants()->whereKey($variantId)->where('is_active', true)->firstOrFail()
@@ -56,10 +60,7 @@ class CartService
             return $item;
         }
 
-        $data = [
-            'product_variant_id' => $variant?->id,
-            'quantity' => $quantity,
-        ];
+        $data = ['product_variant_id' => $variant?->id, 'quantity' => $quantity];
         if ($legacyCart) {
             $data['product_id'] = $product->id;
         }

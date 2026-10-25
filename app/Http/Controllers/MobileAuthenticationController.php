@@ -2,27 +2,29 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\WrongAccountTypeException;
 use App\Http\Controllers\Concerns\IssuesMobileTokens;
 use App\Models\User;
 use App\Rules\PersonName;
 use App\Rules\PhoneNumber;
 use App\Rules\StrongPassword;
+use App\Services\ActivityLogger;
 use App\Services\EmailVerificationService;
 use App\Services\GoogleAccountService;
 use App\Services\GoogleIdTokenVerifier;
+use App\Services\PendingRegistrationService;
 use App\Support\MobilePayload;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use Laravel\Socialite\Two\User as GoogleUser;
 
 /**
- * Buyer sign-in, registration and email verification for the mobile app, plus
- * the logout and password-reset endpoints riders share.
+ * Buyer sign-in and sign-up for the mobile app, plus the endpoints buyers and riders share: who am I, sign out,
+ * email codes and password reset. Like the website, a sign-up becomes an account only once its emailed code is entered.
  */
 class MobileAuthenticationController extends Controller
 {
@@ -30,71 +32,47 @@ class MobileAuthenticationController extends Controller
 
     public function login(Request $request): JsonResponse
     {
-        return $this->signInWithRole($request, 'buyer', 'This sign-in is for buyer accounts. Riders can use Login as a Rider; sellers can use the website.');
+        return $this->signInWithRole($request, 'buyer', 'This sign-in is for buyer accounts. Riders can use Login as a Rider; sellers and logistics partners use the website.');
     }
 
     /**
-     * "Continue with Google" in the buyer app. The app signs in with Google
-     * natively and sends the ID token; accounts are found, linked or created
-     * by the same rules as the website's Google sign-in (GoogleAccountService).
+     * "Continue with Google" in the app. The phone sends the ID token Google gave it; the account is found, linked
+     * or created by the same rules as the website's Google sign-in. Buyers only: riders apply to a partner by form.
      */
-    public function google(Request $request, GoogleIdTokenVerifier $verifier, GoogleAccountService $accounts): JsonResponse
+    public function google(Request $request, GoogleIdTokenVerifier $tokens, GoogleAccountService $accounts): JsonResponse
     {
         $validated = $request->validate([
             'id_token' => ['required', 'string', 'max:4096'],
             'device_name' => ['nullable', 'string', 'max:100'],
         ]);
-        if (! GoogleIdTokenVerifier::configured()) {
-            return response()->json([
-                'message' => 'Google sign-in is not set up yet. Please use email and password for now.',
-                'code' => 'google_unconfigured',
-            ], 503);
+        if (! $tokens->configured()) {
+            return response()->json(['message' => 'Google sign-in is not set up yet. Please use email and password for now.', 'code' => 'google_unconfigured'], 503);
         }
 
         try {
-            $claims = $verifier->verify($validated['id_token']);
-        } catch (\DomainException $exception) {
-            $this->googleFailed($exception);
-        } catch (\Throwable $exception) {
-            // Google's signing keys could not be fetched; the token itself may be fine.
-            Log::warning('Google sign-in key fetch failed.', ['exception_type' => $exception::class]);
-
-            return response()->json(['message' => 'Google sign-in is unavailable right now. Please try again or use email and password.'], 503);
-        }
-
-        // Check the role before linking, so a seller's or rider's account is never changed from the buyer app.
-        $existing = User::where('google_id', $claims['sub'])
-            ->when(is_string($claims['email'] ?? null), fn ($query) => $query->orWhere('email', $claims['email']))
-            ->get();
-        if ($existing->contains(fn (User $user) => ! $user->hasRole('buyer'))) {
-            throw ValidationException::withMessages(['google' => 'This sign-in is for buyer accounts. Riders can use Login as a Rider; sellers can use the website.']);
-        }
-
-        $identity = (new GoogleUser)->setRaw($claims)->map([
-            'id' => $claims['sub'],
-            'name' => $claims['name'] ?? null,
-            'email' => $claims['email'] ?? null,
-            'avatar' => $claims['picture'] ?? null,
-        ]);
-        try {
+            $identity = $tokens->verify($validated['id_token']);
+            if (! $identity) {
+                throw ValidationException::withMessages(['google' => 'Google could not confirm this sign-in. Please try again.']);
+            }
             $user = $accounts->resolve($identity, 'buyer');
-        } catch (\DomainException $exception) {
-            $this->googleFailed($exception);
+        } catch (WrongAccountTypeException $exception) {
+            $portal = User::portalOf($exception->accountRole);
+            throw ValidationException::withMessages(['google' => $portal === 'rider'
+                ? 'This Google email belongs to a rider account. Use Login as a Rider with your email and password.'
+                : "This Google email belongs to a {$portal} account, which uses the ZAYLO website, not the app."]);
+        } catch (ValidationException $exception) {
+            throw $exception;
+        } catch (\Throwable $exception) {
+            // Never log the token or Google's response; only what kind of failure it was.
+            Log::warning('Mobile Google sign-in failed.', ['exception_type' => $exception::class]);
+            throw ValidationException::withMessages(['google' => 'We could not sign you in with Google. Please try again or use email and password.']);
         }
 
         if (! $user->isActive()) {
-            throw ValidationException::withMessages(['google' => 'This account is suspended. Please contact support.']);
+            throw ValidationException::withMessages(['google' => 'This account is suspended. Please contact ZAYLO support.']);
         }
 
-        return $this->issueToken($user, $validated['device_name'] ?? null);
-    }
-
-    private function googleFailed(\Throwable $exception): never
-    {
-        // Like the website: log only the exception type, never the token or Google's claims.
-        Log::warning('Google sign-in failed.', ['exception_type' => $exception::class]);
-
-        throw ValidationException::withMessages(['google' => 'We could not sign you in with Google. Please try again or use email and password.']);
+        return $this->issueToken($user, $validated['device_name'] ?? null, 'Signed in with Google.');
     }
 
     public function me(Request $request): JsonResponse
@@ -104,6 +82,7 @@ class MobileAuthenticationController extends Controller
 
     public function logout(Request $request): JsonResponse
     {
+        app(ActivityLogger::class)->record('mobile.logout', 'auth', 'Signed out of the mobile app', $request->user());
         $request->user()->currentAccessToken()?->delete();
 
         return response()->json(['message' => 'Signed out.']);
@@ -122,105 +101,94 @@ class MobileAuthenticationController extends Controller
         return response()->json(['message' => 'If an account exists for that email, a password reset link is on its way.']);
     }
 
-    public function register(Request $request): JsonResponse
+    public function register(Request $request, PendingRegistrationService $registrations): JsonResponse
     {
-        $validated = $request->validate([
-            'first_name' => ['required', 'string', 'max:100', new PersonName],
-            'last_name' => ['required', 'string', 'max:100', new PersonName],
-            'phone' => ['required', 'string', 'max:11', new PhoneNumber],
-            'date_of_birth' => ['required', 'date', 'before_or_equal:today'],
-            'email' => ['required', 'email', 'unique:users,email'],
-            'password' => ['required', 'string', 'confirmed', new StrongPassword],
-        ]);
-
-        $user = DB::transaction(fn () => User::create([
-            'name' => $validated['first_name'].' '.$validated['last_name'],
-            'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
-            'role' => 'buyer',
-            'phone' => $validated['phone'],
-            'date_of_birth' => $validated['date_of_birth'],
-            'status' => 'active',
-        ]));
-
-        try {
-            $user->sendEmailVerificationNotification();
-        } catch (\Throwable $exception) {
-            report($exception);
-
-            return response()->json([
-                'email' => $user->email,
-                'verification_sent' => false,
-                'message' => 'Your account was created, but we could not send the verification code. Please use Resend code.',
-            ], 201);
+        // +63 9XX numbers are the same phone as 09XX; store one form so duplicates are caught either way.
+        if (preg_match('/^\+639[0-9]{9}$/D', (string) $request->input('phone'))) {
+            $request->merge(['phone' => '0'.substr($request->input('phone'), 3)]);
         }
 
-        return response()->json([
-            'email' => $user->email,
-            'verification_sent' => true,
-            'message' => 'Your verification code has been sent.',
-        ], 201);
+        $validated = $request->validate([
+            'first_name' => ['required', 'string', 'min:2', 'max:50', new PersonName],
+            'last_name' => ['required', 'string', 'min:2', 'max:50', new PersonName],
+            'phone' => ['required', 'string', 'max:11', new PhoneNumber, 'unique:users,phone'],
+            'date_of_birth' => ['required', 'bail', 'date', 'before_or_equal:today', function (string $attribute, mixed $value, \Closure $fail) {
+                if (Carbon::parse($value)->startOfDay()->gt(today()->subYears(18))) {
+                    $fail('You must be at least 18 years old to register.');
+                }
+            }],
+            'email' => ['required', 'email:filter', 'unique:users,email'],
+            'password' => ['required', 'string', 'confirmed', new StrongPassword],
+        ], [
+            'email.email' => 'Enter a valid email address, such as name@example.com.',
+            'phone.unique' => 'This mobile number is already in use.',
+            'date_of_birth.before_or_equal' => 'Enter a valid date of birth. It cannot be a future date.',
+        ]) + ['role' => 'buyer'];
+
+        return $this->startSignUp($request, $registrations, $validated);
     }
 
-    public function verifyEmail(Request $request, EmailVerificationService $verification): JsonResponse
+    public function verifyEmail(Request $request, EmailVerificationService $verification, PendingRegistrationService $registrations): JsonResponse
     {
         $validated = $request->validate([
             'email' => ['required', 'email'],
             'otp' => ['required', 'string', 'regex:/^[0-9]{6}$/'],
+            'device_name' => ['nullable', 'string', 'max:100'],
         ], [
             'otp.required' => 'Enter the verification code from your email.',
             'otp.regex' => 'Enter the six-digit code from your email.',
         ]);
 
-        $user = User::where('email', $validated['email'])->first();
-        if (! $user) {
-            throw ValidationException::withMessages([
-                'email' => 'We could not find an account for this email address.',
-            ]);
+        $user = User::whereRaw('LOWER(email) = ?', [Str::lower($validated['email'])])->first();
+        if ($user) {
+            if ($user->hasVerifiedEmail()) {
+                return response()->json(['message' => 'This email address is already verified. You can sign in.']);
+            }
+            $verification->verify($user, $validated['otp']);
+            $user->refresh();
+        } elseif ($pending = $this->waitingSignUp($validated['email'])) {
+            // The account is created only now, with its email already verified.
+            $user = $registrations->complete($pending, $validated['otp']);
+        } else {
+            throw ValidationException::withMessages(['email' => 'We could not find a sign-up for this email address. Please sign up again.']);
         }
 
-        $verification->verify($user, $validated['otp']);
-
-        // The code proves control of the inbox, exactly as the web's signed-in
-        // verification step does, so the buyer can continue without signing in again.
+        // The code proves control of the inbox, so a buyer continues signed in, as on the website.
         if ($user->hasRole('buyer') && $user->isActive()) {
-            return $this->issueToken($user->fresh(), $request->input('device_name'), 'Email verified successfully.');
+            return $this->issueToken($user, $validated['device_name'] ?? null, 'Email verified successfully.');
         }
 
-        if ($user->hasRole('rider') && ! $user->isActive()) {
-            return response()->json(['message' => 'Email verified. Your rider application is now under review; we will email you once it is approved.']);
+        if ($user->hasRole('rider', 'courier') && ! $user->isActive()) {
+            return response()->json(['message' => 'Email verified. Your rider application is now with '.($user->rider?->provider?->name ?? 'your logistics partner').' for review. You can sign in once it is approved.']);
         }
 
         return response()->json(['message' => 'Email verified successfully.']);
     }
 
-    public function resendVerification(Request $request): JsonResponse
+    public function resendVerification(Request $request, PendingRegistrationService $registrations): JsonResponse
     {
         $validated = $request->validate(['email' => ['required', 'email']]);
-        $user = User::where('email', $validated['email'])->first();
+        $user = User::whereRaw('LOWER(email) = ?', [Str::lower($validated['email'])])->first();
 
-        if (! $user) {
-            throw ValidationException::withMessages([
-                'email' => 'We could not find an account for this email address.',
-            ]);
-        }
-
-        if ($user->hasVerifiedEmail()) {
+        if ($user?->hasVerifiedEmail()) {
             return response()->json(['message' => 'This email address is already verified.']);
         }
 
+        $pending = $user ? null : $this->waitingSignUp($validated['email']);
+        if (! $user && ! $pending) {
+            throw ValidationException::withMessages(['email' => 'We could not find a sign-up for this email address. Please sign up again.']);
+        }
+
         try {
-            $user->sendEmailVerificationNotification();
+            $user ? $user->sendEmailVerificationNotification() : $registrations->sendCode($pending);
         } catch (ValidationException $exception) {
             throw $exception;
         } catch (\Throwable $exception) {
             report($exception);
 
-            return response()->json([
-                'message' => 'We could not send your code. Please try again shortly.',
-            ], 503);
+            return response()->json(['message' => 'We could not send your code. Please try again shortly.'], 503);
         }
 
-        return response()->json(['message' => 'A new verification code has been sent.']);
+        return response()->json(['message' => 'A new verification code has been sent. Only the latest code will work.']);
     }
 }

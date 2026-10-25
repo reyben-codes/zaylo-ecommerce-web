@@ -203,7 +203,10 @@
     const chips = [...panel.querySelectorAll('[data-option-chip]')];
     const addColor = panel.querySelector('[data-option-add-color]');
     const sizeList = panel.querySelector('#option-size-presets');
-    const presets = JSON.parse(panel.dataset.sizePresets || '{}');
+    const adultPresets = JSON.parse(panel.dataset.sizePresets || '{}');
+    const kidsPresets = JSON.parse(panel.dataset.kidsSizePresets || '{}');
+    const kidsGenders = JSON.parse(panel.dataset.kidsGenders || '[]');
+    const gender = form.querySelector('[data-product-gender]');
     const categories = form.querySelector('[data-categories]');
     const mainPrice = form.querySelector('[data-main-price]');
     const mainStock = form.querySelector('[data-main-stock]');
@@ -219,8 +222,12 @@
     // The rows that become options: sized rows, or a named color's first row when it has no sizes.
     const countedRows = (card) => (sizedRows(card).length ? sizedRows(card) : (colorOf(card) ? rowsOf(card).slice(0, 1) : []));
     const isBlank = (card) => !colorOf(card) && sizedRows(card).length === 0;
-    // Standard sizes come from the first ticked category that has them (e.g. Shoes or Clothing).
-    const sizesFor = () => [...(categories?.querySelectorAll('input:checked') || [])].map((box) => presets[box.value]).find(Boolean) || [];
+    // Standard sizes come from the first ticked category that has them (e.g. Shoes or Clothing), in kids' sizes
+    // when the product is for girls, boys or kids.
+    const sizesFor = () => {
+        const presets = kidsGenders.includes(gender?.value) ? kidsPresets : adultPresets;
+        return [...(categories?.querySelectorAll('input:checked') || [])].map((box) => presets[box.value]).find(Boolean) || [];
+    };
     const clearRow = (row) => row.querySelectorAll('input').forEach((input) => { input.value = input.matches('[data-option-stock]') ? '0' : ''; });
     const fromTemplate = (template, replacements) => {
         let html = template.innerHTML;
@@ -343,6 +350,7 @@
     panel.addEventListener('input', refresh);
     mainPrice?.addEventListener('input', refresh);
     categories?.addEventListener('change', updatePresets);
+    gender?.addEventListener('change', updatePresets);
 
     // A field that needs fixing inside a collapsed color opens that color so the browser can point to it.
     panel.addEventListener('invalid', (event) => {

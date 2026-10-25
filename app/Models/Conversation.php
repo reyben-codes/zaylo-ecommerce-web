@@ -14,20 +14,6 @@ class Conversation extends Model
 
     protected $casts = ['last_message_at' => 'datetime'];
 
-    /**
-     * The buyer's conversation with the seller of a product, started about that product the first time.
-     * Only active, verified sellers can be messaged.
-     */
-    public static function startAbout(User $buyer, Product $product): self
-    {
-        abort_unless($product->is_active, 404);
-        $seller = Product::usesLegacySchema() ? $product->seller : $product->seller?->owner;
-        abort_unless($seller && $seller->isActive() && $seller->hasRole('seller') && $seller->hasVerifiedEmail(), 404);
-        abort_if((int) $seller->id === (int) $buyer->id, 422, 'You cannot message yourself.');
-
-        return static::firstOrCreate(['buyer_id' => $buyer->id, 'seller_id' => $seller->id], ['product_id' => $product->id]);
-    }
-
     public function scopeForUser(Builder $query, int $userId): Builder
     {
         return $query->where(fn ($q) => $q->where('buyer_id', $userId)->orWhere('seller_id', $userId));

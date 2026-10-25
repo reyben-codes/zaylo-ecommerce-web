@@ -45,7 +45,7 @@ mixin RiderDeliveryActions<T extends StatefulWidget> on State<T> {
         'Marked as not delivered. Your logistics partner can see it.');
   }
 
-  /// Scans any parcel label: one of [active] goes out for delivery, or is
+  /// Scans any parcel's waybill: one of [active] goes out for delivery, or is
   /// delivered if it already was. The server checks the parcel is the rider's.
   Future<void> scanAnyParcel(List<RiderDelivery> active) async {
     final code = await _scan(title: 'Scan parcel', hint: 'Scan a parcel to start or confirm its delivery.');

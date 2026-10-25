@@ -334,15 +334,15 @@
     gap: 8px;
     align-items: center;
     padding: 8px 10px;
-    border: 1px solid #e8e0d7;
+    border: 1px solid var(--c-e8e0d7);
     border-radius: 8px;
     font-size: .85rem;
     cursor: pointer;
 }
 
 .service-area:has(input:checked) {
-    border-color: #1a1714;
-    background: #faf7f2;
+    border-color: var(--c-1a1714);
+    background: var(--c-faf7f2);
 }
 
 .service-area input {
@@ -352,6 +352,6 @@
 }
 
 .service-area:has(input:focus-visible) {
-    outline: 2px solid #1a1714;
+    outline: 2px solid var(--c-1a1714);
     outline-offset: 2px;
 }

@@ -1,0 +1,38 @@
+This policy explains what to do when something is wrong with an order, and how returns and refunds work on ZAYLO. It is part of our Terms of Service and does not limit your rights under the Consumer Act of the Philippines (Republic Act No. 7394).
+
+## 1. When you can ask for a return or refund
+You can file a complaint when:
+- your order did not arrive;
+- an item arrived damaged or defective;
+- you received the wrong item, size or color;
+- an item is not as described in its listing;
+- there was a problem with the delivery or the rider; or
+- you were charged incorrectly or did not receive a refund you were promised.
+Returns because you changed your mind are not covered, unless the seller agrees to accept them.
+
+## 2. How to file a complaint
+- Open the order in My Orders and choose Report a problem, or start from Help and support.
+- Pick the reason, describe what happened and attach up to 4 photos or files (5 MB each), such as the parcel, the label and the item.
+- File as soon as you notice the problem, ideally within 7 days of delivery. Complaints filed much later are harder to verify.
+- Each order can have one complaint case. If you have more to add, reply in the same case.
+- Cancelled orders cannot have complaints, because nothing was charged or delivered.
+
+## 3. What happens next
+- The ZAYLO team reviews your case and may ask you, the seller or the rider for more details or photos. You can follow every update and reply in the case.
+- We decide the outcome based on the evidence: a full or partial refund, a replacement, a return of the item, or no refund if the complaint is not supported. We explain the decision in the case.
+- If an item has to be sent back, we will tell you how. Keep the item, its tags and packaging until the case is closed.
+
+## 4. How refunds are paid
+- Orders paid with GCash are refunded to the same GCash account.
+- Orders paid by cash on delivery are refunded by GCash or bank transfer to an account in your name that you give us in the case.
+- We aim to send approved refunds within 7 business days of the decision. Your bank or e-wallet may take extra time to show it.
+- Vouchers used on a refunded order are not reissued unless we say so in the case.
+
+## 5. Before you accept a parcel
+Check that the parcel is sealed and addressed to you. If it is clearly damaged or opened, tell the rider and take a photo before you accept it. For cash on delivery, pay only the amount shown in the app.
+
+## 6. Fair use
+We may decline complaints that are false or misleading, or limit refunds and cash on delivery for accounts that repeatedly abuse returns. Sellers who are found at fault may be charged for the refund and shipping.
+
+## 7. Contact us
+If you need help with a return or refund, reply in your complaint case, use Help and support, or email zaylo.shop.dev@gmail.com.

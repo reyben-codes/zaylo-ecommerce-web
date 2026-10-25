@@ -121,9 +121,9 @@
                             </td>
                             <td>
                                 <span class="stock-pill stock-pill--{{ $stock['state'] }}">{{ $stockLabels[$stock['state']] }}</span>
-                                <span class="visibility{{ $product->is_active ? ' is-visible' : '' }}">
-                                    <i class="fas {{ $product->is_active ? 'fa-eye' : 'fa-eye-slash' }}" aria-hidden="true"></i>
-                                    {{ $product->is_active ? 'Visible to buyers' : 'Hidden' }}
+                                <span class="visibility{{ $product->is_listed ? ' is-visible' : '' }}">
+                                    <i class="fas {{ $product->is_listed ? 'fa-eye' : ($product->is_pending_review ? 'fa-hourglass-half' : 'fa-eye-slash') }}" aria-hidden="true"></i>
+                                    {{ match (true) { $product->is_pending_review => 'Pending review', $product->is_rejected => 'Rejected by admin', $product->is_active => 'Visible to buyers', default => 'Hidden' } }}
                                 </span>
                             </td>
                             <td class="is-numeric">

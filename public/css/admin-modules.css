@@ -352,6 +352,115 @@
     justify-content: space-between;
 }
 
+/* Audience of an announcement: a badge in the list and a choice of cards on the form. */
+.announcement-audience {
+    display: inline-flex;
+    gap: 5px;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--c-f3ece4);
+    color: var(--c-4f453c);
+    font-weight: 600;
+}
+
+.announcement-audience--all {
+    background: var(--c-1a1714);
+    color: var(--c-ffffff);
+}
+
+.announcement-audiences {
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.announcement-audiences legend {
+    margin-bottom: 7px;
+    padding: 0;
+}
+
+.announcement-audiences__options {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 8px;
+}
+
+.announcement-audience-option {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 10px 12px;
+    border: 1px solid var(--c-e3d9cf);
+    border-radius: 10px;
+    background: var(--c-ffffff);
+    cursor: pointer;
+    transition: border-color .18s ease-out, background-color .18s ease-out;
+}
+
+.announcement-audience-option--public {
+    grid-column: 1 / -1;
+}
+
+.announcement-audience-option:hover {
+    border-color: var(--c-9a755e);
+}
+
+.announcement-audience-option:has(input:checked) {
+    border-color: var(--c-1a1714);
+    background: var(--c-faf7f2);
+}
+
+.announcement-audience-option:has(input:focus-visible) {
+    outline: 2px solid var(--c-9a755e);
+    outline-offset: 2px;
+}
+
+.announcement-audience-option input {
+    flex: none;
+    width: 16px;
+    height: 16px;
+    min-height: 0;
+    margin: 2px 0 0;
+    padding: 0;
+    accent-color: var(--c-1a1714);
+}
+
+.announcement-audience-option__icon {
+    display: inline-grid;
+    flex: none;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--c-f3ece4);
+    color: var(--c-9a755e);
+    font-size: .78rem;
+}
+
+.announcement-audience-option__text {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+
+.announcement-audience-option__text strong {
+    color: var(--c-1a1714);
+    font-size: .8rem;
+}
+
+.announcement-audience-option__text small {
+    color: var(--c-81756b);
+    font-size: .7rem;
+    line-height: 1.4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .announcement-audience-option {
+        transition: none;
+    }
+}
+
 .announcement-state {
     padding: 3px 8px;
     border-radius: 999px;

@@ -1,15 +1,17 @@
 @if(auth()->check() && in_array(auth()->user()->role, ['buyer', 'seller'], true) && auth()->user()->isActive() && auth()->user()->hasVerifiedEmail())
 @once
     <link rel="stylesheet" href="{{ asset('css/chat-widget.css') }}?v={{ filemtime(public_path('css/chat-widget.css')) }}">
-    <div class="chat-widget" data-chat-widget data-chat-url="{{ route(auth()->user()->role.'.chat') }}" data-user-id="{{ auth()->id() }}" hidden>
+    <div class="chat-widget" data-chat-widget data-chat-url="{{ route(auth()->user()->role.'.chat') }}" data-typing-url="{{ route('messages.typing-status') }}" data-user-id="{{ auth()->id() }}" hidden>
         <section class="chat-widget-panel" id="chat-widget-panel" data-chat-panel role="dialog" aria-label="Messages" hidden>
-            <header class="chat-widget-toolbar">
+            <header class="chat-widget-toolbar" data-chat-drag-handle>
+                <button type="button" class="chat-widget-move" data-chat-move aria-label="Move chat window" title="Drag to move. Arrow keys move it to another corner.">@include('partials.icons.chat-widget', ['icon' => 'grip'])</button>
                 <div><strong>Messages</strong><span>A little conversation goes a long way.</span></div>
                 <a href="{{ route(auth()->user()->role.'.chat') }}" data-chat-expand aria-label="Open full Messages page" title="Open full Messages page">@include('partials.icons.chat-widget', ['icon' => 'expand'])</a>
                 <button type="button" data-chat-minimize aria-label="Minimize chat" title="Minimize">@include('partials.icons.chat-widget', ['icon' => 'minimize'])</button>
                 <button type="button" data-chat-dismiss aria-label="Dismiss chat bubble" title="Dismiss bubble">@include('partials.icons.chat-widget', ['icon' => 'close'])</button>
             </header>
             <iframe data-chat-frame title="Buyer and seller conversations"></iframe>
+            <button type="button" class="chat-widget-resize" data-chat-resize aria-label="Resize chat window" title="Drag to resize. Arrow keys adjust the size; Home resets it."></button>
         </section>
         <button class="chat-widget-bubble" type="button" data-chat-bubble aria-label="Open messages" aria-controls="chat-widget-panel" aria-expanded="false" aria-describedby="chat-bubble-help">
             @include('partials.icons.chat-widget', ['icon' => 'chat'])

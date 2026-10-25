@@ -198,6 +198,13 @@ class BuyerApi extends ApiClient {
 
   Future<int> sellerUnreadCount() async => (await send('GET', '/mobile/messages/unread'))['unread'] as int? ?? 0;
 
+  /// Who is typing to the buyer right now, across their recent conversations:
+  /// the floating chat head shows typing dots while the chat itself is closed.
+  Future<List<ChatTyping>> chatTyping() async =>
+      ((await send('GET', '/mobile/chat/typing'))['typing'] as List<dynamic>? ?? const [])
+          .map((item) => ChatTyping.fromJson(item as Map<String, dynamic>))
+          .toList();
+
   /// Opens (or creates) the conversation with the seller of a product.
   Future<SellerConversation> startSellerChat(String slug) async => SellerConversation.fromJson(
       (await send('POST', '/mobile/products/${Uri.encodeComponent(slug)}/chat'))['conversation'] as Map<String, dynamic>);

@@ -227,7 +227,7 @@
 .logistics-chat__start select:focus {
     border-color: var(--zaylo-accent, var(--c-9a755e));
     outline: 0;
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-9a755e) 14%, transparent);
+    box-shadow: 0 0 0 3px rgba(154, 117, 94, .14);
 }
 
 .logistics-chat__error {

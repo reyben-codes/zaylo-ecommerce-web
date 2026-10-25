@@ -121,7 +121,7 @@ class LogisticsPartnerTest extends TestCase
         $this->assertSame(0, Artisan::call('admin:provision', ['email' => 'Owner@Example.com', '--name' => 'Store Owner']));
         preg_match('/\|\s*Password\s*\|\s*(\S+)\s*\|/', Artisan::output(), $matches);
 
-        $this->post(route('login'), ['email' => 'owner@example.com', 'password' => $matches[1]])->assertRedirect(route('admin.dashboard'));
+        $this->post(route('admin.login.submit'), ['email' => 'owner@example.com', 'password' => $matches[1]])->assertRedirect(route('admin.dashboard'));
         $this->get(route('admin.dashboard'))->assertOk();
 
         User::factory()->create(['role' => 'buyer', 'email' => 'buyer@example.com']);
@@ -133,7 +133,7 @@ class LogisticsPartnerTest extends TestCase
         $this->assertSame(0, Artisan::call('logistics:provision', ['email' => 'dispatch@example.com', '--company' => 'Swift Parcels', '--phone' => '09170000009']));
         preg_match('/\|\s*Password\s*\|\s*(\S+)\s*\|/', Artisan::output(), $matches);
 
-        $this->post(route('login'), ['email' => 'dispatch@example.com', 'password' => $matches[1]])->assertRedirect(route('logistics.dashboard'));
+        $this->post(route('logistics.login.submit'), ['email' => 'dispatch@example.com', 'password' => $matches[1]])->assertRedirect(route('logistics.dashboard'));
         $this->get(route('logistics.dashboard'))->assertOk()->assertSee('Swift Parcels');
         $this->post(route('logout'));
         $this->get(route('register', ['role' => 'courier']))->assertSee('Swift Parcels');
@@ -158,7 +158,9 @@ class LogisticsPartnerTest extends TestCase
 
         $buyer = User::factory()->create(['role' => 'buyer', 'status' => 'active', 'password' => 'Buyer-pass1!']);
         $this->from(route('logistics.login'))->post(route('logistics.login.submit'), ['email' => $buyer->email, 'password' => 'Buyer-pass1!'])
-            ->assertRedirect(route('logistics.login'))->assertSessionHasErrors(['email' => 'Incorrect logistics email or password.']);
+            ->assertRedirect(route('logistics.login'))
+            ->assertSessionHasErrors(['email' => "This is a buyer account, so it can't sign in here. Please use the shop sign-in page instead."])
+            ->assertSessionHas('portal_hint.url', route('login'));
         $this->assertGuest();
 
         // Applicants under review see their application; suspended partners are turned away.
@@ -188,7 +190,7 @@ class LogisticsPartnerTest extends TestCase
 
         $seller = User::factory()->create(['role' => 'seller', 'status' => 'active', 'password' => 'Seller-pass1!']);
         $this->post(route('admin.login.submit'), ['email' => $seller->email, 'password' => 'Seller-pass1!'])
-            ->assertSessionHasErrors(['email' => 'Incorrect admin email or password.']);
+            ->assertSessionHasErrors(['email' => "This is a seller account, so it can't sign in here. Please use the Seller Center sign-in page instead."]);
         $this->assertGuest();
     }
 

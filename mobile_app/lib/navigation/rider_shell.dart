@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'package:zaylo_mobile/state/chat_head_state.dart';
 import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/api/rider_api.dart';
 import 'package:zaylo_mobile/components/chat/support_chat.dart';
@@ -111,7 +112,10 @@ class _RiderShellState extends State<RiderShell> {
   }
 
   @override
-  Widget build(BuildContext context) => PopScope(
+  Widget build(BuildContext context) => HideChatHead(child: _screen(context));
+
+  // The buyer app's floating chat bubble is hidden in the rider app.
+  Widget _screen(BuildContext context) => PopScope(
         canPop: false,
         onPopInvokedWithResult: (didPop, _) {
           if (!didPop) _onBack();

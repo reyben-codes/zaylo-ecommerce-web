@@ -48,7 +48,8 @@
         <div class="admin-stack">
             <section class="seller-panel">
                 <header class="seller-panel__header"><div><h2>Decision</h2><p>Resolving or rejecting emails the decision to everyone in the case.</p></div></header>
-                <form method="POST" action="{{ route('admin.disputes.update', $dispute) }}" class="admin-form">
+                <form method="POST" action="{{ route('admin.disputes.update', $dispute) }}" class="admin-form"
+                      data-confirm="Save this decision? Everyone in the case is emailed when it is resolved or rejected." data-confirm-title="Save decision?" data-confirm-button="Save decision">
                     @csrf
                     @method('PATCH')
                     <div class="seller-field">
@@ -92,7 +93,14 @@
 
             @if($order)
                 <section class="seller-panel">
-                    <header class="seller-panel__header"><div><h2>Order</h2><p>{{ Str::headline($order->status) }} · {{ strtoupper((string) $order->payment_method) }} · payment {{ $order->payment?->status ?? 'pending' }}</p></div></header>
+                    <header class="seller-panel__header">
+                        <div><h2>Order</h2><p>{{ Str::headline($order->status) }} · {{ strtoupper((string) $order->payment_method) }} · payment {{ $order->payment?->status ?? 'pending' }}</p></div>
+                        @php $parcel = \Illuminate\Support\Facades\Schema::hasColumn('shipments', 'order_id') ? $order->shipment : $order->sellerOrders->first()?->shipment; @endphp
+                        @if(\App\Support\Waybill::available($parcel))
+                            <a href="{{ route('admin.parcels.waybill.print', $parcel) }}" class="seller-button seller-button--small seller-button--secondary" target="_blank" rel="noopener"
+                               aria-label="Print the waybill for order {{ $order->order_number }} (opens in a new tab)"><i class="fas fa-print" aria-hidden="true"></i> Waybill</a>
+                        @endif
+                    </header>
                     <ul class="case-items">
                         @foreach($order->items as $item)
                             <li><span>{{ $item->quantity }} × {{ $item->product_name }}</span><strong>&#8369;{{ number_format((float) ($item->line_total ?? 0), 2) }}</strong></li>

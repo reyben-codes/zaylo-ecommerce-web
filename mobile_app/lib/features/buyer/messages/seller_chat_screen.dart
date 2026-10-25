@@ -4,17 +4,20 @@ import 'package:flutter/material.dart';
 
 import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/api/buyer_api.dart';
+import 'package:zaylo_mobile/components/chat/typing_dots.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
 import 'package:zaylo_mobile/components/layout.dart';
 import 'package:zaylo_mobile/models/buyer/seller_chat_models.dart';
 import 'package:zaylo_mobile/state/app_state.dart';
+import 'package:zaylo_mobile/state/chat_head_state.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 import 'package:zaylo_mobile/utils/formatters.dart';
 import 'package:zaylo_mobile/utils/ids.dart';
 
 /// A conversation with a seller. It is the same thread the website and the
-/// Seller Center show; new messages and "typing…" are fetched every
-/// [_pollEvery] while the screen is open.
+/// Seller Center show; new messages and "typing…" (animated dots, as on the
+/// website) are fetched every [_pollEvery] while the screen is open. The
+/// floating chat head hides here and afterwards reopens this conversation.
 class SellerChatScreen extends StatefulWidget {
   const SellerChatScreen({super.key, required this.conversation});
 
@@ -53,6 +56,7 @@ class _SellerChatScreenState extends State<SellerChatScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      AppScope.read(context).chatHead.openedConversation(widget.conversation.id, widget.conversation.name);
       _loadLatest();
       _poll = Timer.periodic(_pollEvery, (_) => _loadNew());
     });
@@ -180,7 +184,8 @@ class _SellerChatScreenState extends State<SellerChatScreen> {
   Widget build(BuildContext context) {
     final chat = widget.conversation;
     final thread = [..._messages, ..._outbox.values];
-    return Scaffold(
+    return HideChatHead(
+        child: Scaffold(
       appBar: AppBar(
         title: Column(mainAxisSize: MainAxisSize.min, children: [
           Text(chat.name),
@@ -210,12 +215,13 @@ class _SellerChatScreenState extends State<SellerChatScreen> {
                             textAlign: TextAlign.center, style: TextStyle(color: ZayloColors.muted)),
                       ),
                     for (final message in thread) _Bubble(message: message, onRetry: () => _send(message)),
+                    if (_typing) TypingIndicator(name: chat.name),
                   ],
                 ),
               ),
               _composer(chat.name),
             ]),
-    );
+    ));
   }
 
   Widget _composer(String sellerName) => SafeArea(

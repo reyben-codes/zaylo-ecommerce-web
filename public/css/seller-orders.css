@@ -1,18 +1,4 @@
 /* Order fulfillment and Delivery pages. Shared layout lives in seller-workspace.css. */
-.fulfillment-mode {
-    display: inline-flex;
-    flex: 0 0 auto;
-    gap: 8px;
-    align-items: center;
-    padding: 9px 13px;
-    border: 1px solid var(--c-cbdcc6);
-    border-radius: 999px;
-    background: var(--c-edf5ea);
-    color: var(--c-38603c);
-    font-size: .72rem;
-    font-weight: 700;
-}
-
 .orders-toolbar {
     display: flex;
     gap: 20px;
@@ -59,7 +45,7 @@
 
 .order-tab.is-active span,
 .order-tab:hover span {
-    background: color-mix(in srgb, var(--c-ffffff) 16%, transparent);
+    background: rgba(255, 255, 255, .16);
 }
 
 .order-search {
@@ -199,4 +185,48 @@
         flex-basis: auto;
         width: min(100%, 360px);
     }
+}
+
+/* Where the parcel stands with the logistics partner (seller/partials/pickup-status). */
+.pickup-status {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    max-width: 210px;
+    margin-top: 7px;
+    color: var(--c-6b5f54);
+    font-size: .72rem;
+    line-height: 1.35;
+}
+
+.pickup-status i {
+    margin-top: 2px;
+}
+
+.pickup-status--scheduled {
+    color: var(--c-1a1714);
+    font-weight: 600;
+}
+
+.pickup-status--scheduled i {
+    color: var(--c-2f6b38);
+}
+
+/* Logistics partner picked with "Ready to ship". */
+.order-actions form:has(.order-partner) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.order-partner {
+    max-width: 170px;
+    min-height: 32px;
+    padding: 0 8px;
+    border: 1px solid var(--c-d9d0c7);
+    border-radius: 8px;
+    background: var(--c-ffffff);
+    color: var(--c-1a1714);
+    font: inherit;
+    font-size: .74rem;
 }

@@ -42,7 +42,7 @@ class RiderApi extends ApiClient {
       RiderDelivery.fromJson((await send('PATCH', '/mobile/rider/deliveries/$id', body: {'status': status}))['delivery']
           as Map<String, dynamic>);
 
-  /// Sends the code read from a parcel label's QR code. The parcel goes out for
+  /// Sends the code read from the waybill's barcode or QR code. The parcel goes out for
   /// delivery, or is delivered if it already was; the buyer (and on delivery,
   /// the seller) is notified by the server.
   Future<RiderScanResult> scanParcel(String code) async =>

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:zaylo_mobile/state/chat_head_state.dart';
 import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/api/rider_api.dart';
 import 'package:zaylo_mobile/auth/buyer/login_screen.dart';
@@ -66,7 +67,10 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => AuthScaffold(children: [
+  Widget build(BuildContext context) => HideChatHead(child: _screen(context));
+
+  // The buyer app's floating chat bubble is hidden in the rider app.
+  Widget _screen(BuildContext context) => AuthScaffold(children: [
         const AuthMasthead(registering: false),
         const SizedBox(height: 32),
         const Eyebrow('ZAYLO rider'),

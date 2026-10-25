@@ -17,8 +17,8 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Buyer wishlist, bag and checkout for the mobile app. Business rules live in
- * CartService and CheckoutService, shared with the web storefront.
+ * Buyer saved items, bag and checkout for the mobile app. The rules live in CartService and CheckoutService,
+ * shared with the website, so the ID check, sale prices, stock and vouchers behave the same.
  */
 class MobileShoppingController extends Controller
 {
@@ -30,12 +30,13 @@ class MobileShoppingController extends Controller
     public function wishlist(Request $request): JsonResponse
     {
         $items = $request->user()->wishlistItems()
-            ->whereHas('product', fn ($query) => $query->where('is_active', true))
-            ->with(['product.images', 'product.variants'])
+            ->whereHas('product', fn ($query) => $query->visibleToBuyers())
+            ->with(['product' => fn ($query) => $query->with(Product::usesLegacySchema() ? ['images'] : ['images', 'defaultVariant', 'category'])
+                ->withCount(['variants as active_variants_count' => fn ($variants) => $variants->where('is_active', true)])])
             ->latest()->get();
 
         return response()->json([
-            'products' => $items->map(fn (Wishlist $item) => MobilePayload::product($this->withVariantCount($item->product), saved: true))->values(),
+            'products' => $items->map(fn (Wishlist $item) => MobilePayload::product($item->product, saved: true))->values(),
         ]);
     }
 
@@ -61,7 +62,7 @@ class MobileShoppingController extends Controller
             'quantity' => 'required|integer|min:1|max:99',
             'product_variant_id' => 'nullable|integer|exists:product_variants,id',
         ]);
-        $item = $this->carts->add($request->user(), $product, $validated['quantity'], $validated['product_variant_id'] ?? null);
+        $item = $this->carts->add($request->user(), $product, (int) $validated['quantity'], isset($validated['product_variant_id']) ? (int) $validated['product_variant_id'] : null);
 
         return response()->json($this->cartPayload($this->loadedCart($request)) + [
             'added_item_id' => $item->id,
@@ -73,7 +74,7 @@ class MobileShoppingController extends Controller
     {
         $this->ownCartItem($request, $cartItem);
         $validated = $request->validate(['quantity' => 'required|integer|min:1|max:99']);
-        $this->carts->updateQuantity($cartItem, $validated['quantity']);
+        $this->carts->updateQuantity($cartItem, (int) $validated['quantity']);
 
         return response()->json($this->cartPayload($this->loadedCart($request)));
     }
@@ -116,14 +117,14 @@ class MobileShoppingController extends Controller
             'totals' => $this->checkout->quote($items, $voucher),
             'voucher_code' => $voucher?->code,
             'shipping_per_seller' => CheckoutService::SHIPPING_PER_SELLER,
+            // Orders need an approved ID; the app can say so before the buyer taps Place order.
+            'identity_verified' => $request->user()->isIdentityVerified(),
             'estimated_delivery' => [
                 'from' => now()->addWeekdays(2)->toDateString(),
                 'to' => now()->addWeekdays(4)->toDateString(),
             ],
             'addresses' => $request->user()->addresses()->orderByDesc('is_default')->orderBy('id')->get()
                 ->map(fn ($address) => MobilePayload::address($address))->values(),
-            // Orders need an approved ID; the app shows the upload step before Place order.
-            'identity_verified' => $request->user()->isIdentityVerified(),
         ]);
     }
 
@@ -150,7 +151,7 @@ class MobileShoppingController extends Controller
 
         $orders = $this->checkout->place(
             $request->user(),
-            $validated['cart_item_ids'],
+            array_map('intval', $validated['cart_item_ids']),
             $validated,
             $this->checkout->normalizeVoucherCode($validated['voucher_code'] ?? null),
         );
@@ -165,7 +166,7 @@ class MobileShoppingController extends Controller
     private function loadedCart(Request $request): Cart
     {
         return $this->carts->cartFor($request->user())
-            ->load(['items' => fn ($query) => $query->latest('id'), 'items.product.seller', 'items.product.images', 'items.variant']);
+            ->load(['items' => fn ($query) => $query->latest('id'), 'items.product.images', 'items.variant']);
     }
 
     private function cartPayload(Cart $cart): array
@@ -200,13 +201,6 @@ class MobileShoppingController extends Controller
 
     private function ownCartItem(Request $request, CartItem $cartItem): void
     {
-        abort_unless($cartItem->cart->user_id === $request->user()->id, 403);
-    }
-
-    private function withVariantCount(Product $product): Product
-    {
-        $product->active_variants_count = $product->variants->where('is_active', true)->count();
-
-        return $product;
+        abort_unless($cartItem->cart?->user_id === $request->user()->id, 403);
     }
 }

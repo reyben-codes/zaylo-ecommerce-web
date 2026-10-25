@@ -8,13 +8,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    @include('partials.theme-head')
     <link rel="stylesheet" href="{{ asset('css/style.css') }}?v={{ filemtime(public_path('css/style.css')) }}" />
     <link rel="stylesheet" href="{{ asset('css/home.css') }}?v={{ filemtime(public_path('css/home.css')) }}" />
 <link rel="stylesheet" href="{{ asset('css/product-rating.css') }}?v={{ filemtime(public_path('css/product-rating.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/category-tags.css') }}?v={{ filemtime(public_path('css/category-tags.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/product-card-description.css') }}?v={{ filemtime(public_path('css/product-card-description.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/shop-card.css') }}?v={{ filemtime(public_path('css/shop-card.css')) }}">
-    @include('partials.theme-head')
 </head>
 <body>
     <header class="navbar">
@@ -44,7 +44,7 @@
                 <input type="search" name="search" placeholder="Search products" aria-label="Search products" />
             </form>
             <div class="icon-group">
-                <button type="button" class="theme-toggle" data-theme-toggle aria-label="Switch color theme"></button>
+                <button type="button" class="theme-toggle" data-theme-toggle aria-label="Switch theme"></button>
                 @if(auth()->user()?->role === 'buyer')
                     @include('partials.buyer-nav-icons')
                 @else
@@ -65,6 +65,7 @@
     </header>
 
     @include('partials.notifications')
+    @include('partials.announcements')
 <div class="container">
 
     <div class="hero home-hero" id="home-hero" role="region" aria-roledescription="carousel" aria-label="Featured marketplace images">
@@ -144,7 +145,7 @@
 <footer class="site-footer">
     <div class="footer-main">
         <div class="footer-brand">
-            <img data-theme-fixed src="{{ asset('images/ZAYLO_LOGO_LIGHT.png') }}" alt="ZAYLO" />
+            <img src="{{ asset('images/ZAYLO_LOGO_LIGHT.png') }}" alt="ZAYLO" />
             <p>Everyday essentials, exciting finds, and trusted sellers—all together in one marketplace.</p>
         </div>
         <div class="footer-links">
@@ -154,7 +155,15 @@
             <div><h2>Partners</h2><a href="{{ route('register', ['role' => 'seller']) }}">Sell on ZAYLO</a><a href="{{ route('register', ['role' => 'courier']) }}">Become a courier</a></div>
         </div>
     </div>
-    <div class="footer-bottom"><span>© {{ date('Y') }} ZAYLO</span><span>Driven by passion. Defined by your origin</span></div>
+    <div class="footer-bottom">
+        <span>© {{ date('Y') }} ZAYLO</span>
+        <nav class="footer-legal" aria-label="Legal">
+            <a href="{{ route('policies.show', 'terms') }}">Terms of Service</a>
+            <a href="{{ route('policies.show', 'privacy') }}">Privacy Policy</a>
+            <a href="{{ route('policies.show', 'returns') }}">Returns and Refunds</a>
+        </nav>
+        <span>Driven by passion. Defined by your origin</span>
+    </div>
 </footer>
 <script src="{{ asset('js/navigation.js') }}?v={{ filemtime(public_path('js/navigation.js')) }}" defer></script>
 <script src="{{ asset('js/notifications.js') }}?v={{ filemtime(public_path('js/notifications.js')) }}" defer></script>

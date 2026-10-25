@@ -120,7 +120,6 @@
 
             <a class="auth-brand" href="{{ route('home') }}">
                 <img
-                    data-theme-fixed
                     src="{{ asset('images/ZAYLO_LOGO_LIGHT.png') }}"
                     alt="ZAYLO home"
                 >
@@ -529,7 +528,7 @@
                     <div class="terms-consent">
                         <label class="terms-consent__label" for="terms">
                             <input type="checkbox" id="terms" name="terms" value="1" @checked(old('terms')) required @if($errors->has('terms')) aria-invalid="true" @endif>
-                            <span>I have read and agree to the <a href="{{ route('terms') }}" target="_blank" rel="noopener">Terms and Privacy Policy</a>.</span>
+                            <span>I have read and agree to the <a href="{{ route('policies.show', 'terms') }}" target="_blank" rel="noopener">Terms of Service</a> and <a href="{{ route('policies.show', 'privacy') }}" target="_blank" rel="noopener">Privacy Policy</a>.</span>
                         </label>
                         @error('terms')<p class="terms-consent__error" role="alert">{{ $message }}</p>@enderror
                     </div>

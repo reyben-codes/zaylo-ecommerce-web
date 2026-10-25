@@ -1,12 +1,5 @@
 (() => {
-    // Ask before submitting destructive or irreversible seller actions.
-    document.querySelectorAll('form[data-confirm]').forEach((form) => {
-        form.addEventListener('submit', (event) => {
-            if (!window.confirm(form.dataset.confirm)) {
-                event.preventDefault();
-            }
-        });
-    });
+    // Forms with data-confirm ask in the site-wide modal (confirm-dialog.js).
 
     // Product photos that fail to load fall back to the store logo.
     document.querySelectorAll('img[data-fallback-src]').forEach((image) => {

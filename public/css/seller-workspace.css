@@ -170,6 +170,13 @@ body.seller-workspace {
     margin-bottom: 26px;
 }
 
+/* The seller dashboard shows a fifth card (followers); other pages keep four. */
+@media (min-width: 1101px) {
+    .seller-stat-grid--five {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+}
+
 .seller-stat {
     display: block;
     min-width: 0;
@@ -535,7 +542,7 @@ a.seller-stat.is-active {
 
 .seller-field :is(input, select, textarea):focus {
     border-color: var(--zaylo-accent);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-9a755e) 12%, transparent);
+    box-shadow: 0 0 0 3px rgba(154, 117, 94, .12);
 }
 
 .seller-field :is(input[readonly], input:disabled) {
@@ -639,7 +646,7 @@ a.seller-stat.is-active {
     border: 1px solid var(--c-d9d0c7);
     border-left: 3px solid var(--c-9a755e);
     border-radius: 4px;
-    background: color-mix(in srgb, var(--c-fffdfa) 98%, transparent);
+    background: rgba(255, 253, 250, .98);
     color: var(--c-1a1714);
     box-shadow: 0 16px 40px rgba(42, 32, 25, .16), 0 3px 10px rgba(42, 32, 25, .08);
     pointer-events: auto;
@@ -820,3 +827,10 @@ a.seller-stat.is-active {
         transition: none;
     }
 }
+
+/* Policy links on the seller Account page. */
+.seller-policy-links { display: grid; margin: 0; padding-top: 0; list-style: none; }
+.seller-policy-links a { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--c-e5dfd8); color: var(--c-1a1714); text-decoration: none; }
+.seller-policy-links li:last-child a { border-bottom: 0; }
+.seller-policy-links a:hover { color: var(--c-9a755e); }
+.seller-policy-links i { color: var(--c-6b5f54); font-size: .75rem; }

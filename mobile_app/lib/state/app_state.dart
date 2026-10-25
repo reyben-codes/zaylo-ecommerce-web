@@ -7,6 +7,7 @@ import 'package:zaylo_mobile/auth/token_store.dart';
 import 'package:zaylo_mobile/models/auth_models.dart';
 import 'package:zaylo_mobile/models/buyer/cart_models.dart';
 import 'package:zaylo_mobile/models/buyer/catalog_models.dart';
+import 'package:zaylo_mobile/state/chat_head_state.dart';
 
 /// Session, bag and saved-item state shared by every screen.
 class AppState extends ChangeNotifier {
@@ -34,9 +35,32 @@ class AppState extends ChangeNotifier {
   /// Bottom navigation tab: 0 home, 1 saved, 2 bag, 3 account.
   final ValueNotifier<int> selectedTab = ValueNotifier(0);
 
+  /// The floating chat bubble shown over the buyer screens.
+  final ChatHeadState chatHead = ChatHeadState();
+
+  int _chatUnread = 0;
+
+  /// Unread messages from sellers, for the Messages badges and the chat bubble.
+  int get chatUnread => _chatUnread;
+
+  /// Re-reads the unread message count; quietly keeps the old one if offline.
+  Future<void> refreshChatUnread() async {
+    if (!signedIn) return;
+    try {
+      final unread = await api.sellerUnreadCount();
+      if (unread != _chatUnread) {
+        _chatUnread = unread;
+        notifyListeners();
+      }
+    } on ApiException {
+      // The badge catches up on the next refresh.
+    }
+  }
+
   @override
   void dispose() {
     selectedTab.dispose();
+    chatHead.dispose();
     super.dispose();
   }
 
@@ -48,7 +72,7 @@ class AppState extends ChangeNotifier {
       api.token = token;
       try {
         _user = await api.me();
-        await Future.wait([refreshCart(), _loadSaved()]);
+        await Future.wait([refreshCart(), _loadSaved(), refreshChatUnread()]);
       } on ApiException catch (error) {
         if (error.statusCode == 401) await _clearSession();
       }
@@ -65,7 +89,7 @@ class AppState extends ChangeNotifier {
     _user = result.user;
     notifyListeners();
     try {
-      await Future.wait([refreshCart(), _loadSaved()]);
+      await Future.wait([refreshCart(), _loadSaved(), refreshChatUnread()]);
     } on ApiException {
       // The session is valid; the bag badge refreshes on next visit.
     }
@@ -127,6 +151,8 @@ class AppState extends ChangeNotifier {
     _user = null;
     _cart = const CartSummary.empty();
     _savedSlugs.clear();
+    _chatUnread = 0;
+    chatHead.reset();
     await _tokens.clear();
   }
 

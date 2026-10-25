@@ -14,6 +14,8 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 
+    @include('partials.theme-head')
+
     <!-- Base Styles -->
     <link rel="stylesheet" href="{{ asset('css/style.css') }}?v={{ filemtime(public_path('css/style.css')) }}" />
 
@@ -24,8 +26,8 @@
     <link rel="stylesheet" href="{{ asset('css/product-rating.css') }}?v={{ filemtime(public_path('css/product-rating.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/category-tags.css') }}?v={{ filemtime(public_path('css/category-tags.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/shop-card.css') }}?v={{ filemtime(public_path('css/shop-card.css')) }}">
-    <link rel="stylesheet" href="{{ asset('css/logout-confirm.css') }}?v={{ filemtime(public_path('css/logout-confirm.css')) }}">
-    @include('partials.theme-head')
+    <link rel="stylesheet" href="{{ asset('css/confirm-dialog.css') }}?v={{ filemtime(public_path('css/confirm-dialog.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/print.css') }}?v={{ filemtime(public_path('css/print.css')) }}" media="print">
 </head>
 <body class="@yield('body-class')">
     <!-- Navigation -->
@@ -63,7 +65,7 @@
                 <input type="search" name="search" value="{{ request('search') }}" placeholder="Search products" aria-label="Search products" />
             </form>
             <div class="icon-group">
-                <button type="button" class="theme-toggle" data-theme-toggle aria-label="Switch color theme"></button>
+                <button type="button" class="theme-toggle" data-theme-toggle aria-label="Switch theme"></button>
                 @if(auth()->user()?->role === 'buyer')
                     @include('partials.buyer-nav-icons')
                 @else
@@ -100,6 +102,15 @@
         @yield('content')
     </div>
 
+    <footer class="legal-footer">
+        <span>© {{ date('Y') }} ZAYLO</span>
+        <nav aria-label="Legal">
+            <a href="{{ route('policies.show', 'terms') }}">Terms of Service</a>
+            <a href="{{ route('policies.show', 'privacy') }}">Privacy Policy</a>
+            <a href="{{ route('policies.show', 'returns') }}">Returns and Refunds</a>
+        </nav>
+    </footer>
+
     <script src="{{ asset('js/navigation.js') }}?v={{ filemtime(public_path('js/navigation.js')) }}" defer></script>
     <script src="{{ asset('js/notifications.js') }}?v={{ filemtime(public_path('js/notifications.js')) }}" defer></script>
     <script src="{{ asset('js/product-carousel.js') }}?v={{ filemtime(public_path('js/product-carousel.js')) }}" defer></script>
@@ -111,6 +122,7 @@
     <script src="{{ asset('js/quantity-stepper.js') }}?v={{ filemtime(public_path('js/quantity-stepper.js')) }}" defer></script>
     @include('partials.chat-widget')
     @include('partials.cart-animation')
-    <script src="{{ asset('js/logout-confirm.js') }}?v={{ filemtime(public_path('js/logout-confirm.js')) }}" defer></script>
+    <script src="{{ asset('js/confirm-dialog.js') }}?v={{ filemtime(public_path('js/confirm-dialog.js')) }}" defer></script>
+    <script src="{{ asset('js/print.js') }}?v={{ filemtime(public_path('js/print.js')) }}" defer></script>
 </body>
 </html>

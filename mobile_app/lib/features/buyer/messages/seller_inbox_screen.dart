@@ -6,10 +6,12 @@ import 'package:zaylo_mobile/components/layout.dart';
 import 'package:zaylo_mobile/features/buyer/messages/seller_chat_screen.dart';
 import 'package:zaylo_mobile/models/buyer/seller_chat_models.dart';
 import 'package:zaylo_mobile/state/app_state.dart';
+import 'package:zaylo_mobile/state/chat_head_state.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 import 'package:zaylo_mobile/utils/formatters.dart';
 
-/// The buyer's conversations with sellers, most recent first.
+/// The buyer's conversations with sellers, most recent first. The floating chat
+/// head hides here, and opening Messages brings it back if it was dismissed.
 class SellerInboxScreen extends StatefulWidget {
   const SellerInboxScreen({super.key});
 
@@ -23,7 +25,12 @@ class _SellerInboxScreenState extends State<SellerInboxScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _conversations ??= AppScope.read(context).api.sellerConversations();
+    if (_conversations == null) {
+      final state = AppScope.read(context);
+      _conversations = state.api.sellerConversations();
+      // After this frame: the bubble's listeners must not rebuild while this screen builds.
+      WidgetsBinding.instance.addPostFrameCallback((_) => state.chatHead.restore());
+    }
   }
 
   Future<void> _reload() async {
@@ -38,11 +45,15 @@ class _SellerInboxScreenState extends State<SellerInboxScreen> {
 
   Future<void> _open(SellerConversation conversation) async {
     await Navigator.of(context).push(MaterialPageRoute(builder: (_) => SellerChatScreen(conversation: conversation)));
-    if (mounted) _reload();
+    if (mounted) {
+      _reload();
+      AppScope.read(context).refreshChatUnread();
+    }
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => HideChatHead(
+          child: Scaffold(
         appBar: AppBar(title: const Text('Messages')),
         body: FutureBuilder<List<SellerConversation>>(
           future: _conversations,
@@ -99,5 +110,5 @@ class _SellerInboxScreenState extends State<SellerInboxScreen> {
             );
           },
         ),
-      );
+      ));
 }

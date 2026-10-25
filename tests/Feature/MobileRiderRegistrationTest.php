@@ -2,24 +2,26 @@
 
 namespace Tests\Feature;
 
-use App\Http\Requests\RegisterRiderRequest;
+use App\Http\Requests\MobileRiderRegistrationRequest;
 use App\Models\LogisticsProvider;
 use App\Models\Rider;
 use App\Models\User;
-use App\Notifications\VerifyEmailCode;
 use App\Services\PsgcService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
+use Tests\Support\CompletesSignUp;
 use Tests\TestCase;
 
 /**
  * Rider sign-up from the app creates the same rider application as the
- * website: the rider applies to a logistics partner, which approves them.
+ * website: the rider applies to a logistics partner, enters the emailed
+ * code (which creates the application), and the partner approves them.
  */
 class MobileRiderRegistrationTest extends TestCase
 {
+    use CompletesSignUp;
     use RefreshDatabase;
 
     private User $partnerOwner;
@@ -80,6 +82,14 @@ class MobileRiderRegistrationTest extends TestCase
         return $this->post('/api/mobile/rider/register', $this->payload($overrides), ['Accept' => 'application/json']);
     }
 
+    /** Registers and enters the emailed code, so the application exists. Requires Notification::fake(). */
+    private function apply(array $overrides = []): void
+    {
+        $this->register($overrides)->assertCreated()->assertJsonPath('verification_sent', true);
+        $email = $this->payload($overrides)['email'];
+        $this->postJson('/api/mobile/verify-email', ['email' => $email, 'otp' => $this->signUpCode($email)])->assertOk();
+    }
+
     public function test_sign_up_lists_partners_accepting_riders_and_the_vehicle_types(): void
     {
         $closedOwner = User::factory()->create(['role' => 'logistics', 'status' => 'active']);
@@ -102,7 +112,13 @@ class MobileRiderRegistrationTest extends TestCase
         $this->register()
             ->assertCreated()
             ->assertJsonPath('email', 'juan.rider@example.test')
-            ->assertJsonPath('status', 'pending')
+            ->assertJsonPath('verification_sent', true);
+        // Nothing is saved until the emailed code is entered.
+        $this->assertFalse(User::where('email', 'juan.rider@example.test')->exists());
+
+        $this->postJson('/api/mobile/verify-email', ['email' => 'juan.rider@example.test', 'otp' => $this->signUpCode('juan.rider@example.test')])
+            ->assertOk()
+            ->assertJsonMissingPath('token')
             ->assertJsonPath('message', fn ($message) => str_contains($message, 'Express Delivery'));
 
         $user = User::where('email', 'juan.rider@example.test')->firstOrFail();
@@ -122,18 +138,18 @@ class MobileRiderRegistrationTest extends TestCase
         Storage::disk('local')->assertExists([$rider->license_document_path, $rider->or_cr_document_path]);
         $this->assertStringStartsWith("riders/{$user->id}/", $rider->license_document_path);
         $this->assertSame([], Storage::disk('public')->allFiles());
-        // Sign-up has no code step; the email is confirmed at first sign-in after approval.
-        Notification::assertNotSentTo($user, VerifyEmailCode::class);
+        $this->assertNotNull($user->email_verified_at);
     }
 
     public function test_bicycle_riders_need_no_license_plate_or_or_cr(): void
     {
         Storage::fake('local');
+        Notification::fake();
 
-        $this->register([
+        $this->apply([
             'vehicle_type' => 'Bicycle', 'license_number' => '', 'license_expires_on' => '', 'plate_number' => '',
             'license_image' => null, 'or_cr_image' => null,
-        ])->assertCreated();
+        ]);
 
         $rider = Rider::sole();
         $this->assertSame('Bicycle', $rider->vehicle_type);
@@ -156,13 +172,13 @@ class MobileRiderRegistrationTest extends TestCase
             'or_cr_image' => UploadedFile::fake()->createWithContent('or-cr.gif', base64_decode('R0lGODlhAQABAAAAACw=')),
         ])->assertUnprocessable()->assertJsonValidationErrors([
             'first_name' => 'at least 2 characters',
-            'last_name' => '50 characters or fewer',
+            'last_name' => 'not be greater than 50 characters',
             'date_of_birth' => 'at least 18',
             'logistics_provider_id' => 'not accepting riders',
             'license_expires_on' => 'expired',
             'vehicle_type',
             'license_image' => 'Upload a photo',
-            'or_cr_image' => 'Only JPG, PNG, or PDF',
+            'or_cr_image' => 'upload a JPG, PNG or PDF',
         ]);
 
         $this->assertSame(1, User::count(), 'only the logistics partner exists');
@@ -172,7 +188,8 @@ class MobileRiderRegistrationTest extends TestCase
     public function test_check_endpoint_reports_taken_details_and_formats_before_upload(): void
     {
         Storage::fake('local');
-        $this->register()->assertCreated();
+        Notification::fake();
+        $this->apply();
 
         $details = collect($this->payload())->except(['license_image', 'or_cr_image'])->all();
 
@@ -191,10 +208,10 @@ class MobileRiderRegistrationTest extends TestCase
             'phone' => '19171234567',
             'license_number' => '001-23-456789',
             'plate_number' => 'ABCDEF',
-            'license_expires_on' => now(RegisterRiderRequest::TIMEZONE)->subDay()->toDateString(),
+            'license_expires_on' => now(MobileRiderRegistrationRequest::TIMEZONE)->subDay()->toDateString(),
         ]))->assertUnprocessable()->assertJsonValidationErrors([
             'email' => 'valid email address',
-            'phone' => 'start with 09',
+            'phone' => 'starting with 09',
             'license_number' => 'A00-00-000000',
             'plate_number' => '5 to 7 letters and numbers',
             'license_expires_on' => 'expired',
@@ -206,7 +223,7 @@ class MobileRiderRegistrationTest extends TestCase
             'phone' => '09181234567',
             'license_number' => 'm9876543210',
             'plate_number' => 'xyz 789',
-            'license_expires_on' => now(RegisterRiderRequest::TIMEZONE)->toDateString(),
+            'license_expires_on' => now(MobileRiderRegistrationRequest::TIMEZONE)->toDateString(),
         ]))->assertOk()->assertJson(['valid' => true]);
     }
 
@@ -234,19 +251,19 @@ class MobileRiderRegistrationTest extends TestCase
     public function test_pending_rider_cannot_sign_in_until_the_partner_approves(): void
     {
         Storage::fake('local');
-        $this->register()->assertCreated();
-        User::where('email', 'juan.rider@example.test')->update(['email_verified_at' => now()]);
+        Notification::fake();
+        $this->apply();
 
         $this->postJson('/api/mobile/rider/login', ['email' => 'juan.rider@example.test', 'password' => 'Zaylo#2026'])
             ->assertUnprocessable()
-            ->assertJsonValidationErrors(['email' => 'still under review by Express Delivery']);
+            ->assertJsonValidationErrors(['email' => 'still being reviewed by Express Delivery']);
     }
 
-    public function test_partner_approval_lets_the_rider_confirm_email_and_sign_in(): void
+    public function test_partner_approval_lets_the_rider_sign_in(): void
     {
         Storage::fake('local');
         Notification::fake();
-        $this->register()->assertCreated();
+        $this->apply();
         $rider = Rider::sole();
 
         // The logistics partner approves the app sign-up from its Riders page on the website.
@@ -255,17 +272,17 @@ class MobileRiderRegistrationTest extends TestCase
         $user = $rider->user->fresh();
         $this->assertSame('active', $user->status);
 
+        // The email was confirmed with the sign-up code, so approval is all the rider waits for.
         $this->postJson('/api/mobile/rider/login', ['email' => $user->email, 'password' => 'Zaylo#2026'])
-            ->assertForbidden()
-            ->assertJsonPath('code', 'unverified');
-        $this->postJson('/api/mobile/resend-verification', ['email' => $user->email])->assertOk();
-        Notification::assertSentTo($user, VerifyEmailCode::class);
+            ->assertOk()
+            ->assertJsonStructure(['token']);
     }
 
     public function test_rejected_rider_sees_the_reason_when_signing_in(): void
     {
         Storage::fake('local');
-        $this->register()->assertCreated();
+        Notification::fake();
+        $this->apply();
         $rider = Rider::sole();
 
         $this->actingAs($this->partnerOwner)->patch(route('logistics.riders.update', $rider), [
@@ -274,6 +291,6 @@ class MobileRiderRegistrationTest extends TestCase
 
         $this->postJson('/api/mobile/rider/login', ['email' => 'juan.rider@example.test', 'password' => 'Zaylo#2026'])
             ->assertUnprocessable()
-            ->assertJsonValidationErrors(['email' => 'did not approve your rider application: License photo is unreadable.']);
+            ->assertJsonValidationErrors(['email' => 'not approved by Express Delivery: License photo is unreadable.']);
     }
 }

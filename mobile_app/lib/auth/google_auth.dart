@@ -13,7 +13,8 @@ import 'package:google_sign_in/google_sign_in.dart';
 ///     flutter run --dart-define=GOOGLE_SERVER_CLIENT_ID=<web client ID>
 ///                 --dart-define=GOOGLE_IOS_CLIENT_ID=<iOS client ID>   # iOS only
 ///
-/// Without them the Google button is hidden and email sign-in works as before.
+/// The website's web client ID is built in, so Android needs no flag; iOS
+/// still needs its own client ID, and without it the button is hidden there.
 abstract class GoogleIdTokenSource {
   /// Whether Google sign-in is configured for this platform.
   bool get available;
@@ -44,7 +45,11 @@ abstract final class GoogleAuth {
 class PluginGoogleIdTokenSource implements GoogleIdTokenSource {
   /// The *web* OAuth client ID. Google issues ID tokens to it, and the server
   /// accepts tokens for it (GOOGLE_CLIENT_ID).
-  static const serverClientId = String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID');
+  /// Client IDs are public; the website's is built in so a plain `flutter run` offers Google sign-in.
+  static const serverClientId = String.fromEnvironment(
+    'GOOGLE_SERVER_CLIENT_ID',
+    defaultValue: '71918808884-d4uh5997uq3pe2n7m4vha15ikt52vvbq.apps.googleusercontent.com',
+  );
 
   /// The iOS OAuth client ID; iOS also needs its reversed form as a URL scheme.
   static const iosClientId = String.fromEnvironment('GOOGLE_IOS_CLIENT_ID');
