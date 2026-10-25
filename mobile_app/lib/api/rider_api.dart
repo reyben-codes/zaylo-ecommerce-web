@@ -45,10 +45,33 @@ class RiderApi extends ApiClient {
 
   Future<RiderDashboard> dashboard() async => RiderDashboard.fromJson(await send('GET', '/mobile/rider/dashboard'));
 
-  /// Reports a failed delivery attempt; starting and finishing a delivery go through [scanParcel].
-  Future<RiderDelivery> updateDelivery(int id, String status) async =>
-      RiderDelivery.fromJson((await send('PATCH', '/mobile/rider/deliveries/$id', body: {'status': status}))['delivery']
-          as Map<String, dynamic>);
+  /// Reports a failed delivery attempt with its [reason] (and the rider's own words in [note]); the buyer and
+  /// seller are told. Starting and finishing a delivery go through [scanParcel].
+  Future<RiderDelivery> updateDelivery(int id, String status, {String? reason, String? note}) async =>
+      RiderDelivery.fromJson((await send('PATCH', '/mobile/rider/deliveries/$id', body: {
+        'status': status,
+        if (reason != null) 'reason': reason,
+        if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+      }))['delivery'] as Map<String, dynamic>);
+
+  /// Takes a new assignment from the logistics partner.
+  Future<RiderDelivery> acceptDelivery(int id) async =>
+      RiderDelivery.fromJson((await send('POST', '/mobile/rider/deliveries/$id/accept'))['delivery'] as Map<String, dynamic>);
+
+  /// Turns a new assignment down; the parcel goes back to the hub for another rider. Returns the server's message.
+  Future<String> declineDelivery(int id, {required String reason, String? note}) async =>
+      (await send('POST', '/mobile/rider/deliveries/$id/decline', body: {
+        'reason': reason,
+        if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+      }))['message'] as String;
+
+  /// One of the rider's parcels with everything they did with it.
+  Future<RiderDelivery> deliveryDetails(int id) async =>
+      RiderDelivery.fromJson((await send('GET', '/mobile/rider/deliveries/$id'))['delivery'] as Map<String, dynamic>);
+
+  /// Totals for [period]: assignments, deliveries, failed attempts and their reasons, cash and fees.
+  Future<RiderReport> reports({RiderPeriod period = RiderPeriod.week}) async =>
+      RiderReport.fromJson(await send('GET', '/mobile/rider/reports', query: {'period': period.value}));
 
   /// Sends the code read from the waybill's barcode or QR code. The parcel goes out for
   /// delivery, or is delivered if it already was; the buyer (and on delivery,

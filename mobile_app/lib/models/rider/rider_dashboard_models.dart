@@ -93,6 +93,7 @@ class RiderStats {
   const RiderStats({
     this.available = 0,
     this.active = 0,
+    this.awaitingAcceptance = 0,
     this.completed = 0,
     this.completedToday = 0,
     this.earningsToday = 0,
@@ -101,6 +102,9 @@ class RiderStats {
 
   final int available;
   final int active;
+
+  /// New assignments the rider has not accepted or declined yet.
+  final int awaitingAcceptance;
   final int completed;
   final int completedToday;
 
@@ -111,6 +115,7 @@ class RiderStats {
   factory RiderStats.fromJson(Map<String, dynamic> json) => RiderStats(
         available: json['available'] as int? ?? 0,
         active: json['active'] as int? ?? 0,
+        awaitingAcceptance: json['awaiting_acceptance'] as int? ?? 0,
         completed: json['completed'] as int? ?? 0,
         completedToday: json['completed_today'] as int? ?? 0,
         earningsToday: _money(json['earnings_today']),
@@ -161,6 +166,94 @@ class RiderPickup {
       );
 }
 
+/// A reason the rider picks when declining an assignment or reporting a failed attempt.
+class RiderReason {
+  const RiderReason(this.code, this.label);
+
+  final String code;
+  final String label;
+
+  /// "Other" asks the rider to describe what happened.
+  bool get needsNote => code == 'other';
+
+  static List<RiderReason> listFrom(Object? json, List<RiderReason> fallback) {
+    final list = (json as List<dynamic>? ?? const [])
+        .map((item) => item as Map<String, dynamic>)
+        .map((item) => RiderReason(item['code'] as String? ?? 'other', item['label'] as String? ?? 'Other reason'))
+        .toList();
+    return list.isEmpty ? fallback : list;
+  }
+}
+
+/// The reasons offered by the server (GET /mobile/rider/dashboard), with the same lists built in for older servers.
+class RiderReasons {
+  const RiderReasons({this.decline = defaultDecline, this.failed = defaultFailed});
+
+  final List<RiderReason> decline;
+  final List<RiderReason> failed;
+
+  static const defaultDecline = [
+    RiderReason('too_far', 'Outside my delivery area'),
+    RiderReason('too_many', 'I have too many parcels'),
+    RiderReason('vehicle', 'Vehicle problem'),
+    RiderReason('too_large', 'Parcel too large or heavy for my vehicle'),
+    RiderReason('unavailable', 'Not available today'),
+    RiderReason('other', 'Other reason'),
+  ];
+
+  static const defaultFailed = [
+    RiderReason('buyer_cancelled', 'Buyer cancelled the order at delivery'),
+    RiderReason('buyer_refused', 'Buyer refused to accept the parcel'),
+    RiderReason('buyer_unavailable', 'Buyer was not available to receive it'),
+    RiderReason('unreachable', 'Could not reach the buyer by phone'),
+    RiderReason('wrong_address', 'Wrong or incomplete address'),
+    RiderReason('no_cash', 'Buyer could not pay the cash on delivery'),
+    RiderReason('rescheduled', 'Buyer asked to deliver another day'),
+    RiderReason('unsafe', 'Area unsafe or not accessible'),
+    RiderReason('other', 'Other reason'),
+  ];
+
+  factory RiderReasons.fromJson(Map<String, dynamic>? json) => RiderReasons(
+        decline: RiderReason.listFrom(json?['decline'], defaultDecline),
+        failed: RiderReason.listFrom(json?['failed'], defaultFailed),
+      );
+}
+
+/// Why the last delivery attempt failed.
+class RiderFailure {
+  const RiderFailure({this.reason, this.note, this.at});
+
+  final String? reason;
+  final String? note;
+  final DateTime? at;
+
+  /// "Buyer was not available to receive it (gate was locked)".
+  String get summary => [reason ?? 'Delivery failed', if (note != null && note!.isNotEmpty) '($note)'].join(' ');
+
+  static RiderFailure? fromJson(Object? json) => json is Map<String, dynamic>
+      ? RiderFailure(reason: json['reason'] as String?, note: json['note'] as String?, at: _date(json['at']))
+      : null;
+}
+
+/// One thing the rider did with a parcel, for its details screen.
+class RiderTimelineEntry {
+  const RiderTimelineEntry({required this.action, required this.label, this.reason, this.note, this.at});
+
+  final String action;
+  final String label;
+  final String? reason;
+  final String? note;
+  final DateTime? at;
+
+  factory RiderTimelineEntry.fromJson(Map<String, dynamic> json) => RiderTimelineEntry(
+        action: json['action'] as String? ?? '',
+        label: json['label'] as String? ?? '',
+        reason: json['reason'] as String?,
+        note: json['note'] as String?,
+        at: _date(json['at']),
+      );
+}
+
 class RiderDelivery {
   const RiderDelivery({
     required this.id,
@@ -185,6 +278,9 @@ class RiderDelivery {
     this.actions = const [],
     this.unreadMessages = 0,
     this.scanCode = '',
+    this.needsAcceptance = false,
+    this.lastFailure,
+    this.timeline = const [],
   });
 
   final int id;
@@ -219,6 +315,15 @@ class RiderDelivery {
   /// Every step available now; the first is the main button ([nextStatus]).
   final List<RiderDeliveryAction> actions;
   final int unreadMessages;
+
+  /// A new assignment: the rider accepts or declines it before anything else.
+  final bool needsAcceptance;
+
+  /// Why the last attempt failed, while it matters (the parcel is still with the rider).
+  final RiderFailure? lastFailure;
+
+  /// Everything the rider did with the parcel; only on the details screen.
+  final List<RiderTimelineEntry> timeline;
 
   int get itemCount => items.fold(0, (sum, item) => sum + item.quantity);
 
@@ -260,6 +365,11 @@ class RiderDelivery {
             .toList(),
         unreadMessages: json['unread_messages'] as int? ?? 0,
         scanCode: json['scan_code'] as String? ?? json['tracking_number'] as String? ?? '',
+        needsAcceptance: json['needs_acceptance'] as bool? ?? false,
+        lastFailure: RiderFailure.fromJson(json['last_failure']),
+        timeline: (json['timeline'] as List<dynamic>? ?? const [])
+            .map((item) => RiderTimelineEntry.fromJson(item as Map<String, dynamic>))
+            .toList(),
       );
 }
 
@@ -288,6 +398,7 @@ class RiderDashboard {
     this.recent = const [],
     this.deliveryModeMessage,
     this.announcements = const [],
+    this.reasons = const RiderReasons(),
   });
 
   final RiderProfile rider;
@@ -303,6 +414,13 @@ class RiderDashboard {
   /// Live notices from the ZAYLO admin for riders.
   final List<Announcement> announcements;
 
+  /// Reasons for declining an assignment or reporting a failed attempt.
+  final RiderReasons reasons;
+
+  /// New assignments waiting for the rider's answer, then the ones in progress.
+  List<RiderDelivery> get newAssignments => active.where((delivery) => delivery.needsAcceptance).toList();
+  List<RiderDelivery> get inProgress => active.where((delivery) => !delivery.needsAcceptance).toList();
+
   static List<RiderDelivery> _deliveries(Object? list) =>
       (list as List<dynamic>? ?? const []).map((item) => RiderDelivery.fromJson(item as Map<String, dynamic>)).toList();
 
@@ -313,5 +431,6 @@ class RiderDashboard {
         recent: _deliveries(json['recent']),
         deliveryModeMessage: json['delivery_mode_message'] as String?,
         announcements: Announcement.listFrom(json['announcements']),
+        reasons: RiderReasons.fromJson(json['reasons'] as Map<String, dynamic>?),
       );
 }

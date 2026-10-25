@@ -77,12 +77,17 @@ Route::prefix('mobile')->name('mobile.')->middleware('throttle:60,1')->group(fun
             // Scanning a parcel label's QR code starts a delivery, and again at the door confirms it.
             Route::post('/deliveries/scan', [MobileRiderDashboardController::class, 'scan'])->middleware('throttle:30,1,mobile-rider-scan')->name('deliveries.scan');
             Route::post('/deliveries/{shipment}/claim', [MobileRiderDashboardController::class, 'claim'])->name('deliveries.claim');
+            // The rider answers each assignment from the logistics partner: accept it, or decline it with a reason.
+            Route::post('/deliveries/{shipment}/accept', [MobileRiderDashboardController::class, 'accept'])->middleware('throttle:60,1,mobile-rider-answer')->name('deliveries.accept');
+            Route::post('/deliveries/{shipment}/decline', [MobileRiderDashboardController::class, 'decline'])->middleware('throttle:60,1,mobile-rider-answer')->name('deliveries.decline');
+            Route::get('/deliveries/{shipment}', [MobileRiderDashboardController::class, 'show'])->name('deliveries.show');
             Route::patch('/deliveries/{shipment}', [MobileRiderDashboardController::class, 'update'])->name('deliveries.update');
             // Chat with the buyer while the parcel is with the rider.
             Route::get('/deliveries/{shipment}/chat', [MobileDeliveryChatController::class, 'riderShow'])->name('deliveries.chat');
             Route::post('/deliveries/{shipment}/chat', [MobileDeliveryChatController::class, 'riderSend'])->middleware('throttle:20,1,mobile-delivery-chat')->name('deliveries.chat.send');
             Route::get('/history', [MobileRiderDashboardController::class, 'history'])->name('history');
             Route::get('/earnings', [MobileRiderDashboardController::class, 'earnings'])->name('earnings');
+            Route::get('/reports', [MobileRiderDashboardController::class, 'reports'])->name('reports');
 
             Route::patch('/account/phone', [MobileRiderAccountController::class, 'updatePhone'])->name('account.phone');
             Route::patch('/account/gender', [MobileRiderAccountController::class, 'updateGender'])->name('account.gender');

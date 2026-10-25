@@ -62,6 +62,12 @@ class ShipmentWorkflow
         'returned' => 'Return to seller',
     ];
 
+    /**
+     * Steps only the assigned rider takes, from the rider app: going out, delivering (which tells the buyer) and
+     * reporting a failed attempt with its reason. The logistics partner takes over again for returns.
+     */
+    public const RIDER_ONLY = ['out_for_delivery', 'delivered', 'failed'];
+
     /** Steps of a parcel that is still on its way. */
     public const ACTIVE = ['ready', 'confirmed', 'picked_up', 'in_transit', 'sorted', 'assigned', 'out_for_delivery', 'failed'];
 
@@ -190,6 +196,14 @@ class ShipmentWorkflow
         return collect($next)->mapWithKeys(fn (string $status) => [$status => self::ACTION_LABELS[$status]])->all();
     }
 
+    /** @return array<string,string> the step buttons the logistics partner gets; the rider's own steps are left out */
+    public static function logisticsSteps(Shipment $shipment): array
+    {
+        $steps = self::nextSteps($shipment);
+
+        return self::riderOf($shipment) ? array_diff_key($steps, array_flip(self::RIDER_ONLY)) : $steps;
+    }
+
     public static function awaitingPickupConfirmation(Shipment $shipment): bool
     {
         return self::hasHubSteps() && self::stageOf($shipment) === 'ready';
@@ -290,9 +304,10 @@ class ShipmentWorkflow
         });
     }
 
-    public function advance(Shipment $shipment, string $to, User $actor): void
+    /** [$note] replaces the default order-history note, e.g. with the reason a delivery attempt failed. */
+    public function advance(Shipment $shipment, string $to, User $actor, ?string $note = null): void
     {
-        DB::transaction(function () use ($shipment, $to, $actor) {
+        DB::transaction(function () use ($shipment, $to, $actor, $note) {
             $locked = Shipment::whereKey($shipment->id)->lockForUpdate()->firstOrFail();
             if (! array_key_exists($to, self::nextSteps($locked))) {
                 throw ValidationException::withMessages(['status' => 'This parcel can no longer move to "'.self::label($to).'". Refresh the page and try again.']);
@@ -312,7 +327,20 @@ class ShipmentWorkflow
                 $attributes['attempts'] = (int) $locked->attempts + 1;
             }
             $locked->update($attributes);
-            $this->syncOrder($locked, $to, $actor);
+            $this->syncOrder($locked, $to, $actor, $note);
+        });
+    }
+
+    /**
+     * Takes an assigned parcel back from its rider (the rider declined it), so it waits at the hub for another
+     * rider. The order keeps its status: buyers and sellers only see the parcel move again once it is reassigned.
+     */
+    public function unassign(Shipment $shipment): void
+    {
+        DB::transaction(function () use ($shipment) {
+            $locked = $this->lockAt($shipment, ['assigned'], 'This parcel is no longer waiting at the hub for you.');
+            $locked->update((Schema::hasColumn('shipments', 'rider_id') ? ['rider_id' => null] : ['courier_id' => null])
+                + ['status' => self::stored(self::assignableStage())]);
         });
     }
 

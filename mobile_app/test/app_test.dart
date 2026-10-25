@@ -23,6 +23,7 @@ import 'package:zaylo_mobile/features/buyer/orders/order_detail_screen.dart';
 import 'package:zaylo_mobile/features/buyer/home/widgets/home_header.dart';
 import 'package:zaylo_mobile/features/buyer/messages/seller_chat_screen.dart';
 import 'package:zaylo_mobile/features/buyer/messages/seller_inbox_screen.dart';
+import 'package:zaylo_mobile/features/rider/history/rider_history_tab.dart';
 import 'package:zaylo_mobile/models/auth_models.dart';
 import 'package:zaylo_mobile/models/buyer/account_models.dart';
 import 'package:zaylo_mobile/models/buyer/cart_models.dart';
@@ -259,8 +260,12 @@ class FakeRiderApi extends RiderApi {
     });
   }
 
-  /// Steps sent to [updateDelivery] and [scanParcel], as "id:status".
+  /// Steps sent to [updateDelivery] and [scanParcel], as "id:status" (and ":reason" for a failed attempt), and
+  /// answers to new assignments as "accept:id" or "decline:id:reason".
   final updates = <String>[];
+
+  /// Adds parcel 3, a new assignment waiting for the rider to accept or decline it.
+  bool withNewAssignment = false;
 
   /// The steps the rider can take at each status, as the server sends them.
   static const _steps = {
@@ -279,6 +284,7 @@ class FakeRiderApi extends RiderApi {
         'scan_code': 'TRK-$id',
         'status': status,
         'status_label': switch (status) {
+          'new' => 'New assignment',
           'assigned' => 'Rider assigned',
           'out_for_delivery' => 'Out for delivery',
           _ => 'Delivered',
@@ -300,6 +306,7 @@ class FakeRiderApi extends RiderApi {
         'pickup': {'store_name': 'Happy Heels', 'phone': '09171110000', 'address': 'Halang, Calamba, Laguna'},
         'chat_open': status != 'delivered',
         'unread_messages': status == 'assigned' ? 1 : 0,
+        'needs_acceptance': status == 'new',
       };
 
   final chatSent = <String>[];
@@ -348,15 +355,79 @@ class FakeRiderApi extends RiderApi {
         },
         'delivery_mode': 'logistics',
         'stats': {'available': 0, 'active': 2, 'completed': 3, 'completed_today': 1, 'earnings_today': 49, 'earnings_total': 147},
-        'active': [delivery(1, 'assigned'), delivery(2, 'out_for_delivery')],
+        'active': [
+          if (withNewAssignment && !updates.any((update) => update.endsWith(':3') || update.contains(':3:')))
+            delivery(3, 'new'),
+          delivery(1, 'assigned'),
+          delivery(2, 'out_for_delivery'),
+        ],
         'available': [],
         'recent': [],
+        'reasons': {
+          'decline': [
+            {'code': 'too_far', 'label': 'Outside my delivery area'},
+            {'code': 'other', 'label': 'Other reason'},
+          ],
+          'failed': [
+            {'code': 'buyer_cancelled', 'label': 'Buyer cancelled the order at delivery'},
+            {'code': 'buyer_unavailable', 'label': 'Buyer was not available to receive it'},
+            {'code': 'other', 'label': 'Other reason'},
+          ],
+        },
       });
 
   @override
-  Future<RiderDelivery> updateDelivery(int id, String status) async {
-    updates.add('$id:$status');
+  Future<RiderDelivery> updateDelivery(int id, String status, {String? reason, String? note}) async {
+    updates.add([id, status, if (reason != null) reason].join(':'));
     return RiderDelivery.fromJson(delivery(id, status));
+  }
+
+  @override
+  Future<RiderDelivery> acceptDelivery(int id) async {
+    updates.add('accept:$id');
+    return RiderDelivery.fromJson(delivery(id, 'assigned'));
+  }
+
+  @override
+  Future<String> declineDelivery(int id, {required String reason, String? note}) async {
+    updates.add('decline:$id:$reason');
+    return 'Delivery declined. Your logistics partner will assign it to another rider.';
+  }
+
+  @override
+  Future<RiderDelivery> deliveryDetails(int id) async => RiderDelivery.fromJson({
+        ...delivery(id, 'delivered'),
+        'timeline': [
+          {'action': 'accepted', 'label': 'You accepted the delivery', 'at': '2026-10-12T08:00:00Z'},
+          {
+            'action': 'failed',
+            'label': 'Delivery attempt failed',
+            'reason': 'Could not reach the buyer by phone',
+            'at': '2026-10-12T09:00:00Z',
+          },
+          {'action': 'delivered', 'label': 'Delivered to the buyer', 'at': '2026-10-12T11:00:00Z'},
+        ],
+      });
+
+  final reportRequests = <RiderPeriod>[];
+
+  @override
+  Future<RiderReport> reports({RiderPeriod period = RiderPeriod.week}) async {
+    reportRequests.add(period);
+    return RiderReport.fromJson({
+      'period': period.value,
+      'assignments': {'accepted': 4, 'declined': 1},
+      'deliveries': {'delivered': 3, 'failed_attempts': 1, 'success_rate': 75},
+      'money': {'cash_collected': 1647, 'delivery_fees': 147},
+      'failed_reasons': [
+        {'reason': 'buyer_refused', 'label': 'Buyer refused to accept the parcel', 'count': 1},
+      ],
+      'declined_reasons': [],
+      'last_7_days': [
+        for (var day = 6; day >= 0; day--)
+          {'date': '2026-10-${(18 - day).toString().padLeft(2, '0')}', 'delivered': day == 0 ? 3 : 0, 'failed': day == 0 ? 1 : 0},
+      ],
+    });
   }
 
   @override
@@ -753,9 +824,15 @@ void main() {
     await tester.ensureVisible(find.text('COULD NOT DELIVER'));
     await tester.tap(find.text('COULD NOT DELIVER'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(TextButton, 'Could not deliver'));
+    // The rider says why; the reason goes to the buyer and seller.
+    expect(find.text('Buyer cancelled the order at delivery'), findsOneWidget);
+    await tester.tap(find.text('REPORT FAILED DELIVERY'));
     await tester.pumpAndSettle();
-    expect(api.updates, ['1:out_for_delivery', '2:failed']);
+    expect(find.text('Choose a reason.'), findsOneWidget);
+    await tester.tap(find.text('Buyer was not available to receive it'));
+    await tester.tap(find.text('REPORT FAILED DELIVERY'));
+    await tester.pumpAndSettle();
+    expect(api.updates, ['1:out_for_delivery', '2:failed:buyer_unavailable']);
   });
 
   group('rider app tabs', () {
@@ -777,6 +854,77 @@ void main() {
       expect(find.text('Active deliveries'), findsOneWidget);
       expect(find.text('SCAN TO START DELIVERY'), findsOneWidget);
       expect(find.text('SCAN TO CONFIRM DELIVERY'), findsOneWidget);
+    });
+
+    testWidgets('a new assignment is accepted, or declined with a reason', (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(400, 3200);
+      addTearDown(tester.view.reset);
+      final api = FakeRiderApi()..withNewAssignment = true;
+      await tester.pumpWidget(MaterialApp(home: RiderShell(api: api)));
+      await tester.pumpAndSettle();
+
+      expect(find.text('New assignments'), findsOneWidget);
+      expect(find.text('New assignment'), findsOneWidget, reason: 'status pill');
+      expect(find.text('ACCEPT'), findsOneWidget);
+
+      // Declining asks why; "Other reason" needs a description.
+      await tester.tap(find.text('DECLINE'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Other reason'));
+      await tester.tap(find.text('DECLINE DELIVERY'));
+      await tester.pumpAndSettle();
+      expect(find.text('Describe what happened.'), findsOneWidget);
+      await tester.tap(find.text('Outside my delivery area'));
+      await tester.tap(find.text('DECLINE DELIVERY'));
+      await tester.pumpAndSettle();
+      expect(api.updates, ['decline:3:too_far']);
+      expect(find.text('Delivery declined. Your logistics partner will assign it to another rider.'), findsOneWidget);
+      expect(find.text('New assignments'), findsNothing, reason: 'the declined parcel left the list');
+    });
+
+    testWidgets('accepting a new assignment takes it', (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(400, 3200);
+      addTearDown(tester.view.reset);
+      final api = FakeRiderApi()..withNewAssignment = true;
+      await tester.pumpWidget(MaterialApp(home: RiderShell(api: api)));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('ACCEPT'));
+      await tester.pumpAndSettle();
+      expect(api.updates, ['accept:3']);
+      expect(find.text('Accepted. Pick the parcel up at the hub, then scan it to start the delivery.'), findsOneWidget);
+    });
+
+    testWidgets('reports show the success rate, failures and their reasons by period', (tester) async {
+      final api = await pumpRider(tester);
+
+      await tester.tap(find.text('VIEW REPORTS'));
+      await tester.pumpAndSettle();
+      expect(api.reportRequests, [RiderPeriod.week]);
+      expect(find.text('75%'), findsOneWidget);
+      expect(find.text('3 delivered out of 4 attempts'), findsOneWidget);
+      expect(find.text('Buyer refused to accept the parcel'), findsOneWidget);
+      expect(find.text('No declined assignments.'), findsOneWidget);
+
+      await tester.tap(find.text('Today'));
+      await tester.pumpAndSettle();
+      expect(api.reportRequests, [RiderPeriod.week, RiderPeriod.today]);
+      expect(find.text('Success rate · today'), findsOneWidget);
+    });
+
+    testWidgets('a delivered parcel opens its timeline from History', (tester) async {
+      await pumpRider(tester);
+
+      await tester.tap(find.text('History'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.descendant(of: find.byType(RiderHistoryTab), matching: find.byIcon(Icons.chevron_right)).first);
+      await tester.pumpAndSettle();
+      expect(find.text('Timeline'), findsOneWidget);
+      expect(find.text('You accepted the delivery'), findsOneWidget);
+      expect(find.text('Could not reach the buyer by phone'), findsOneWidget);
+      expect(find.text('Delivered to the buyer'), findsOneWidget);
     });
 
     testWidgets('Delivered today opens history filtered to today', (tester) async {

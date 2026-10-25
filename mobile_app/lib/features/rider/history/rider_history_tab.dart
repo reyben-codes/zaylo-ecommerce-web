@@ -4,6 +4,7 @@ import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/api/rider_api.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
 import 'package:zaylo_mobile/components/layout.dart';
+import 'package:zaylo_mobile/features/rider/dashboard/rider_delivery_detail_screen.dart';
 import 'package:zaylo_mobile/features/rider/dashboard/widgets/rider_dashboard_widgets.dart';
 import 'package:zaylo_mobile/models/rider/rider_activity_models.dart';
 import 'package:zaylo_mobile/models/rider/rider_dashboard_models.dart';
@@ -122,7 +123,14 @@ class _RiderHistoryTabState extends State<RiderHistoryTab> {
                           icon: Icons.history,
                           message: 'No deliveries completed ${widget.period.value == RiderPeriod.all ? 'yet' : widget.period.value.label.toLowerCase()}.',
                         ),
-                      for (final delivery in _deliveries) RiderDeliveryCard(delivery: delivery),
+                      for (final delivery in _deliveries)
+                        RiderDeliveryCard(
+                          delivery: delivery,
+                          onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                            builder: (_) => RiderDeliveryDetailScreen(
+                                api: widget.api, deliveryId: delivery.id, preview: delivery),
+                          )),
+                        ),
                       if (_loading)
                         const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()))
                       else if (_nextPage != null)

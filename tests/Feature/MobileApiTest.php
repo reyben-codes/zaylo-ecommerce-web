@@ -139,14 +139,18 @@ class MobileApiTest extends TestCase
             ->assertJsonPath('rider.company', 'Express Delivery')
             ->assertJsonPath('stats.active', 1)
             ->assertJsonPath('active.0.tracking_number', 'ZX-0101')
-            ->assertJsonPath('active.0.next_status', 'out_for_delivery')
-            ->assertJsonPath('active.0.next_needs_scan', true)
+            // New assignments are accepted or declined before any delivery step.
+            ->assertJsonPath('active.0.needs_acceptance', true)
+            ->assertJsonPath('active.0.next_status', null)
             ->assertJsonPath('active.0.scan_code', 'ZX-0101')
             ->assertJsonPath('active.0.pickup.store_name', 'Express Delivery')
             ->assertJsonPath('available', []);
         $this->assertNotContains('ZX-0102', collect($dashboard->json('active'))->pluck('tracking_number'));
 
         $this->withToken($token)->postJson("/api/mobile/rider/deliveries/{$waiting->id}/claim")->assertStatus(409);
+        $this->withToken($token)->postJson("/api/mobile/rider/deliveries/{$parcel->id}/accept")->assertOk()
+            ->assertJsonPath('delivery.next_status', 'out_for_delivery')
+            ->assertJsonPath('delivery.next_needs_scan', true);
         // Starting and confirming a delivery needs the parcel label's QR code, not a button.
         $this->withToken($token)->patchJson("/api/mobile/rider/deliveries/{$parcel->id}", ['status' => 'out_for_delivery'])->assertUnprocessable()
             ->assertJsonValidationErrors(['status' => 'Scan the QR code']);
@@ -187,6 +191,7 @@ class MobileApiTest extends TestCase
         $seller = User::find(ShipmentWorkflow::sellerUserId($parcel));
         $token = $marco->user->createToken('test');
 
+        $this->withToken($token)->postJson("/api/mobile/rider/deliveries/{$parcel->id}/accept")->assertOk();
         $this->withToken($token)->postJson('/api/mobile/rider/deliveries/scan', ['code' => 'ZX-0201'])->assertOk();
         Notification::assertSentTo($buyer, ParcelDeliveryUpdate::class, fn (ParcelDeliveryUpdate $n) => $n->step === 'out_for_delivery');
         Notification::assertNotSentTo($seller, ParcelDeliveryUpdate::class);

@@ -142,10 +142,14 @@ class MobileAppFeaturesTest extends TestCase
         $this->withToken($riderToken)->getJson('/api/mobile/rider/dashboard')->assertOk()
             ->assertJsonPath('rider.logistics_partner', 'Express Delivery')
             ->assertJsonPath('delivery_mode_message', null)
-            ->assertJsonPath('active.0.actions.0.status', 'out_for_delivery')
-            ->assertJsonPath('active.0.actions.0.needs_scan', true)
+            // A new assignment is answered first; its delivery steps follow once accepted.
+            ->assertJsonPath('active.0.needs_acceptance', true)
+            ->assertJsonPath('active.0.actions', [])
             ->assertJsonPath('active.0.chat_open', true)
             ->assertJsonPath('active.0.unread_messages', 0);
+        $this->withToken($riderToken)->postJson("/api/mobile/rider/deliveries/{$parcel->id}/accept")->assertOk()
+            ->assertJsonPath('delivery.actions.0.status', 'out_for_delivery')
+            ->assertJsonPath('delivery.actions.0.needs_scan', true);
 
         $clientId = (string) str()->uuid();
         foreach ([1, 2] as $attempt) {

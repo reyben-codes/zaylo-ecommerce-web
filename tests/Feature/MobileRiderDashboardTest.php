@@ -83,10 +83,15 @@ class MobileRiderDashboardTest extends TestCase
             ->assertJsonPath('stats.active', 1)
             ->assertJsonCount(0, 'available')
             ->assertJsonPath('active.0.id', $mine)
-            ->assertJsonPath('active.0.status_label', 'Assigned to you')
+            ->assertJsonPath('stats.awaiting_acceptance', 1)
+            ->assertJsonPath('active.0.status', 'new')
+            ->assertJsonPath('active.0.status_label', 'New assignment')
+            ->assertJsonPath('active.0.needs_acceptance', true)
             ->assertJsonPath('active.0.recipient_name', 'Maria Santos')
-            ->assertJsonPath('active.0.next_status', 'out_for_delivery')
-            ->assertJsonPath('active.0.chat_open', true);
+            ->assertJsonPath('active.0.next_status', null)
+            ->assertJsonPath('active.0.chat_open', true)
+            ->assertJsonPath('reasons.failed.0.code', 'buyer_cancelled')
+            ->assertJsonPath('reasons.decline.0.code', 'too_far');
     }
 
     public function test_dashboard_carries_announcements_for_riders_only(): void
@@ -110,6 +115,7 @@ class MobileRiderDashboardTest extends TestCase
         $this->signInMobile($rider);
 
         $this->patchJson("/api/mobile/rider/deliveries/$shipmentId", ['status' => 'delivered'])->assertUnprocessable();
+        $this->postJson("/api/mobile/rider/deliveries/$shipmentId/accept")->assertOk()->assertJsonPath('delivery.next_status', 'out_for_delivery');
         $this->postJson('/api/mobile/rider/deliveries/scan', ['code' => "TRK-$orderId"])
             ->assertOk()
             ->assertJsonPath('step', 'out_for_delivery')
@@ -135,7 +141,8 @@ class MobileRiderDashboardTest extends TestCase
         $shipmentId = $this->parcel('out_for_delivery', $rider);
         $this->signInMobile($rider);
 
-        $this->patchJson("/api/mobile/rider/deliveries/$shipmentId", ['status' => 'failed'])
+        $this->patchJson("/api/mobile/rider/deliveries/$shipmentId", ['status' => 'failed'])->assertJsonValidationErrors('reason');
+        $this->patchJson("/api/mobile/rider/deliveries/$shipmentId", ['status' => 'failed', 'reason' => 'buyer_unavailable'])
             ->assertOk()
             ->assertJsonPath('delivery.status', 'failed')
             ->assertJsonPath('delivery.next_status', 'out_for_delivery');
@@ -166,6 +173,7 @@ class MobileRiderDashboardTest extends TestCase
         $code = DB::table('shipments')->where('id', $shipmentId)->value('tracking_number');
         $this->signInMobile($rider);
 
+        $this->postJson("/api/mobile/rider/deliveries/$shipmentId/accept")->assertOk();
         $this->postJson('/api/mobile/rider/deliveries/scan', ['code' => " $code "])->assertOk();
         Notification::assertSentTo($buyer, ParcelDeliveryUpdate::class, fn ($n) => $n->step === 'out_for_delivery' && ! $n->forSeller);
         Notification::assertNotSentTo($seller, ParcelDeliveryUpdate::class);

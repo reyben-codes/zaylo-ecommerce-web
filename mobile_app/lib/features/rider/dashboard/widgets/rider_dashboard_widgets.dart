@@ -218,9 +218,19 @@ class RiderDeliveryCard extends StatelessWidget {
     this.busy = false,
     this.onChat,
     this.onOtherAction,
+    this.onAccept,
+    this.onDecline,
+    this.onTap,
   });
 
   final RiderDelivery delivery;
+
+  /// Answer a new assignment ([RiderDelivery.needsAcceptance]); shown instead of the delivery steps.
+  final VoidCallback? onAccept;
+  final VoidCallback? onDecline;
+
+  /// Opens the delivery's details.
+  final VoidCallback? onTap;
   final String? actionLabel;
   final VoidCallback? onAction;
   final bool busy;
@@ -236,13 +246,21 @@ class RiderDeliveryCard extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: 12),
         child: SectionCard(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Expanded(
-                child: Text(delivery.orderNumber ?? delivery.trackingNumber,
-                    style: const TextStyle(fontWeight: FontWeight.w700)),
-              ),
-              _Pill(label: delivery.statusLabel, color: _statusColor(delivery.status)),
-            ]),
+            InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(8),
+              child: Row(children: [
+                Expanded(
+                  child: Text(delivery.orderNumber ?? delivery.trackingNumber,
+                      style: const TextStyle(fontWeight: FontWeight.w700)),
+                ),
+                _Pill(label: delivery.statusLabel, color: _statusColor(delivery.status)),
+                if (onTap != null) ...[
+                  const SizedBox(width: 4),
+                  Icon(Icons.chevron_right, size: 20, color: ZayloColors.muted, semanticLabel: 'Details'),
+                ],
+              ]),
+            ),
             const SizedBox(height: 4),
             Text('Tracking ${delivery.trackingNumber}', style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
             const SizedBox(height: 12),
@@ -262,6 +280,8 @@ class RiderDeliveryCard extends StatelessWidget {
             if (delivery.items.isNotEmpty) _ItemsToPickUp(items: delivery.items, total: delivery.itemCount),
             if (delivery.notes != null && delivery.notes!.trim().isNotEmpty)
               _InfoRow(icon: Icons.sticky_note_2_outlined, text: delivery.notes!),
+            if (delivery.lastFailure != null && delivery.status == 'failed')
+              _InfoRow(icon: Icons.error_outline, text: 'Last attempt: ${delivery.lastFailure!.summary}', color: _red),
             const SizedBox(height: 8),
             Row(children: [
               Expanded(
@@ -297,6 +317,39 @@ class RiderDeliveryCard extends StatelessWidget {
                   ),
                 ),
               ),
+            ],
+            if (delivery.needsAcceptance && (onAccept != null || onDecline != null || busy)) ...[
+              const SizedBox(height: 14),
+              Text('Your logistics partner assigned this parcel to you. Accept it to pick it up at the hub.',
+                  style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
+              const SizedBox(height: 10),
+              Row(children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: busy ? null : onDecline,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: _red,
+                      side: BorderSide(color: _red),
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: const Text('DECLINE', style: TextStyle(fontWeight: FontWeight.w700)),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: busy ? null : onAccept,
+                    style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 13)),
+                    child: busy
+                        ? SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: ZayloColors.white))
+                        : const Text('ACCEPT', style: TextStyle(fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ]),
             ],
             if (actionLabel != null) ...[
               const SizedBox(height: 10),
@@ -352,7 +405,7 @@ class RiderDeliveryCard extends StatelessWidget {
   }
 
   static Color _statusColor(String status) => switch (status) {
-        'assigned' => _amber,
+        'new' || 'assigned' => _amber,
         'delivered' => _green,
         'failed' || 'returned' || 'cancelled' => _red,
         _ => ZayloColors.info,
@@ -486,18 +539,19 @@ class _ItemsToPickUp extends StatelessWidget {
 }
 
 class _InfoRow extends StatelessWidget {
-  const _InfoRow({required this.icon, required this.text});
+  const _InfoRow({required this.icon, required this.text, this.color});
 
   final IconData icon;
   final String text;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(bottom: 6),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(icon, size: 18, color: ZayloColors.muted),
+          Icon(icon, size: 18, color: color ?? ZayloColors.muted),
           const SizedBox(width: 8),
-          Expanded(child: Text(text)),
+          Expanded(child: Text(text, style: color == null ? null : TextStyle(color: color))),
         ]),
       );
 }

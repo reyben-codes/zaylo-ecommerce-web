@@ -274,6 +274,10 @@ class LogisticsOperationsController extends Controller
         ], [
             'tracking.required' => "Scan or type the tracking number on the parcel's waybill to confirm you have it.",
         ]);
+        // Going out, delivering and reporting a failed attempt belong to the assigned rider, in the rider app.
+        if (ShipmentWorkflow::riderOf($shipment) && in_array($data['status'], ShipmentWorkflow::RIDER_ONLY, true)) {
+            throw ValidationException::withMessages(['status' => 'Only the assigned rider can update parcel '.$this->tracking($shipment).' to "'.ShipmentWorkflow::label($data['status']).'", from the rider app.']);
+        }
         if ($data['status'] === 'picked_up' && strcasecmp(trim($data['tracking']), $this->tracking($shipment)) !== 0) {
             throw ValidationException::withMessages(['tracking' => 'That code does not match parcel '.$this->tracking($shipment).'. Check that you have the right parcel.']);
         }
