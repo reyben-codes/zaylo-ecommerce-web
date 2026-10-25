@@ -1,0 +1,115 @@
+/* "Get the app" page shown to shoppers on Android (resources/views/app-download.blade.php). Theme tokens: theme.css. */
+
+body {
+    margin: 0;
+    background: var(--c-f4f1ec);
+    color: var(--c-1a1714);
+    font-family: 'Inter', sans-serif;
+}
+
+.app-download {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    min-height: 100vh;
+    min-height: 100dvh;
+    box-sizing: border-box;
+    padding: 28px 16px 24px;
+}
+
+.app-download__card {
+    width: 100%;
+    max-width: 440px;
+    box-sizing: border-box;
+    padding: 28px 22px;
+    border: 1px solid var(--c-e5dfd8);
+    border-radius: 20px;
+    background: var(--c-fffdfb);
+    box-shadow: 0 10px 30px #392a2012;
+    text-align: center;
+}
+
+.app-download__logo { display: block; height: 30px; width: auto; margin: 0 auto 22px; }
+
+.app-download__icon {
+    display: block;
+    width: 76px;
+    height: 76px;
+    margin: 0 auto 16px;
+    border-radius: 20px;
+    box-shadow: 0 8px 22px #392a2026;
+}
+
+.app-download__eyebrow {
+    margin: 0 0 6px;
+    color: var(--c-81756b);
+    font-size: .72rem;
+    font-weight: 600;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+}
+
+.app-download h1 {
+    margin: 0 0 10px;
+    font-family: 'Playfair Display', serif;
+    font-size: 1.75rem;
+    line-height: 1.2;
+}
+
+.app-download__lead { margin: 0 0 22px; color: var(--c-4a4037); font-size: .92rem; line-height: 1.6; }
+
+.app-download__button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 52px;
+    border-radius: 14px;
+    background: var(--c-2b241f);
+    color: var(--c-fffdfb);
+    font-size: .95rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: transform .15s ease-out, box-shadow .15s ease-out;
+}
+.app-download__button:hover { transform: translateY(-1px); box-shadow: 0 8px 20px #241a1633; }
+.app-download__button:focus-visible { outline: 3px solid var(--c-9a755e); outline-offset: 3px; }
+
+.app-download__note { margin: 8px 0 22px; color: var(--c-81756b); font-size: .78rem; }
+
+.app-download__steps {
+    margin: 0 0 16px;
+    padding: 16px 16px 16px 36px;
+    border-radius: 12px;
+    background: var(--c-f4f1ec);
+    color: var(--c-4a4037);
+    font-size: .85rem;
+    line-height: 1.55;
+    text-align: left;
+}
+.app-download__steps li + li { margin-top: 8px; }
+.app-download__steps code { font-size: .8rem; }
+
+.app-download__fine { margin: 0; color: var(--c-81756b); font-size: .76rem; line-height: 1.55; text-align: left; }
+
+.app-download__portals {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px 14px;
+    width: 100%;
+    max-width: 440px;
+    font-size: .8rem;
+    text-align: center;
+}
+.app-download__portals p { flex-basis: 100%; margin: 0; color: var(--c-81756b); }
+.app-download__portals a,
+.app-download__legal a { color: var(--c-4a4037); font-weight: 600; }
+
+.app-download__legal { display: flex; gap: 16px; margin-top: auto; font-size: .75rem; }
+
+@media (prefers-reduced-motion: reduce) {
+    .app-download__button { transition: none; }
+    .app-download__button:hover { transform: none; }
+}

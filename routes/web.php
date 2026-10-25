@@ -58,6 +58,8 @@ Route::get('/', function () {
 })->name('home');
 // Uploaded photos saved as "/storage/..." links: redirected to Cloudflare R2, or sent from storage/app/public.
 Route::get('/storage/{path}', PublicFileController::class)->where('path', '.*')->name('storage.public');
+// Shoppers on Android land here instead of the web store (App\Http\Middleware\RequireAndroidApp).
+Route::view('/get-the-app', 'app-download', ['downloadUrl' => config('marketplace.android_app.download_url')])->name('app.download');
 Route::get('/terms', [PolicyController::class, 'show'])->name('terms');
 Route::get('/policies/{slug}', [PolicyController::class, 'show'])->name('policies.show');
 Route::get('/products', [BuyerController::class, 'products'])->name('products.index');

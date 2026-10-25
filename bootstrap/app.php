@@ -24,7 +24,8 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         // Activity logs: records the actions listed in config/activity.php once they succeed.
-        $middleware->web(append: [\App\Http\Middleware\RecordActivity::class]);
+        // Shoppers on Android are sent to download the app instead of using the web store.
+        $middleware->web(append: [\App\Http\Middleware\RequireAndroidApp::class, \App\Http\Middleware\RecordActivity::class]);
         $middleware->api(append: [\App\Http\Middleware\RecordActivity::class]);
 
         $middleware->alias([
