@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/components/buttons.dart';
+import 'package:zaylo_mobile/components/cart_flight.dart';
 import 'package:zaylo_mobile/components/cart_icon.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
 import 'package:zaylo_mobile/components/form_fields.dart';
@@ -30,6 +31,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   late Future<Product> _product;
   final _gallery = PageController();
   int _imageIndex = 0;
+
+  /// The ADD TO BAG button, where the added product's photo starts its flight into the bag.
+  final _addButton = GlobalKey();
   ProductVariant? _variant;
   int _quantity = 1;
   bool _busy = false;
@@ -66,6 +70,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       return;
     }
     if (!await ShopActions.ensureSignedIn(context) || !mounted) return;
+    final start = CartFlight.rectOf(_addButton.currentContext);
     setState(() => _busy = true);
     try {
       final cart = await AppScope.read(context).addToBag(product, quantity: _quantity, variantId: _variant?.id);
@@ -75,6 +80,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       } else {
         showMessage(context, 'Added to your bag.',
             actionLabel: 'VIEW BAG', onAction: () => ShopActions.showTab(context, 2));
+        final images = product.images.isNotEmpty ? product.images : [product.imageUrl];
+        CartFlight.fly(context, from: start, imageUrl: images[_imageIndex.clamp(0, images.length - 1)]);
       }
     } on ApiException catch (error) {
       if (mounted) showMessage(context, error.message);
@@ -120,10 +127,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 IconButton(
                   tooltip: 'Bag',
                   onPressed: () => ShopActions.showTab(context, 2),
-                  icon: Badge(
-                    isLabelVisible: AppScope.of(context).cartCount > 0,
-                    label: Text('${AppScope.of(context).cartCount}'),
-                    child: const CartIcon(),
+                  icon: CartTarget(
+                    child: Badge(
+                      isLabelVisible: AppScope.of(context).cartCount > 0,
+                      label: Text('${AppScope.of(context).cartCount}'),
+                      child: const CartIcon(),
+                    ),
                   ),
                 ),
               ],
@@ -131,6 +140,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             bottomNavigationBar: snapshot.hasError
                 ? null
                 : _ActionBar(
+                    addButtonKey: _addButton,
                     busy: _busy,
                     enabled: loaded,
                     onAdd: () => _add(product, buyNow: false),
@@ -326,8 +336,11 @@ class _RatingLink extends StatelessWidget {
 }
 
 class _ActionBar extends StatelessWidget {
-  const _ActionBar({required this.busy, required this.enabled, required this.onAdd, required this.onBuy});
+  const _ActionBar(
+      {required this.addButtonKey, required this.busy, required this.enabled, required this.onAdd, required this.onBuy});
 
+  /// Where the add-to-bag animation starts.
+  final GlobalKey addButtonKey;
   final bool busy;
   final bool enabled;
   final VoidCallback onAdd;
@@ -345,6 +358,7 @@ class _ActionBar extends StatelessWidget {
           child: Row(children: [
             Expanded(
               child: OutlinedButton(
+                key: addButtonKey,
                 onPressed: enabled && !busy ? onAdd : null,
                 style: secondaryButtonStyle,
                 child: const Text('ADD TO BAG'),
