@@ -16,6 +16,7 @@ class ZayloPalette {
     required this.taupe,
     required this.muted,
     required this.line,
+    required this.cardBorder,
     required this.white,
     required this.onInkMuted,
     required this.onInkFaint,
@@ -40,6 +41,9 @@ class ZayloPalette {
   final Color taupe;
   final Color muted;
   final Color line;
+
+  /// Warm brown outline that lifts product cards off the page (web: --c-c7a78f).
+  final Color cardBorder;
   final Color white;
 
   /// Secondary and tertiary copy on an `ink` background.
@@ -71,6 +75,7 @@ class ZayloPalette {
     taupe: Color(0xFF86786B),
     muted: Color(0xFF6D635A),
     line: Color(0xFFE7DED4),
+    cardBorder: Color(0xFFC7A78F),
     white: Color(0xFFFFFFFF),
     onInkMuted: Color(0xFFD7CCC0),
     onInkFaint: Color(0xFFB9ACA0),
@@ -98,6 +103,7 @@ class ZayloPalette {
     taupe: Color(0xFFA09282),
     muted: Color(0xFFB3A799),
     line: Color(0xFF3A332C),
+    cardBorder: Color(0xFF755943),
     white: Color(0xFF221E1A),
     onInkMuted: Color(0xFF5E554D),
     onInkFaint: Color(0xFF7A6F64),
@@ -136,6 +142,7 @@ abstract final class ZayloColors {
   static Color get taupe => _palette.taupe;
   static Color get muted => _palette.muted;
   static Color get line => _palette.line;
+  static Color get cardBorder => _palette.cardBorder;
   static Color get white => _palette.white;
   static Color get onInkMuted => _palette.onInkMuted;
   static Color get onInkFaint => _palette.onInkFaint;

@@ -2,7 +2,8 @@
  * Storefront product cards (partials/shop-card.blade.php), matching the mobile
  * app's ProductCard: a soft rounded card a shade between the page and sand,
  * the photo fading into it, white pills and a save button over the photo, and
- * a compact ink bag button beside the price. Colors come from theme.css, so
+ * a compact ink bag button beside the price. A warm brown outline and a soft
+ * shadow lift the card off the cream page. Colors come from theme.css, so
  * dark mode follows the app's dark palette.
  */
 
@@ -13,9 +14,11 @@
     flex-direction: column;
     min-width: 0;
     overflow: hidden;
+    border: 1px solid var(--c-c7a78f);
     border-radius: 20px;
     background: var(--shop-card-surface);
-    transition: transform .38s cubic-bezier(.22, 1, .36, 1), box-shadow .38s cubic-bezier(.22, 1, .36, 1);
+    box-shadow: 0 2px 6px rgba(42, 32, 25, .06);
+    transition: transform .38s cubic-bezier(.22, 1, .36, 1), box-shadow .38s cubic-bezier(.22, 1, .36, 1), border-color .38s ease;
 }
 
 @supports (background: color-mix(in srgb, red 50%, blue)) {
@@ -23,7 +26,7 @@
     .shop-card { --shop-card-surface: color-mix(in srgb, var(--c-faf7f2) 45%, var(--c-ede4d8)); }
 }
 
-.shop-card:hover { transform: translateY(-4px); box-shadow: 0 12px 28px rgba(42, 32, 25, .1); }
+.shop-card:hover { transform: translateY(-4px); border-color: var(--c-b48d74); box-shadow: 0 12px 28px rgba(42, 32, 25, .1); }
 
 /* Photo */
 .shop-card__media {
