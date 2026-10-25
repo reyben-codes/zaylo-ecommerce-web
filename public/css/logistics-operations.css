@@ -469,3 +469,12 @@
         flex-basis: 100%;
     }
 }
+
+/* Why a rider declined a parcel or could not deliver it (rider app), shown next to the parcel's actions. */
+.parcel-declined {
+    display: flex;
+    flex-basis: 100%;
+    gap: 6px;
+    align-items: baseline;
+    color: var(--c-b42318);
+}

@@ -6,7 +6,6 @@ use App\Models\Announcement;
 use App\Models\Shipment;
 use App\Models\User;
 use App\Services\RiderDeliveries;
-use App\Services\ShipmentWorkflow;
 use App\Support\MobilePayload;
 use App\Support\ParcelView;
 use Illuminate\Http\JsonResponse;
@@ -15,8 +14,9 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * The rider app's dashboard, history, earnings and delivery actions. Parcels come from the rider's logistics
- * partner, which assigns them at its hub; there is no open pool to claim from.
+ * The rider app's dashboard, history, earnings, reports and delivery actions. Parcels come from the rider's
+ * logistics partner, which assigns them at its hub; the rider accepts or declines each one, and only the rider
+ * takes it out, delivers it, or reports a failed attempt with the reason.
  */
 class MobileRiderDashboardController extends Controller
 {
@@ -35,7 +35,9 @@ class MobileRiderDashboardController extends Controller
         $today = now(self::TIMEZONE)->startOfDay();
         $completed = $this->deliveries->completed($rider)->with($this->relations())->get();
         $completedToday = $completed->filter(fn (Shipment $s) => RiderDeliveries::deliveredAt($s)?->gte($today));
-        $active = $this->deliveries->active($rider)->with($this->relations())->latest('updated_at')->get();
+        $active = $this->deliveries->active($rider)->with($this->relations())->latest('updated_at')->get()
+            // New assignments waiting for an answer come first.
+            ->sortByDesc(fn (Shipment $s) => RiderDeliveries::needsAcceptance($s))->values();
 
         return response()->json([
             'rider' => $this->riderPayload($rider),
@@ -46,6 +48,7 @@ class MobileRiderDashboardController extends Controller
                 // The logistics partner assigns parcels, so nothing waits to be claimed.
                 'available' => 0,
                 'active' => $active->count(),
+                'awaiting_acceptance' => $active->filter(fn (Shipment $s) => RiderDeliveries::needsAcceptance($s))->count(),
                 'completed' => $completed->count(),
                 'completed_today' => $completedToday->count(),
                 'earnings_today' => $this->fees($completedToday),
@@ -55,8 +58,61 @@ class MobileRiderDashboardController extends Controller
             'available' => [],
             'recent' => $completed->sortByDesc(fn (Shipment $s) => RiderDeliveries::deliveredAt($s))->take(5)
                 ->map(fn (Shipment $shipment) => $this->shipmentPayload($shipment))->values(),
-            'note' => 'Your logistics partner assigns deliveries to you at the hub.',
+            'note' => 'Your logistics partner assigns deliveries to you at the hub. Accept or decline each one.',
+            'reasons' => self::reasons(),
         ]);
+    }
+
+    /** The reasons a rider picks from when declining an assignment or reporting a failed attempt. */
+    public static function reasons(): array
+    {
+        $list = fn (array $reasons) => collect($reasons)->map(fn ($label, $code) => ['code' => $code, 'label' => $label])->values();
+
+        return ['decline' => $list(RiderDeliveries::DECLINE_REASONS), 'failed' => $list(RiderDeliveries::FAILED_REASONS)];
+    }
+
+    /** One of the rider's parcels, with everything they did with it. */
+    public function show(Request $request, Shipment $shipment): JsonResponse
+    {
+        abort_unless($this->deliveries->owns($shipment, $request->user()), 404);
+
+        return response()->json(['delivery' => $this->shipmentPayload($shipment->load($this->relations()), withTimeline: true)]);
+    }
+
+    /** The rider takes a new assignment. */
+    public function accept(Request $request, Shipment $shipment): JsonResponse
+    {
+        $shipment = $this->deliveries->accept($shipment, $request->user());
+
+        return response()->json([
+            'message' => 'Delivery accepted. Pick the parcel up at the hub, then scan it to start.',
+            'delivery' => $this->shipmentPayload($shipment->load($this->relations())),
+        ]);
+    }
+
+    /** The rider turns a new assignment down; the parcel goes back to the hub for another rider. */
+    public function decline(Request $request, Shipment $shipment): JsonResponse
+    {
+        abort_unless($this->deliveries->owns($shipment, $request->user()), 403, 'This delivery is assigned to another rider.');
+        $data = $request->validate([
+            'reason' => ['required', 'in:'.implode(',', array_keys(RiderDeliveries::DECLINE_REASONS))],
+            'note' => ['nullable', 'string', 'max:500', 'required_if:reason,other'],
+        ], [
+            'reason.required' => 'Choose why you are declining this delivery.',
+            'note.required_if' => 'Tell your logistics partner why you are declining.',
+        ]);
+        $this->deliveries->decline($shipment, $request->user(), $data['reason'], $data['note'] ?? null);
+
+        return response()->json(['message' => 'Delivery declined. Your logistics partner will assign it to another rider.']);
+    }
+
+    /** Totals for a period: assignments, deliveries, failed attempts and their reasons, cash and fees. */
+    public function reports(Request $request): JsonResponse
+    {
+        $data = $request->validate(['period' => ['nullable', 'in:'.implode(',', self::PERIODS)]]);
+        $period = $data['period'] ?? 'week';
+
+        return response()->json(['period' => $period] + $this->deliveries->report($request->user(), $this->since($period), self::TIMEZONE));
     }
 
     /** Delivered parcels, newest first, 20 per page, with the count and fees for the period. */
@@ -137,17 +193,29 @@ class MobileRiderDashboardController extends Controller
         ]);
     }
 
-    /** Reports that a delivery could not be made; starting and finishing a delivery go through scan(). */
+    /**
+     * Reports that a delivery could not be made, with the reason (e.g. the buyer cancelled at the door); the
+     * buyer and seller are told. Starting and finishing a delivery go through scan().
+     */
     public function update(Request $request, Shipment $shipment): JsonResponse
     {
-        $data = $request->validate(['status' => ['required', 'in:'.implode(',', array_keys(RiderDeliveries::ACTION_LABELS))]]);
-        $shipment = $this->deliveries->advance($shipment, $request->user(), $data['status']);
+        // Another rider's parcel is refused before its fields are checked.
+        abort_unless($this->deliveries->owns($shipment, $request->user()), 403, 'This delivery is assigned to another rider.');
+        $data = $request->validate([
+            'status' => ['required', 'in:'.implode(',', array_keys(RiderDeliveries::ACTION_LABELS))],
+            'reason' => ['exclude_unless:status,failed', 'required', 'in:'.implode(',', array_keys(RiderDeliveries::FAILED_REASONS))],
+            'note' => ['exclude_unless:status,failed', 'nullable', 'string', 'max:500', 'required_if:reason,other'],
+        ], [
+            'reason.required' => 'Choose why the parcel could not be delivered.',
+            'note.required_if' => 'Describe what happened.',
+        ]);
+        $shipment = $this->deliveries->advance($shipment, $request->user(), $data['status'], reason: $data['reason'] ?? null, note: $data['note'] ?? null);
 
         return response()->json([
             'message' => match ($data['status']) {
                 'out_for_delivery' => 'Delivery started. Drive safely!',
                 'delivered' => 'Marked as delivered.',
-                default => 'Marked as failed. Your logistics partner will arrange another attempt or a return.',
+                default => 'Marked as not delivered. The buyer and seller were told why, and your logistics partner will arrange another attempt or a return.',
             },
             'delivery' => $this->shipmentPayload($shipment->load($this->relations())),
         ]);
@@ -180,6 +248,7 @@ class MobileRiderDashboardController extends Controller
             Schema::hasColumn('shipments', 'seller_order_id') ? 'sellerOrder.seller' : null,
             Schema::hasColumn('shipments', 'seller_order_id') ? 'sellerOrder.items' : null,
             Schema::hasColumn('shipments', 'logistics_provider_id') ? 'provider' : null,
+            RiderDeliveries::tracksDecisions() ? 'riderLogs' : null,
         ]));
     }
 
@@ -215,14 +284,15 @@ class MobileRiderDashboardController extends Controller
     }
 
     /** The recipient's details are for the rider the parcel is assigned to, which is the only rider who sees it. */
-    private function shipmentPayload(Shipment $shipment): array
+    private function shipmentPayload(Shipment $shipment, bool $withTimeline = false): array
     {
         $parcel = ParcelView::for($shipment);
         $order = $shipment->order ?: $shipment->sellerOrder?->order;
         $items = $shipment->sellerOrder?->items ?? $order?->items ?? collect();
         $amounts = RiderDeliveries::amounts($shipment);
         $next = $this->deliveries->nextSteps($shipment);
-        $stage = ShipmentWorkflow::stageOf($shipment);
+        $stage = RiderDeliveries::riderStage($shipment);
+        $lastFailure = $shipment->relationLoaded('riderLogs') ? $shipment->riderLogs->where('action', 'failed')->last() : null;
         // The deployed schema does not record the partner on a parcel; it is then the rider's own partner.
         $hub = $shipment->provider ?? $shipment->sellerOrder?->provider ?? request()->user()?->rider?->provider;
 
@@ -235,6 +305,13 @@ class MobileRiderDashboardController extends Controller
             'next_action_label' => isset($next[0]) ? RiderDeliveries::ACTION_LABELS[$next[0]] : null,
             // Starting and finishing a delivery are taken by scanning the parcel's QR code, not a plain button.
             'next_needs_scan' => isset($next[0]) && in_array($next[0], RiderDeliveries::SCAN_STEPS, true),
+            // A new assignment: the rider accepts or declines it before anything else.
+            'needs_acceptance' => $stage === 'new',
+            'last_failure' => $lastFailure ? [
+                'reason' => RiderDeliveries::reasonLabel('failed', $lastFailure->reason),
+                'note' => $lastFailure->note,
+                'at' => $lastFailure->created_at?->toIso8601String(),
+            ] : null,
             'other_actions' => collect(array_slice($next, 1))->map(fn ($status) => $this->actionPayload($status))->values(),
             // Every step available now; the first is the main button (next_status).
             'actions' => collect($next)->map(fn ($status) => $this->actionPayload($status))->values(),
@@ -263,7 +340,7 @@ class MobileRiderDashboardController extends Controller
             // The rider–buyer chat, open while the parcel is with the rider.
             'chat_open' => $shipment->chatIsOpen(),
             'unread_messages' => $shipment->chatIsOpen() ? $shipment->unreadMessagesFor(rider: true) : 0,
-        ];
+        ] + ($withTimeline ? ['timeline' => RiderDeliveries::timeline($shipment, self::TIMEZONE)] : []);
     }
 
     private function actionPayload(string $status): array

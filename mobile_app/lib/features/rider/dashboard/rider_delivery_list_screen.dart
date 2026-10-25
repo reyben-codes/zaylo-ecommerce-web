@@ -48,6 +48,7 @@ class _RiderDeliveryListScreenState extends State<RiderDeliveryListScreen> with 
               return LoadError(error: snapshot.error, onRetry: reloadDeliveries, title: 'Could not load deliveries');
             }
             final deliveries = snapshot.requireData.active;
+            riderReasons = snapshot.requireData.reasons;
             return RefreshIndicator(
               color: ZayloColors.ink,
               onRefresh: reloadDeliveries,
@@ -68,7 +69,10 @@ class _RiderDeliveryListScreenState extends State<RiderDeliveryListScreen> with 
                         actionLabel: delivery.nextActionLabel,
                         onAction: busyDeliveryId == null ? () => advanceDelivery(delivery) : null,
                         onOtherAction: busyDeliveryId == null ? (status) => advanceDelivery(delivery, status) : null,
+                        onAccept: busyDeliveryId == null ? () => acceptAssignment(delivery) : null,
+                        onDecline: busyDeliveryId == null ? () => declineAssignment(delivery) : null,
                         onChat: () => openDeliveryChat(delivery),
+                        onTap: () => openDeliveryDetails(delivery),
                       ),
                 ],
               ),

@@ -5,15 +5,16 @@ import 'package:zaylo_mobile/components/announcement_banner.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
 import 'package:zaylo_mobile/features/rider/dashboard/rider_delivery_list_screen.dart';
 import 'package:zaylo_mobile/features/rider/dashboard/rider_earnings_screen.dart';
+import 'package:zaylo_mobile/features/rider/dashboard/rider_reports_screen.dart';
 import 'package:zaylo_mobile/features/rider/dashboard/widgets/rider_dashboard_widgets.dart';
 import 'package:zaylo_mobile/features/rider/dashboard/widgets/rider_delivery_actions.dart';
 import 'package:zaylo_mobile/models/rider/rider_activity_models.dart';
 import 'package:zaylo_mobile/models/rider/rider_dashboard_models.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 
-/// The Home tab: today's numbers (each opens its own list), deliveries in
-/// progress with their next step, deliveries waiting for a rider, and the
-/// most recent completed ones.
+/// The Home tab: today's numbers (each opens its own list), new assignments
+/// to accept or decline, deliveries in progress with their next step, and
+/// the most recent completed ones.
 class RiderDashboardTab extends StatefulWidget {
   const RiderDashboardTab({super.key, required this.api, required this.onOpenHistory});
 
@@ -59,6 +60,7 @@ class RiderDashboardTabState extends State<RiderDashboardTab> with RiderDelivery
           if (snapshot.hasError) {
             return LoadError(error: snapshot.error, onRetry: reloadDeliveries, title: 'Could not load your dashboard');
           }
+          riderReasons = snapshot.requireData.reasons;
           return RefreshIndicator(
             color: ZayloColors.ink,
             onRefresh: reloadDeliveries,
@@ -98,6 +100,20 @@ class RiderDashboardTabState extends State<RiderDashboardTab> with RiderDelivery
               },
             )),
           ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => _open(RiderReportsScreen(api: widget.api)),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: ZayloColors.ink,
+                side: BorderSide(color: ZayloColors.line),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              icon: const Icon(Icons.insights_outlined),
+              label: const Text('VIEW REPORTS', style: TextStyle(fontWeight: FontWeight.w700)),
+            ),
+          ),
 
           // Always shown, so riders know where scanning lives; off while sellers deliver their own orders.
           const SizedBox(height: 16),
@@ -119,28 +135,40 @@ class RiderDashboardTabState extends State<RiderDashboardTab> with RiderDelivery
                       'The buyer and seller are notified automatically.',
               style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
 
-          RiderSectionHeader(title: 'Your active deliveries', count: data.active.length),
-          if (data.active.isEmpty)
-            const RiderEmptyCard(
+          if (data.newAssignments.isNotEmpty) ...[
+            RiderSectionHeader(title: 'New assignments', count: data.newAssignments.length),
+            for (final delivery in data.newAssignments) _card(delivery),
+          ],
+
+          RiderSectionHeader(title: 'Your active deliveries', count: data.inProgress.length),
+          if (data.inProgress.isEmpty)
+            RiderEmptyCard(
               icon: Icons.local_shipping_outlined,
-              message: 'No deliveries right now. Your logistics partner assigns parcels to you when they are ready.',
+              message: data.newAssignments.isEmpty
+                  ? 'No deliveries right now. Your logistics partner assigns parcels to you when they are ready.'
+                  : 'Accept a new assignment above to start delivering it.',
             )
           else
-            for (final delivery in data.active)
-              RiderDeliveryCard(
-                delivery: delivery,
-                actionLabel: delivery.nextActionLabel,
-                busy: busyDeliveryId == delivery.id,
-                onAction: busyDeliveryId == null ? () => advanceDelivery(delivery) : null,
-                onOtherAction: busyDeliveryId == null ? (status) => advanceDelivery(delivery, status) : null,
-                onChat: () => openDeliveryChat(delivery),
-              ),
+            for (final delivery in data.inProgress) _card(delivery),
 
           if (data.recent.isNotEmpty) ...[
             const RiderSectionHeader(title: 'Recently delivered'),
-            for (final delivery in data.recent) RiderDeliveryCard(delivery: delivery),
+            for (final delivery in data.recent)
+              RiderDeliveryCard(delivery: delivery, onTap: () => openDeliveryDetails(delivery)),
             TextButton(onPressed: () => widget.onOpenHistory(RiderPeriod.all), child: const Text('See all delivery history')),
           ],
         ],
+      );
+
+  Widget _card(RiderDelivery delivery) => RiderDeliveryCard(
+        delivery: delivery,
+        actionLabel: delivery.nextActionLabel,
+        busy: busyDeliveryId == delivery.id,
+        onAction: busyDeliveryId == null ? () => advanceDelivery(delivery) : null,
+        onOtherAction: busyDeliveryId == null ? (status) => advanceDelivery(delivery, status) : null,
+        onAccept: busyDeliveryId == null ? () => acceptAssignment(delivery) : null,
+        onDecline: busyDeliveryId == null ? () => declineAssignment(delivery) : null,
+        onChat: () => openDeliveryChat(delivery),
+        onTap: () => openDeliveryDetails(delivery),
       );
 }

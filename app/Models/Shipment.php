@@ -60,6 +60,12 @@ class Shipment extends Model
         return $this->hasMany(DeliveryEvent::class)->orderBy('occurred_at');
     }
 
+    /** What riders did with this parcel (accepted, declined, failed attempts, delivered), oldest first. */
+    public function riderLogs(): HasMany
+    {
+        return $this->hasMany(RiderDeliveryLog::class)->orderBy('created_at')->orderBy('id');
+    }
+
     /** The rider–buyer chat for this delivery, oldest first. */
     public function messages(): HasMany
     {

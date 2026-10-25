@@ -3,7 +3,9 @@
      Sorting suggestions come from a <datalist id="sort-areas"> on the page. --}}
 @php
     $workflow = \App\Services\ShipmentWorkflow::class;
-    $steps = $workflow::nextSteps($shipment);
+    // The rider's own steps (out for delivery, delivered, failed) are taken in the rider app, not here.
+    $steps = $workflow::logisticsSteps($shipment);
+    $deliveries = \App\Services\RiderDeliveries::class;
     $awaitingRider = $workflow::awaitingRider($shipment);
     $awaitingConfirmation = $workflow::awaitingPickupConfirmation($shipment);
     $awaitingSort = $workflow::awaitingSort($shipment);
@@ -56,6 +58,10 @@
         </form>
     @endif
 
+    @if($awaitingRider && ($decline = $deliveries::lastDecline($shipment)))
+        <span class="seller-cell-note parcel-declined"><i class="fas fa-user-xmark" aria-hidden="true"></i> Declined by {{ $decline->user?->name ?? 'a rider' }}: {{ $deliveries::reasonLabel('declined', $decline->reason) }}@if($decline->note) ({{ $decline->note }})@endif</span>
+    @endif
+
     @if($awaitingRider && $riders !== null)
         @if($riders->isEmpty())
             <span class="seller-cell-note">No riders available. <a href="{{ route('logistics.riders', ['status' => 'approved']) }}">Manage riders</a></span>
@@ -104,7 +110,14 @@
     @endforeach
 
     @if(! $steps && ! $awaitingRider && ! $awaitingConfirmation && ! $awaitingSort)
-        <span class="seller-cell-note">{{ in_array($stage, ['delivered', 'returned', 'cancelled'], true) ? 'Done' : 'With the rider' }}</span>
+        <span class="seller-cell-note">{{ match (true) {
+            in_array($stage, ['delivered', 'returned', 'cancelled'], true) => 'Done',
+            $deliveries::needsAcceptance($shipment) => 'Waiting for the rider to accept',
+            default => 'With the rider',
+        } }}</span>
+    @endif
+    @if($stage === 'failed' && $deliveries::tracksDecisions() && ($failure =$shipment->riderLogs()->where('action', 'failed')->reorder()->latest('id')->first()))
+        <span class="seller-cell-note parcel-declined"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ $deliveries::failureSummary($failure->reason, $failure->note) }}</span>
     @endif
 
     @if(\App\Support\Waybill::available($shipment))

@@ -10,6 +10,7 @@ use App\Models\Rider;
 use App\Models\SellerOrder;
 use App\Models\Shipment;
 use App\Models\User;
+use App\Services\RiderDeliveries;
 use App\Services\ShipmentWorkflow;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -86,11 +87,19 @@ class LogisticsOperationsTest extends TestCase
         $this->assertFalse($this->get(route('logistics.assignments'))->viewData('shipments')->contains('id', $shipment->id));
         $this->get(route('logistics.monitoring'))->assertSee('ZX-0002')->assertSee('Marco Rider');
 
-        $this->patch(route('logistics.parcels.advance', $shipment), ['status' => 'out_for_delivery'])->assertSessionHasNoErrors();
-        $this->patch(route('logistics.parcels.advance', $shipment), ['status' => 'failed'])->assertSessionHasNoErrors();
+        // From here the rider drives the parcel in the rider app; the partner only waits for the rider to accept.
+        $this->get(route('logistics.deliveries'))->assertSee('Waiting for the rider to accept');
+        $this->patch(route('logistics.parcels.advance', $shipment), ['status' => 'out_for_delivery'])->assertSessionHasErrors('status');
+        $riderApp = app(RiderDeliveries::class);
+        $riderApp->accept($shipment->fresh(), $rider->user);
+        $riderApp->scan($rider->user, 'ZX-0002');
+        $riderApp->advance($shipment->fresh(), $rider->user, 'failed', reason: 'buyer_unavailable');
         $this->get(route('logistics.monitoring'))->assertViewHas('attention', fn ($parcels) => $parcels->contains('id', $shipment->id));
-        $this->patch(route('logistics.parcels.advance', $shipment), ['status' => 'out_for_delivery'])->assertSessionHasNoErrors();
-        $this->patch(route('logistics.parcels.advance', $shipment), ['status' => 'delivered'])->assertSessionHasNoErrors();
+        $this->get(route('logistics.deliveries', ['stage' => 'failed']))->assertSee('Buyer was not available to receive it');
+        $this->patch(route('logistics.parcels.advance', $shipment), ['status' => 'out_for_delivery'])->assertSessionHasErrors('status');
+        $riderApp->scan($rider->user, 'ZX-0002');
+        $this->patch(route('logistics.parcels.advance', $shipment), ['status' => 'delivered'])->assertSessionHasErrors('status');
+        $riderApp->scan($rider->user, 'ZX-0002');
 
         $fresh = $shipment->fresh();
         $this->assertSame('delivered', $fresh->status);
