@@ -1,15 +1,18 @@
 FROM php:8.2-apache
 
 # Install system dependencies and PHP extensions needed for Laravel
+# GD needs WebP (profile photos are saved as WebP) and exif turns sideways phone photos upright.
 RUN apt-get update && apt-get install -y \
     libpng-dev \
     libjpeg-dev \
+    libwebp-dev \
     libfreetype6-dev \
     zip \
     unzip \
     git \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd pdo pdo_mysql
+    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
+    && docker-php-ext-install gd exif pdo pdo_mysql \
+    && rm -rf /var/lib/apt/lists/*
 
 # Enable Apache Mod_Rewrite for Laravel routing
 RUN a2enmod rewrite

@@ -100,12 +100,17 @@ class ProfilePhotos
         imagefill($square, 0, 0, imagecolorallocate($square, 255, 255, 255));
         imagecopyresampled($square, $image, 0, 0, $left, $top, self::SIZE, self::SIZE, $side, $side);
 
+        // WebP needs GD built with libwebp; on a server without it, JPEG keeps uploads working.
+        $webp = function_exists('imagewebp') && (gd_info()['WebP Support'] ?? false);
         ob_start();
-        imagewebp($square, null, 82);
+        $webp ? imagewebp($square, null, 82) : imagejpeg($square, null, 85);
         $data = (string) ob_get_clean();
 
-        $path = "avatars/{$user->id}/".Str::random(40).'.webp';
-        Storage::disk('public')->put($path, $data);
+        $path = "avatars/{$user->id}/".Str::random(40).($webp ? '.webp' : '.jpg');
+        // The disks do not throw, so a failed upload (say, to R2) must be caught here, not saved as a missing photo.
+        if ($data === '' || ! Storage::disk('public')->put($path, $data)) {
+            throw ValidationException::withMessages(['photo' => 'Your photo could not be saved right now. Please try again in a moment.']);
+        }
 
         return $path;
     }
