@@ -39,18 +39,99 @@
 
         <dialog class="camera-scan" aria-labelledby="camera-scan-title" data-camera-dialog>
             <div class="camera-scan__panel">
-                <h2 id="camera-scan-title" class="camera-scan__title">Scan the waybill</h2>
-                <video class="camera-scan__video" playsinline muted data-camera-video></video>
-                <p class="camera-scan__status" role="status" data-camera-status>Point the camera at the barcode or QR code on the waybill.</p>
+                <div class="camera-scan__head">
+                    <h2 id="camera-scan-title" class="camera-scan__title">Scan waybill or return code</h2>
+                    <div class="camera-scan__tools">
+                        <button type="button" class="seller-button seller-button--secondary camera-scan__tool" data-camera-torch hidden title="Toggle flashlight">
+                            <i class="fas fa-bolt" aria-hidden="true"></i> <span class="sr-only">Flashlight</span>
+                        </button>
+                        <button type="button" class="seller-button seller-button--secondary camera-scan__tool" data-camera-flip hidden title="Switch camera">
+                            <i class="fas fa-camera-rotate" aria-hidden="true"></i> <span class="sr-only">Switch camera</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="camera-scan__view">
+                    <video class="camera-scan__video" playsinline muted data-camera-video></video>
+                    <div class="camera-scan__reticle" aria-hidden="true">
+                        <span class="camera-scan__corner camera-scan__corner--tl"></span>
+                        <span class="camera-scan__corner camera-scan__corner--tr"></span>
+                        <span class="camera-scan__corner camera-scan__corner--bl"></span>
+                        <span class="camera-scan__corner camera-scan__corner--br"></span>
+                        <div class="camera-scan__laser"></div>
+                    </div>
+                </div>
+                <p class="camera-scan__status" role="status" data-camera-status>Point the camera at the barcode or QR code on the waybill or return ticket.</p>
                 <button type="button" class="seller-button seller-button--secondary" data-camera-close>Cancel</button>
             </div>
         </dialog>
 
-        @if($tracking !== '' && ! $shipment)
+        @if($tracking !== '' && ! $shipment && ! $returnCase)
             <div class="seller-empty">
                 <i class="fas fa-circle-question" aria-hidden="true"></i>
                 <strong>No parcel with tracking number "{{ $tracking }}"</strong>
-                <span>Check the label and scan again. Tracking numbers look like TRK-XXXXXXXXXXXX.</span>
+                <span>Check the label or return slip and scan again. Tracking numbers look like TRK-XXXXXXXXXXXX or RET-XXXXXXXX.</span>
+            </div>
+        @elseif($returnCase)
+            <div class="parcel-result parcel-result--return">
+                <div class="parcel-result__head">
+                    <div>
+                        <span class="seller-cell-note">Return Parcel &middot; {{ $returnCase->returnMethodName() }}</span>
+                        <strong class="parcel-tracking">{{ $returnCase->return_tracking_number }}</strong>
+                    </div>
+                    <span class="parcel-stage parcel-stage--{{ $returnCase->return_status ?? 'scheduled' }}">
+                        {{ ucfirst(str_replace('_', ' ', $returnCase->return_status ?? 'scheduled')) }}
+                    </span>
+                </div>
+                <dl class="workspace-detail-list parcel-result__details">
+                    <div><dt>Dispute Case</dt><dd>#{{ $returnCase->id }} &middot; {{ $returnCase->reason_label }}</dd></div>
+                    <div><dt>Original Order</dt><dd>{{ $returnCase->order?->order_number ?? ('#'.$returnCase->order_id) }}</dd></div>
+                    <div><dt>Assigned Courier Truck</dt><dd><strong>{{ $returnCase->returnCourierName() }}</strong></dd></div>
+                    <div><dt>Buyer</dt><dd>{{ $returnCase->order?->buyer?->name ?? 'Buyer' }}{{ $returnCase->order?->shipping_phone ? ' · '.$returnCase->order->shipping_phone : '' }}</dd></div>
+                    <div><dt>Pickup / Return Address</dt><dd>{{ $returnCase->order?->formattedShippingAddress() ?? 'Registered buyer home address' }}</dd></div>
+                    @if($returnCase->return_method === 'pickup')
+                        <div><dt>Pickup Schedule</dt><dd>{{ $returnCase->pickup_date ? $returnCase->pickup_date->format('D, M j, Y') : 'Scheduled' }} ({{ $returnCase->pickup_slot === 'afternoon' ? 'Afternoon 1:00 PM - 6:00 PM' : 'Morning 9:00 AM - 1:00 PM' }})</dd></div>
+                    @else
+                        <div><dt>Drop-off Location</dt><dd>{{ $returnCase->dropoff_location ?? 'Authorized Logistics Hub' }} (Deadline: {{ $returnCase->dropoff_deadline ? $returnCase->dropoff_deadline->format('M j, Y') : '7 days' }})</dd></div>
+                    @endif
+                    <div><dt>Return To Seller</dt><dd>{{ $returnCase->order?->seller?->shop_name ?? $returnCase->order?->seller?->name ?? 'Seller Shop' }}</dd></div>
+                    @if($returnCase->order && $returnCase->order->items->isNotEmpty())
+                        <div><dt>Item(s)</dt><dd>{{ $returnCase->order->items->pluck('product_name')->join(', ') }}</dd></div>
+                    @endif
+                </dl>
+                <div class="parcel-result__actions">
+                    <p class="seller-cell-note">Update return parcel step</p>
+                    <form method="POST" action="{{ route('logistics.returns.scan', $returnCase) }}">
+                        @csrf
+                        @method('PATCH')
+                        <div class="return-action-buttons" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;">
+                            @if(in_array($returnCase->return_status, ['scheduled', null, ''], true))
+                                <button type="submit" name="return_status" value="picked_up" class="seller-button">
+                                    <i class="fas fa-truck-ramp-box" aria-hidden="true"></i> Confirm Truck Pickup from Home
+                                </button>
+                            @endif
+                            @if(in_array($returnCase->return_status, ['scheduled', 'picked_up'], true))
+                                <button type="submit" name="return_status" value="sorted" class="seller-button seller-button--secondary">
+                                    <i class="fas fa-boxes-packing" aria-hidden="true"></i> Receive &amp; Sort at Hub
+                                </button>
+                            @endif
+                            @if(in_array($returnCase->return_status, ['picked_up', 'sorted'], true))
+                                <button type="submit" name="return_status" value="in_transit" class="seller-button seller-button--secondary">
+                                    <i class="fas fa-truck-fast" aria-hidden="true"></i> In Transit to Seller
+                                </button>
+                            @endif
+                            @if(in_array($returnCase->return_status, ['in_transit', 'sorted'], true))
+                                <button type="submit" name="return_status" value="received_by_seller" class="seller-button seller-button--secondary">
+                                    <i class="fas fa-box-check" aria-hidden="true"></i> Delivered to Seller
+                                </button>
+                            @endif
+                            @if(in_array($returnCase->return_status, ['received_by_seller', 'in_transit'], true))
+                                <button type="submit" name="return_status" value="refunded" class="seller-button">
+                                    <i class="fas fa-hand-holding-dollar" aria-hidden="true"></i> Process &amp; Release Refund
+                                </button>
+                            @endif
+                        </div>
+                    </form>
+                </div>
             </div>
         @elseif($shipment)
             @php $parcel = \App\Support\ParcelView::for($shipment); @endphp

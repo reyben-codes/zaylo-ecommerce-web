@@ -325,6 +325,7 @@ Route::middleware(['auth', 'active', 'verified', 'role:logistics', 'nocache'])->
     Route::patch('/parcels/{shipment}/pickup', [LogisticsOperationsController::class, 'pickup'])->middleware('throttle:120,1')->name('parcels.pickup');
     Route::patch('/parcels/{shipment}/sort', [LogisticsOperationsController::class, 'sort'])->middleware('throttle:120,1')->name('parcels.sort');
     Route::patch('/parcels/{shipment}/status', [LogisticsOperationsController::class, 'advance'])->middleware('throttle:120,1')->name('parcels.advance');
+    Route::patch('/returns/{dispute}/scan', [LogisticsOperationsController::class, 'updateReturnScan'])->middleware('throttle:120,1')->name('returns.scan');
     Route::post('/parcels/{shipment}/rider', [LogisticsOperationsController::class, 'assign'])->middleware('throttle:120,1')->name('parcels.assign');
     Route::post('/areas/rider', [LogisticsOperationsController::class, 'assignArea'])->middleware('throttle:60,1')->name('areas.assign');
     Route::get('/messages', [LogisticsChatController::class, 'logistics'])->name('messages');

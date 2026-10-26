@@ -23,6 +23,17 @@
             </select>
         </div>
     @endisset
+    @isset($products)
+        <div class="seller-field">
+            <label class="seller-field__label" for="range-product">Item</label>
+            <select id="range-product" name="product">
+                <option value="">All items</option>
+                @foreach($products as $id => $name)
+                    <option value="{{ $id }}" @selected(($product['id'] ?? null) === $id)>{{ $name }}</option>
+                @endforeach
+            </select>
+        </div>
+    @endisset
     <button type="submit" class="seller-button seller-button--small"><i class="fas fa-calendar-days" aria-hidden="true"></i> Apply</button>
     @error('from')<p class="seller-field__error" role="alert">{{ $message }}</p>@enderror
 </form>

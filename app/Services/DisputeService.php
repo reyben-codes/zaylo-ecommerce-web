@@ -17,12 +17,17 @@ use Illuminate\Support\Facades\Storage;
 class DisputeService
 {
     /** @param UploadedFile[] $evidence */
-    public function open(Order $order, User $buyer, string $category, string $details, array $evidence): Dispute
+    public function open(Order $order, User $buyer, string $category, string $details, array $evidence, array $returnDetails = []): Dispute
     {
         $paths = [];
         foreach ($evidence as $file) {
             // Private disk: evidence is only served through the case page to the people in it.
             $paths[] = $file->store('disputes/'.$order->id, 'local');
+        }
+
+        $tracking = null;
+        if (! empty($returnDetails['return_method'])) {
+            $tracking = 'RET-'.\Illuminate\Support\Str::upper(\Illuminate\Support\Str::random(12));
         }
 
         $dispute = DB::transaction(fn () => Dispute::create([
@@ -32,6 +37,15 @@ class DisputeService
             'category' => $category,
             'reason' => $details,
             'evidence' => $paths,
+            'return_type' => $returnDetails['return_type'] ?? 'return_refund',
+            'return_method' => $returnDetails['return_method'] ?? null,
+            'return_courier' => $returnDetails['return_courier'] ?? 'zaylo_express',
+            'pickup_date' => $returnDetails['pickup_date'] ?? null,
+            'pickup_slot' => $returnDetails['pickup_slot'] ?? null,
+            'dropoff_location' => $returnDetails['dropoff_location'] ?? null,
+            'dropoff_deadline' => ! empty($returnDetails['return_method']) && $returnDetails['return_method'] === 'dropoff' ? now('Asia/Manila')->addDays(3)->toDateString() : null,
+            'return_tracking_number' => $tracking,
+            'return_status' => ! empty($returnDetails['return_method']) ? 'scheduled' : null,
         ]));
         $this->notify($dispute, 'opened', except: $buyer->id);
 

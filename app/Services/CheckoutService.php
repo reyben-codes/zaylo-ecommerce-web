@@ -132,6 +132,7 @@ class CheckoutService
                     'payment_method' => $paymentMethod, 'recipient_name' => $address->recipient_name,
                     'phone' => $address->phone, 'shipping_address' => $address->formatted(),
                     'notes' => $input['notes'] ?? null, 'placed_at' => now(),
+                    'courier_choice' => $input['courier_choice'] ?? 'zaylo_express',
                 ]);
 
                 foreach ($prepared as $row) {

@@ -17,7 +17,7 @@
         </div>
         <div class="seller-page-heading__actions">
             <button type="button" class="seller-button seller-button--secondary" data-print hidden><i class="fas fa-print" aria-hidden="true"></i> Print</button>
-            <a href="{{ route('logistics.reports.export', array_filter(['from' => $from, 'to' => $to])) }}" class="seller-button seller-button--secondary"><i class="fas fa-file-pdf" aria-hidden="true"></i> Download PDF</a>
+            <a href="{{ route('logistics.reports.export', array_filter(['from' => $from, 'to' => $to, 'item' => $item, 'stage' => $stage, 'rider' => $selectedRider])) }}" class="seller-button seller-button--secondary"><i class="fas fa-file-pdf" aria-hidden="true"></i> Download PDF</a>
         </div>
     </section>
 
@@ -31,9 +31,33 @@
                 <label class="seller-field__label" for="to">To</label>
                 <input type="date" id="to" name="to" value="{{ $to }}" max="{{ today()->toDateString() }}">
             </div>
+            <div class="seller-field">
+                <label class="seller-field__label" for="item">Item / Product</label>
+                <input type="search" id="item" name="item" value="{{ $item }}" placeholder="Search item name..." style="min-width: 160px;">
+            </div>
+            <div class="seller-field">
+                <label class="seller-field__label" for="stage">Stage</label>
+                <select id="stage" name="stage">
+                    <option value="">All stages</option>
+                    @foreach($stages as $stageKey => $stageLabel)
+                        <option value="{{ $stageKey }}" @selected($stage === $stageKey)>{{ $stageLabel }}</option>
+                    @endforeach
+                </select>
+            </div>
+            @if(isset($riders) && $riders->isNotEmpty())
+                <div class="seller-field">
+                    <label class="seller-field__label" for="rider">Rider</label>
+                    <select id="rider" name="rider">
+                        <option value="">All riders</option>
+                        @foreach($riders as $r)
+                            <option value="{{ $r->id }}" @selected((string)$selectedRider === (string)$r->id)>{{ $r->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            @endif
             <button type="submit" class="seller-button seller-button--small"><i class="fas fa-filter" aria-hidden="true"></i> Apply</button>
-            @if($from || $to)
-                <a href="{{ route('logistics.reports') }}" class="seller-button seller-button--small seller-button--secondary">All time</a>
+            @if($from || $to || $item || $stage || $selectedRider)
+                <a href="{{ route('logistics.reports') }}" class="seller-button seller-button--small seller-button--secondary">Reset</a>
             @endif
         </form>
         @error('to')<p class="seller-field__error parcel-report-error" role="alert">{{ $message }}</p>@enderror

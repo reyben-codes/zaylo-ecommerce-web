@@ -10,31 +10,38 @@
     @php
         $maxSales = max(1, (float) $series->max('sales'));
         $percent = rtrim(rtrim(number_format($rate * 100, 2), '0'), '.');
-        $period = ['from' => $range['from'], 'to' => $range['to'], 'seller' => $seller['id'] ?? null];
+        $period = ['from' => $range['from'], 'to' => $range['to'], 'seller' => $seller['id'] ?? null, 'product' => $product['id'] ?? null];
+        $scopeTitle = $seller ? $seller['name'] : 'Marketplace';
+        if ($product) {
+            $scopeTitle .= ' · '.$product['name'];
+        }
     @endphp
-    @include('partials.print-header', ['title' => ($seller ? $seller['name'].' reports' : 'Marketplace reports').' · '.$range['label']])
+    @include('partials.print-header', ['title' => $scopeTitle.' reports · '.$range['label']])
     <section class="seller-page-heading">
         <div>
             <p class="seller-eyebrow">Finance</p>
-            <h1>{{ $seller ? $seller['name'].' · reports' : 'Reports' }}</h1>
-            <p>{{ $seller ? 'Sales and commission for this seller' : 'Marketplace sales and platform commission across all sellers' }} for orders placed {{ $range['label'] }} (Philippine time).</p>
+            <h1>{{ $scopeTitle.' · reports' }}</h1>
+            <p>{{ $seller ? 'Sales and commission for '.$seller['name'] : 'Marketplace sales and platform commission across all sellers' }}{{ $product ? ' for "'.$product['name'].'"' : '' }} for orders placed {{ $range['label'] }} (Philippine time).</p>
         </div>
         <div class="seller-page-heading__actions">
+            @if($product)
+                <a href="{{ route('admin.reports', array_filter(['from' => $range['from'], 'to' => $range['to'], 'seller' => $seller['id'] ?? null])) }}" class="seller-button seller-button--secondary"><i class="fas fa-boxes-stacked" aria-hidden="true"></i> All items</a>
+            @endif
             @if($seller)
-                <a href="{{ route('admin.reports', ['from' => $range['from'], 'to' => $range['to']]) }}" class="seller-button seller-button--secondary"><i class="fas fa-users" aria-hidden="true"></i> All sellers</a>
+                <a href="{{ route('admin.reports', array_filter(['from' => $range['from'], 'to' => $range['to'], 'product' => $product['id'] ?? null])) }}" class="seller-button seller-button--secondary"><i class="fas fa-users" aria-hidden="true"></i> All sellers</a>
             @endif
             <button type="button" class="seller-button seller-button--secondary" data-print hidden><i class="fas fa-print" aria-hidden="true"></i> Print</button>
-            <a href="{{ route('admin.reports.pdf', ['report' => 'sales'] + $period) }}" class="seller-button"><i class="fas fa-file-pdf" aria-hidden="true"></i> Sales summary PDF</a>
-            <a href="{{ route('admin.reports.pdf', ['report' => 'commission'] + $period) }}" class="seller-button seller-button--secondary"><i class="fas fa-file-pdf" aria-hidden="true"></i> Commission PDF</a>
+            <a href="{{ route('admin.reports.pdf', ['report' => 'sales'] + array_filter($period)) }}" class="seller-button"><i class="fas fa-file-pdf" aria-hidden="true"></i> Sales summary PDF</a>
+            <a href="{{ route('admin.reports.pdf', ['report' => 'commission'] + array_filter($period)) }}" class="seller-button seller-button--secondary"><i class="fas fa-file-pdf" aria-hidden="true"></i> Commission PDF</a>
         </div>
     </section>
 
     <section class="seller-panel admin-filter-panel">
-        @include('admin.partials.date-range', ['action' => route('admin.reports'), 'range' => $range, 'sellers' => $sellers, 'seller' => $seller])
+        @include('admin.partials.date-range', ['action' => route('admin.reports'), 'range' => $range, 'sellers' => $sellers, 'seller' => $seller, 'products' => $products, 'product' => $product])
     </section>
 
     <section class="seller-panel admin-download-panel">
-        <header class="seller-panel__header"><div><h2>Download report</h2><p>Choose the report, the seller and the dates, then download it as a PDF.</p></div></header>
+        <header class="seller-panel__header"><div><h2>Download report</h2><p>Choose the report, the seller, specific item, and dates, then download it as a PDF.</p></div></header>
         <form method="GET" action="{{ route('admin.reports.download') }}" class="seller-filter-bar admin-range">
             <div class="seller-field">
                 <label class="seller-field__label" for="download-report">Report</label>
@@ -49,6 +56,15 @@
                     <option value="">All sellers</option>
                     @foreach($sellers as $id => $name)
                         <option value="{{ $id }}" @selected(($seller['id'] ?? null) === $id)>{{ $name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="seller-field">
+                <label class="seller-field__label" for="download-product">Item</label>
+                <select id="download-product" name="product">
+                    <option value="">All items</option>
+                    @foreach($products as $id => $name)
+                        <option value="{{ $id }}" @selected(($product['id'] ?? null) === $id)>{{ $name }}</option>
                     @endforeach
                 </select>
             </div>

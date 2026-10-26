@@ -49,10 +49,18 @@ class DisputeController extends Controller
             throw ValidationException::withMessages(['details' => 'You already filed a complaint about this order. Reply in that case instead.']);
         }
         $data = $request->validate(Dispute::filingRules(), Dispute::filingMessages());
+        $returnDetails = array_filter([
+            'return_type' => $data['return_type'] ?? null,
+            'return_method' => $data['return_method'] ?? null,
+            'return_courier' => $data['return_courier'] ?? null,
+            'pickup_date' => $data['pickup_date'] ?? null,
+            'pickup_slot' => $data['pickup_slot'] ?? null,
+            'dropoff_location' => $data['dropoff_location'] ?? null,
+        ]);
 
-        $dispute = $this->disputes->open($order, $request->user(), $data['category'], $data['details'], $request->file('evidence', []));
+        $dispute = $this->disputes->open($order, $request->user(), $data['category'], $data['details'], $request->file('evidence', []), $returnDetails);
 
-        return redirect()->route('disputes.show', $dispute)->with('status', 'Your complaint was filed. The ZAYLO team will review it and reply here.');
+        return redirect()->route('disputes.show', $dispute)->with('status', 'Your request was filed. The ZAYLO team and seller will review it and reply here.');
     }
 
     public function show(Request $request, Dispute $dispute)

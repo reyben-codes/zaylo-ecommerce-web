@@ -30,6 +30,70 @@
             </section>
         @endif
 
+        @if($dispute->return_tracking_number)
+            <section class="seller-panel return-tracking-card">
+                <header class="seller-panel__header">
+                    <div>
+                        <h2><i class="fas fa-truck-ramp-box" aria-hidden="true"></i> Return &amp; Refund Tracker</h2>
+                        <p>Return Tracking No: <strong>{{ $dispute->return_tracking_number }}</strong> &middot; Method: {{ $dispute->returnMethodName() }}</p>
+                    </div>
+                    <span class="case-pill case-pill--{{ $dispute->return_status ?? 'scheduled' }}">
+                        {{ ucfirst(str_replace('_', ' ', $dispute->return_status ?? 'scheduled')) }}
+                    </span>
+                </header>
+                <div class="case-body return-tracking-body">
+                    <div class="return-truck-info">
+                        <p><strong>Courier Delivery Truck:</strong> <i class="fas fa-truck" aria-hidden="true"></i> {{ $dispute->returnCourierName() }}</p>
+                        @if($dispute->return_method === 'pickup')
+                            <p><strong>Pickup Schedule:</strong> {{ $dispute->pickup_date ? $dispute->pickup_date->format('l, F j, Y') : 'Scheduled' }} ({{ $dispute->pickup_slot === 'afternoon' ? 'Afternoon 1:00 PM - 6:00 PM' : 'Morning 9:00 AM - 1:00 PM' }})</p>
+                            <p><strong>Pickup Address:</strong> {{ $dispute->order?->formattedShippingAddress() ?? 'Registered buyer delivery address' }}</p>
+                            <p class="seller-cell-note"><i class="fas fa-clock" aria-hidden="true"></i> <strong>Waiting time &amp; process:</strong> The assigned courier delivery truck driver will arrive during the scheduled window and scan the barcode below upon collecting the parcel.</p>
+                        @else
+                            <p><strong>Drop-off Location:</strong> {{ $dispute->dropoff_location ?? 'Authorized Logistics Hub' }}</p>
+                            <p><strong>Drop-off Deadline:</strong> {{ $dispute->dropoff_deadline ? $dispute->dropoff_deadline->format('F j, Y') : '7 days from filing' }}</p>
+                            <p class="seller-cell-note"><i class="fas fa-clock" aria-hidden="true"></i> Please bring the item to the drop-off branch before the deadline and present the barcode below to the staff.</p>
+                        @endif
+                    </div>
+
+                    <div class="return-barcode-box" style="text-align:center; padding:16px; background:#fff; border:1px dashed #d1c7bc; border-radius:8px; margin-top:12px;">
+                        <p style="margin:0 0 8px; font-size:.85rem; font-weight:600; color:#5b4d41;">Courier Handover Barcode</p>
+                        <div style="display:inline-block; max-width:100%; overflow-x:auto;">
+                            {!! \App\Support\Code128::svg($dispute->return_tracking_number, 56, 2) !!}
+                        </div>
+                        <p style="margin:4px 0 0; font-family:monospace; font-size:.9rem; font-weight:bold; letter-spacing:1px;">{{ $dispute->return_tracking_number }}</p>
+                        <small style="color:#786c5f;">Show this barcode to the courier truck driver or hub agent when surrendering the return item.</small>
+                    </div>
+
+                    <div class="return-timeline" style="margin-top:16px;">
+                        <h3>Return Progress</h3>
+                        <div class="return-steps" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:10px; margin-top:8px;">
+                            @php
+                                $steps = [
+                                    'scheduled' => '1. Scheduled',
+                                    'picked_up' => '2. Picked Up',
+                                    'sorted' => '3. Sorted at Hub',
+                                    'in_transit' => '4. In Transit',
+                                    'received_by_seller' => '5. Delivered & Refunded',
+                                ];
+                                $orderStatusOrder = ['scheduled', 'picked_up', 'sorted', 'in_transit', 'received_by_seller', 'refunded'];
+                                $currentIdx = array_search($dispute->return_status ?? 'scheduled', $orderStatusOrder, true);
+                                if ($currentIdx === false) $currentIdx = 0;
+                            @endphp
+                            @foreach($steps as $stepKey => $stepLabel)
+                                @php
+                                    $stepIdx = array_search($stepKey, $orderStatusOrder, true);
+                                    $isPastOrCurrent = $currentIdx >= $stepIdx;
+                                @endphp
+                                <div style="padding:10px; border-radius:6px; border:1px solid {{ $isPastOrCurrent ? '#22c55e' : '#e2e8f0' }}; background:{{ $isPastOrCurrent ? '#f0fdf4' : '#f8fafc' }}; color:{{ $isPastOrCurrent ? '#15803d' : '#64748b' }}; font-size:.8rem; font-weight:{{ $isPastOrCurrent ? '600' : 'normal' }}; text-align:center;">
+                                    <i class="fas {{ $isPastOrCurrent ? 'fa-circle-check' : 'fa-circle' }}" aria-hidden="true"></i> {{ $stepLabel }}
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            </section>
+        @endif
+
         <section class="seller-panel">
             <header class="seller-panel__header"><div><h2>Complaint</h2><p>Filed by {{ (int) $dispute->opened_by === (int) auth()->id() ? 'you' : 'the buyer' }}.</p></div></header>
             <div class="case-body">

@@ -3,12 +3,13 @@
     $isSales = $report === 'sales';
     $percent = rtrim(rtrim(number_format($rate * 100, 2), '0'), '.');
     $shopName = isset($seller) ? $seller['name'] : null;
+    $productName = isset($product) ? $product['name'] : null;
 @endphp
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>ZAYLO {{ $isSales ? 'sales summary' : 'commission report' }}{{ $shopName ? ' · '.$shopName : '' }} · {{ $range['label'] }}</title>
+    <title>ZAYLO {{ $isSales ? 'sales summary' : 'commission report' }}{{ $shopName ? ' · '.$shopName : '' }}{{ $productName ? ' · '.$productName : '' }} · {{ $range['label'] }}</title>
     <link rel="stylesheet" href="{{ public_path('css/logistics-report-pdf.css') }}">
 </head>
 <body>
@@ -23,7 +24,7 @@
                     @endif
                     <p class="report-eyebrow">Admin Center</p>
                     <h1>{{ $isSales ? 'Sales summary report' : 'Commission report' }}</h1>
-                    <p class="report-eyebrow">{{ $shopName ? 'Seller: '.$shopName : 'All sellers' }}</p>
+                    <p class="report-eyebrow">{{ $shopName ? 'Seller: '.$shopName : 'All sellers' }}{{ $productName ? ' · Item: '.$productName : '' }}</p>
                 </td>
                 <td class="report-meta">
                     <p><strong>Period:</strong> {{ $range['label'] }}</p>

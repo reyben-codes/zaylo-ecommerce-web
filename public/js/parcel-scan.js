@@ -1,8 +1,7 @@
 /**
- * "Use camera" on the logistics Scan parcel page: reads the waybill's barcode or QR code with the phone camera
- * and looks the parcel up, so pickup staff need no separate scanner. Uses the browser's BarcodeDetector where it
- * exists (Chrome on Android, for example) and otherwise loads the ZXing reader on first use (iPhone, Firefox,
- * desktop browsers). Typing or a USB/Bluetooth scanner still works everywhere.
+ * "Use camera" on the logistics Scan parcel page: reads the waybill or return slip barcode / QR code
+ * with the phone camera and looks the parcel up. Features torch toggle, front/rear camera flip,
+ * and audio confirmation beep on scan detection.
  */
 (function () {
     const button = document.querySelector('[data-camera-scan]');
@@ -12,16 +11,40 @@
 
     const video = dialog.querySelector('[data-camera-video]');
     const status = dialog.querySelector('[data-camera-status]');
+    const torchBtn = dialog.querySelector('[data-camera-torch]');
+    const flipBtn = dialog.querySelector('[data-camera-flip]');
     const input = form.querySelector('input[name="tracking"]');
-    // Waybills carry a Code 128 barcode and a QR code; both hold the tracking number.
+
+    // Waybills and return slips carry a Code 128 barcode and a QR code; both hold tracking numbers.
     const WANTED = ['qr_code', 'code_128'];
     const ZXING_URL = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js';
     const ZXING_INTEGRITY = 'sha384-BzBxP10ZE72aitqj5UMmUsbKFliP/DZqA8Wq+BNNhlIJDGoEd1tpkMYXOg9+n6sB';
+
     let stream = null;
     let timer = null;
-    let read = null; // async () => string|null, reading one video frame
+    let read = null;
+    let facingMode = 'environment';
+    let isTorchOn = false;
 
     button.hidden = false;
+
+    function playBeep() {
+        try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+            const ctx = new AudioCtx();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, ctx.currentTime);
+            gain.gain.setValueAtTime(0.18, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.12);
+        } catch (_) {}
+    }
 
     async function nativeReader() {
         if (!('BarcodeDetector' in window)) return null;
@@ -72,17 +95,52 @@
 
                 return reader.decodeWithState(bitmap).getText();
             } catch (error) {
-                return null; // No code in this frame.
+                return null;
             }
         };
+    }
+
+    function updateTorchSupport() {
+        if (!torchBtn) return;
+        const track = stream?.getVideoTracks()[0];
+        const capabilities = track?.getCapabilities ? track.getCapabilities() : {};
+        if (capabilities.torch) {
+            torchBtn.hidden = false;
+            torchBtn.classList.toggle('active', isTorchOn);
+        } else {
+            torchBtn.hidden = true;
+            isTorchOn = false;
+        }
+    }
+
+    async function toggleTorch() {
+        const track = stream?.getVideoTracks()[0];
+        if (!track) return;
+        try {
+            isTorchOn = !isTorchOn;
+            await track.applyConstraints({
+                advanced: [{ torch: isTorchOn }],
+            });
+            torchBtn?.classList.toggle('active', isTorchOn);
+        } catch (e) {
+            isTorchOn = false;
+            torchBtn?.classList.remove('active');
+        }
     }
 
     function stop() {
         clearTimeout(timer);
         timer = null;
-        stream?.getTracks().forEach((track) => track.stop());
-        stream = null;
+        if (stream) {
+            stream.getTracks().forEach((track) => track.stop());
+            stream = null;
+        }
         video.srcObject = null;
+        isTorchOn = false;
+        if (torchBtn) {
+            torchBtn.hidden = true;
+            torchBtn.classList.remove('active');
+        }
     }
 
     function close() {
@@ -91,12 +149,45 @@
         button.focus();
     }
 
+    async function startCamera() {
+        stop();
+        status.textContent = 'Starting camera…';
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: facingMode,
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
+                },
+                audio: false,
+            });
+
+            if (!dialog.open) {
+                stop();
+                return;
+            }
+
+            video.srcObject = stream;
+            await video.play();
+            updateTorchSupport();
+            if (flipBtn) flipBtn.hidden = false;
+            status.textContent = 'Point the camera at the barcode or QR code.';
+            detect();
+        } catch (error) {
+            stop();
+            status.textContent = error?.name === 'NotAllowedError'
+                ? 'Camera access was blocked. Allow camera access in your browser settings.'
+                : 'The camera could not start. Please type the tracking number manually.';
+        }
+    }
+
     async function detect() {
         if (!stream) return;
         try {
-            const value = (await read())?.trim();
+            const value = (await read?.())?.trim();
             if (value) {
-                status.textContent = `Found ${value}. Opening the parcel…`;
+                playBeep();
+                status.textContent = `Found ${value}. Looking up parcel…`;
                 stop();
                 dialog.close();
                 input.value = value;
@@ -104,38 +195,35 @@
                 return;
             }
         } catch (error) {
-            // The video may not have a frame yet; try again on the next tick.
+            // Wait for next frame
         }
-        timer = setTimeout(detect, 200);
+        timer = setTimeout(detect, 180);
     }
 
     button.addEventListener('click', async () => {
-        status.textContent = 'Point the camera at the barcode or QR code on the waybill.';
+        status.textContent = 'Initializing barcode scanner…';
         dialog.showModal();
         try {
             read ??= (await nativeReader()) ?? (await zxingReader());
         } catch (error) {
-            status.textContent = 'The barcode reader could not load. Check your connection, or type the tracking number.';
+            status.textContent = 'The barcode reader could not load. Check your internet connection or enter tracking manually.';
             return;
         }
-        try {
-            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
-            if (!dialog.open) {
-                stop();
-                return;
-            }
-            video.srcObject = stream;
-            await video.play();
-            detect();
-        } catch (error) {
-            stop();
-            status.textContent = error?.name === 'NotAllowedError'
-                ? 'Camera access was blocked. Allow the camera for this site in your browser settings, or type the tracking number.'
-                : 'The camera could not start. Type the tracking number instead.';
-        }
+        await startCamera();
     });
 
-    dialog.querySelector('[data-camera-close]').addEventListener('click', close);
+    if (torchBtn) {
+        torchBtn.addEventListener('click', toggleTorch);
+    }
+
+    if (flipBtn) {
+        flipBtn.addEventListener('click', async () => {
+            facingMode = facingMode === 'environment' ? 'user' : 'environment';
+            await startCamera();
+        });
+    }
+
+    dialog.querySelector('[data-camera-close]')?.addEventListener('click', close);
     dialog.addEventListener('cancel', (event) => {
         event.preventDefault();
         close();

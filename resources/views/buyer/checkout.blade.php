@@ -90,8 +90,45 @@
                 <label class="checkout-notes-label">Delivery notes <span>(optional)</span><textarea name="notes" rows="3" maxlength="500" placeholder="Instructions for the seller or courier">{{ old('notes') }}</textarea></label>
             </section>
 
+            <section class="checkout-section-card" aria-labelledby="checkout-courier-title">
+                <div class="checkout-section-heading">
+                    <span class="checkout-step">3</span>
+                    <div>
+                        <h2 id="checkout-courier-title">Delivery courier truck</h2>
+                        <p>Choose which courier truck will pick up from the seller and deliver to your home with parcel scanning.</p>
+                    </div>
+                </div>
+                <fieldset class="payment-method-options courier-options">
+                    <legend class="sr-only">Choose delivery truck</legend>
+                    <label class="payment-method-option {{ old('courier_choice', 'zaylo_express') === 'zaylo_express' ? 'selected' : '' }}">
+                        <input type="radio" name="courier_choice" value="zaylo_express" @checked(old('courier_choice', 'zaylo_express') === 'zaylo_express')>
+                        <span class="payment-method-option-icon"><i class="fas fa-truck-fast" aria-hidden="true"></i></span>
+                        <span class="payment-method-option-content">
+                            <span class="payment-method-option-title">ZAYLO Express (Standard Delivery)</span>
+                            <span class="payment-method-option-description">Official ZAYLO courier truck · 2–4 business days · Door-to-door barcode scan</span>
+                        </span>
+                    </label>
+                    <label class="payment-method-option {{ old('courier_choice') === 'jnt_express' ? 'selected' : '' }}">
+                        <input type="radio" name="courier_choice" value="jnt_express" @checked(old('courier_choice') === 'jnt_express')>
+                        <span class="payment-method-option-icon"><i class="fas fa-truck" aria-hidden="true"></i></span>
+                        <span class="payment-method-option-content">
+                            <span class="payment-method-option-title">J&T Express Delivery</span>
+                            <span class="payment-method-option-description">J&T delivery truck pickup & drop · 1–3 business days · Real-time tracking scan</span>
+                        </span>
+                    </label>
+                    <label class="payment-method-option {{ old('courier_choice') === 'flash_express' ? 'selected' : '' }}">
+                        <input type="radio" name="courier_choice" value="flash_express" @checked(old('courier_choice') === 'flash_express')>
+                        <span class="payment-method-option-icon"><i class="fas fa-bolt-lightning" aria-hidden="true"></i></span>
+                        <span class="payment-method-option-content">
+                            <span class="payment-method-option-title">Flash Express</span>
+                            <span class="payment-method-option-description">Speed delivery truck · 1–2 business days · Priority door scan</span>
+                        </span>
+                    </label>
+                </fieldset>
+            </section>
+
             <section class="checkout-section-card" aria-labelledby="checkout-payment-title">
-                <div class="checkout-section-heading"><span class="checkout-step">3</span><div><h2 id="checkout-payment-title">Payment method</h2><p>Choose how you would like to pay.</p></div></div>
+                <div class="checkout-section-heading"><span class="checkout-step">4</span><div><h2 id="checkout-payment-title">Payment method</h2><p>Choose how you would like to pay.</p></div></div>
                 <fieldset class="payment-method-options"><legend class="sr-only">Payment method</legend>
                     <label class="payment-method-option {{ old('payment_method', 'cod') === 'cod' ? 'selected' : '' }}"><input type="radio" name="payment_method" value="cod" @checked(old('payment_method', 'cod') === 'cod')><span class="payment-method-option-icon"><i class="fas fa-money-bill-wave" aria-hidden="true"></i></span><span class="payment-method-option-content"><span class="payment-method-option-title">Cash on Delivery</span><span class="payment-method-option-description">Pay when your order arrives</span></span></label>
                     <label class="payment-method-option {{ old('payment_method') === 'gcash' ? 'selected' : '' }}"><input type="radio" name="payment_method" value="gcash" @checked(old('payment_method') === 'gcash')><span class="payment-method-option-icon"><i class="fas fa-mobile-alt" aria-hidden="true"></i></span><span class="payment-method-option-content"><span class="payment-method-option-title">GCash</span><span class="payment-method-option-description">Manual payment, pending confirmation</span></span></label>
@@ -115,8 +152,14 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('input[name="payment_method"]').forEach(radio => {
-        radio.addEventListener('change', () => document.querySelectorAll('.payment-method-option').forEach(option => option.classList.toggle('selected', option.querySelector('input').checked)));
+    ['payment_method', 'courier_choice'].forEach(name => {
+        document.querySelectorAll(`input[name="${name}"]`).forEach(radio => {
+            radio.addEventListener('change', () => {
+                radio.closest('fieldset').querySelectorAll('.payment-method-option').forEach(option => {
+                    option.classList.toggle('selected', option.querySelector('input').checked);
+                });
+            });
+        });
     });
 });
 </script>

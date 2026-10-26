@@ -19,6 +19,9 @@
                     @endif
                     <p class="report-eyebrow">Seller Center · Sales report</p>
                     <h1>{{ $storeName }}</h1>
+                    @if(! empty($product))
+                        <p class="report-eyebrow">Item: {{ $product['name'] }}</p>
+                    @endif
                 </td>
                 <td class="report-meta">
                     <p><strong>Period:</strong> {{ $from->format('M j, Y') }} – {{ $to->format('M j, Y') }}</p>

@@ -441,23 +441,148 @@
     padding: 18px;
 }
 
-.camera-scan__title {
-    margin: 0;
-    font-size: 1.1rem;
+.camera-scan__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.camera-scan__tools {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.camera-scan__tool {
+    padding: 6px 10px;
+    font-size: .85rem;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background .2s ease, color .2s ease;
+}
+
+.camera-scan__tool.active {
+    background: #f59e0b;
+    color: #fff;
+    border-color: #d97706;
+}
+
+.camera-scan__view {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #000;
 }
 
 .camera-scan__video {
     width: 100%;
-    aspect-ratio: 4 / 3;
-    border-radius: 10px;
-    background: #000;
+    height: 100%;
     object-fit: cover;
+    display: block;
+}
+
+.camera-scan__reticle {
+    position: absolute;
+    inset: 15% 12%;
+    pointer-events: none;
+    box-sizing: border-box;
+}
+
+.camera-scan__corner {
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    border-color: #22c55e;
+    border-style: solid;
+}
+
+.camera-scan__corner--tl {
+    top: 0;
+    left: 0;
+    border-width: 3px 0 0 3px;
+    border-top-left-radius: 4px;
+}
+
+.camera-scan__corner--tr {
+    top: 0;
+    right: 0;
+    border-width: 3px 3px 0 0;
+    border-top-right-radius: 4px;
+}
+
+.camera-scan__corner--bl {
+    bottom: 0;
+    left: 0;
+    border-width: 0 0 3px 3px;
+    border-bottom-left-radius: 4px;
+}
+
+.camera-scan__corner--br {
+    bottom: 0;
+    right: 0;
+    border-width: 0 3px 3px 0;
+    border-bottom-right-radius: 4px;
+}
+
+.camera-scan__laser {
+    position: absolute;
+    left: 4px;
+    right: 4px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #22c55e, #86efac, #22c55e, transparent);
+    box-shadow: 0 0 8px #22c55e;
+    top: 10%;
+    animation: cameraScanLaser 2s ease-in-out infinite alternate;
+}
+
+@keyframes cameraScanLaser {
+    0% {
+        top: 6%;
+        opacity: 0.8;
+    }
+    100% {
+        top: 92%;
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .camera-scan__laser {
+        animation: none;
+        top: 50%;
+        opacity: 0.6;
+    }
 }
 
 .camera-scan__status {
     margin: 0;
     color: var(--c-6b5f54);
     font-size: .8rem;
+}
+
+/* Return parcel stages */
+.parcel-stage--picked_up {
+    background: #e0f2fe;
+    color: #0369a1;
+}
+
+.parcel-stage--sorted {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.parcel-stage--in_transit {
+    background: #ede9fe;
+    color: #6d28d9;
+}
+
+.parcel-stage--received_by_seller,
+.parcel-stage--refunded {
+    background: #dcfce7;
+    color: #15803d;
 }
 
 @media (max-width: 640px) {
