@@ -418,15 +418,21 @@ class Product extends Model
      */
     public function getIsSoldOutAttribute(): bool
     {
+        return $this->available_stock <= 0;
+    }
+
+    /** How many can be bought across its active options (shown on shop cards). Same sources as is_sold_out. */
+    public function getAvailableStockAttribute(): int
+    {
         if (array_key_exists('catalog_variant_stock', $this->attributes) && (int) ($this->attributes['active_variants_count'] ?? 0) > 0) {
-            return (int) $this->attributes['catalog_variant_stock'] <= 0;
+            return max(0, (int) $this->attributes['catalog_variant_stock']);
         }
         if (static::usesLegacySchema()) {
             // Kept equal to the variant total by syncStockFromVariants().
-            return (int) ($this->attributes['stock'] ?? 0) <= 0;
+            return max(0, (int) ($this->attributes['stock'] ?? 0));
         }
 
-        return (int) $this->variants->where('is_active', true)->sum('stock') <= 0;
+        return max(0, (int) $this->variants->where('is_active', true)->sum('stock'));
     }
 
     /**

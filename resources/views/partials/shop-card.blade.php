@@ -2,7 +2,7 @@
     A storefront product tile in the mobile app's style (mobile_app/lib/features/buyer/catalog/product_card.dart):
     the photo fades into a soft card, with the save button, badge and rating over it, then the categories, name,
     description, price and a compact bag button. Expects $product; optional $heading ('h2' or 'h3', default 'h3')
-    and $showStock (the In stock / Sold out line). $savedProductIds comes from AppServiceProvider.
+    and $showStock (how many are in stock, or Sold out). $savedProductIds comes from AppServiceProvider.
 --}}
 @php
     $heading = ($heading ?? 'h3') === 'h2' ? 'h2' : 'h3';
@@ -58,7 +58,7 @@
             @endunless
         </div>
         @if($showStock ?? false)
-            <p class="catalog-stock {{ $soldOut ? 'is-sold-out' : '' }}">{{ $soldOut ? 'Currently sold out' : 'In stock' }}</p>
+            <p class="catalog-stock {{ $soldOut ? 'is-sold-out' : '' }}">{{ $soldOut ? 'Currently sold out' : number_format($product->available_stock).' in stock' }}</p>
         @endif
     </div>
 </article>
