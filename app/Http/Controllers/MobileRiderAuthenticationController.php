@@ -39,6 +39,13 @@ class MobileRiderAuthenticationController extends Controller
      */
     public function google(Request $request, GoogleIdTokenVerifier $tokens, GoogleAccountService $accounts): JsonResponse
     {
+        if (! $request->has('id_token')) {
+            $token = $request->input('idToken') ?? $request->input('token') ?? $request->input('credential');
+            if (is_string($token) && $token !== '') {
+                $request->merge(['id_token' => $token]);
+            }
+        }
+
         $validated = $request->validate([
             'id_token' => ['required', 'string', 'max:4096'],
             'device_name' => ['nullable', 'string', 'max:100'],
