@@ -268,6 +268,7 @@
                     <p style="margin-top:8px;">Selling on ZAYLO? <a href="{{ route('seller.login') }}">Sign in to Seller Center</a></p>
                     <p style="margin-top:4px;">Delivery partner? <a href="{{ route('logistics.login') }}">Sign in to Logistics Center</a></p>
                     <p style="margin-top:4px;">Rider? <a href="{{ route('rider.login') }}">Sign in to your deliveries</a></p>
+                    <p style="margin-top:4px;">Administrator? <a href="{{ route('admin.login') }}">Sign in to Admin Center</a></p>
                 @endif
             </div>
         </div>
