@@ -13,9 +13,12 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class RequireAndroidApp
 {
-    /** Pages that stay open on Android: portals without an app, legal pages, and links opened from emails. */
+    /**
+     * Pages that stay open on Android: portals without an app, legal pages, links opened from emails, uploaded
+     * photos (the portals show them) and the Google sign-in round trip (sellers use it on the seller login page).
+     */
     private const OPEN_PATHS = [
-        'get-the-app', 'up',
+        'get-the-app', 'up', 'storage/*', 'auth/google', 'auth/google/*',
         'seller', 'seller/*', 'logistics', 'logistics/*', 'admin', 'admin/*', 'sorting-center', 'sorting-center/*',
         'policies/*', 'terms', 'forgot-password', 'reset-password/*', 'email/verify', 'email/verify/*',
     ];

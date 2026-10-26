@@ -44,7 +44,8 @@ class RequireAndroidAppTest extends TestCase
 
     public function test_business_portals_legal_pages_and_email_links_stay_open_on_android(): void
     {
-        foreach (['/seller/login', '/logistics/login', '/admin/login', '/register?role=seller', '/register?role=logistics', '/terms', '/forgot-password', '/up'] as $page) {
+        foreach (['/seller/login', '/logistics/login', '/admin/login', '/register?role=seller', '/register?role=logistics', '/terms', '/forgot-password', '/up',
+            '/storage/products/7/photo.png', '/auth/google?role=seller', '/auth/google/callback'] as $page) {
             $response = $this->as(self::ANDROID)->get($page);
             $this->assertNotSame(route('app.download'), $response->headers->get('Location'), "$page should stay open");
         }
