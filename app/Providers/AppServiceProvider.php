@@ -7,6 +7,7 @@ use App\Models\MobileToken;
 use App\Models\User;
 use App\Services\ActivityLogger;
 use App\Services\BuyerNotificationFeed;
+use App\Services\WorkspaceNotificationFeed;
 use App\Support\SnapshotSchemaBuilder;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\PasswordReset;
@@ -26,6 +27,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+
         // Web requests answer schema checks from one snapshot query instead of a round trip each.
         // Console commands (migrations above all) keep the stock builder; see SnapshotSchemaBuilder.
         if (! $this->app->runningInConsole()) {
@@ -46,6 +48,16 @@ class AppServiceProvider extends ServiceProvider
     {
         View::composer('partials.seller-header', function ($view) {
             $view->with('sellerHeaderStoreName', auth()->user()?->sellerStoreName() ?? 'My Shop');
+        });
+
+        // Unread notifications on the Admin and Seller Center sidebars, plus the seller's account and product warnings.
+        View::composer(['partials.seller-sidebar', 'layouts.workspace', 'seller.partials.alert-banner'], function ($view) {
+            $user = auth()->user();
+            $feed = app(WorkspaceNotificationFeed::class);
+            $view->with([
+                'sidebarUnreadNotifications' => $user ? $feed->unreadCount($user) : 0,
+                'sidebarUrgentNotifications' => $user ? $feed->urgent($user) : collect(),
+            ]);
         });
 
         View::composer('partials.buyer-nav-icons', function ($view) {

@@ -29,28 +29,7 @@
         @include('admin.partials.date-range', ['action' => route('admin.reports'), 'range' => $range])
     </section>
 
-    <section class="seller-stat-grid" aria-label="Sales summary">
-        <div class="seller-stat">
-            <span class="seller-stat__label"><i class="fas fa-peso-sign" aria-hidden="true"></i> Gross sales</span>
-            <strong class="seller-stat__value">&#8369;{{ number_format($summary['gross'], 2) }}</strong>
-            <span class="seller-stat__note">Merchandise in non-cancelled orders</span>
-        </div>
-        <div class="seller-stat">
-            <span class="seller-stat__label"><i class="fas fa-receipt" aria-hidden="true"></i> Orders</span>
-            <strong class="seller-stat__value">{{ number_format($summary['orders']) }}</strong>
-            <span class="seller-stat__note">{{ $summary['completedOrders'] }} completed · {{ $summary['cancelled'] }} cancelled</span>
-        </div>
-        <div class="seller-stat">
-            <span class="seller-stat__label"><i class="fas fa-basket-shopping" aria-hidden="true"></i> Average order</span>
-            <strong class="seller-stat__value">&#8369;{{ number_format($summary['average'], 2) }}</strong>
-            <span class="seller-stat__note">Including shipping</span>
-        </div>
-        <div class="seller-stat">
-            <span class="seller-stat__label"><i class="fas fa-percent" aria-hidden="true"></i> Commission earned</span>
-            <strong class="seller-stat__value">&#8369;{{ number_format($summary['commissionEarned'], 2) }}</strong>
-            <span class="seller-stat__note">{{ $percent }}% of completed sales</span>
-        </div>
-    </section>
+    @include('admin.partials.money-summary')
 
     <section class="seller-panel">
         <header class="seller-panel__header"><div><h2>Sales over time</h2><p>Merchandise sales per {{ $monthly ? 'month' : 'day' }}.</p></div></header>
@@ -78,12 +57,12 @@
             <header class="seller-panel__header"><div><h2>Top sellers</h2><p>By sales in this period.</p></div></header>
             <div class="seller-table-wrap">
                 <table class="seller-table workspace-table admin-money">
-                    <thead><tr><th>Seller</th><th>Orders</th><th>Sales</th><th>Commission</th></tr></thead>
+                    <thead><tr><th>Seller</th><th>Gross</th><th>Net</th><th>Commission</th><th>Orders</th></tr></thead>
                     <tbody>
                         @forelse($bySeller->take(10) as $seller)
-                            <tr><td>{{ $seller['seller'] }}</td><td>{{ $seller['orders'] }}</td><td>&#8369;{{ number_format($seller['sales'], 2) }}</td><td>&#8369;{{ number_format($seller['earned'] + $seller['settled'], 2) }}</td></tr>
+                            <tr><td>{{ $seller['seller'] }}</td><td>&#8369;{{ number_format($seller['sales'], 2) }}</td><td>&#8369;{{ number_format($seller['net'], 2) }}</td><td>&#8369;{{ number_format($seller['commission'], 2) }}</td><td>{{ $seller['orders'] }}</td></tr>
                         @empty
-                            <tr><td colspan="4"><p class="admin-empty-inline">No sales.</p></td></tr>
+                            <tr><td colspan="5"><p class="admin-empty-inline">No sales.</p></td></tr>
                         @endforelse
                     </tbody>
                 </table>

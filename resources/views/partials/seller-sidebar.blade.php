@@ -5,6 +5,7 @@
         @php
             $sellerNavigation = [
                 ['route' => 'seller.dashboard', 'label' => 'Dashboard', 'icon' => 'fa-home'],
+                ['route' => 'seller.notifications', 'label' => 'Notifications', 'icon' => 'fa-bell', 'badge' => true],
                 ['route' => 'seller.orders', 'label' => 'Orders', 'icon' => 'fa-box'],
                 ['route' => 'seller.handover', 'label' => 'Delivery', 'icon' => 'fa-truck'],
                 ['route' => 'seller.inventory', 'label' => 'Inventory', 'icon' => 'fa-warehouse'],
@@ -30,6 +31,9 @@
             >
                 <i class="fas {{ $item['icon'] }}" aria-hidden="true"></i>
                 <span>{{ $item['label'] }}</span>
+                @if(! empty($item['badge']) && $sidebarUnreadNotifications > 0)
+                    <span class="seller-sidebar__badge">{{ $sidebarUnreadNotifications > 99 ? '99+' : $sidebarUnreadNotifications }}<span class="sr-only"> unread</span></span>
+                @endif
             </a>
         @endforeach
 

@@ -2,12 +2,13 @@
 @php
     $isSales = $report === 'sales';
     $percent = rtrim(rtrim(number_format($rate * 100, 2), '0'), '.');
+    $shopName = isset($seller) ? $seller['name'] : null;
 @endphp
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>ZAYLO {{ $isSales ? 'sales summary' : 'commission report' }} · {{ $range['label'] }}</title>
+    <title>ZAYLO {{ $isSales ? 'sales summary' : 'commission report' }}{{ $shopName ? ' · '.$shopName : '' }} · {{ $range['label'] }}</title>
     <link rel="stylesheet" href="{{ public_path('css/logistics-report-pdf.css') }}">
 </head>
 <body>
@@ -22,6 +23,7 @@
                     @endif
                     <p class="report-eyebrow">Admin Center</p>
                     <h1>{{ $isSales ? 'Sales summary report' : 'Commission report' }}</h1>
+                    <p class="report-eyebrow">{{ $shopName ? 'Seller: '.$shopName : 'All sellers' }}</p>
                 </td>
                 <td class="report-meta">
                     <p><strong>Period:</strong> {{ $range['label'] }}</p>
@@ -34,11 +36,17 @@
 
     <table class="report-stats">
         <tr>
+            <td><span>Gross</span><strong>&#8369;{{ number_format($summary['gross'], 2) }}</strong><em>Non-cancelled orders</em></td>
+            <td><span>Net</span><strong>&#8369;{{ number_format($summary['net'], 2) }}</strong><em>Kept by sellers</em></td>
+            <td><span>Commission</span><strong>&#8369;{{ number_format($summary['commission'], 2) }}</strong><em>{{ $percent }}% of gross</em></td>
+            <td><span>Total orders</span><strong>{{ number_format($summary['orders']) }}</strong><em>{{ $summary['completedOrders'] }} completed · {{ $summary['cancelled'] }} cancelled</em></td>
+        </tr>
+        <tr>
             @if($isSales)
-                <td><span>Gross sales</span><strong>&#8369;{{ number_format($summary['gross'], 2) }}</strong><em>Non-cancelled orders</em></td>
-                <td><span>Orders</span><strong>{{ number_format($summary['orders']) }}</strong><em>{{ $summary['completedOrders'] }} completed · {{ $summary['cancelled'] }} cancelled</em></td>
                 <td><span>Average order</span><strong>&#8369;{{ number_format($summary['average'], 2) }}</strong><em>Including shipping</em></td>
                 <td><span>Shipping fees</span><strong>&#8369;{{ number_format($summary['shipping'], 2) }}</strong><em>Charged to buyers</em></td>
+                <td><span>Completed sales</span><strong>&#8369;{{ number_format($summary['completedSales'], 2) }}</strong><em>Delivered and finished</em></td>
+                <td><span>Commission earned</span><strong>&#8369;{{ number_format($summary['commissionEarned'], 2) }}</strong><em>On completed orders</em></td>
             @else
                 <td><span>Earned</span><strong>&#8369;{{ number_format($summary['commissionEarned'], 2) }}</strong><em>{{ $percent }}% of completed sales</em></td>
                 <td><span>Settled</span><strong>&#8369;{{ number_format($summary['commissionSettled'], 2) }}</strong><em>Collected from sellers</em></td>
@@ -52,7 +60,7 @@
     <table class="report-table">
         <thead>
             <tr>
-                <th>Seller</th><th class="num">Orders</th><th class="num">Sales</th>
+                <th>Seller</th><th class="num">Orders</th><th class="num">Gross</th><th class="num">Net</th><th class="num">Commission</th>
                 @if($isSales)
                     <th class="num">Share of sales</th>
                 @else
@@ -61,21 +69,23 @@
             </tr>
         </thead>
         <tbody>
-            @forelse($bySeller as $seller)
+            @forelse($bySeller as $shop)
                 <tr>
-                    <td>{{ $seller['seller'] }}</td>
-                    <td class="num">{{ $seller['orders'] }}</td>
-                    <td class="num">&#8369;{{ number_format($seller['sales'], 2) }}</td>
+                    <td>{{ $shop['seller'] }}</td>
+                    <td class="num">{{ $shop['orders'] }}</td>
+                    <td class="num">&#8369;{{ number_format($shop['sales'], 2) }}</td>
+                    <td class="num">&#8369;{{ number_format($shop['net'], 2) }}</td>
+                    <td class="num">&#8369;{{ number_format($shop['commission'], 2) }}</td>
                     @if($isSales)
-                        <td class="num">{{ $summary['gross'] > 0 ? round($seller['sales'] / $summary['gross'] * 100, 1) : 0 }}%</td>
+                        <td class="num">{{ $summary['gross'] > 0 ? round($shop['sales'] / $summary['gross'] * 100, 1) : 0 }}%</td>
                     @else
-                        <td class="num">&#8369;{{ number_format($seller['earned'] + $seller['settled'], 2) }}</td>
-                        <td class="num">&#8369;{{ number_format($seller['settled'], 2) }}</td>
-                        <td class="num">&#8369;{{ number_format($seller['pending'], 2) }}</td>
+                        <td class="num">&#8369;{{ number_format($shop['earned'] + $shop['settled'], 2) }}</td>
+                        <td class="num">&#8369;{{ number_format($shop['settled'], 2) }}</td>
+                        <td class="num">&#8369;{{ number_format($shop['pending'], 2) }}</td>
                     @endif
                 </tr>
             @empty
-                <tr><td colspan="{{ $isSales ? 4 : 6 }}" class="muted">No orders in this period.</td></tr>
+                <tr><td colspan="{{ $isSales ? 6 : 8 }}" class="muted">No orders in this period.</td></tr>
             @endforelse
         </tbody>
     </table>

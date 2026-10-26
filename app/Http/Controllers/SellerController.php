@@ -911,7 +911,8 @@ class SellerController extends Controller
     /**
      * Stock states: "out" has nothing to sell, "low" has some stock at or under the fixed alert level, "in" is healthy.
      */
-    private function whereStock(Builder $query, string $state): Builder
+    /** Products in a stock state (in, low or out). Also used by the seller notifications. */
+    public static function whereStock(Builder $query, string $state): Builder
     {
         $threshold = Product::lowStockThreshold();
         if (Product::usesLegacySchema()) {

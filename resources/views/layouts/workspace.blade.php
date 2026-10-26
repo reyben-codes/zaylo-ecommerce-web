@@ -11,6 +11,7 @@
             'icon' => 'fa-shield-halved',
             'nav' => [
                 ['route' => 'admin.dashboard', 'label' => 'Dashboard', 'icon' => 'fa-home'],
+                ['route' => 'admin.notifications', 'label' => 'Notifications', 'icon' => 'fa-bell', 'badge' => true],
                 ['heading' => 'Accounts'],
                 ['route' => 'admin.registrations', 'label' => 'Approvals', 'icon' => 'fa-user-check'],
                 ['route' => 'admin.identity', 'label' => 'ID checks', 'icon' => 'fa-id-card'],
@@ -118,6 +119,9 @@
                     <a href="{{ route($item['route']) }}" class="seller-sidebar__link{{ $active ? ' is-active' : '' }}" @if($active) aria-current="page" @endif>
                         <i class="fas {{ $item['icon'] }}" aria-hidden="true"></i>
                         <span>{{ $item['label'] }}</span>
+                        @if(! empty($item['badge']) && $sidebarUnreadNotifications > 0)
+                            <span class="seller-sidebar__badge">{{ $sidebarUnreadNotifications > 99 ? '99+' : $sidebarUnreadNotifications }}<span class="sr-only"> unread</span></span>
+                        @endif
                     </a>
                 @endforeach
                 <div class="seller-sidebar__divider" aria-hidden="true"></div>

@@ -26,6 +26,7 @@
         @include('partials.seller-sidebar')
 
         <main class="seller-main" id="main-content">
+            @include('seller.partials.alert-banner')
             @yield('content')
         </main>
     </div>

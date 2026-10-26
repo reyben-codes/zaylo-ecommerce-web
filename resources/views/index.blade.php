@@ -15,6 +15,7 @@
     <link rel="stylesheet" href="{{ asset('css/category-tags.css') }}?v={{ filemtime(public_path('css/category-tags.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/product-card-description.css') }}?v={{ filemtime(public_path('css/product-card-description.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/shop-card.css') }}?v={{ filemtime(public_path('css/shop-card.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/live-search.css') }}?v={{ filemtime(public_path('css/live-search.css')) }}">
 </head>
 <body>
     <header class="navbar">
@@ -39,9 +40,10 @@
             <img class="home-brand-logo" src="{{ asset('images/ZAYLO_LOGO_DARK.png') }}" alt="ZAYLO">
         </a>
         <div class="nav-actions">
-            <form class="search-wrapper" method="GET" action="{{ route('products.index') }}" role="search">
+            <form class="search-wrapper" method="GET" action="{{ route('products.index') }}" role="search" data-live-search>
                 <span class="search-icon">⌕</span>
-                <input type="search" name="search" placeholder="Search products" aria-label="Search products" />
+                <input type="search" name="search" placeholder="Search products" aria-label="Search products" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="live-search-results" maxlength="100" />
+                <div class="live-search" id="live-search-results" role="listbox" aria-label="Matching products" hidden></div>
             </form>
             <div class="icon-group">
                 <button type="button" class="theme-toggle" data-theme-toggle aria-label="Switch theme"></button>
@@ -169,6 +171,7 @@
 <script src="{{ asset('js/notifications.js') }}?v={{ filemtime(public_path('js/notifications.js')) }}" defer></script>
 <script src="{{ asset('js/product-carousel.js') }}?v={{ filemtime(public_path('js/product-carousel.js')) }}" defer></script>
 <script src="{{ asset('js/home.js') }}?v={{ filemtime(public_path('js/home.js')) }}" defer></script>
+<script src="{{ asset('js/live-search.js') }}?v={{ filemtime(public_path('js/live-search.js')) }}" defer></script>
 @include('partials.chat-widget')
 @include('partials.cart-animation')
 </body>

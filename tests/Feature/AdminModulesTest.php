@@ -150,9 +150,36 @@ class AdminModulesTest extends TestCase
         $this->get(route('admin.commissions'))->assertOk()
             ->assertViewHas('summary', fn ($summary) => $summary['commissionEarned'] === 200.0 && $summary['commissionPending'] === 50.0 && $summary['gross'] === 2500.0);
         $this->get(route('admin.reports'))->assertOk()
+            ->assertSeeInOrder(['Gross', 'Net', 'Commission', 'Total orders'])
+            ->assertSeeInOrder(['<th>Gross</th>', '<th>Net</th>', '<th>Commission</th>', '<th>Orders</th>'], false)
+            ->assertViewHas('summary', fn ($summary) => $summary['net'] === $summary['gross'] - $summary['commission'])
             ->assertViewHas('summary', fn ($summary) => $summary['orders'] === 3 && $summary['completedOrders'] === 1 && $summary['cancelled'] === 1)
             ->assertViewHas('bySeller', fn ($rows) => $rows->count() === 3);
         $this->get(route('admin.reports', ['from' => '2026-10-10', 'to' => '2026-10-01']))->assertSessionHasErrors('from');
+    }
+
+    public function test_commission_shows_gross_net_commission_and_orders_for_all_or_one_seller(): void
+    {
+        $this->order('delivered', 200000);
+        $this->order('shipped', 50000);
+        $this->actingAs($this->admin);
+
+        $all = $this->get(route('admin.commissions'))->assertOk()
+            ->assertSeeInOrder(['Gross', 'Net', 'Commission', 'Total orders'])
+            ->assertSee('View report')
+            ->assertViewHas('summary', fn ($summary) => $summary['gross'] === 2500.0 && $summary['commission'] === 250.0 && $summary['net'] === 2250.0 && $summary['orders'] === 2)
+            ->assertViewHas('bySeller', fn ($rows) => $rows->count() === 2 && $rows->every(fn ($row) => $row['net'] === $row['sales'] - $row['commission']));
+        $shopId = $all->viewData('bySeller')->firstWhere('sales', 500.0)['seller_id'];
+
+        $this->get(route('admin.commissions', ['seller' => $shopId]))->assertOk()
+            ->assertSee('All sellers')
+            ->assertViewHas('seller', fn ($seller) => $seller['id'] === $shopId)
+            ->assertViewHas('summary', fn ($summary) => $summary['gross'] === 500.0 && $summary['commission'] === 50.0 && $summary['net'] === 450.0 && $summary['orders'] === 1)
+            ->assertViewHas('sellers', fn ($sellers) => $sellers->count() === 2);
+
+        $pdf = $this->get(route('admin.reports.pdf', ['report' => 'commission', 'seller' => $shopId]))->assertOk();
+        $this->assertStringContainsString('-report-shop-', $pdf->headers->get('content-disposition'));
+        $this->get(route('admin.commissions', ['seller' => 'abc']))->assertSessionHasErrors('seller');
     }
 
     public function test_announcements_reach_their_audience_and_policies_are_editable(): void

@@ -31,6 +31,7 @@ use App\Http\Controllers\ShopController;
 use App\Http\Controllers\SortingCenterController;
 use App\Http\Controllers\SupportChatController;
 use App\Http\Controllers\WaybillController;
+use App\Http\Controllers\WorkspaceNotificationController;
 use App\Models\Product;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
@@ -156,6 +157,9 @@ Route::middleware(['auth', 'verified', 'role:seller', 'nocache'])->prefix('selle
 
 Route::middleware(['auth', 'active', 'verified', 'role:seller', 'nocache'])->prefix('seller')->name('seller.')->group(function () {
     Route::get('/dashboard', [SellerController::class, 'dashboard'])->name('dashboard');
+    Route::get('/notifications', [WorkspaceNotificationController::class, 'index'])->name('notifications');
+    Route::post('/notifications/open', [WorkspaceNotificationController::class, 'open'])->name('notifications.open');
+    Route::post('/notifications/read-all', [WorkspaceNotificationController::class, 'markAllRead'])->name('notifications.read-all');
     Route::get('/products', [SellerController::class, 'products'])->name('products');
     Route::post('/products', [SellerController::class, 'storeProduct'])->name('products.store');
     Route::get('/products/create', [SellerController::class, 'createProduct'])->name('products.create');
@@ -216,6 +220,9 @@ Route::middleware(['auth', 'active', 'verified', 'role:sorting_center', 'nocache
 
 Route::middleware(['auth', 'active', 'verified', 'role:admin', 'nocache'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
+    Route::get('/notifications', [WorkspaceNotificationController::class, 'index'])->name('notifications');
+    Route::post('/notifications/open', [WorkspaceNotificationController::class, 'open'])->name('notifications.open');
+    Route::post('/notifications/read-all', [WorkspaceNotificationController::class, 'markAllRead'])->name('notifications.read-all');
     Route::get('/users', [AdminController::class, 'users'])->name('users');
     Route::patch('/users/{user}/status', [AdminController::class, 'updateUserStatus'])->name('users.status');
     Route::get('/registrations', [AdminController::class, 'registrations'])->name('registrations');

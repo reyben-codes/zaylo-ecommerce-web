@@ -42,9 +42,15 @@ class MarketplaceLedger
         $live = $rows->where('status', '!=', 'cancelled');
         $completed = $rows->filter(fn ($row) => in_array($row['status'], self::COMPLETED, true));
 
+        $gross = round($live->sum('subtotal'), 2);
+        // ZAYLO's share of every non-cancelled order (earned once completed); sellers keep the rest.
+        $commission = round($live->sum('commission'), 2);
+
         return [
             'orders' => $rows->pluck('order_id')->unique()->count(),
-            'gross' => round($live->sum('subtotal'), 2),
+            'gross' => $gross,
+            'commission' => $commission,
+            'net' => round($gross - $commission, 2),
             'completedSales' => round($completed->sum('subtotal'), 2),
             'completedOrders' => $completed->pluck('order_id')->unique()->count(),
             'cancelled' => $rows->where('status', 'cancelled')->pluck('order_id')->unique()->count(),
@@ -57,7 +63,7 @@ class MarketplaceLedger
         ];
     }
 
-    /** Per seller: orders, sales and commission. */
+    /** Per seller: orders, sales (gross), commission, net and settlement state. */
     public function bySeller(Collection $rows): Collection
     {
         return $rows->groupBy('seller_id')->map(function (Collection $group) {
@@ -68,6 +74,8 @@ class MarketplaceLedger
                 'seller' => $group->first()['seller'],
                 'orders' => $group->pluck('order_id')->unique()->count(),
                 'sales' => round($live->sum('subtotal'), 2),
+                'commission' => round($live->sum('commission'), 2),
+                'net' => round($live->sum('subtotal') - $live->sum('commission'), 2),
                 'earned' => round($group->whereIn('commission_status', ['earned', 'unrecorded'])->sum('commission'), 2),
                 'settled' => round($group->where('commission_status', 'settled')->sum('commission'), 2),
                 'pending' => round($group->where('commission_status', 'pending')->sum('commission'), 2),

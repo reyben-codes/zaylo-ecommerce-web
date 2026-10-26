@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 
@@ -43,12 +44,59 @@ class PrimaryButton extends StatelessWidget {
       );
 }
 
-class QuantityStepper extends StatelessWidget {
+/// Quantity picker: tap - or +, or type an exact amount (kept between 1 and [max], applied when typing ends).
+class QuantityStepper extends StatefulWidget {
   const QuantityStepper({super.key, required this.value, required this.max, required this.onChanged, this.enabled = true});
   final int value;
   final int max;
   final ValueChanged<int> onChanged;
   final bool enabled;
+
+  @override
+  State<QuantityStepper> createState() => _QuantityStepperState();
+}
+
+class _QuantityStepperState extends State<QuantityStepper> {
+  late final TextEditingController _controller = TextEditingController(text: '${widget.value}');
+  final FocusNode _focus = FocusNode();
+  // Submitting also ends focus; this keeps the typed amount from being sent twice before the parent rebuilds.
+  int? _sent;
+
+  @override
+  void initState() {
+    super.initState();
+    _focus.addListener(() {
+      if (!_focus.hasFocus) _commit();
+    });
+  }
+
+  @override
+  void didUpdateWidget(QuantityStepper oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _sent = null;
+    if (!_focus.hasFocus && _controller.text != '${widget.value}') _controller.text = '${widget.value}';
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focus.dispose();
+    super.dispose();
+  }
+
+  void _commit() {
+    final typed = int.tryParse(_controller.text) ?? widget.value;
+    final amount = typed.clamp(1, widget.max < 1 ? 1 : widget.max);
+    _controller.text = '$amount';
+    if (amount == widget.value || amount == _sent) return;
+    _sent = amount;
+    widget.onChanged(amount);
+  }
+
+  void _step(int by) {
+    _focus.unfocus();
+    widget.onChanged(widget.value + by);
+  }
 
   @override
   Widget build(BuildContext context) => Container(
@@ -61,16 +109,37 @@ class QuantityStepper extends StatelessWidget {
           _StepButton(
             icon: Icons.remove,
             label: 'Decrease quantity',
-            onTap: enabled && value > 1 ? () => onChanged(value - 1) : null,
+            onTap: widget.enabled && widget.value > 1 ? () => _step(-1) : null,
           ),
           SizedBox(
-            width: 32,
-            child: Text('$value', textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w700)),
+            width: 44,
+            child: TextField(
+              controller: _controller,
+              focusNode: _focus,
+              enabled: widget.enabled,
+              keyboardType: TextInputType.number,
+              textInputAction: TextInputAction.done,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(4)],
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+              decoration: const InputDecoration(
+                isDense: true,
+                filled: false,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                disabledBorder: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(vertical: 8),
+                semanticCounterText: '',
+              ),
+              onSubmitted: (_) => _commit(),
+              onTapOutside: (_) => _focus.unfocus(),
+            ),
           ),
           _StepButton(
             icon: Icons.add,
             label: 'Increase quantity',
-            onTap: enabled && value < max ? () => onChanged(value + 1) : null,
+            onTap: widget.enabled && widget.value < widget.max ? () => _step(1) : null,
           ),
         ]),
       );

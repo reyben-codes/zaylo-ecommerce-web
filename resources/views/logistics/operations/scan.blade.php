@@ -32,7 +32,7 @@
                 <i class="fas fa-barcode" aria-hidden="true"></i>
                 <input type="search" id="tracking" name="tracking" value="{{ $tracking }}" placeholder="e.g. TRK-OZIMZ8VNRMDW" autocomplete="off" autofocus required maxlength="100">
                 <button type="submit" class="seller-button"><i class="fas fa-magnifying-glass" aria-hidden="true"></i> Find parcel</button>
-                {{-- Shown by js/parcel-scan.js only where the browser can read barcodes from the camera. --}}
+                {{-- Shown by js/parcel-scan.js wherever the browser can use a camera (built-in barcode reader, else ZXing). --}}
                 <button type="button" class="seller-button seller-button--secondary" data-camera-scan hidden><i class="fas fa-camera" aria-hidden="true"></i> Use camera</button>
             </div>
         </form>
