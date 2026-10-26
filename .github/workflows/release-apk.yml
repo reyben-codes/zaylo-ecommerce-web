@@ -45,10 +45,20 @@ jobs:
             exit 1
           fi
           mkdir -p ~/.android
-          # Copying on Windows can add a line break (\r\n) or spaces, which base64 rejects; drop them first.
-          printf '%s' "$DEBUG_KEYSTORE_BASE64" | tr -d '\r\n\t ' | base64 --decode > ~/.android/debug.keystore
+          # Copying on Windows can add a line break (\r\n), spaces or quotes, which base64 rejects; drop them first.
+          SECRET=$(printf '%s' "$DEBUG_KEYSTORE_BASE64" | tr -d "\r\n\t \"'")
+          echo "Secret: ${#SECRET} characters (the team key encodes to 3492)."
+          if ! printf '%s' "$SECRET" | base64 --decode > ~/.android/debug.keystore 2> /dev/null; then
+            echo "::error::DEBUG_KEYSTORE_BASE64 is not valid base64 (${#SECRET} characters). Copy it again with the PowerShell command in the README and replace the secret."
+            exit 1
+          fi
+          echo "Keystore: $(stat -c %s ~/.android/debug.keystore) bytes (the team key is 2618)."
           # The SHA-1 must match the one registered for Google sign-in (the team's key starts 76:70:DD).
-          keytool -list -v -keystore ~/.android/debug.keystore -storepass android | grep -m1 'SHA1:'
+          KEYTOOL_OUTPUT=$(keytool -list -v -keystore ~/.android/debug.keystore -storepass android 2>&1) || {
+            echo "::error::DEBUG_KEYSTORE_BASE64 decodes to $(stat -c %s ~/.android/debug.keystore) bytes but is not the debug keystore (password 'android'): $(printf '%s' "$KEYTOOL_OUTPUT" | head -n 1)"
+            exit 1
+          }
+          printf '%s\n' "$KEYTOOL_OUTPUT" | grep 'SHA1:' | head -n 1
 
       - run: flutter pub get
 

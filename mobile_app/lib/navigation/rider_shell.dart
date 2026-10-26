@@ -14,6 +14,7 @@ import 'package:zaylo_mobile/models/auth_models.dart';
 import 'package:zaylo_mobile/models/rider/rider_activity_models.dart';
 import 'package:zaylo_mobile/navigation/floating_nav_bar.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
+import 'package:zaylo_mobile/auth/google_auth.dart';
 
 /// The signed-in rider app: Home, History, Chat (ZAYLO support), and Account
 /// tabs. Sign out lives in Account. [api] carries the rider's token; the
@@ -86,6 +87,8 @@ class _RiderShellState extends State<RiderShell> {
       // The token is dropped either way; the server expires it on its own.
     }
     widget.api.token = null;
+    // So the next "Continue with Google" lets the rider choose an account again.
+    await GoogleAuth.source.signOut();
     if (!mounted) return;
     Navigator.of(context).pop();
     showMessage(context, 'Signed out of your rider account.');

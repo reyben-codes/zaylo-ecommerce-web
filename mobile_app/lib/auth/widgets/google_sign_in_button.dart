@@ -8,12 +8,16 @@ import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 
 /// "or" and a "Continue with Google" button, as under the website's sign-in
 /// and sign-up forms. Hidden until Google sign-in is configured for the build.
-/// New Google accounts become buyer accounts with a verified email.
+/// By default it signs buyers in (new Google accounts become buyer accounts with
+/// a verified email); [signIn] replaces that, as on the rider login screen.
 class GoogleSignInSection extends StatefulWidget {
-  const GoogleSignInSection({super.key, required this.onError});
+  const GoogleSignInSection({super.key, required this.onError, this.signIn});
 
   /// Shows a problem in the screen's error banner; null clears it.
   final ValueChanged<String?> onError;
+
+  /// Sends the Google ID token and opens the signed-in app. Defaults to the buyer sign-in.
+  final Future<void> Function(String idToken)? signIn;
 
   @override
   State<GoogleSignInSection> createState() => _GoogleSignInSectionState();
@@ -28,13 +32,17 @@ class _GoogleSignInSectionState extends State<GoogleSignInSection> {
     final state = AppScope.read(context);
     try {
       final idToken = await GoogleAuth.source.idToken();
-      if (idToken == null || !mounted) return; // The buyer closed Google's account picker.
-      final result = await state.api.googleSignIn(idToken);
-      if (mounted) await finishBuyerSignIn(context, result);
+      if (idToken == null || !mounted) return; // Google's account picker was closed.
+      if (widget.signIn != null) {
+        await widget.signIn!(idToken);
+      } else {
+        final result = await state.api.googleSignIn(idToken);
+        if (mounted) await finishBuyerSignIn(context, result);
+      }
     } on GoogleSignInFailure catch (error) {
       widget.onError(error.message);
     } on ApiException catch (error) {
-      // Forget the chosen account, so trying again lets the buyer pick another one.
+      // Forget the chosen account, so trying again lets them pick another one.
       await GoogleAuth.source.signOut();
       widget.onError(error.fieldErrors['google'] ?? error.message);
     } finally {

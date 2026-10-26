@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\NoGoogleAccountException;
 use App\Models\User;
 use Illuminate\Support\Str;
 use Illuminate\Auth\Events\Verified;
@@ -15,7 +16,12 @@ class GoogleAccountService
     // Riders and logistics partners register with the form: they must name a partner or company.
     public const PUBLIC_ROLES = ['buyer', 'seller'];
 
-    public function resolve(GoogleUser $identity, string $role): User
+    /**
+     * The account for this Google identity: found by Google ID or verified email (and linked), or created for
+     * the public roles. With $createAccount false (riders, who apply with documents first) a missing account
+     * throws NoGoogleAccountException instead.
+     */
+    public function resolve(GoogleUser $identity, string $role, bool $createAccount = true): User
     {
         $attributes = [
             'google_id' => $identity->getId(),
@@ -23,7 +29,7 @@ class GoogleAccountService
             'name' => $identity->getName(),
         ];
         $verifiedEmail = $identity->user['email_verified'] ?? $identity->user['verified_email'] ?? false;
-        if ($verifiedEmail !== true || ! in_array($role, self::PUBLIC_ROLES, true)
+        if ($verifiedEmail !== true || ($createAccount && ! in_array($role, self::PUBLIC_ROLES, true))
             || Validator::make($attributes, [
                 'google_id' => 'required|string|max:255',
                 'email' => 'required|string|email:rfc|max:255',
@@ -40,7 +46,7 @@ class GoogleAccountService
         // Unique email and google_id indexes arbitrate simultaneous first-time callbacks.
         for ($attempt = 0; $attempt < 2; $attempt++) {
             try {
-                [$user, $newlyVerified] = DB::transaction(function () use ($attributes, $role, $avatar) {
+                [$user, $newlyVerified] = DB::transaction(function () use ($attributes, $role, $avatar, $createAccount) {
                     $byId = User::where('google_id', $attributes['google_id'])->lockForUpdate()->first();
                     $byEmail = User::where('email', $attributes['email'])->lockForUpdate()->first();
                     if (($byId && $byEmail && ! $byId->is($byEmail))
@@ -50,6 +56,9 @@ class GoogleAccountService
                     }
 
                     $user = $byId ?? $byEmail;
+                    if (! $user && ! $createAccount) {
+                        throw new NoGoogleAccountException;
+                    }
                     // Each sign-in page admits one account type; never link or sign in another type's account here.
                     if ($user && User::portalOf($user->role) !== User::portalOf($role)) {
                         throw new \App\Exceptions\WrongAccountTypeException($user->role);

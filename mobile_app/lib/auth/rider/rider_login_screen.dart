@@ -8,6 +8,7 @@ import 'package:zaylo_mobile/auth/forgot_password_screen.dart';
 import 'package:zaylo_mobile/auth/rider/rider_registration_screen.dart';
 import 'package:zaylo_mobile/auth/rider/rider_verify_email_screen.dart';
 import 'package:zaylo_mobile/auth/widgets/auth_layout.dart';
+import 'package:zaylo_mobile/auth/widgets/google_sign_in_button.dart';
 import 'package:zaylo_mobile/components/buttons.dart';
 import 'package:zaylo_mobile/components/form_fields.dart';
 import 'package:zaylo_mobile/components/layout.dart';
@@ -17,7 +18,10 @@ import 'package:zaylo_mobile/state/app_state.dart';
 /// Same layout as [LoginScreen], for rider accounts. The rider session lives
 /// on its own [RiderApi], so a signed-in buyer session is never replaced.
 class RiderLoginScreen extends StatefulWidget {
-  const RiderLoginScreen({super.key});
+  const RiderLoginScreen({super.key, this.api});
+
+  /// Replaced in tests; the app signs in on a fresh [RiderApi].
+  final RiderApi? api;
 
   @override
   State<RiderLoginScreen> createState() => _RiderLoginScreenState();
@@ -28,7 +32,7 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
   // Same server as the buyer client; a separate instance keeps the token apart.
-  late final _api = RiderApi(baseUrl: AppScope.read(context).api.baseUrl);
+  late final _api = widget.api ?? RiderApi(baseUrl: AppScope.read(context).api.baseUrl);
   bool _obscurePassword = true;
   bool _submitting = false;
   String? _error;
@@ -64,6 +68,16 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
+  }
+
+  /// "Continue with Google" for riders who already applied; errors show in the screen's banner.
+  Future<void> _googleSignIn(String idToken) async {
+    final result = await _api.googleSignIn(idToken);
+    _api.token = result.token;
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(MaterialPageRoute(
+      builder: (_) => RiderShell(api: _api, user: result.user),
+    ));
   }
 
   @override
@@ -125,6 +139,10 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
             ),
             const SizedBox(height: 12),
             PrimaryButton(label: 'SIGN IN AS RIDER', busy: _submitting, onPressed: _submit),
+            GoogleSignInSection(
+              onError: (message) => setState(() => _error = message),
+              signIn: _googleSignIn,
+            ),
           ]),
         ),
         const SizedBox(height: 27),
