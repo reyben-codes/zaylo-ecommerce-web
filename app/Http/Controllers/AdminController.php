@@ -25,6 +25,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -55,6 +56,18 @@ class AdminController extends Controller
         'suspended' => 'suspended',
         'deactivated' => 'suspended',
         'rejected' => 'rejected',
+    ];
+
+    /**
+     * The status changes an admin may make, by current status. A rejection is final: the applicant has to fix and
+     * resubmit their application (which puts them back to pending) before anyone can approve them.
+     */
+    public const STATUS_CHANGES = [
+        'pending' => ['active', 'rejected'],
+        'active' => ['suspended', 'deactivated'],
+        'suspended' => ['active'],
+        'deactivated' => ['active'],
+        'rejected' => [],
     ];
 
     public function dashboard(MarketplaceLedger $ledger)
@@ -260,10 +273,18 @@ class AdminController extends Controller
             // Rejected sellers and logistics partners see the reason, so it is required when one has applied.
             'reason' => [$application || $partnerApplied ? 'required_if:status,rejected' : 'nullable', 'nullable', 'string', 'max:500'],
         ], ['reason.required_if' => 'Give the reason for rejecting this application. The applicant sees it.']);
-        $deciding = in_array($user->status, ['pending', 'rejected'], true) && in_array($data['status'], ['active', 'rejected'], true);
+        $deciding = $user->status === 'pending' && in_array($data['status'], ['active', 'rejected'], true);
         $previous = $user->status;
 
         DB::transaction(function () use ($user, $data, $application) {
+            // Checked on the locked row, so an old page or two clicks at once cannot approve a rejected account.
+            $current = User::whereKey($user->id)->lockForUpdate()->value('status');
+            if (! in_array($data['status'], self::STATUS_CHANGES[$current] ?? [], true)) {
+                throw ValidationException::withMessages(['status' => $current === 'rejected'
+                    ? "{$user->name} was rejected. They can be reviewed again only after they fix and resubmit their application."
+                    : "{$user->name} is already ".Str::lower(self::STATUS_LABELS[$current] ?? $current).'. Refresh the page.']);
+            }
+
             $user->update([
                 'status' => $data['status'],
                 'approved_at' => $data['status'] === 'active' ? ($user->approved_at ?? now()) : null,

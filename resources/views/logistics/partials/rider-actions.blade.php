@@ -1,6 +1,10 @@
 {{-- Review actions for one rider application. Expects $rider. --}}
 <div class="review-actions">
-    @if(in_array($rider->status, ['pending', 'rejected'], true))
+    @if($rider->status === 'rejected')
+        <span class="seller-cell-note">Rejected · a rejected application cannot be approved</span>
+    @endif
+
+    @if($rider->status === 'pending')
         <form method="POST" action="{{ route('logistics.riders.update', $rider) }}">
             @csrf
             @method('PATCH')

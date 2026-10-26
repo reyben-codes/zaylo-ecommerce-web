@@ -26,7 +26,7 @@ class LogisticsController extends Controller
 
     // Each review action: the rider statuses it applies to, the resulting status, and the rider's account status.
     private const RIDER_ACTIONS = [
-        'approve' => ['from' => ['pending', 'rejected'], 'to' => 'approved', 'account' => 'active'],
+        'approve' => ['from' => ['pending'], 'to' => 'approved', 'account' => 'active'],
         'reject' => ['from' => ['pending'], 'to' => 'rejected', 'account' => 'rejected'],
         'suspend' => ['from' => ['approved'], 'to' => 'suspended', 'account' => 'suspended'],
         'reinstate' => ['from' => ['suspended'], 'to' => 'approved', 'account' => 'active'],
