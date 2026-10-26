@@ -59,7 +59,7 @@
                         <tr>
                             <td>
                                 <a href="{{ route('admin.users.show', $account) }}" class="workspace-link"><strong>{{ $account->name }}</strong></a>
-                                <span class="seller-cell-note">{{ $account->email }}</span>
+                                <span class="seller-cell-note">ID #{{ $account->id }} · {{ $account->email }}</span>
                             </td>
                             <td>
                                 <span class="role-pill">{{ $roleLabels[$account->role] ?? Str::headline($account->role) }}</span>

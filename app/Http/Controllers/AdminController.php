@@ -17,6 +17,7 @@ use App\Models\User;
 use App\Notifications\AccountReviewed;
 use App\Notifications\SellerApplicationReviewed;
 use App\Services\MarketplaceLedger;
+use App\Support\DocumentPreview;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -105,6 +106,7 @@ class AdminController extends Controller
             'disputes' => Schema::hasTable('dispute_messages') ? Dispute::involving($user)->with('order')->latest()->limit(10)->get() : collect(),
             'warnings' => Schema::hasTable('compliance_warnings') ? ComplianceWarning::with('product')->where('seller_id', $user->id)->latest()->get() : collect(),
             'activity' => Schema::hasTable('activity_logs') ? ActivityLog::where('user_id', $user->id)->latest('created_at')->latest('id')->limit(8)->get() : collect(),
+            'userDocuments' => $this->userDocuments($user),
         ]);
     }
 
@@ -424,7 +426,82 @@ class AdminController extends Controller
             Schema::hasTable('logistics_providers') ? 'logisticsProvider' : null,
             Schema::hasTable('riders') ? 'rider.provider' : null,
             Schema::hasTable('seller_applications') ? 'sellerApplication' : null,
+            Schema::hasTable('identity_verifications') ? 'identityVerifications' : null,
             Schema::hasColumn('users', 'role') ? null : 'roles',
         ]));
+    }
+
+    /** All uploaded identity verification and application documents for this user, ready for modal viewing. */
+    private function userDocuments(User $user): array
+    {
+        $documents = [];
+
+        // Buyer identity verification documents
+        if (Schema::hasTable('identity_verifications')) {
+            foreach ($user->identityVerifications()->latest()->get() as $iv) {
+                if (! empty($iv->document_path)) {
+                    $documents[] = [
+                        'category' => 'Identity Verification',
+                        'title' => $iv->id_type_label ?: 'Valid Government ID',
+                        'status' => $iv->status,
+                        'status_label' => ucfirst($iv->status),
+                        'date' => $iv->created_at?->timezone('Asia/Manila')->format('M j, Y'),
+                        'url' => route('admin.identity.document', $iv),
+                        'type' => DocumentPreview::type($iv->document_path),
+                    ];
+                }
+            }
+        }
+
+        // Seller application documents (ID, business permits)
+        if ($user->sellerApplication) {
+            $sellerApp = $user->sellerApplication;
+            $docLabels = [
+                'valid_id' => 'Valid Government ID',
+                'business_permit' => 'Mayor’s / Business Permit',
+                'bir_certificate' => 'BIR Certificate (Form 2303)',
+                'dti_sec' => 'DTI / SEC Certificate',
+            ];
+            foreach ($docLabels as $field => $label) {
+                $prop = $field.'_path';
+                if (! empty($sellerApp->$prop)) {
+                    $documents[] = [
+                        'category' => 'Seller Application',
+                        'title' => $label,
+                        'status' => $sellerApp->status,
+                        'status_label' => ucfirst($sellerApp->status),
+                        'date' => $sellerApp->submitted_at?->timezone('Asia/Manila')->format('M j, Y'),
+                        'url' => route('admin.seller-applications.document', [$user, $field]),
+                        'type' => DocumentPreview::type($sellerApp->$prop),
+                    ];
+                }
+            }
+        }
+
+        // Logistics partner documents
+        if ($user->logisticsProvider) {
+            $provider = $user->logisticsProvider;
+            $logisticsDocs = [
+                'sec_certificate' => 'SEC / DTI Registration',
+                'mayors_permit' => 'Mayor’s / Business Permit',
+                'bir_certificate' => 'BIR Certificate (Form 2303)',
+            ];
+            foreach ($logisticsDocs as $field => $label) {
+                $prop = $field.'_path';
+                if (! empty($provider->$prop)) {
+                    $documents[] = [
+                        'category' => 'Logistics Partner',
+                        'title' => $label,
+                        'status' => $provider->status,
+                        'status_label' => ucfirst($provider->status),
+                        'date' => $provider->submitted_at?->timezone('Asia/Manila')->format('M j, Y'),
+                        'url' => route('admin.logistics.document', [$provider, $field]),
+                        'type' => DocumentPreview::type($provider->$prop),
+                    ];
+                }
+            }
+        }
+
+        return $documents;
     }
 }
