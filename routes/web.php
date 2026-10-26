@@ -256,6 +256,7 @@ Route::middleware(['auth', 'active', 'verified', 'role:admin', 'nocache'])->pref
     Route::post('/commissions/record', [AdminFinanceController::class, 'recordCommissions'])->name('commissions.record');
     Route::post('/commissions/settle', [AdminFinanceController::class, 'settleCommissions'])->name('commissions.settle');
     Route::get('/reports', [AdminFinanceController::class, 'reports'])->name('reports');
+    Route::get('/reports/download', [AdminFinanceController::class, 'downloadReport'])->middleware('throttle:30,1')->name('reports.download');
     Route::get('/reports/{report}.pdf', [AdminFinanceController::class, 'reportPdf'])->whereIn('report', ['sales', 'commission'])->name('reports.pdf');
 
     Route::get('/settings', [AdminSettingsController::class, 'index'])->name('settings');

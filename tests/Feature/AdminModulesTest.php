@@ -158,6 +158,41 @@ class AdminModulesTest extends TestCase
         $this->get(route('admin.reports', ['from' => '2026-10-10', 'to' => '2026-10-01']))->assertSessionHasErrors('from');
     }
 
+    public function test_reports_can_be_viewed_and_downloaded_for_all_sellers_or_one(): void
+    {
+        $this->order('delivered', 200000);
+        $this->order('shipped', 50000);
+        $this->actingAs($this->admin);
+
+        $page = $this->get(route('admin.reports'))->assertOk()
+            ->assertSee('Download report')
+            ->assertSee('action="'.route('admin.reports.download').'"', false)
+            ->assertSee('<option value="">All sellers</option>', false)
+            ->assertViewHas('sellers', fn ($sellers) => $sellers->count() === 2);
+        $shopId = $page->viewData('bySeller')->firstWhere('sales', 500.0)['seller_id'];
+        $shopName = $page->viewData('sellers')->get($shopId);
+
+        // Sellers stay listed even when the chosen dates have none of their orders.
+        $this->get(route('admin.reports', ['from' => '2020-01-01', 'to' => '2020-01-31']))->assertOk()
+            ->assertViewHas('sellers', fn ($sellers) => $sellers->count() === 2);
+
+        $this->get(route('admin.reports', ['seller' => $shopId]))->assertOk()
+            ->assertSee($shopName.' · reports')
+            ->assertSee('All sellers')
+            ->assertSee(route('admin.reports', ['from' => now('Asia/Manila')->subDays(29)->toDateString(), 'to' => now('Asia/Manila')->toDateString()]))
+            ->assertSee(route('admin.reports.pdf', ['report' => 'sales', 'from' => now('Asia/Manila')->subDays(29)->toDateString(), 'to' => now('Asia/Manila')->toDateString(), 'seller' => $shopId]))
+            ->assertViewHas('summary', fn ($summary) => $summary['gross'] === 500.0 && $summary['orders'] === 1);
+
+        foreach (['sales', 'commission'] as $report) {
+            $all = $this->get(route('admin.reports.download', ['report' => $report]))->assertOk();
+            $this->assertStringContainsString("zaylo-{$report}-report-20", $all->headers->get('content-disposition'));
+            $one = $this->get(route('admin.reports.download', ['report' => $report, 'seller' => $shopId, 'from' => '2026-01-01']))->assertOk();
+            $this->assertStringContainsString("zaylo-{$report}-report-shop-", $one->headers->get('content-disposition'));
+            $this->assertStringContainsString('-2026-01-01-to-', $one->headers->get('content-disposition'));
+        }
+        $this->get(route('admin.reports.download', ['report' => 'payroll']))->assertSessionHasErrors('report');
+    }
+
     public function test_commission_shows_gross_net_commission_and_orders_for_all_or_one_seller(): void
     {
         $this->order('delivered', 200000);

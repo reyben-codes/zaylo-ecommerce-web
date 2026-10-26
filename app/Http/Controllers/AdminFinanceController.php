@@ -65,8 +65,18 @@ class AdminFinanceController extends Controller
     public function reports(Request $request)
     {
         [$from, $to, $range] = $this->range($request, defaultDays: 30);
+        // Every seller who has had an order, so a report can be downloaded for any of them and any dates.
+        [$rows, $seller, $sellers] = $this->forSeller($request, $this->ledger->rows($from, $to), $this->ledger->rows());
 
-        return view('admin.reports', $this->report($from, $to) + ['range' => $range]);
+        return view('admin.reports', $this->report($from, $to, $rows) + ['range' => $range, 'seller' => $seller, 'sellers' => $sellers]);
+    }
+
+    /** The "Download report" form on the Reports page: the chosen report, seller and dates as a PDF. */
+    public function downloadReport(Request $request)
+    {
+        $report = $request->validate(['report' => ['required', Rule::in(['sales', 'commission'])]])['report'];
+
+        return $this->reportPdf($request, $report);
     }
 
     /** The sales summary or commission report as a PDF. */
@@ -74,7 +84,7 @@ class AdminFinanceController extends Controller
     {
         abort_unless(in_array($report, ['sales', 'commission'], true), 404);
         [$from, $to, $range] = $this->range($request, defaultDays: 30);
-        [$rows, $seller] = $this->forSeller($request, $this->ledger->rows($from, $to));
+        [$rows, $seller] = $this->forSeller($request, $this->ledger->rows($from, $to), $this->ledger->rows());
         $data = $this->report($from, $to, $rows) + [
             'range' => $range,
             'report' => $report,
@@ -95,13 +105,14 @@ class AdminFinanceController extends Controller
     }
 
     /**
-     * One seller's rows when ?seller= names a shop in this period (the individual report), else every seller's.
+     * One seller's rows when ?seller= names a shop (the individual report), else every seller's. The picker lists the
+     * sellers in $all (default: the rows themselves).
      *
      * @return array{0: Collection, 1: array{id: int, name: string}|null, 2: Collection<int, string>}
      */
-    private function forSeller(Request $request, Collection $rows): array
+    private function forSeller(Request $request, Collection $rows, ?Collection $all = null): array
     {
-        $sellers = $rows->whereNotNull('seller_id')->mapWithKeys(fn ($row) => [$row['seller_id'] => $row['seller']])->sort();
+        $sellers = ($all ?? $rows)->whereNotNull('seller_id')->mapWithKeys(fn ($row) => [$row['seller_id'] => $row['seller']])->sort();
         $id = $request->validate(['seller' => ['nullable', 'integer']])['seller'] ?? null;
         if ($id === null) {
             return [$rows, null, $sellers];
