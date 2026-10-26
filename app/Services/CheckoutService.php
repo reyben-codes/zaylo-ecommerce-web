@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Models\Voucher;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -132,8 +133,10 @@ class CheckoutService
                     'payment_method' => $paymentMethod, 'recipient_name' => $address->recipient_name,
                     'phone' => $address->phone, 'shipping_address' => $address->formatted(),
                     'notes' => $input['notes'] ?? null, 'placed_at' => now(),
-                    'courier_choice' => $input['courier_choice'] ?? 'zaylo_express',
-                ]);
+                ] + (Schema::hasColumn('orders', 'courier_choice')
+                    // Only once the 2026_10_26 migration has added the column.
+                    ? ['courier_choice' => $input['courier_choice'] ?? 'zaylo_express']
+                    : []));
 
                 foreach ($prepared as $row) {
                     ['item' => $item, 'product' => $product, 'variant' => $variant, 'unitPrice' => $unitPrice] = $row;

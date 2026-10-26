@@ -62,6 +62,10 @@ return new class extends Migration
         }
 
         if (Schema::hasTable('disputes')) {
+            // The index goes first: SQLite cannot drop a column that an index still uses.
+            if (Schema::hasIndex('disputes', 'disputes_return_tracking_number_index')) {
+                Schema::table('disputes', fn (Blueprint $table) => $table->dropIndex('disputes_return_tracking_number_index'));
+            }
             Schema::table('disputes', function (Blueprint $table) {
                 $columns = [
                     'return_type', 'return_method', 'return_courier', 'pickup_date',

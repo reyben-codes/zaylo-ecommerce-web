@@ -18,8 +18,10 @@ use App\Notifications\AccountReviewed;
 use App\Notifications\SellerApplicationReviewed;
 use App\Services\MarketplaceLedger;
 use App\Support\DocumentPreview;
+use App\Support\Shop;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -97,7 +99,12 @@ class AdminController extends Controller
                 $ledger = app(MarketplaceLedger::class);
                 $row = $ledger->bySeller($ledger->rows()->where('seller_id', $user->id))->first();
 
+                $shopId = Shop::idForSeller($user);
+
                 return [
+                    // The public page exists only while the seller is active; the product list works for any status.
+                    'shopUrl' => $shopId ? Shop::find($shopId)?->url() : null,
+                    'shopProducts' => $shopId ? $this->shopProducts($shopId) : collect(),
                     'shop' => MarketplaceLedger::sellerName($user),
                     'products' => Product::usesLegacySchema() ? Product::where('seller_id', $user->id)->count() : Product::whereIn('seller_id', $user->sellers()->pluck('id'))->count(),
                     'row' => $row,
@@ -215,6 +222,19 @@ class AdminController extends Controller
             'documents' => LogisticsProvider::DOCUMENTS,
             'regions' => LogisticsProvider::serviceRegions(),
         ]);
+    }
+
+    /** A rider's uploaded license or OR/CR, shown in the document viewer on the rider's account page. */
+    public function riderDocument(Rider $rider, string $document)
+    {
+        abort_unless(array_key_exists($document, Rider::DOCUMENTS), 404);
+        $path = $rider->{$document.'_path'};
+        abort_unless($path && Storage::disk('local')->exists($path), 404);
+
+        return Storage::disk('local')->response($path, str_replace('/', '-', Rider::DOCUMENTS[$document]).'.'.pathinfo($path, PATHINFO_EXTENSION), [
+            'Cache-Control' => 'private, no-store',
+            'X-Content-Type-Options' => 'nosniff',
+        ], 'inline');
     }
 
     public function logisticsDocument(LogisticsProvider $provider, string $document)
@@ -431,6 +451,26 @@ class AdminController extends Controller
         ]));
     }
 
+    /** Every product of a shop, newest first, with what buyers see: live, pending review, not approved, hidden or archived. */
+    private function shopProducts(int $shopId): Collection
+    {
+        $legacy = Product::usesLegacySchema();
+
+        return Product::where('seller_id', $shopId)->with($legacy ? ['images'] : ['images', 'variants'])->latest()->limit(60)->get()
+            ->map(fn (Product $product) => [
+                'product' => $product,
+                'image' => $product->image_url ?: $product->images->first()?->path,
+                'stock' => $legacy ? (int) $product->stock : (int) $product->variants->sum('stock'),
+                'state' => match (true) {
+                    $product->archived_at !== null => ['archived', 'Archived'],
+                    $product->is_pending_review => ['pending', 'Pending review'],
+                    $product->is_rejected => ['rejected', 'Not approved'],
+                    ! $product->is_active => ['hidden', 'Hidden'],
+                    default => ['live', 'Live'],
+                },
+            ]);
+    }
+
     /** All uploaded identity verification and application documents for this user, ready for modal viewing. */
     private function userDocuments(User $user): array
     {
@@ -453,18 +493,10 @@ class AdminController extends Controller
             }
         }
 
-        // Seller application documents (ID, business permits)
-        if ($user->sellerApplication) {
-            $sellerApp = $user->sellerApplication;
-            $docLabels = [
-                'valid_id' => 'Valid Government ID',
-                'business_permit' => 'Mayor’s / Business Permit',
-                'bir_certificate' => 'BIR Certificate (Form 2303)',
-                'dti_sec' => 'DTI / SEC Certificate',
-            ];
-            foreach ($docLabels as $field => $label) {
-                $prop = $field.'_path';
-                if (! empty($sellerApp->$prop)) {
+        // Seller application documents (field names from SellerApplication::DOCUMENTS).
+        if ($sellerApp = $user->sellerApplication) {
+            foreach (SellerApplication::DOCUMENTS as $field => $label) {
+                if (! empty($sellerApp->{$field.'_path'})) {
                     $documents[] = [
                         'category' => 'Seller Application',
                         'title' => $label,
@@ -472,23 +504,16 @@ class AdminController extends Controller
                         'status_label' => ucfirst($sellerApp->status),
                         'date' => $sellerApp->submitted_at?->timezone('Asia/Manila')->format('M j, Y'),
                         'url' => route('admin.seller-applications.document', [$user, $field]),
-                        'type' => DocumentPreview::type($sellerApp->$prop),
+                        'type' => DocumentPreview::type($sellerApp->{$field.'_path'}),
                     ];
                 }
             }
         }
 
-        // Logistics partner documents
-        if ($user->logisticsProvider) {
-            $provider = $user->logisticsProvider;
-            $logisticsDocs = [
-                'sec_certificate' => 'SEC / DTI Registration',
-                'mayors_permit' => 'Mayor’s / Business Permit',
-                'bir_certificate' => 'BIR Certificate (Form 2303)',
-            ];
-            foreach ($logisticsDocs as $field => $label) {
-                $prop = $field.'_path';
-                if (! empty($provider->$prop)) {
+        // Logistics partner documents (LogisticsProvider::DOCUMENTS).
+        if (Schema::hasTable('logistics_providers') && $provider = $user->logisticsProvider) {
+            foreach (LogisticsProvider::DOCUMENTS as $field => $label) {
+                if (! empty($provider->{$field.'_path'})) {
                     $documents[] = [
                         'category' => 'Logistics Partner',
                         'title' => $label,
@@ -496,7 +521,24 @@ class AdminController extends Controller
                         'status_label' => ucfirst($provider->status),
                         'date' => $provider->submitted_at?->timezone('Asia/Manila')->format('M j, Y'),
                         'url' => route('admin.logistics.document', [$provider, $field]),
-                        'type' => DocumentPreview::type($provider->$prop),
+                        'type' => DocumentPreview::type($provider->{$field.'_path'}),
+                    ];
+                }
+            }
+        }
+
+        // Rider application documents (Rider::DOCUMENTS): driver's license and vehicle OR/CR.
+        if (Schema::hasColumn('riders', 'license_document_path') && $rider = $user->rider) {
+            foreach (Rider::DOCUMENTS as $field => $label) {
+                if (! empty($rider->{$field.'_path'})) {
+                    $documents[] = [
+                        'category' => 'Rider Application'.($rider->provider ? ' · '.$rider->provider->name : ''),
+                        'title' => $label,
+                        'status' => $rider->status ?? 'pending',
+                        'status_label' => ucfirst($rider->status ?? 'pending'),
+                        'date' => $rider->created_at?->timezone('Asia/Manila')->format('M j, Y'),
+                        'url' => route('admin.riders.document', [$rider, $field]),
+                        'type' => DocumentPreview::type($rider->{$field.'_path'}),
                     ];
                 }
             }

@@ -89,7 +89,7 @@ class LogisticsController extends Controller
         $path = $rider->{$document.'_path'};
         abort_unless($path && Storage::disk('local')->exists($path), 404);
 
-        return Storage::disk('local')->response($path, Rider::DOCUMENTS[$document].'.'.pathinfo($path, PATHINFO_EXTENSION), [
+        return Storage::disk('local')->response($path, str_replace('/', '-', Rider::DOCUMENTS[$document]).'.'.pathinfo($path, PATHINFO_EXTENSION), [
             'Cache-Control' => 'private, no-store',
             'X-Content-Type-Options' => 'nosniff',
         ], 'inline');

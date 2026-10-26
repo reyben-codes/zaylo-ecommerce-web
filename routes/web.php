@@ -231,6 +231,7 @@ Route::middleware(['auth', 'active', 'verified', 'role:admin', 'nocache'])->pref
     Route::get('/logistics', [AdminController::class, 'logistics'])->name('logistics');
     Route::get('/logistics/{provider}', [AdminController::class, 'logisticsApplication'])->name('logistics.show');
     Route::get('/logistics/{provider}/documents/{document}', [AdminController::class, 'logisticsDocument'])->name('logistics.document');
+    Route::get('/riders/{rider}/documents/{document}', [AdminController::class, 'riderDocument'])->name('riders.document');
     Route::get('/identity', [AdminController::class, 'identity'])->name('identity');
     Route::get('/identity/{verification}/document', [AdminController::class, 'identityDocument'])->name('identity.document');
     Route::patch('/identity/{verification}', [AdminController::class, 'reviewIdentity'])->name('identity.review');

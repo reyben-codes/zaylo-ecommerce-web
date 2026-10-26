@@ -23,6 +23,9 @@
         </div>
         <div class="seller-page-heading__actions">
             <span class="role-pill account-status--{{ $account->status }}">{{ $statusLabels[$account->status] ?? Str::headline($account->status) }}</span>
+            @if($sellerStats['shopUrl'] ?? null)
+                <a href="{{ $sellerStats['shopUrl'] }}" target="_blank" rel="noopener" class="seller-button seller-button--secondary"><i class="fas fa-store" aria-hidden="true"></i> View shop</a>
+            @endif
             @unless($account->hasRole('admin'))
                 <form method="POST" action="{{ route('admin.chat.start') }}">
                     @csrf
@@ -122,6 +125,39 @@
                         <div><dt>Sales</dt><dd>&#8369;{{ number_format($sellerStats['row']['sales'] ?? 0, 2) }}</dd></div>
                         <div><dt>Commission earned</dt><dd>&#8369;{{ number_format(($sellerStats['row']['earned'] ?? 0) + ($sellerStats['row']['settled'] ?? 0), 2) }}</dd></div>
                     </dl>
+                </section>
+
+                <section class="seller-panel" aria-labelledby="shop-products-heading">
+                    <header class="seller-panel__header">
+                        <div>
+                            <h2 id="shop-products-heading">Shop products</h2>
+                            <p>Every product, including ones buyers cannot see.{{ $sellerStats['shopUrl'] ? '' : ' The public shop page is offline while this account is not active.' }}</p>
+                        </div>
+                        @if($sellerStats['shopUrl'])
+                            <a href="{{ $sellerStats['shopUrl'] }}" target="_blank" rel="noopener" class="seller-link">Open shop page</a>
+                        @endif
+                    </header>
+                    @if($sellerStats['shopProducts']->isEmpty())
+                        <p class="admin-empty-inline">No products yet.</p>
+                    @else
+                        <ul class="admin-shop-products">
+                            @foreach($sellerStats['shopProducts'] as $item)
+                                @php $product = $item['product']; @endphp
+                                <li class="admin-shop-product">
+                                    <img src="{{ $item['image'] ?: asset('images/ZAYLO_ICON_DARK.png') }}" alt="" loading="lazy">
+                                    <div class="admin-shop-product__copy">
+                                        @if($item['state'][0] === 'live')
+                                            <a href="{{ route('products.show', $product) }}" target="_blank" rel="noopener" class="workspace-link">{{ $product->name }}</a>
+                                        @else
+                                            <strong>{{ $product->name }}</strong>
+                                        @endif
+                                        <span class="seller-cell-note">{{ $product->category_label }} · &#8369;{{ number_format((float) $product->price, 2) }} · {{ $item['stock'] }} in stock</span>
+                                    </div>
+                                    <span class="admin-shop-product__state admin-shop-product__state--{{ $item['state'][0] }}">{{ $item['state'][1] }}</span>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
                 </section>
             @endif
         </div>
