@@ -17,6 +17,7 @@ import 'package:zaylo_mobile/auth/token_store.dart';
 import 'package:zaylo_mobile/components/announcement_banner.dart';
 import 'package:zaylo_mobile/components/chat/delivery_chat.dart';
 import 'package:zaylo_mobile/components/chat/typing_dots.dart';
+import 'package:zaylo_mobile/components/complaints.dart';
 import 'package:zaylo_mobile/components/policies.dart';
 import 'package:zaylo_mobile/features/buyer/checkout/checkout_screen.dart';
 import 'package:zaylo_mobile/features/buyer/orders/order_detail_screen.dart';
@@ -45,7 +46,7 @@ import 'package:zaylo_mobile/utils/rider_validators.dart';
 import 'package:zaylo_mobile/utils/validators.dart';
 
 /// JSON in the exact shape produced by app/Support/MobilePayload.php.
-Map<String, dynamic> productJson(int id, {String name = 'Watering Can', double price = 499, double? original}) => {
+Map<String, dynamic> productJson(int id, {String name = 'Watering Can', double price = 499, double? original, int stock = 12}) => {
       'id': id,
       'slug': 'product-$id',
       'name': '$name $id',
@@ -55,6 +56,7 @@ Map<String, dynamic> productJson(int id, {String name = 'Watering Can', double p
       if (original != null) 'original_price': original,
       'has_options': false,
       'saved': false,
+      'stock': stock,
     };
 
 Map<String, dynamic> cartJson(List<int> ids) => {
@@ -267,6 +269,18 @@ class FakeRiderApi extends RiderApi {
   /// Adds parcel 3, a new assignment waiting for the rider to accept or decline it.
   bool withNewAssignment = false;
 
+  /// Adds a returned item to collect from a buyer.
+  bool withReturn = false;
+
+  /// Return slips sent to [scanReturn].
+  final returnScans = <String>[];
+
+  @override
+  Future<String> scanReturn(String code) async {
+    returnScans.add(code);
+    return 'Return picked up. Bring the item to your logistics hub.';
+  }
+
   /// The steps the rider can take at each status, as the server sends them.
   static const _steps = {
     'assigned': [
@@ -360,6 +374,27 @@ class FakeRiderApi extends RiderApi {
             delivery(3, 'new'),
           delivery(1, 'assigned'),
           delivery(2, 'out_for_delivery'),
+        ],
+        'returns': [
+          if (withReturn)
+            {
+              'id': 7,
+              'tracking_number': 'RET-ABC123',
+              'status': returnScans.isEmpty ? 'scheduled' : 'picked_up',
+              'status_label': returnScans.isEmpty ? 'Waiting for pickup' : 'Picked up by the rider',
+              'order_number': 'ZAY-1001',
+              'buyer_name': 'Maria Santos',
+              'phone': '09170000000',
+              'address': '12 Rizal St, Calamba, Laguna',
+              'pickup_date': '2026-10-29',
+              'pickup_slot': 'Morning, 9:00 AM–1:00 PM',
+              'items': ['1 × Watering Can'],
+              'reason': 'Damaged or defective item',
+              'can_scan': returnScans.isEmpty,
+              'next_step': returnScans.isEmpty
+                  ? 'Scan the return slip when you collect the item from the buyer.'
+                  : 'Bring the item to your logistics hub; they scan it in.',
+            },
         ],
         'available': [],
         'recent': [],
@@ -530,12 +565,40 @@ Future<void> pumpApp(WidgetTester tester,
 }
 
 void main() {
+  testWidgets('a return shows its slip for the rider, who picks it up, and each step', (tester) async {
+    final info = ComplaintReturn.fromJson({
+      'tracking_number': 'RET-ABC123',
+      'barcode': [2, 1, 1, 2, 3, 2],
+      'type_label': 'Return and Refund',
+      'method': 'pickup',
+      'method_label': 'Courier Pickup (Home Address)',
+      'status': 'scheduled',
+      'status_label': 'Waiting for pickup',
+      'pickup_date': '2026-10-29',
+      'pickup_slot': 'afternoon',
+      'rider_name': 'Jun',
+      'steps': [
+        {'key': 'scheduled', 'label': 'Waiting for pickup', 'done': true},
+        {'key': 'picked_up', 'label': 'Picked up by the rider', 'done': false},
+        {'key': 'refunded', 'label': 'Refunded', 'done': false},
+      ],
+    });
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: SingleChildScrollView(child: ReturnCard(info: info)))));
+
+    expect(find.text('Your rider: Jun'), findsOneWidget);
+    expect(find.text('RET-ABC123'), findsOneWidget);
+    expect(find.bySemanticsLabel('Return slip barcode RET-ABC123'), findsOneWidget);
+    expect(find.text('Show this to the rider, who scans it when collecting the item.'), findsOneWidget);
+    expect(find.text('Picked up by the rider'), findsOneWidget);
+  });
+
   group('guest', () {
     testWidgets('home shows new arrivals but not the signed-in sections', (tester) async {
       await pumpApp(tester);
 
       expect(find.text('New Arrivals'), findsOneWidget);
       expect(find.text('Watering Can 1'), findsOneWidget);
+      expect(find.text('12 in stock'), findsWidgets, reason: 'every product card shows its stock');
       expect(find.text('Flash Sales'), findsNothing);
       expect(find.text('Suggested Products'), findsNothing);
     });
@@ -854,6 +917,39 @@ void main() {
       expect(find.text('Active deliveries'), findsOneWidget);
       expect(find.text('SCAN TO START DELIVERY'), findsOneWidget);
       expect(find.text('SCAN TO CONFIRM DELIVERY'), findsOneWidget);
+    });
+
+    testWidgets('a return is collected by scanning the buyer\'s slip, then brought to the hub', (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(400, 3200);
+      addTearDown(tester.view.reset);
+      final api = FakeRiderApi()..withReturn = true;
+      await tester.pumpWidget(MaterialApp(home: RiderShell(api: api)));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Returns to collect'), findsOneWidget);
+      expect(find.text('RET-ABC123'), findsOneWidget);
+      await tester.tap(find.text('SCAN TO COLLECT'));
+      await tester.pumpAndSettle();
+      expect(find.text('Collect return'), findsOneWidget, reason: 'scanner title');
+      await tester.tap(find.text('Label damaged? Type the tracking number'));
+      await tester.pumpAndSettle();
+      // Another return's slip is turned away.
+      await tester.enterText(find.byType(TextField), 'RET-OTHER');
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+      expect(find.text('That slip is for a different return. Scan RET-ABC123.'), findsOneWidget);
+      expect(api.returnScans, isEmpty);
+      await tester.tap(find.text('Label damaged? Type the tracking number'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'ret-abc123');
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+
+      expect(api.returnScans, ['RET-ABC123']);
+      expect(find.text('Return picked up. Bring the item to your logistics hub.'), findsOneWidget);
+      expect(find.text('Picked up by the rider'), findsOneWidget);
+      expect(find.text('SCAN TO COLLECT'), findsNothing);
     });
 
     testWidgets('a new assignment is accepted, or declined with a reason', (tester) async {

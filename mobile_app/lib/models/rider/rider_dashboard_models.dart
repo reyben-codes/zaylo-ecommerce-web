@@ -400,10 +400,71 @@ class RiderScanResult {
       );
 }
 
+/// A returned item the logistics partner gave the rider: collect it from the
+/// buyer by scanning the return slip, then bring it to the hub.
+class RiderReturn {
+  const RiderReturn({
+    required this.id,
+    required this.trackingNumber,
+    required this.status,
+    required this.statusLabel,
+    required this.canScan,
+    required this.nextStep,
+    this.orderNumber,
+    this.buyerName,
+    this.phone,
+    this.address,
+    this.pickupDate,
+    this.pickupSlot,
+    this.reason,
+    this.items = const [],
+  });
+
+  final int id;
+  final String trackingNumber;
+
+  /// scheduled (waiting at the buyer) or picked_up (on the way to the hub).
+  final String status;
+  final String statusLabel;
+  final bool canScan;
+  final String nextStep;
+  final String? orderNumber;
+  final String? buyerName;
+  final String? phone;
+  final String? address;
+  final DateTime? pickupDate;
+  final String? pickupSlot;
+  final String? reason;
+  final List<String> items;
+
+  /// Return slips start with RET-; delivery labels with TRK-.
+  static bool isReturnCode(String code) => code.trim().toUpperCase().startsWith('RET-');
+
+  bool matchesCode(String code) => code.trim().toUpperCase() == trackingNumber.toUpperCase();
+
+  factory RiderReturn.fromJson(Map<String, dynamic> json) => RiderReturn(
+        id: (json['id'] as num).toInt(),
+        trackingNumber: json['tracking_number'] as String? ?? '',
+        status: json['status'] as String? ?? 'scheduled',
+        statusLabel: json['status_label'] as String? ?? 'Waiting for pickup',
+        canScan: json['can_scan'] as bool? ?? false,
+        nextStep: json['next_step'] as String? ?? '',
+        orderNumber: json['order_number'] as String?,
+        buyerName: json['buyer_name'] as String?,
+        phone: json['phone'] as String?,
+        address: json['address'] as String?,
+        pickupDate: DateTime.tryParse(json['pickup_date'] as String? ?? ''),
+        pickupSlot: json['pickup_slot'] as String?,
+        reason: json['reason'] as String?,
+        items: List<String>.from(json['items'] as List<dynamic>? ?? const []),
+      );
+}
+
 class RiderDashboard {
   const RiderDashboard({
     required this.rider,
     required this.stats,
+    this.returns = const [],
     this.active = const [],
     this.recent = const [],
     this.deliveryModeMessage,
@@ -416,6 +477,9 @@ class RiderDashboard {
 
   /// Parcels the logistics partner assigned to the rider, still in progress.
   final List<RiderDelivery> active;
+
+  /// Returned items to collect from buyers and bring to the hub.
+  final List<RiderReturn> returns;
   final List<RiderDelivery> recent;
 
   /// Set while sellers deliver their own orders and riders have nothing to do.
@@ -438,6 +502,9 @@ class RiderDashboard {
         rider: RiderProfile.fromJson(json['rider'] as Map<String, dynamic>? ?? const {}),
         stats: RiderStats.fromJson(json['stats'] as Map<String, dynamic>? ?? const {}),
         active: _deliveries(json['active']),
+        returns: (json['returns'] as List<dynamic>? ?? const [])
+            .map((item) => RiderReturn.fromJson(item as Map<String, dynamic>))
+            .toList(),
         recent: _deliveries(json['recent']),
         deliveryModeMessage: json['delivery_mode_message'] as String?,
         announcements: Announcement.listFrom(json['announcements']),

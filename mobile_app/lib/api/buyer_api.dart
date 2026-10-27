@@ -184,11 +184,26 @@ class BuyerApi extends ApiClient {
           .toList();
 
   /// Files a complaint about order [orderId], with up to four photos or PDFs.
+  /// With a [returnMethod] ("pickup" on [pickupDate] in the [pickupSlot], or
+  /// "dropoff"), the buyer also sends the item back.
   Future<Complaint> fileComplaint(int orderId,
-          {required String category, required String details, List<File> evidence = const []}) async =>
+          {required String category,
+          required String details,
+          List<File> evidence = const [],
+          String? returnType,
+          String? returnMethod,
+          DateTime? pickupDate,
+          String? pickupSlot}) async =>
       Complaint.fromJson((await sendMultipart('/mobile/orders/$orderId/complaint', fields: {
         'category': category,
         'details': details.trim(),
+        if (returnMethod != null) ...{
+          'return_type': returnType ?? 'return_refund',
+          'return_method': returnMethod,
+          if (returnMethod == 'pickup' && pickupDate != null)
+            'pickup_date': '${pickupDate.year}-${pickupDate.month.toString().padLeft(2, '0')}-${pickupDate.day.toString().padLeft(2, '0')}',
+          if (returnMethod == 'pickup') 'pickup_slot': pickupSlot ?? 'morning',
+        },
       }, files: {
         for (final (index, file) in evidence.indexed) 'evidence[$index]': file,
       }))['complaint'] as Map<String, dynamic>);

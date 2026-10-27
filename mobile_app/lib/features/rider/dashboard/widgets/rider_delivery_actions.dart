@@ -103,11 +103,39 @@ mixin RiderDeliveryActions<T extends StatefulWidget> on State<T> {
   }
 
   /// Scans any parcel's waybill: one of [active] goes out for delivery, or is
-  /// delivered if it already was. The server checks the parcel is the rider's.
+  /// delivered if it already was. A buyer's return slip (RET-…) marks the
+  /// returned item as collected. The server checks it is the rider's.
   Future<void> scanAnyParcel(List<RiderDelivery> active) async {
-    final code = await _scan(title: 'Scan parcel', hint: 'Scan a parcel to start or confirm its delivery.');
+    final code = await _scan(
+        title: 'Scan parcel', hint: 'Scan a parcel to start or confirm its delivery, or a return slip to collect it.');
     if (code == null || !mounted) return;
+    if (RiderReturn.isReturnCode(code)) return _sendReturnScan(code, null);
     await _sendScan(code, active.where((delivery) => delivery.matchesCode(code)).firstOrNull);
+  }
+
+  /// Scans the buyer's return slip for [item] when collecting it.
+  Future<void> collectReturn(RiderReturn item) async {
+    final code = await _scan(
+      title: 'Collect return',
+      hint: 'Scan the return slip the buyer shows you for ${item.trackingNumber}.',
+      accept: (code) => item.matchesCode(code) ? null : 'That slip is for a different return. Scan ${item.trackingNumber}.',
+    );
+    if (code == null || !mounted) return;
+    await _sendReturnScan(code, item);
+  }
+
+  Future<void> _sendReturnScan(String code, RiderReturn? item) async {
+    setState(() => busyDeliveryId = item == null ? -1 : -item.id);
+    try {
+      final message = await riderApi.scanReturn(item?.trackingNumber ?? code);
+      if (mounted) showMessage(context, message);
+    } on ApiException catch (error) {
+      debugPrint('[ZAYLO] Return scan failed: ${error.debugDescription}');
+      if (mounted) showMessage(context, error.message);
+    } finally {
+      if (mounted) setState(() => busyDeliveryId = null);
+    }
+    if (mounted) await reloadDeliveries();
   }
 
   Future<String?> _scan({required String title, required String hint, String? Function(String code)? accept}) =>

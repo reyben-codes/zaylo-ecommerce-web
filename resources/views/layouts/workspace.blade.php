@@ -45,6 +45,7 @@
                 ['route' => 'logistics.scan', 'label' => 'Scan parcel', 'icon' => 'fa-barcode'],
                 ['route' => 'logistics.assignments', 'label' => 'Assign riders', 'icon' => 'fa-people-arrows'],
                 ['route' => 'logistics.deliveries', 'label' => 'Deliveries', 'icon' => 'fa-route'],
+                ['route' => 'logistics.returns', 'label' => 'Returns', 'icon' => 'fa-rotate-left'],
                 ['route' => 'logistics.monitoring', 'label' => 'Monitoring', 'icon' => 'fa-satellite-dish'],
                 ['heading' => 'Team'],
                 ['route' => 'logistics.riders', 'label' => 'Riders', 'icon' => 'fa-motorcycle'],

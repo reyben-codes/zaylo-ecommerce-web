@@ -13,7 +13,9 @@ import 'package:zaylo_mobile/state/app_state.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 
 /// Files a complaint about an order, as on the website: what went wrong, a
-/// description, and up to four photos or PDFs. Pops the new case.
+/// description, and up to four photos or PDFs. A delivered order can also be
+/// sent back: a rider collects it on the chosen day, or the buyer drops it off
+/// at the logistics hub. Pops the new case.
 class ComplaintFormScreen extends StatefulWidget {
   const ComplaintFormScreen({super.key, required this.order});
 
@@ -34,6 +36,27 @@ class _ComplaintFormScreenState extends State<ComplaintFormScreen> {
   String? _category;
   bool _saving = false;
   Map<String, String> _serverErrors = const {};
+
+  /// Sending the item back, for delivered orders only.
+  bool _returning = false;
+  String _returnType = 'return_refund';
+  String _returnMethod = 'pickup';
+  DateTime _pickupDate = DateUtils.dateOnly(DateTime.now()).add(const Duration(days: 1));
+  String _pickupSlot = 'morning';
+
+  bool get _canReturn => const {'delivered', 'completed'}.contains(widget.order.status);
+
+  Future<void> _choosePickupDate() async {
+    final today = DateUtils.dateOnly(DateTime.now());
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _pickupDate,
+      firstDate: today,
+      lastDate: today.add(const Duration(days: 14)),
+      helpText: 'Pickup day',
+    );
+    if (picked != null && mounted) setState(() => _pickupDate = picked);
+  }
 
   @override
   void initState() {
@@ -63,11 +86,23 @@ class _ComplaintFormScreenState extends State<ComplaintFormScreen> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _saving = true);
     try {
-      final complaint = await AppScope.read(context)
-          .api
-          .fileComplaint(widget.order.id, category: _category!, details: _details.text, evidence: _evidence);
+      final returning = _canReturn && _returning;
+      final complaint = await AppScope.read(context).api.fileComplaint(
+            widget.order.id,
+            category: _category!,
+            details: _details.text,
+            evidence: _evidence,
+            returnType: returning ? _returnType : null,
+            returnMethod: returning ? _returnMethod : null,
+            pickupDate: returning ? _pickupDate : null,
+            pickupSlot: returning ? _pickupSlot : null,
+          );
       if (!mounted) return;
-      showMessage(context, 'Your complaint was filed. The ZAYLO team will reply in the case.');
+      showMessage(
+          context,
+          returning
+              ? 'Your return request was filed. Follow the pickup and refund in the case.'
+              : 'Your complaint was filed. The ZAYLO team will reply in the case.');
       Navigator.of(context).pop(complaint);
     } on ApiException catch (error) {
       if (!mounted) return;
@@ -159,8 +194,20 @@ class _ComplaintFormScreenState extends State<ComplaintFormScreen> {
                     padding: const EdgeInsets.only(top: 8),
                     child: Text(error.value, style: const TextStyle(color: Colors.redAccent, fontSize: 12)),
                   ),
+                if (_canReturn) ...[
+                  const SizedBox(height: 16),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: _returning,
+                    onChanged: _saving ? null : (value) => setState(() => _returning = value),
+                    title: const Text('Send the item back'),
+                    subtitle: const Text('Ask for a refund or a replacement and return the item to the seller.'),
+                  ),
+                  if (_returning) ..._returnFields(),
+                ],
                 const SizedBox(height: 26),
-                PrimaryButton(label: 'SUBMIT COMPLAINT', busy: _saving, onPressed: _submit),
+                PrimaryButton(
+                    label: _canReturn && _returning ? 'REQUEST RETURN' : 'SUBMIT COMPLAINT', busy: _saving, onPressed: _submit),
                 const SizedBox(height: 8),
                 Text('You can file one complaint per order and add details in its thread later.',
                     textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
@@ -169,4 +216,51 @@ class _ComplaintFormScreenState extends State<ComplaintFormScreen> {
           },
         ),
       );
+
+  List<Widget> _returnFields() {
+    Widget choices(Map<String, String> options, String selected, ValueChanged<String> onSelected) => Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final MapEntry(:key, :value) in options.entries)
+              ChoiceChip(
+                label: Text(value),
+                selected: selected == key,
+                onSelected: _saving ? null : (_) => onSelected(key),
+              ),
+          ],
+        );
+
+    return [
+      const SizedBox(height: 4),
+      const FieldLabel('What would you like?'),
+      choices(const {'return_refund': 'Refund', 'exchange': 'Replacement'}, _returnType,
+          (value) => setState(() => _returnType = value)),
+      const SizedBox(height: 16),
+      const FieldLabel('How will you send it back?'),
+      choices(const {'pickup': 'A rider picks it up', 'dropoff': 'I drop it off at the hub'}, _returnMethod,
+          (value) => setState(() => _returnMethod = value)),
+      const SizedBox(height: 12),
+      if (_returnMethod == 'pickup') ...[
+        OutlinedButton.icon(
+          onPressed: _saving ? null : _choosePickupDate,
+          icon: const Icon(Icons.event_outlined),
+          label: Text('Pickup day: ${MaterialLocalizations.of(context).formatMediumDate(_pickupDate)}'),
+        ),
+        if (_serverErrors['pickup_date'] case final error?)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(error, style: const TextStyle(color: Colors.redAccent, fontSize: 12)),
+          ),
+        const SizedBox(height: 10),
+        choices(const {'morning': 'Morning, 9 AM–1 PM', 'afternoon': 'Afternoon, 1–6 PM'}, _pickupSlot,
+            (value) => setState(() => _pickupSlot = value)),
+        const SizedBox(height: 8),
+        Text('The rider scans your return slip when collecting the item, so keep the case open to show it.',
+            style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
+      ] else
+        Text('Bring the item to your logistics hub within 3 days and show the return slip from the case.',
+            style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
+    ];
+  }
 }

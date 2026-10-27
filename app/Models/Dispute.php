@@ -59,6 +59,7 @@ class Dispute extends Model
         'return_type', 'return_method', 'return_courier', 'pickup_date', 'pickup_slot',
         'dropoff_location', 'dropoff_deadline', 'return_tracking_number', 'return_status',
         'return_received_at', 'refund_amount', 'refunded_at',
+        'return_rider_id', 'return_assigned_at', 'return_picked_up_at', 'return_at_hub_at',
     ];
 
     protected $casts = [
@@ -69,17 +70,36 @@ class Dispute extends Model
         'return_received_at' => 'datetime',
         'refund_amount' => 'decimal:2',
         'refunded_at' => 'datetime',
+        'return_assigned_at' => 'datetime',
+        'return_picked_up_at' => 'datetime',
+        'return_at_hub_at' => 'datetime',
     ];
 
-    /** A returned parcel's steps, in order (logistics scans the first four; the seller can confirm receipt). */
+    /**
+     * A returned parcel's steps, in order: the rider scans it at the buyer's door (or the buyer drops it off), the
+     * logistics partner scans it at the hub and brings it back to the seller, who records the refund
+     * (App\Services\ReturnPickups).
+     */
     public const RETURN_STEPS = [
-        'scheduled' => 'Scheduled',
-        'picked_up' => 'Picked up',
-        'sorted' => 'Sorted at hub',
-        'in_transit' => 'On the way to you',
-        'received_by_seller' => 'Received',
+        'scheduled' => 'Waiting for pickup',
+        'picked_up' => 'Picked up by the rider',
+        'sorted' => 'At the logistics hub',
+        'in_transit' => 'On the way back to the seller',
+        'received_by_seller' => 'Received by the seller',
         'refunded' => 'Refunded',
     ];
+
+    /** Whether returns can be picked up by riders (after the 2026_10_28_000002 migration). */
+    public static function tracksReturnRiders(): bool
+    {
+        return Schema::hasColumn('disputes', 'return_rider_id');
+    }
+
+    /** The rider's user account picking the returned item up from the buyer. */
+    public function returnRider(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'return_rider_id');
+    }
 
     /** Whether sellers can confirm returns and record refunds (after the 2026_10_27_000002 migration). */
     public static function tracksRefunds(): bool

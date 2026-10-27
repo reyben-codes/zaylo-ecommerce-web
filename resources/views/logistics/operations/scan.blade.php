@@ -78,8 +78,8 @@
                         <span class="seller-cell-note">Return Parcel &middot; {{ $returnCase->returnMethodName() }}</span>
                         <strong class="parcel-tracking">{{ $returnCase->return_tracking_number }}</strong>
                     </div>
-                    <span class="parcel-stage parcel-stage--{{ $returnCase->return_status ?? 'scheduled' }}">
-                        {{ ucfirst(str_replace('_', ' ', $returnCase->return_status ?? 'scheduled')) }}
+                    <span class="parcel-stage parcel-stage--{{ $returnCase->return_status ?: 'scheduled' }}">
+                        {{ $returnCase->returnStepLabel() }}
                     </span>
                 </div>
                 <dl class="workspace-detail-list parcel-result__details">
@@ -97,40 +97,13 @@
                     @if($returnCase->order && $returnCase->order->items->isNotEmpty())
                         <div><dt>Item(s)</dt><dd>{{ $returnCase->order->items->pluck('product_name')->join(', ') }}</dd></div>
                     @endif
+                    @if(\App\Models\Dispute::tracksReturnRiders() && $returnCase->return_method !== 'dropoff')
+                        <div><dt>Pickup rider</dt><dd>{{ $returnCase->returnRider?->name ?? 'Not assigned yet' }}{{ $returnCase->return_picked_up_at ? ' · picked up '.$returnCase->return_picked_up_at->timezone('Asia/Manila')->format('M j, g:i A') : '' }}</dd></div>
+                    @endif
                 </dl>
                 <div class="parcel-result__actions">
-                    <p class="seller-cell-note">Update return parcel step</p>
-                    <form method="POST" action="{{ route('logistics.returns.scan', $returnCase) }}">
-                        @csrf
-                        @method('PATCH')
-                        <div class="return-action-buttons" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;">
-                            @if(in_array($returnCase->return_status, ['scheduled', null, ''], true))
-                                <button type="submit" name="return_status" value="picked_up" class="seller-button">
-                                    <i class="fas fa-truck-ramp-box" aria-hidden="true"></i> Confirm Truck Pickup from Home
-                                </button>
-                            @endif
-                            @if(in_array($returnCase->return_status, ['scheduled', 'picked_up'], true))
-                                <button type="submit" name="return_status" value="sorted" class="seller-button seller-button--secondary">
-                                    <i class="fas fa-boxes-packing" aria-hidden="true"></i> Receive &amp; Sort at Hub
-                                </button>
-                            @endif
-                            @if(in_array($returnCase->return_status, ['picked_up', 'sorted'], true))
-                                <button type="submit" name="return_status" value="in_transit" class="seller-button seller-button--secondary">
-                                    <i class="fas fa-truck-fast" aria-hidden="true"></i> In Transit to Seller
-                                </button>
-                            @endif
-                            @if(in_array($returnCase->return_status, ['in_transit', 'sorted'], true))
-                                <button type="submit" name="return_status" value="received_by_seller" class="seller-button seller-button--secondary">
-                                    <i class="fas fa-box-check" aria-hidden="true"></i> Delivered to Seller
-                                </button>
-                            @endif
-                            @if(in_array($returnCase->return_status, ['received_by_seller', 'in_transit'], true))
-                                <button type="submit" name="return_status" value="refunded" class="seller-button">
-                                    <i class="fas fa-hand-holding-dollar" aria-hidden="true"></i> Process &amp; Release Refund
-                                </button>
-                            @endif
-                        </div>
-                    </form>
+                    <p class="seller-cell-note">Next step for this return</p>
+                    @include('logistics.operations.partials.return-actions', ['case' => $returnCase, 'riders' => $riders])
                 </div>
             </div>
         @elseif($shipment)

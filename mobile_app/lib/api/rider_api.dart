@@ -84,6 +84,10 @@ class RiderApi extends ApiClient {
       ? await send('POST', '/mobile/rider/deliveries/scan', body: {'code': code.trim()})
       : await sendMultipart('/mobile/rider/deliveries/scan', fields: {'code': code.trim()}, files: {'photo': photo}));
 
+  /// Sends the code on a buyer's return slip when collecting the item; returns the server's message.
+  Future<String> scanReturn(String code) async =>
+      (await send('POST', '/mobile/rider/returns/scan', body: {'code': code.trim()}))['message'] as String;
+
   /// Proof of delivery: a [photo] of the parcel at the door. Returns the server's message.
   Future<String> uploadDeliveryPhoto(int id, File photo) async =>
       (await sendMultipart('/mobile/rider/deliveries/$id/proof', fields: const {}, files: {'photo': photo}))['message']

@@ -13,8 +13,8 @@ import 'package:zaylo_mobile/models/rider/rider_dashboard_models.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 
 /// The Home tab: today's numbers (each opens its own list), new assignments
-/// to accept or decline, deliveries in progress with their next step, and
-/// the most recent completed ones.
+/// to accept or decline, returned items to collect from buyers, deliveries in
+/// progress with their next step, and the most recent completed ones.
 class RiderDashboardTab extends StatefulWidget {
   const RiderDashboardTab({super.key, required this.api, required this.onOpenHistory});
 
@@ -138,6 +138,16 @@ class RiderDashboardTabState extends State<RiderDashboardTab> with RiderDelivery
           if (data.newAssignments.isNotEmpty) ...[
             RiderSectionHeader(title: 'New assignments', count: data.newAssignments.length),
             for (final delivery in data.newAssignments) _card(delivery),
+          ],
+
+          if (data.returns.isNotEmpty) ...[
+            RiderSectionHeader(title: 'Returns to collect', count: data.returns.length),
+            for (final item in data.returns)
+              RiderReturnCard(
+                item: item,
+                busy: busyDeliveryId == -item.id,
+                onScan: item.canScan && busyDeliveryId == null ? () => collectReturn(item) : null,
+              ),
           ],
 
           RiderSectionHeader(title: 'Your active deliveries', count: data.inProgress.length),

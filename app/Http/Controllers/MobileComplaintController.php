@@ -7,12 +7,14 @@ use App\Models\DisputeMessage;
 use App\Models\Order;
 use App\Models\User;
 use App\Services\DisputeService;
+use App\Support\Code128;
 use App\Support\OrderParties;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -39,6 +41,7 @@ class MobileComplaintController extends Controller
         return response()->json([
             'categories' => collect(Dispute::CATEGORIES)->map(fn ($label, $key) => ['id' => $key, 'label' => $label])->values(),
             'max_files' => Dispute::MAX_EVIDENCE,
+            'return_types' => collect(Dispute::RETURN_TYPES)->map(fn ($label, $key) => ['id' => $key, 'label' => $label])->values(),
         ]);
     }
 
@@ -50,12 +53,28 @@ class MobileComplaintController extends Controller
         if ($order->disputes()->exists()) {
             throw ValidationException::withMessages(['details' => 'You already filed a complaint about this order. Reply in that case instead.']);
         }
-        $data = $request->validate(Dispute::filingRules(), Dispute::filingMessages());
+        $data = $request->validate([
+            // Sending the item back: a rider collects it on the chosen day, or the buyer drops it at the hub.
+            'pickup_date' => ['nullable', 'required_if:return_method,pickup', 'date', 'after_or_equal:'.now('Asia/Manila')->toDateString(), 'before_or_equal:'.now('Asia/Manila')->addDays(14)->toDateString()],
+            'pickup_slot' => ['nullable', Rule::in(['morning', 'afternoon'])],
+        ] + Dispute::filingRules(), Dispute::filingMessages() + [
+            'pickup_date.required_if' => 'Choose the day the rider can collect the item.',
+            'pickup_date.after_or_equal' => 'Choose today or a later day for the pickup.',
+            'pickup_date.before_or_equal' => 'Choose a pickup day within the next two weeks.',
+        ]);
+        $returnDetails = array_filter([
+            'return_type' => $data['return_type'] ?? null,
+            'return_method' => $data['return_method'] ?? null,
+            'pickup_date' => $data['pickup_date'] ?? null,
+            'pickup_slot' => $data['pickup_slot'] ?? null,
+        ]);
 
-        $dispute = $this->disputes->open($order, $request->user(), $data['category'], $data['details'], $request->file('evidence', []));
+        $dispute = $this->disputes->open($order, $request->user(), $data['category'], $data['details'], $request->file('evidence', []), $returnDetails);
 
         return response()->json([
-            'message' => 'Your complaint was filed. The ZAYLO team will review it and reply here.',
+            'message' => $dispute->hasReturnParcel()
+                ? 'Your return request was filed. Follow the pickup and refund here.'
+                : 'Your complaint was filed. The ZAYLO team will review it and reply here.',
             'complaint' => $this->detail($dispute, $request->user()),
         ], 201);
     }
@@ -122,6 +141,7 @@ class MobileComplaintController extends Controller
             'resolution' => $dispute->resolution,
             'resolved_at' => $dispute->resolved_at?->toIso8601String(),
             'can_reply' => ! $dispute->isClosed(),
+            'return' => $this->returnState($dispute),
             'evidence' => collect($dispute->evidence ?? [])->map(fn (string $path, int $index) => $this->file(
                 $path, route($routes.'evidence', ['dispute' => $dispute->id, 'index' => $index])
             ))->values(),
@@ -135,6 +155,37 @@ class MobileComplaintController extends Controller
                     ? $this->file($message->attachment_path, route($routes.'attachment', ['message' => $message->id]))
                     : null,
             ])->values(),
+        ];
+    }
+
+    /** Where the returned item is, for the buyer: its slip number, each step, and who picks it up. */
+    private function returnState(Dispute $dispute): ?array
+    {
+        if (! $dispute->hasReturnParcel()) {
+            return null;
+        }
+        $current = array_search($dispute->return_status ?: 'scheduled', array_keys(Dispute::RETURN_STEPS), true);
+
+        return [
+            'tracking_number' => $dispute->return_tracking_number,
+            // Code 128 bar and space widths, which the app draws for the rider to scan.
+            'barcode' => Code128::widths($dispute->return_tracking_number),
+            'type_label' => Dispute::RETURN_TYPES[$dispute->return_type] ?? 'Return and Refund',
+            'method' => $dispute->return_method,
+            'method_label' => $dispute->returnMethodName(),
+            'status' => $dispute->return_status ?: 'scheduled',
+            'status_label' => $dispute->returnStepLabel(),
+            'pickup_date' => $dispute->pickup_date?->toDateString(),
+            'pickup_slot' => $dispute->pickup_slot,
+            'dropoff_location' => $dispute->dropoff_location,
+            'dropoff_deadline' => $dispute->dropoff_deadline?->toDateString(),
+            'rider_name' => Dispute::tracksReturnRiders() ? Str::of($dispute->returnRider?->name ?? '')->before(' ')->toString() ?: null : null,
+            'refund_amount' => $dispute->refund_amount === null ? null : (float) $dispute->refund_amount,
+            'steps' => collect(Dispute::RETURN_STEPS)
+                // A drop-off is never picked up by a rider, and an exchange is not refunded.
+                ->reject(fn ($label, $key) => ($key === 'picked_up' && $dispute->return_method === 'dropoff') || ($key === 'refunded' && $dispute->return_type === 'exchange'))
+                ->map(fn ($label, $key) => ['key' => $key, 'label' => $label, 'done' => array_search($key, array_keys(Dispute::RETURN_STEPS), true) <= $current])
+                ->values(),
         ];
     }
 
