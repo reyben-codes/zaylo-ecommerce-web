@@ -100,14 +100,16 @@ flutter test
 
 The download link above always points to the newest GitHub release that has a file named exactly `zaylo.apk`.
 
-Push the app changes to `main`, then push a version tag. GitHub builds the APK and publishes the release (about 10 minutes; watch it under **Actions → Release APK**):
+This happens on its own: every push to `main` that changes the app (`mobile_app/`) builds a new APK and publishes it as the next patch version (`v1.0.3` → `v1.0.4`), so the download link always gives the newest app (about 10 minutes; watch it under **Actions → Release APK**). You can also start it from that page with **Run workflow**.
+
+To choose the version yourself (for example a bigger update), push a tag instead:
 
 ```bash
-git tag v1.0.1
-git push origin v1.0.1
+git tag v1.1.0
+git push origin v1.1.0
 ```
 
-The version comes from the tag, so `pubspec.yaml` needs no edit; use a higher number each time (`v1.0.2`, `v1.1.0`, ...).
+The version comes from the tag, so `pubspec.yaml` needs no edit; automatic releases continue from the highest tag.
 
 One-time setup: the build signs with the same debug key as local builds, because Google sign-in and app updates only accept that key. Copy it into a repository secret: in PowerShell run `[Convert]::ToBase64String([IO.File]::ReadAllBytes("$env:USERPROFILE\.android\debug.keystore")) | Set-Clipboard`, then on GitHub open **Settings → Secrets and variables → Actions → New repository secret**, name it `DEBUG_KEYSTORE_BASE64` and paste.
 
