@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:zaylo_mobile/components/layout.dart';
+import 'package:zaylo_mobile/components/return_steps.dart';
 import 'package:zaylo_mobile/models/rider/rider_dashboard_models.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 import 'package:zaylo_mobile/utils/formatters.dart';
@@ -454,8 +455,19 @@ class RiderReturnCard extends StatelessWidget {
             const SizedBox(height: 6),
             Text(item.items.join(', '), style: const TextStyle(fontSize: 12)),
           ],
-          const SizedBox(height: 8),
-          Text(item.nextStep, style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
+          const SizedBox(height: 10),
+          ReturnNextStep(text: item.nextStep),
+          // The whole return, so the rider sees where their part fits.
+          if (item.steps.isNotEmpty)
+            Theme(
+              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+              child: ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                childrenPadding: const EdgeInsets.only(bottom: 4),
+                title: Text('Return steps', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: ZayloColors.ink)),
+                children: [ReturnSteps(steps: item.steps)],
+              ),
+            ),
           if (onScan != null) ...[
             const SizedBox(height: 10),
             SizedBox(

@@ -14,6 +14,7 @@ use App\Http\Controllers\ChatController;
 use App\Http\Controllers\PolicyController;
 use App\Http\Controllers\ProfilePhotoController;
 use App\Http\Controllers\PublicFileController;
+use App\Http\Controllers\ReturnPhotoController;
 use App\Http\Controllers\ProductSaleController;
 use App\Http\Controllers\ComplianceWarningController;
 use App\Http\Controllers\CourierController;
@@ -22,6 +23,7 @@ use App\Http\Controllers\IdentityVerificationController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\DeliveryProofController;
 use App\Http\Controllers\DisputeController;
+use App\Http\Controllers\FaqController;
 use App\Http\Controllers\LogisticsApplicationController;
 use App\Http\Controllers\LogisticsChatController;
 use App\Http\Controllers\LogisticsController;
@@ -309,6 +311,10 @@ Route::middleware(['auth', 'active', 'verified', 'nocache'])->group(function () 
     Route::get('/support/{thread}/messages/{message}/photo', [SupportChatController::class, 'photo'])->middleware('throttle:240,1')->name('support.photo');
     // The rider's photo of a delivered parcel, for the people in the order.
     Route::get('/deliveries/{shipment}/proof', [DeliveryProofController::class, 'show'])->middleware('throttle:120,1')->name('delivery-proof');
+    // Photos of a returned item at pickup and at the hub, for the case, its rider and the logistics partner.
+    Route::get('/returns/{dispute}/photos/{kind}', [ReturnPhotoController::class, 'show'])->whereIn('kind', ['pickup', 'hub'])->middleware('throttle:120,1')->name('return-photo');
+    // Answers for the help bot on every portal.
+    Route::get('/help/faq', [FaqController::class, 'web'])->middleware('throttle:60,1')->name('faq');
 });
 
 // Pending and rejected logistics partners can still reach their application, so this group skips the active check.

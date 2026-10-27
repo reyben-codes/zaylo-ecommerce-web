@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/components/buttons.dart';
 import 'package:zaylo_mobile/components/complaints.dart';
+import 'package:zaylo_mobile/components/help_bot.dart';
 import 'package:zaylo_mobile/components/layout.dart';
 import 'package:zaylo_mobile/components/policies.dart';
 import 'package:zaylo_mobile/components/profile_photo.dart';
@@ -203,6 +204,16 @@ class _AccountScreenState extends State<AccountScreen> {
           SectionCard(
             padding: EdgeInsets.zero,
             child: Column(children: [
+              _MenuTile(
+                icon: Icons.smart_toy_outlined,
+                label: 'Help bot (FAQs)',
+                onTap: () => _push(HelpBotScreen(
+                  api: state.api,
+                  // Replaces the bot with the support chat.
+                  onContactSupport: () => Navigator.of(context)
+                      .pushReplacement(MaterialPageRoute(builder: (_) => const SupportScreen())),
+                )),
+              ),
               _MenuTile(
                 icon: Icons.support_agent_outlined,
                 label: 'Help & support',

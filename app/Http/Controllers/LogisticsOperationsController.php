@@ -7,6 +7,7 @@ use App\Models\Dispute;
 use App\Models\Order;
 use App\Models\Rider;
 use App\Models\Shipment;
+use App\Services\ChatPhotos;
 use App\Services\LogisticsMessenger;
 use App\Services\ReturnPickups;
 use App\Services\ShipmentWorkflow;
@@ -153,8 +154,11 @@ class LogisticsOperationsController extends Controller
     public function updateReturnScan(Request $request, Dispute $dispute)
     {
         $this->ownsReturn($dispute);
-        $data = $request->validate(['return_status' => ['required', Rule::in(array_keys(ReturnPickups::LOGISTICS_LABELS))]]);
-        $this->returns->advance($dispute, $data['return_status'], $request->user());
+        $data = $request->validate([
+            'return_status' => ['required', Rule::in(array_keys(ReturnPickups::LOGISTICS_LABELS))],
+        ] + ChatPhotos::rules(), ChatPhotos::messages());
+        // Receiving it at the hub needs a photo of the item as it arrived.
+        $this->returns->advance($dispute, $data['return_status'], $request->user(), $request->file('photo'));
 
         return back()->with('status', 'Return '.$dispute->return_tracking_number.': '.ReturnPickups::LOGISTICS_LABELS[$data['return_status']].'.');
     }

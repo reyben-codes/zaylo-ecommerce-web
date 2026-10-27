@@ -1,0 +1,216 @@
+/* The help bot (partials/faq-bot): a bubble at the bottom left (the messages bubble sits at the bottom right) that
+   opens a small conversation panel. */
+
+.faq-bot__toggle {
+    position: fixed;
+    bottom: max(24px, env(safe-area-inset-bottom));
+    left: 24px;
+    z-index: 1490;
+    display: grid;
+    width: 52px;
+    height: 52px;
+    place-items: center;
+    padding: 0;
+    border: 3px solid var(--c-fffdfb);
+    border-radius: 50%;
+    background: var(--c-9a755e);
+    color: var(--c-ffffff);
+    box-shadow: 0 5px 22px #241a1638;
+    font-size: 1.35rem;
+    cursor: pointer;
+}
+
+.faq-bot__toggle:focus-visible,
+.faq-bot__panel :focus-visible {
+    outline: 2px solid var(--c-1a1714);
+    outline-offset: 2px;
+}
+
+.faq-bot__panel {
+    position: fixed;
+    bottom: calc(max(24px, env(safe-area-inset-bottom)) + 64px);
+    left: 24px;
+    z-index: 1490;
+    display: flex;
+    flex-direction: column;
+    width: min(360px, calc(100vw - 32px));
+    height: min(520px, calc(100vh - 140px));
+    overflow: hidden;
+    border: 1px solid var(--c-ece4db);
+    border-radius: 16px;
+    background: var(--c-ffffff);
+    box-shadow: 0 18px 50px #241a1630;
+    color: var(--c-1a1714);
+    font: 400 14px/1.45 'Inter', sans-serif;
+    opacity: 0;
+    transform: translateY(12px) scale(.98);
+    transform-origin: bottom left;
+    transition: opacity 280ms ease-out, transform 280ms ease-out;
+}
+
+.faq-bot__panel.is-open {
+    opacity: 1;
+    transform: none;
+}
+
+.faq-bot__panel[hidden] {
+    display: none;
+}
+
+.faq-bot__header {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--c-ece4db);
+    background: var(--c-faf7f2);
+}
+
+.faq-bot__header div {
+    display: grid;
+    flex: 1;
+    min-width: 0;
+}
+
+.faq-bot__header span:not(.faq-bot__avatar) {
+    color: var(--c-6b5f54);
+    font-size: .74rem;
+}
+
+.faq-bot__avatar {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--c-eee6de);
+    color: var(--c-9a755e);
+}
+
+.faq-bot__close {
+    display: grid;
+    width: 32px;
+    height: 32px;
+    place-items: center;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--c-6b5f54);
+    cursor: pointer;
+}
+
+.faq-bot__close:hover {
+    background: var(--c-f5f0ea);
+}
+
+.faq-bot__messages {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 10px;
+    margin: 0;
+    padding: 14px;
+    overflow-y: auto;
+    list-style: none;
+}
+
+.faq-bot__message {
+    display: grid;
+    gap: 8px;
+    max-width: 88%;
+    padding: 10px 12px;
+    border-radius: 14px 14px 14px 4px;
+    background: var(--c-f5f0ea);
+}
+
+.faq-bot__message p {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.faq-bot__message--user {
+    align-self: flex-end;
+    border-radius: 14px 14px 4px 14px;
+    background: var(--c-1a1714);
+    color: var(--c-ffffff);
+}
+
+.faq-bot__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.faq-bot__chips button {
+    padding: 6px 10px;
+    border: 1px solid var(--c-dcd2c8);
+    border-radius: 999px;
+    background: var(--c-ffffff);
+    color: var(--c-1a1714);
+    font: inherit;
+    font-size: .76rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.faq-bot__chips button:hover {
+    border-color: var(--c-9a755e);
+}
+
+.faq-bot__link {
+    color: var(--c-9a755e);
+    font-size: .8rem;
+    font-weight: 600;
+}
+
+.faq-bot__form {
+    display: flex;
+    gap: 8px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--c-ece4db);
+}
+
+.faq-bot__form input {
+    flex: 1;
+    min-width: 0;
+    padding: 9px 12px;
+    border: 1px solid var(--c-dcd2c8);
+    border-radius: 10px;
+    background: var(--c-ffffff);
+    color: var(--c-1a1714);
+    font: inherit;
+}
+
+.faq-bot__form button {
+    width: 40px;
+    border: 0;
+    border-radius: 10px;
+    background: var(--c-1a1714);
+    color: var(--c-ffffff);
+    cursor: pointer;
+}
+
+@media (max-width: 640px) {
+    .faq-bot__toggle {
+        bottom: max(16px, env(safe-area-inset-bottom));
+        left: 16px;
+    }
+
+    .faq-bot__panel {
+        bottom: calc(max(16px, env(safe-area-inset-bottom)) + 62px);
+        left: 16px;
+        height: min(480px, calc(100vh - 120px));
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .faq-bot__panel {
+        transition: none;
+    }
+}
+
+@media print {
+    .faq-bot {
+        display: none;
+    }
+}

@@ -60,6 +60,7 @@ class Dispute extends Model
         'dropoff_location', 'dropoff_deadline', 'return_tracking_number', 'return_status',
         'return_received_at', 'refund_amount', 'refunded_at',
         'return_rider_id', 'return_assigned_at', 'return_picked_up_at', 'return_at_hub_at',
+        'return_pickup_photo_path', 'return_hub_photo_path',
     ];
 
     protected $casts = [
@@ -93,6 +94,21 @@ class Dispute extends Model
     public static function tracksReturnRiders(): bool
     {
         return Schema::hasColumn('disputes', 'return_rider_id');
+    }
+
+    /** Photos of the returned item at pickup and at the hub (after the 2026_10_28_000003 migration). */
+    public static function tracksReturnPhotos(): bool
+    {
+        return Schema::hasColumn('disputes', 'return_hub_photo_path');
+    }
+
+    /** @return array<string, string> proof photos of the returned item that exist, keyed pickup and hub */
+    public function returnPhotos(): array
+    {
+        return array_filter([
+            'pickup' => $this->return_pickup_photo_path,
+            'hub' => $this->return_hub_photo_path,
+        ]);
     }
 
     /** The rider's user account picking the returned item up from the buyer. */

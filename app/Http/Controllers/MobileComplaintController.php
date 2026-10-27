@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\User;
 use App\Services\DisputeService;
 use App\Support\Code128;
+use App\Support\ReturnProcess;
 use App\Support\OrderParties;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -141,7 +142,7 @@ class MobileComplaintController extends Controller
             'resolution' => $dispute->resolution,
             'resolved_at' => $dispute->resolved_at?->toIso8601String(),
             'can_reply' => ! $dispute->isClosed(),
-            'return' => $this->returnState($dispute),
+            'return' => $this->returnState($dispute, $viewer),
             'evidence' => collect($dispute->evidence ?? [])->map(fn (string $path, int $index) => $this->file(
                 $path, route($routes.'evidence', ['dispute' => $dispute->id, 'index' => $index])
             ))->values(),
@@ -158,13 +159,16 @@ class MobileComplaintController extends Controller
         ];
     }
 
-    /** Where the returned item is, for the buyer: its slip number, each step, and who picks it up. */
-    private function returnState(Dispute $dispute): ?array
+    /**
+     * Where the returned item is: its slip number, who picks it up, each step with its date (ReturnProcess, the same
+     * steps as the website), and what the viewer does now.
+     */
+    private function returnState(Dispute $dispute, User $viewer): ?array
     {
         if (! $dispute->hasReturnParcel()) {
             return null;
         }
-        $current = array_search($dispute->return_status ?: 'scheduled', array_keys(Dispute::RETURN_STEPS), true);
+        $process = ReturnProcess::payload($dispute, $viewer->hasRole('rider', 'courier') ? 'rider' : 'buyer');
 
         return [
             'tracking_number' => $dispute->return_tracking_number,
@@ -181,11 +185,11 @@ class MobileComplaintController extends Controller
             'dropoff_deadline' => $dispute->dropoff_deadline?->toDateString(),
             'rider_name' => Dispute::tracksReturnRiders() ? Str::of($dispute->returnRider?->name ?? '')->before(' ')->toString() ?: null : null,
             'refund_amount' => $dispute->refund_amount === null ? null : (float) $dispute->refund_amount,
-            'steps' => collect(Dispute::RETURN_STEPS)
-                // A drop-off is never picked up by a rider, and an exchange is not refunded.
-                ->reject(fn ($label, $key) => ($key === 'picked_up' && $dispute->return_method === 'dropoff') || ($key === 'refunded' && $dispute->return_type === 'exchange'))
-                ->map(fn ($label, $key) => ['key' => $key, 'label' => $label, 'done' => array_search($key, array_keys(Dispute::RETURN_STEPS), true) <= $current])
-                ->values(),
+            'next' => $process['next'],
+            'steps' => collect($process['steps'])->map(fn (array $step) => [
+                'key' => $step['key'], 'label' => $step['label'], 'detail' => $step['detail'], 'at' => $step['at'],
+                'done' => $step['done'], 'current' => $step['current'],
+            ])->values(),
         ];
     }
 

@@ -11,8 +11,6 @@
 @section('content')
     @php
         $tabs = ['action' => 'Needs action', 'in_progress' => 'In progress', 'closed' => 'Closed', 'all' => 'All'];
-        $steps = \App\Models\Dispute::RETURN_STEPS;
-        $stepKeys = array_keys($steps);
         $types = \App\Models\Dispute::RETURN_TYPES;
     @endphp
 
@@ -54,8 +52,6 @@
 
         @forelse($cases as $case)
             @php
-                $current = array_search($case->return_status ?? 'scheduled', $stepKeys, true);
-                $current = $current === false ? 0 : $current;
                 $orderNumber = $case->order?->order_number ?? $case->order?->reference ?? '#'.$case->order_id;
             @endphp
             <article class="return-case">
@@ -78,17 +74,17 @@
                             · Drop-off by {{ $case->dropoff_deadline->format('M j') }}
                         @endif
                     </p>
-                    <ol class="return-steps" aria-label="Return progress">
-                        @foreach($steps as $key => $label)
-                            @php $index = $loop->index; @endphp
-                            <li class="{{ $index < $current ? 'is-done' : ($index === $current ? 'is-current' : '') }}" @if($index === $current) aria-current="step" @endif>
-                                <span>{{ $label }}</span>
-                            </li>
-                        @endforeach
-                    </ol>
                 @else
                     <p class="seller-cell-note">No item to send back{{ $case->return_type === 'refund_only' ? ': the buyer asked for a refund only.' : '.' }}</p>
                 @endif
+
+                {{-- Every step of the return with its dates and proof photos, and what the seller does now. --}}
+                <details class="return-track" data-smooth-disclosure @if($loop->first) open @endif>
+                    <summary><i class="fas fa-route" aria-hidden="true"></i> Track this return</summary>
+                    <div data-disclosure-content>
+                        @include('partials.return-process', ['case' => $case, 'role' => 'seller'])
+                    </div>
+                </details>
 
                 @if($case->refunded_at)
                     <p class="return-case__refunded"><i class="fas fa-circle-check" aria-hidden="true"></i> Refunded ₱{{ number_format((float) $case->refund_amount, 2) }} on {{ $case->refunded_at->timezone('Asia/Manila')->format('M j, Y · g:i A') }}</p>

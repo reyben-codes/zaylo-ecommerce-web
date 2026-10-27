@@ -277,7 +277,7 @@ class FakeRiderApi extends RiderApi {
   final returnScans = <String>[];
 
   @override
-  Future<String> scanReturn(String code) async {
+  Future<String> scanReturn(String code, {File? photo}) async {
     returnScans.add(code);
     return 'Return picked up. Bring the item to your logistics hub.';
   }

@@ -53,7 +53,10 @@
                                     <span class="seller-cell-note parcel-note"><i class="fas fa-calendar" aria-hidden="true"></i> {{ $case->pickup_date?->format('D, M j') ?? 'Date to confirm' }} · {{ $case->pickup_slot === 'afternoon' ? 'Afternoon' : 'Morning' }}</span>
                                 @endif
                             </td>
-                            <td><span class="parcel-stage parcel-stage--{{ $case->return_status ?: 'scheduled' }}">{{ $case->returnStepLabel() }}</span></td>
+                            <td>
+                                <span class="parcel-stage parcel-stage--{{ $case->return_status ?: 'scheduled' }}">{{ $case->returnStepLabel() }}</span>
+                                @include('logistics.operations.partials.return-photos', ['case' => $case])
+                            </td>
                             <td>{{ $case->returnRider?->name ?? '—' }}</td>
                             <td>@include('logistics.operations.partials.return-actions', ['case' => $case, 'riders' => $riders])</td>
                         </tr>

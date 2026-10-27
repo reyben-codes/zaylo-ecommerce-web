@@ -38,6 +38,14 @@
                             <span class="seller-cell-note parcel-note"><i class="fas fa-location-dot" aria-hidden="true"></i> {{ $parcel['area'] }}</span>
                         @endif
                         <span class="seller-cell-note">{{ $parcel['updated']?->timezone('Asia/Manila')->format('M j, g:i A') }}</span>
+                        {{-- Proof of delivery: the rider's photo, taken when the parcel was handed over. --}}
+                        @if($shipment->delivery_proof_path)
+                            @include('logistics.operations.partials.proof-photo', [
+                                'url' => route('delivery-proof', $shipment),
+                                'label' => 'Delivery photo',
+                                'alt' => 'Rider\'s delivery photo for parcel '.$parcel['tracking'],
+                            ])
+                        @endif
                     </td>
                     <td>{{ $parcel['rider'] ?? '—' }}</td>
                     @unless($hideActions)

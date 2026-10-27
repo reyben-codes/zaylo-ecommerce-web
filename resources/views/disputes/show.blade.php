@@ -67,28 +67,18 @@
                         <small style="color:#786c5f;">Show this barcode to the courier truck driver or hub agent when surrendering the return item.</small>
                     </div>
 
-                    <div class="return-timeline" style="margin-top:16px;">
-                        <h3>Return Progress</h3>
-                        <div class="return-steps" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:10px; margin-top:8px;">
-                            @php
-                                // A drop-off is never picked up by a rider, and an exchange is not refunded.
-                                $steps = collect(\App\Models\Dispute::RETURN_STEPS)
-                                    ->reject(fn ($label, $key) => ($key === 'picked_up' && $dispute->return_method === 'dropoff') || ($key === 'refunded' && $dispute->return_type === 'exchange'))
-                                    ->keys()->mapWithKeys(fn ($key, $index) => [$key => ($index + 1).'. '.\App\Models\Dispute::RETURN_STEPS[$key]])->all();
-                                $orderStatusOrder = array_keys(\App\Models\Dispute::RETURN_STEPS);
-                                $currentIdx = array_search($dispute->return_status ?? 'scheduled', $orderStatusOrder, true);
-                                if ($currentIdx === false) $currentIdx = 0;
-                            @endphp
-                            @foreach($steps as $stepKey => $stepLabel)
-                                @php
-                                    $stepIdx = array_search($stepKey, $orderStatusOrder, true);
-                                    $isPastOrCurrent = $currentIdx >= $stepIdx;
-                                @endphp
-                                <div style="padding:10px; border-radius:6px; border:1px solid {{ $isPastOrCurrent ? '#22c55e' : '#e2e8f0' }}; background:{{ $isPastOrCurrent ? '#f0fdf4' : '#f8fafc' }}; color:{{ $isPastOrCurrent ? '#15803d' : '#64748b' }}; font-size:.8rem; font-weight:{{ $isPastOrCurrent ? '600' : 'normal' }}; text-align:center;">
-                                    <i class="fas {{ $isPastOrCurrent ? 'fa-circle-check' : 'fa-circle' }}" aria-hidden="true"></i> {{ $stepLabel }}
-                                </div>
-                            @endforeach
-                        </div>
+                    <div class="return-timeline">
+                        <h3>Return progress</h3>
+                        @php
+                            // The viewer's part in the return: the buyer, the seller, or a rider (delivery or pickup).
+                            $returnRole = match ($dispute->roleOf((int) auth()->id())) {
+                                'Buyer' => 'buyer',
+                                'Seller' => 'seller',
+                                'Courier' => 'rider',
+                                default => \App\Models\Dispute::tracksReturnRiders() && (int) $dispute->return_rider_id === (int) auth()->id() ? 'rider' : 'admin',
+                            };
+                        @endphp
+                        @include('partials.return-process', ['case' => $dispute, 'role' => $returnRole])
                     </div>
                 </div>
             </section>

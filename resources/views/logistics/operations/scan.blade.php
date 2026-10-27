@@ -105,6 +105,11 @@
                     <p class="seller-cell-note">Next step for this return</p>
                     @include('logistics.operations.partials.return-actions', ['case' => $returnCase, 'riders' => $riders])
                 </div>
+                {{-- The whole return so far, with the rider's and the hub's proof photos. --}}
+                <div class="parcel-result__tracker">
+                    <p class="seller-cell-note">Return tracking</p>
+                    @include('partials.return-process', ['case' => $returnCase, 'role' => 'logistics'])
+                </div>
             </div>
         @elseif($shipment)
             @php $parcel = \App\Support\ParcelView::for($shipment); @endphp

@@ -8,8 +8,11 @@ use App\Models\Rider;
 use App\Models\Shipment;
 use App\Models\User;
 use App\Notifications\DisputeUpdated;
+use App\Support\ReturnProcess;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -20,6 +23,9 @@ use Illuminate\Validation\ValidationException;
  *  2. the partner scans the item in at the hub ("sorted"), sends it out ("in_transit") and hands it to the seller
  *     ("received_by_seller"); the seller can also confirm it arrived;
  *  3. the seller records the refund (SellerReturnController).
+ *
+ * The rider photographs the item when collecting it and the partner when it arrives at the hub, as proof of what was
+ * returned (Dispute::returnPhotos()).
  *
  * The buyer and seller are emailed at each step and see it on the case.
  */
@@ -40,6 +46,8 @@ class ReturnPickups
 
     /** Returns whose item can still be scanned by its rider: waiting at the buyer's door, or on the way to the hub. */
     public const RIDER_STAGES = ['scheduled', 'picked_up'];
+
+    public function __construct(private ChatPhotos $photos) {}
 
     public static function isPickup(Dispute $dispute): bool
     {
@@ -118,8 +126,8 @@ class ReturnPickups
         return $dispute;
     }
 
-    /** The rider scanned the return label at the buyer's door. */
-    public function scan(User $rider, string $code): Dispute
+    /** The rider scanned the return label at the buyer's door, with a [$photo] of the item collected. */
+    public function scan(User $rider, string $code, ?UploadedFile $photo = null): Dispute
     {
         $code = strtoupper(trim($code));
         $dispute = Dispute::tracksReturnRiders()
@@ -129,31 +137,43 @@ class ReturnPickups
             throw ValidationException::withMessages(['code' => 'This return is not assigned to you. Check the return slip, or ask your logistics partner.']);
         }
 
-        DB::transaction(function () use ($dispute, $rider) {
+        if (($dispute->return_status ?: 'scheduled') !== 'scheduled' || $dispute->status === 'rejected') {
+            throw ValidationException::withMessages(['code' => 'This return was already picked up. Bring it to your logistics hub.']);
+        }
+        $path = $this->proof($photo, $dispute, 'Take a photo of the returned item when you collect it from the buyer.');
+
+        $this->saving($path, fn () => DB::transaction(function () use ($dispute, $rider, $path) {
             $locked = Dispute::whereKey($dispute->id)->lockForUpdate()->firstOrFail();
             if (($locked->return_status ?: 'scheduled') !== 'scheduled' || $locked->status === 'rejected') {
                 throw ValidationException::withMessages(['code' => 'This return was already picked up. Bring it to your logistics hub.']);
             }
-            $locked->update(['return_status' => 'picked_up', 'return_picked_up_at' => now()]);
+            $locked->update(['return_status' => 'picked_up', 'return_picked_up_at' => now()] + ($path ? ['return_pickup_photo_path' => $path] : []));
             $this->note($locked, 'The rider picked up the returned item from the buyer and is bringing it to the logistics hub.', $rider, notify: false);
-        });
+        }));
         $dispute->refresh();
         $this->notify($dispute, $rider);
 
         return $dispute;
     }
 
-    /** The logistics partner moves the return on: in at the hub, sent out, handed to the seller. */
-    public function advance(Dispute $dispute, string $to, User $actor): Dispute
+    /**
+     * The logistics partner moves the return on: in at the hub (with a [$photo] of the item as it arrived), sent out,
+     * handed to the seller.
+     */
+    public function advance(Dispute $dispute, string $to, User $actor, ?UploadedFile $photo = null): Dispute
     {
-        DB::transaction(function () use ($dispute, $to, $actor) {
+        $path = $to === 'sorted' && in_array('sorted', self::logisticsSteps($dispute), true)
+            ? $this->proof($photo, $dispute, 'Take a photo of the returned item as it arrived at the hub.')
+            : null;
+
+        $this->saving($path, fn () => DB::transaction(function () use ($dispute, $to, $actor, $path) {
             $locked = Dispute::whereKey($dispute->id)->lockForUpdate()->firstOrFail();
             if (! in_array($to, self::logisticsSteps($locked), true)) {
                 throw ValidationException::withMessages(['return_status' => self::isPickup($locked) && ($locked->return_status ?: 'scheduled') === 'scheduled'
                     ? 'The rider has to scan this return at the buyer\'s door first.'
                     : 'This return can no longer move to "'.(Dispute::RETURN_STEPS[$to] ?? $to).'". Refresh and try again.']);
             }
-            $locked->update(['return_status' => $to] + match ($to) {
+            $locked->update(['return_status' => $to] + ($path ? ['return_hub_photo_path' => $path] : []) + match ($to) {
                 'sorted' => Dispute::tracksReturnRiders() ? ['return_at_hub_at' => now()] : [],
                 'received_by_seller' => Dispute::tracksRefunds() ? ['return_received_at' => now()] : [],
                 default => [],
@@ -163,7 +183,7 @@ class ReturnPickups
                 'in_transit' => 'The logistics partner is bringing the returned item back to the seller.',
                 default => 'The logistics partner handed the returned item to the seller.',
             }, $actor, notify: false);
-        });
+        }));
         $dispute->refresh();
         $this->notify($dispute, $actor);
 
@@ -175,6 +195,7 @@ class ReturnPickups
     {
         $order = $dispute->order;
         $status = $dispute->return_status ?: 'scheduled';
+        $process = ReturnProcess::payload($dispute, 'rider');
 
         return [
             'id' => $dispute->id,
@@ -190,10 +211,40 @@ class ReturnPickups
             'items' => $order ? $order->items->map(fn ($item) => $item->quantity.' × '.$item->product_name)->values() : [],
             'reason' => $dispute->category_label,
             'can_scan' => $status === 'scheduled',
-            'next_step' => $status === 'scheduled'
-                ? 'Scan the return slip when you collect the item from the buyer.'
-                : 'Bring the item to your logistics hub; they scan it in.',
+            // Collecting the item needs a photo of it, the proof of what the buyer returned.
+            'needs_photo' => Dispute::tracksReturnPhotos(),
+            'next_step' => $process['next'],
+            'steps' => collect($process['steps'])->map(fn (array $step) => [
+                'key' => $step['key'], 'label' => $step['label'], 'detail' => $step['detail'], 'at' => $step['at'],
+                'done' => $step['done'], 'current' => $step['current'],
+            ])->values(),
         ];
+    }
+
+    /** Stores the proof photo for a step; required once the photo columns exist. */
+    private function proof(?UploadedFile $photo, Dispute $dispute, string $missing): ?string
+    {
+        if (! Dispute::tracksReturnPhotos()) {
+            return null;
+        }
+        if (! $photo) {
+            throw ValidationException::withMessages(['photo' => $missing]);
+        }
+
+        return $this->photos->store($photo, 'return-proof/'.$dispute->id);
+    }
+
+    /** Runs the step; a step that fails leaves no stray photo behind. */
+    private function saving(?string $path, callable $step): void
+    {
+        try {
+            $step();
+        } catch (\Throwable $error) {
+            if ($path) {
+                Storage::disk('local')->delete($path);
+            }
+            throw $error;
+        }
     }
 
     /** Saved in the case thread (from whoever took the step), so the buyer and seller see each step. */

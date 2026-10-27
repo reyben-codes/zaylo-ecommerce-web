@@ -234,9 +234,13 @@ class ComplaintReturn {
     this.refundAmount,
     this.steps = const [],
     this.barcode = const [],
+    this.next,
   });
 
   final String trackingNumber;
+
+  /// What the person viewing the return does now (or where it stands when it is finished).
+  final String? next;
 
   /// Code 128 bar and space widths (starting with a bar) for the rider's scanner.
   final List<int> barcode;
@@ -275,23 +279,42 @@ class ComplaintReturn {
         dropoffDeadline: parseDate(json['dropoff_deadline']),
         riderName: json['rider_name'] as String?,
         refundAmount: (json['refund_amount'] as num?)?.toDouble(),
+        next: json['next'] as String?,
         steps: (json['steps'] as List<dynamic>? ?? const [])
             .map((item) => ReturnStep.fromJson(item as Map<String, dynamic>))
             .toList(),
       );
 }
 
+/// One step of a return, the same on the website: when it happened and whether it is the one in progress.
 class ReturnStep {
-  const ReturnStep({required this.key, required this.label, required this.done});
+  const ReturnStep({
+    required this.key,
+    required this.label,
+    required this.done,
+    this.current = false,
+    this.detail,
+    this.at,
+  });
 
   final String key;
   final String label;
   final bool done;
 
+  /// The first step not done yet.
+  final bool current;
+
+  /// For example the rider's name, or the refunded amount.
+  final String? detail;
+  final DateTime? at;
+
   factory ReturnStep.fromJson(Map<String, dynamic> json) => ReturnStep(
         key: json['key'] as String? ?? '',
         label: json['label'] as String? ?? '',
         done: json['done'] as bool? ?? false,
+        current: json['current'] as bool? ?? false,
+        detail: json['detail'] as String?,
+        at: DateTime.tryParse(json['at'] as String? ?? '')?.toLocal(),
       );
 }
 
@@ -333,5 +356,67 @@ class AppVersionInfo {
   factory AppVersionInfo.fromJson(Map<String, dynamic> json) => AppVersionInfo(
         latestVersion: json['latest_version'] as String?,
         downloadUrl: json['download_url'] as String?,
+      );
+}
+
+/// The help bot's questions and answers from GET /mobile/faq.
+class FaqData {
+  const FaqData({required this.greeting, this.items = const []});
+
+  final String greeting;
+  final List<FaqItem> items;
+
+  factory FaqData.fromJson(Map<String, dynamic> json) => FaqData(
+        greeting: json['greeting'] as String? ?? 'Hi! Pick a question below or type your own.',
+        items: (json['items'] as List<dynamic>? ?? const [])
+            .map((item) => FaqItem.fromJson(item as Map<String, dynamic>))
+            .toList(),
+      );
+
+  /// Questions that match [text], best first, with their scores: a matching
+  /// keyword counts most, words shared with the question a little (the same
+  /// rules as the website's bot).
+  List<(FaqItem, int)> match(String text) {
+    final typed = ' ${_normalize(text)} ';
+    final typedWords = _words(text).toSet();
+    final ranked = [
+      for (final item in items)
+        (
+          item,
+          item.keywords.fold<int>(0, (total, keyword) {
+                final key = _normalize(keyword);
+                return typed.contains(' $key ') || typed.contains(' $key') ? total + (keyword.contains(' ') ? 4 : 3) : total;
+              }) +
+              _words(item.question).where(typedWords.contains).length,
+        ),
+    ].where((entry) => entry.$2 > 0).toList()
+      ..sort((a, b) => b.$2.compareTo(a.$2));
+    return ranked;
+  }
+
+  static const _stopWords = {
+    'how', 'what', 'when', 'where', 'why', 'who', 'can', 'the', 'and', 'for', 'my', 'do', 'does', 'did', 'is', //
+    'are', 'a', 'an', 'i', 'to', 'of', 'in', 'on', 'it', 'me', 'you', 'your', 'with', 'or', 'be', 'get', 'not', //
+    'there', 'this', 'that',
+  };
+
+  static String _normalize(String text) =>
+      text.toLowerCase().replaceAll(RegExp(r"[^a-z0-9'\-\s]"), ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
+
+  static List<String> _words(String text) =>
+      _normalize(text).split(' ').where((word) => word.length > 2 && !_stopWords.contains(word)).toList();
+}
+
+class FaqItem {
+  const FaqItem({required this.question, required this.answer, this.keywords = const []});
+
+  final String question;
+  final String answer;
+  final List<String> keywords;
+
+  factory FaqItem.fromJson(Map<String, dynamic> json) => FaqItem(
+        question: json['q'] as String? ?? '',
+        answer: json['a'] as String? ?? '',
+        keywords: List<String>.from(json['keywords'] as List<dynamic>? ?? const []),
       );
 }

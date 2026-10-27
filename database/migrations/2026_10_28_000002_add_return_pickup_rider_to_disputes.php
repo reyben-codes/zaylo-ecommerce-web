@@ -35,6 +35,10 @@ return new class extends Migration
         if (! Schema::hasTable('disputes')) {
             return;
         }
+        // The index goes first: SQLite cannot drop a column that an index still uses.
+        if (Schema::hasIndex('disputes', 'disputes_return_rider_id_index')) {
+            Schema::table('disputes', fn (Blueprint $table) => $table->dropIndex('disputes_return_rider_id_index'));
+        }
         $existing = array_values(array_filter(self::COLUMNS, fn ($column) => Schema::hasColumn('disputes', $column)));
         if ($existing) {
             Schema::table('disputes', fn (Blueprint $table) => $table->dropColumn($existing));

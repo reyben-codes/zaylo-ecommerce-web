@@ -38,8 +38,9 @@ class MobileRiderDashboardController extends Controller
     /** The rider scanned a return slip at the buyer's door: the item is on its way to the hub. */
     public function scanReturn(Request $request): JsonResponse
     {
-        $data = $request->validate(['code' => 'required|string|max:100']);
-        $dispute = $this->returns->scan($request->user(), $data['code'])->load(['order.items', 'order.buyer']);
+        // A photo of the item collected is the proof of what the buyer returned (a 422 on "photo" without one).
+        $data = $request->validate(['code' => 'required|string|max:100'] + ChatPhotos::rules(), ChatPhotos::messages());
+        $dispute = $this->returns->scan($request->user(), $data['code'], $request->file('photo'))->load(['order.items', 'order.buyer']);
 
         return response()->json([
             'message' => 'Return picked up. Bring the item to your logistics hub.',

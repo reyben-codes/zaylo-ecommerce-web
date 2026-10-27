@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:zaylo_mobile/api/api_client.dart';
 import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
+import 'package:zaylo_mobile/components/return_steps.dart';
 import 'package:zaylo_mobile/components/file_picking.dart';
 import 'package:zaylo_mobile/components/layout.dart';
 import 'package:zaylo_mobile/models/support_models.dart';
@@ -442,23 +443,13 @@ class ReturnCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text('Return slip ${info.trackingNumber}', style: const TextStyle(fontSize: 12)),
         ],
+        if (info.next != null) ...[
+          const SizedBox(height: 14),
+          ReturnNextStep(text: info.next!, finished: info.steps.isNotEmpty && info.steps.every((step) => step.done)),
+        ],
         const SizedBox(height: 14),
-        for (final step in info.steps)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: Row(children: [
-              Icon(step.done ? Icons.check_circle : Icons.radio_button_unchecked,
-                  size: 18, color: step.done ? ZayloColors.success : ZayloColors.muted),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(step.label,
-                    style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: step.key == info.status ? FontWeight.w800 : FontWeight.w500,
-                        color: step.done ? ZayloColors.ink : ZayloColors.muted)),
-              ),
-            ]),
-          ),
+        ReturnSteps(steps: info.steps),
+        const SizedBox(height: 6),
         if (info.refundAmount != null)
           Text('Refunded ₱${info.refundAmount!.toStringAsFixed(2)}',
               style: TextStyle(fontWeight: FontWeight.w700, color: ZayloColors.success)),

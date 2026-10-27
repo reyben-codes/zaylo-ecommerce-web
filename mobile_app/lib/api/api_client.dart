@@ -66,6 +66,13 @@ class ApiClient {
   @protected
   String get accountPrefix => '/mobile';
 
+  /// Whose questions the help bot answers: buyer here, rider in [RiderApi].
+  @protected
+  String get faqRole => 'buyer';
+
+  /// The help bot's questions and answers (the same as on the website).
+  Future<FaqData> faq() async => FaqData.fromJson(await send('GET', '/mobile/faq', query: {'role': faqRole}));
+
   /// The whole support thread, oldest first. Opening it marks replies as read.
   Future<List<SupportMessage>> supportMessages() async =>
       ((await send('GET', '$accountPrefix/support'))['messages'] as List<dynamic>)

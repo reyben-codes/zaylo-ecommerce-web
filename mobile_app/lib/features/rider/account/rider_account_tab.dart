@@ -5,6 +5,7 @@ import 'package:zaylo_mobile/api/rider_api.dart';
 import 'package:zaylo_mobile/components/buttons.dart';
 import 'package:zaylo_mobile/components/complaints.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
+import 'package:zaylo_mobile/components/help_bot.dart';
 import 'package:zaylo_mobile/components/layout.dart';
 import 'package:zaylo_mobile/components/policies.dart';
 import 'package:zaylo_mobile/components/profile_photo.dart';
@@ -224,6 +225,21 @@ class _RiderAccountTabState extends State<RiderAccountTab> {
                 SectionCard(
                   padding: EdgeInsets.zero,
                   child: Column(children: [
+                    _Row(
+                      icon: Icons.smart_toy_outlined,
+                      label: 'Help bot',
+                      value: 'Answers to common rider questions',
+                      action: 'Ask',
+                      onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                        builder: (botContext) => HelpBotScreen(
+                          api: widget.api,
+                          onContactSupport: () {
+                            Navigator.of(botContext).pop();
+                            widget.onContactSupport();
+                          },
+                        ),
+                      )),
+                    ),
                     _Row(
                       icon: Icons.report_gmailerrorred_outlined,
                       label: 'Complaints',

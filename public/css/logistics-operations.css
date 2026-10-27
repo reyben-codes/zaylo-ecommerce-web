@@ -615,3 +615,54 @@
     align-items: baseline;
     color: var(--c-b42318);
 }
+
+/* Proof photos (delivery and return) as small thumbnails that open the full photo. */
+.proof-photo {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 6px;
+    color: var(--zaylo-ink, var(--c-1a1714));
+    font-size: .74rem;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.proof-photo img {
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--zaylo-border, var(--c-ece4db));
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+.proof-photo:hover span,
+.proof-photo:focus-visible span {
+    text-decoration: underline;
+}
+
+/* Receiving a return at the hub asks for a photo of the item. */
+.return-photo-form {
+    display: grid;
+    gap: 6px;
+    justify-items: start;
+}
+
+.return-photo-form__field {
+    display: grid;
+    gap: 4px;
+    color: var(--zaylo-muted, var(--c-6b5f54));
+    font-size: .74rem;
+    font-weight: 600;
+}
+
+.return-photo-form__field input {
+    max-width: 220px;
+    font-size: .74rem;
+}
+
+.parcel-result__tracker {
+    display: grid;
+    gap: 10px;
+    margin-top: 18px;
+}

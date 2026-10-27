@@ -127,5 +127,6 @@
     @include('partials.cart-animation')
     <script src="{{ asset('js/confirm-dialog.js') }}?v={{ filemtime(public_path('js/confirm-dialog.js')) }}" defer></script>
     <script src="{{ asset('js/print.js') }}?v={{ filemtime(public_path('js/print.js')) }}" defer></script>
+    @include('partials.faq-bot')
 </body>
 </html>

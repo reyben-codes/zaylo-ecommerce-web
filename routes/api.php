@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\FaqController;
 use App\Http\Controllers\MobileAccountController;
 use App\Http\Controllers\MobileAppVersionController;
 use App\Http\Controllers\MobileAuthenticationController;
@@ -48,6 +49,8 @@ Route::prefix('mobile')->name('mobile.')->middleware('throttle:60,1')->group(fun
     Route::get('/products/{product:slug}/reviews', [MobileStorefrontController::class, 'reviews'])->name('products.reviews');
     Route::get('/policies', [MobileStorefrontController::class, 'policies'])->name('policies');
     Route::get('/policies/{slug}', [MobileStorefrontController::class, 'policy'])->name('policies.show');
+    // The help bot's questions and answers (?role=buyer or rider).
+    Route::get('/faq', [FaqController::class, 'mobile'])->name('faq');
     Route::get('/logistics-partners', [MobileRiderAuthenticationController::class, 'partners'])->name('logistics-partners');
     // The rider sign-up form's partners and vehicle types (newer app builds use this path).
     Route::get('/rider/logistics-partners', [MobileRiderAuthenticationController::class, 'partners'])->name('rider.logistics-partners');

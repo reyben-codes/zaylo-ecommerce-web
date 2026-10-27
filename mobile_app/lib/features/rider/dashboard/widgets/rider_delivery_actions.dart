@@ -124,16 +124,31 @@ mixin RiderDeliveryActions<T extends StatefulWidget> on State<T> {
     await _sendReturnScan(code, item);
   }
 
+  /// Collecting a return needs a photo of the item as proof of what the buyer
+  /// returned. A slip scanned without knowing the return asks for the photo
+  /// when the server does (a "photo" field error), then sends the scan again.
   Future<void> _sendReturnScan(String code, RiderReturn? item) async {
-    setState(() => busyDeliveryId = item == null ? -1 : -item.id);
-    try {
-      final message = await riderApi.scanReturn(item?.trackingNumber ?? code);
-      if (mounted) showMessage(context, message);
-    } on ApiException catch (error) {
-      debugPrint('[ZAYLO] Return scan failed: ${error.debugDescription}');
-      if (mounted) showMessage(context, error.message);
-    } finally {
-      if (mounted) setState(() => busyDeliveryId = null);
+    const hint = 'Take a photo of the returned item as you collect it, as proof of what the buyer returned.';
+    var photo = item?.needsPhoto ?? false ? await _takePhoto(hint, 'A photo is needed to collect the return.') : null;
+    if ((item?.needsPhoto ?? false) && photo == null) return;
+    while (mounted) {
+      setState(() => busyDeliveryId = item == null ? -1 : -item.id);
+      try {
+        final message = await riderApi.scanReturn(item?.trackingNumber ?? code, photo: photo);
+        if (mounted) showMessage(context, message);
+      } on ApiException catch (error) {
+        debugPrint('[ZAYLO] Return scan failed: ${error.debugDescription}');
+        if (photo == null && error.fieldErrors.containsKey('photo') && mounted) {
+          setState(() => busyDeliveryId = null);
+          photo = await _takePhoto(hint, 'A photo is needed to collect the return.');
+          if (photo != null) continue;
+        } else if (mounted) {
+          showMessage(context, error.message);
+        }
+      } finally {
+        if (mounted) setState(() => busyDeliveryId = null);
+      }
+      break;
     }
     if (mounted) await reloadDeliveries();
   }
@@ -198,8 +213,14 @@ mixin RiderDeliveryActions<T extends StatefulWidget> on State<T> {
 
   /// Opens the camera for proof of delivery: the parcel with the recipient or
   /// at the door. Returns null when the rider backs out or the photo is unusable.
-  Future<File?> _takeDeliveryPhoto() async {
-    showMessage(context, 'Take a photo of the parcel with the recipient or at the door as proof of delivery.');
+  Future<File?> _takeDeliveryPhoto() => _takePhoto(
+        'Take a photo of the parcel with the recipient or at the door as proof of delivery.',
+        'A photo is needed to finish the delivery.',
+      );
+
+  /// Opens the camera after showing [hint]; [missing] is shown when the rider backs out.
+  Future<File?> _takePhoto(String hint, String missing) async {
+    showMessage(context, hint);
     final File? photo;
     try {
       final picked = await ImagePicker().pickImage(
@@ -216,7 +237,7 @@ mixin RiderDeliveryActions<T extends StatefulWidget> on State<T> {
     }
     if (!mounted) return null;
     if (photo == null) {
-      showMessage(context, 'A photo is needed to finish the delivery.');
+      showMessage(context, missing);
       return null;
     }
     final problem = uploadFileError(photo, extensions: const ['jpg', 'jpeg', 'png', 'webp']);

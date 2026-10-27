@@ -27,10 +27,18 @@
     @endif
 
     @foreach($steps as $step)
-        <form method="POST" action="{{ route('logistics.returns.scan', $case) }}">
+        @php $needsPhoto = $step === 'sorted' && \App\Models\Dispute::tracksReturnPhotos(); @endphp
+        <form method="POST" action="{{ route('logistics.returns.scan', $case) }}" @if($needsPhoto) enctype="multipart/form-data" class="return-photo-form" @endif>
             @csrf
             @method('PATCH')
             <input type="hidden" name="return_status" value="{{ $step }}">
+            {{-- Receiving the item needs a photo of it as it arrived: the hub's proof of what came back. --}}
+            @if($needsPhoto)
+                <label class="return-photo-form__field">
+                    <span>Photo of the item as it arrived</span>
+                    <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" capture="environment" required>
+                </label>
+            @endif
             <button type="submit" class="seller-button seller-button--small">
                 <i class="fas {{ ['sorted' => 'fa-boxes-packing', 'in_transit' => 'fa-truck-fast', 'received_by_seller' => 'fa-store'][$step] }}" aria-hidden="true"></i>
                 {{ \App\Services\ReturnPickups::LOGISTICS_LABELS[$step] }}

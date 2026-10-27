@@ -18,6 +18,9 @@ class RiderApi extends ApiClient {
   @override
   String get accountPrefix => '/mobile/rider';
 
+  @override
+  String get faqRole => 'rider';
+
   /// Rider accounts only; buyers are turned away by the server.
   Future<AuthResult> login(String email, String password) async =>
       AuthResult.fromJson(await send('POST', '/mobile/rider/login', body: {
@@ -84,9 +87,12 @@ class RiderApi extends ApiClient {
       ? await send('POST', '/mobile/rider/deliveries/scan', body: {'code': code.trim()})
       : await sendMultipart('/mobile/rider/deliveries/scan', fields: {'code': code.trim()}, files: {'photo': photo}));
 
-  /// Sends the code on a buyer's return slip when collecting the item; returns the server's message.
-  Future<String> scanReturn(String code) async =>
-      (await send('POST', '/mobile/rider/returns/scan', body: {'code': code.trim()}))['message'] as String;
+  /// Sends the code on a buyer's return slip when collecting the item, with a [photo] of the item as proof of
+  /// what was returned (without one the server answers with a "photo" field error); returns the server's message.
+  Future<String> scanReturn(String code, {File? photo}) async => (photo == null
+      ? await send('POST', '/mobile/rider/returns/scan', body: {'code': code.trim()})
+      : await sendMultipart('/mobile/rider/returns/scan', fields: {'code': code.trim()}, files: {'photo': photo}))['message']
+          as String;
 
   /// Proof of delivery: a [photo] of the parcel at the door. Returns the server's message.
   Future<String> uploadDeliveryPhoto(int id, File photo) async =>

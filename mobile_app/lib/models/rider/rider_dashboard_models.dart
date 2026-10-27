@@ -418,10 +418,18 @@ class RiderReturn {
     this.pickupSlot,
     this.reason,
     this.items = const [],
+    this.steps = const [],
+    this.needsPhoto = false,
   });
 
   final int id;
   final String trackingNumber;
+
+  /// Every step of the return, from the buyer's request to the refund.
+  final List<ReturnStep> steps;
+
+  /// Collecting the item needs a photo of it as proof of what the buyer returned.
+  final bool needsPhoto;
 
   /// scheduled (waiting at the buyer) or picked_up (on the way to the hub).
   final String status;
@@ -457,6 +465,10 @@ class RiderReturn {
         pickupSlot: json['pickup_slot'] as String?,
         reason: json['reason'] as String?,
         items: List<String>.from(json['items'] as List<dynamic>? ?? const []),
+        steps: (json['steps'] as List<dynamic>? ?? const [])
+            .map((step) => ReturnStep.fromJson(step as Map<String, dynamic>))
+            .toList(),
+        needsPhoto: json['needs_photo'] as bool? ?? false,
       );
 }
 

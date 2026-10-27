@@ -1,0 +1,142 @@
+/* A return, step by step (partials/return-process). Done steps are filled, the current one outlined. */
+
+.return-process {
+    display: grid;
+    gap: 16px;
+}
+
+.return-process__next {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin: 0;
+    padding: 12px 14px;
+    border: 1px solid var(--c-e5d8c9);
+    border-radius: 10px;
+    background: var(--c-fffaf3);
+    color: var(--c-644c37);
+    font-size: .86rem;
+    line-height: 1.5;
+}
+
+.return-process__next i {
+    margin-top: 3px;
+}
+
+.return-process__next.is-finished {
+    border-color: transparent;
+    background: var(--c-e9eee3);
+    color: var(--c-586747);
+}
+
+.return-process__steps {
+    display: grid;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.return-process__step {
+    position: relative;
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 12px;
+    padding-bottom: 18px;
+}
+
+/* The line joining one step to the next. */
+.return-process__step:not(:last-child)::before {
+    position: absolute;
+    top: 26px;
+    bottom: 0;
+    left: 13px;
+    width: 2px;
+    background: var(--c-ece4db);
+    content: "";
+}
+
+.return-process__step.is-done:not(:last-child)::before {
+    background: var(--c-70805b);
+}
+
+.return-process__dot {
+    display: grid;
+    width: 28px;
+    height: 28px;
+    place-items: center;
+    border: 2px solid var(--c-ece4db);
+    border-radius: 50%;
+    background: var(--c-ffffff);
+    color: var(--c-ece4db);
+    font-size: .62rem;
+}
+
+.return-process__step.is-done .return-process__dot {
+    border-color: var(--c-70805b);
+    background: var(--c-70805b);
+    color: var(--c-ffffff);
+}
+
+.return-process__step.is-current .return-process__dot {
+    border-color: var(--c-1a1714);
+    color: var(--c-1a1714);
+}
+
+.return-process__body {
+    display: grid;
+    gap: 2px;
+    padding-top: 3px;
+    color: var(--c-6b5f54);
+    font-size: .8rem;
+}
+
+.return-process__body strong {
+    color: var(--c-6b5f54);
+    font-size: .88rem;
+    font-weight: 600;
+}
+
+.return-process__step.is-done .return-process__body strong,
+.return-process__step.is-current .return-process__body strong {
+    color: var(--c-1a1714);
+}
+
+.return-process__step.is-current .return-process__body strong {
+    font-weight: 700;
+}
+
+.return-process__body time {
+    font-size: .74rem;
+}
+
+.return-process__photo {
+    display: block;
+    width: fit-content;
+    margin-top: 6px;
+    overflow: hidden;
+    border: 1px solid var(--c-ece4db);
+    border-radius: 10px;
+    line-height: 0;
+}
+
+.return-process__photo img {
+    width: 88px;
+    height: 88px;
+    object-fit: cover;
+}
+
+.return-process__photo:focus-visible {
+    outline: 2px solid var(--c-9a755e);
+    outline-offset: 2px;
+}
+
+/* Inside the case page's return card. */
+.return-timeline {
+    margin-top: 16px;
+}
+
+.return-timeline h3 {
+    margin: 0 0 10px;
+    font-size: .95rem;
+}
