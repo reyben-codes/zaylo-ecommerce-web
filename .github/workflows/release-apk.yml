@@ -5,8 +5,8 @@
 #   git push origin v1.0.1
 #
 # The app version comes from the tag (v1.0.1 -> 1.0.1), so pubspec.yaml does not need editing.
-# The APK is signed with the team's debug key (the DEBUG_KEYSTORE_BASE64 secret), the same key local
-# builds use: Google sign-in only accepts that key, and phones can only update an app signed with it.
+# The APK is signed with the team's debug key (the DEBUG_KEYSTORE_BASE64 secret). Phones can only update an app
+# signed with the same key, and Google sign-in only works for keys registered as Android OAuth clients (checked below).
 name: Release APK
 
 on:
@@ -53,12 +53,21 @@ jobs:
             exit 1
           fi
           echo "Keystore: $(stat -c %s ~/.android/debug.keystore) bytes (the team key is 2618)."
-          # The SHA-1 must match the one registered for Google sign-in (the team's key starts 76:70:DD).
           KEYTOOL_OUTPUT=$(keytool -list -v -keystore ~/.android/debug.keystore -storepass android 2>&1) || {
             echo "::error::DEBUG_KEYSTORE_BASE64 decodes to $(stat -c %s ~/.android/debug.keystore) bytes but is not the debug keystore (password 'android'): $(printf '%s' "$KEYTOOL_OUTPUT" | head -n 1)"
             exit 1
           }
-          printf '%s\n' "$KEYTOOL_OUTPUT" | grep 'SHA1:' | head -n 1
+          # Google sign-in only works when this SHA-1 is registered as an Android OAuth client in Google Cloud, so a
+          # different key stops the release instead of shipping an app whose Google button fails.
+          SHA1=$(printf '%s\n' "$KEYTOOL_OUTPUT" | grep 'SHA1:' | head -n 1 | awk '{print $2}')
+          echo "Signing key SHA-1: $SHA1"
+          case "$SHA1" in
+            20:4D:5D:DF:E5:29:63:1D:B7:9D:73:6D:FD:02:7D:53:4D:EC:5D:F9|76:70:DD:8F:BA:94:A9:5E:16:10:34:D3:11:69:A1:50:D3:B3:4B:37) ;;
+            *)
+              echo "::error::The signing key's SHA-1 ($SHA1) is not registered for Google sign-in. Add it as an Android OAuth client (package com.example.zaylo_mobile) in Google Cloud, then list it here."
+              exit 1
+              ;;
+          esac
 
       - run: flutter pub get
 
