@@ -31,17 +31,54 @@ class Dispute extends Model
         'rejected' => 'Rejected',
     ];
 
+    public const RETURN_TYPES = [
+        'return_refund' => 'Return and Refund',
+        'refund_only' => 'Refund Only',
+        'exchange' => 'Replacement / Exchange',
+    ];
+
+    public const RETURN_METHODS = [
+        'pickup' => 'Courier Pickup (Home Address)',
+        'dropoff' => 'Drop-off (Courier Branch / Hub)',
+    ];
+
+    public const RETURN_COURIERS = [
+        'zaylo_express' => 'ZAYLO Express',
+        'jnt_express' => 'J&T Express',
+        'flash_express' => 'Flash Express',
+    ];
+
     public const MAX_EVIDENCE = 4;
 
     public const MAX_EVIDENCE_KB = 5120;
 
-    protected $fillable = ['order_id', 'opened_by', 'resolved_by', 'status', 'reason', 'resolution', 'category', 'evidence', 'resolved_at'];
+    protected $fillable = [
+        'order_id', 'opened_by', 'resolved_by', 'status', 'reason', 'resolution',
+        'category', 'evidence', 'resolved_at',
+        'return_type', 'return_method', 'return_courier', 'pickup_date', 'pickup_slot',
+        'dropoff_location', 'dropoff_deadline', 'return_tracking_number', 'return_status',
+    ];
 
-    protected $casts = ['evidence' => 'array', 'resolved_at' => 'datetime'];
+    protected $casts = [
+        'evidence' => 'array',
+        'resolved_at' => 'datetime',
+        'pickup_date' => 'date',
+        'dropoff_deadline' => 'date',
+    ];
+
+    public function returnCourierName(): string
+    {
+        return self::RETURN_COURIERS[$this->return_courier] ?? 'ZAYLO Express';
+    }
+
+    public function returnMethodName(): string
+    {
+        return self::RETURN_METHODS[$this->return_method] ?? 'Pickup';
+    }
 
     private ?array $partiesCache = null;
 
-    /** Validation for a buyer filing a complaint, on the website and in the app. */
+    /** Validation for a buyer filing a complaint or return, on the website and in the app. */
     public static function filingRules(): array
     {
         return [
@@ -49,6 +86,12 @@ class Dispute extends Model
             'details' => ['required', 'string', 'min:20', 'max:2000'],
             'evidence' => ['nullable', 'array', 'max:'.self::MAX_EVIDENCE],
             'evidence.*' => ['file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:'.self::MAX_EVIDENCE_KB],
+            'return_type' => ['nullable', Rule::in(array_keys(self::RETURN_TYPES))],
+            'return_method' => ['nullable', Rule::in(array_keys(self::RETURN_METHODS))],
+            'return_courier' => ['nullable', Rule::in(array_keys(self::RETURN_COURIERS))],
+            'pickup_date' => ['nullable', 'date'],
+            'pickup_slot' => ['nullable', 'string', 'max:50'],
+            'dropoff_location' => ['nullable', 'string', 'max:255'],
         ];
     }
 

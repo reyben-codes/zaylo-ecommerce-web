@@ -13,8 +13,17 @@ class Order extends Model
         'order_number', 'user_id', 'seller_id', 'status', 'subtotal', 'shipping_fee',
         'total', 'currency', 'recipient_name', 'phone', 'notes', 'placed_at', 'completed_at', 'shipping_discount',
         'buyer_id', 'reference', 'total_minor', 'payment_method', 'payment_status',
-        'shipping_address', 'note', 'voucher_code', 'shipping_discount_minor',
+        'shipping_address', 'note', 'voucher_code', 'shipping_discount_minor', 'courier_choice',
     ];
+
+    public function courierName(): string
+    {
+        return match ($this->courier_choice) {
+            'jnt_express' => 'J&T Express',
+            'flash_express' => 'Flash Express',
+            default => 'ZAYLO Express',
+        };
+    }
 
     protected function casts(): array
     {
@@ -88,6 +97,27 @@ class Order extends Model
     public function getOrderNumberAttribute(mixed $value): string { return static::usesLegacySchema() ? (string) $value : (string) $this->reference; }
     public function getTotalAttribute(mixed $value): float { return static::usesLegacySchema() ? (float) $value : ((int) $this->total_minor / 100); }
     public function getShippingDiscountAttribute(mixed $value): float { return static::usesLegacySchema() ? (float) ($value ?? 0) : ((int) ($this->shipping_discount_minor ?? 0) / 100); }
+
+    public function formattedShippingAddress(): string
+    {
+        $raw = $this->shipping_address;
+        if (is_string($raw)) {
+            return $raw;
+        }
+        if (is_array($raw)) {
+            $parts = array_filter([
+                $raw['address_line_1'] ?? $raw['street'] ?? $raw['address'] ?? null,
+                $raw['barangay'] ?? null,
+                $raw['city'] ?? null,
+                $raw['province'] ?? null,
+                $raw['postal_code'] ?? null,
+            ]);
+
+            return ! empty($parts) ? implode(', ', $parts) : ($raw['recipient'] ?? 'Buyer address');
+        }
+
+        return 'Buyer registered address';
+    }
 
     public static function usesLegacySchema(): bool
     {

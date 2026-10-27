@@ -1,0 +1,36 @@
+# Keep secrets, local data and things the web server does not need out of the Docker image.
+
+# Secrets: Render gets these from its Environment settings, never from the image.
+.env
+.env.*
+!.env.example
+
+# Version control and editor files
+.git
+.github
+.idea
+.vscode
+
+# Rebuilt inside the image (composer install) or not used by the web server
+vendor
+node_modules
+mobile_app
+tests
+*.xlsx
+*.apk
+
+# Local runtime data: uploads, logs, caches and sessions from this computer
+storage/app/public/*
+!storage/app/public/.gitignore
+storage/app/private/*
+!storage/app/private/.gitignore
+storage/logs/*
+!storage/logs/.gitignore
+storage/framework/cache/data/*
+!storage/framework/cache/data/.gitignore
+storage/framework/sessions/*
+!storage/framework/sessions/.gitignore
+storage/framework/views/*
+!storage/framework/views/.gitignore
+bootstrap/cache/*.php
+public/storage

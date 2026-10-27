@@ -81,7 +81,8 @@ class PrintableDocumentsTest extends TestCase
         $this->get(route('seller.reports.pdf', ['from' => '2026-10-10', 'to' => '2026-10-01']))->assertSessionHasErrors('from');
 
         $admin = User::factory()->create(['role' => 'admin', 'status' => 'active']);
-        $this->actingAs($admin)->get(route('admin.reports'))->assertOk()->assertSee('data-print', false);
+        // Admin reports are printed from the "Download report" PDF instead of a print button.
+        $this->actingAs($admin)->get(route('admin.reports'))->assertOk()->assertDontSee('data-print', false)->assertSee(route('admin.reports.download'));
 
         [$owner] = $this->partner('Express Delivery');
         $this->actingAs($owner)->get(route('logistics.reports'))->assertOk()->assertSee('data-print', false);

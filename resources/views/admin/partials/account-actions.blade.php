@@ -6,11 +6,11 @@
     $partnerApplied = $account->role === 'logistics' && $account->awaitsLogisticsApproval() && $account->logisticsProvider?->hasApplication();
     $explains = $sellerApplied || $partnerApplied;
     // [status, label, icon, button variant, asks for a reason]
+    // Rejected accounts have no actions (AdminController::STATUS_CHANGES): the applicant must resubmit first.
     $actions = match ($account->status) {
         'pending' => [['active', 'Approve', 'fa-check', '', false], ['rejected', 'Reject', 'fa-xmark', ' seller-button--danger', true]],
         'active' => [['suspended', 'Suspend', 'fa-ban', ' seller-button--danger', true], ['deactivated', 'Deactivate', 'fa-power-off', ' seller-button--secondary', true]],
         'suspended', 'deactivated' => [['active', 'Reactivate', 'fa-rotate-left', ' seller-button--secondary', false]],
-        'rejected' => [['active', 'Approve', 'fa-check', ' seller-button--secondary', false]],
         default => [],
     };
     $reasonHints = [
@@ -22,6 +22,8 @@
 
 @if($account->is(auth()->user()))
     <span class="seller-cell-note">This is you</span>
+@elseif($account->status === 'rejected')
+    <span class="seller-cell-note">Rejected · can be reviewed again once they resubmit their application</span>
 @else
     <div class="review-actions">
         @foreach($actions as [$status, $label, $icon, $variant, $asksReason])

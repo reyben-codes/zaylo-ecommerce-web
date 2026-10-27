@@ -31,6 +31,7 @@
             'showList' => false,
             'fetchRoute' => 'support.messages',
             'sendRoute' => 'support.send',
+            'photos' => true,
             'emptyText' => 'Write to the ZAYLO support team.',
         ])
     </div>

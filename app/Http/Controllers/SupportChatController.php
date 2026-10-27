@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\SupportMessage;
 use App\Models\SupportThread;
 use App\Models\User;
+use App\Services\ChatPhotos;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Help & support: every user can message the ZAYLO admin team, and admins can message any user.
@@ -70,12 +72,19 @@ class SupportChatController extends Controller
         return response()->json(['messages' => $messages->map(fn ($message) => $this->payload($message, $request->user()))]);
     }
 
-    public function send(Request $request, SupportThread $thread)
+    public function send(Request $request, SupportThread $thread, ChatPhotos $photos)
     {
         abort_unless($thread->isOpenTo($request->user()), 403);
-        $data = $request->validate(['body' => ['required', 'string', 'max:2000']], ['body.required' => 'Type a message first.']);
-        $message = DB::transaction(function () use ($thread, $request, $data) {
-            $message = $thread->messages()->create(['sender_id' => $request->user()->id, 'body' => trim($data['body'])]);
+        $canAttach = Schema::hasColumn('support_messages', 'image_path');
+        // A message is text, a photo, or both.
+        $data = $request->validate(
+            ['body' => [$canAttach ? 'required_without:photo' : 'required', 'nullable', 'string', 'max:2000']] + ($canAttach ? ChatPhotos::rules() : []),
+            ['body.required' => 'Type a message first.', 'body.required_without' => 'Type a message or add a photo.'] + ChatPhotos::messages(),
+        );
+        $imagePath = $canAttach && $request->hasFile('photo') ? $photos->store($request->file('photo'), "support/{$thread->id}") : null;
+        $message = DB::transaction(function () use ($thread, $request, $data, $imagePath) {
+            $message = $thread->messages()->create(['sender_id' => $request->user()->id, 'body' => trim((string) ($data['body'] ?? ''))]
+                + ($imagePath ? ['image_path' => $imagePath] : []));
             $thread->update(['last_message_at' => $message->created_at]);
 
             return $message;
@@ -84,6 +93,18 @@ class SupportChatController extends Controller
         return $request->expectsJson()
             ? response()->json(['message' => $this->payload($message->load('sender'), $request->user())], 201)
             : back();
+    }
+
+    /** A photo from a support conversation; only its user and the admin team can open it. */
+    public function photo(Request $request, SupportThread $thread, SupportMessage $message)
+    {
+        abort_unless($thread->isOpenTo($request->user()) && (int) $message->support_thread_id === (int) $thread->id, 403);
+        abort_unless($message->image_path && Storage::disk('local')->exists($message->image_path), 404);
+
+        return Storage::disk('local')->response($message->image_path, 'photo.'.pathinfo($message->image_path, PATHINFO_EXTENSION), [
+            'Cache-Control' => 'private, max-age=86400',
+            'X-Content-Type-Options' => 'nosniff',
+        ], 'inline');
     }
 
     private function conversation(Request $request, Collection $threads, Collection $contacts): array
@@ -119,6 +140,7 @@ class SupportChatController extends Controller
         return [
             'id' => $message->id,
             'body' => $message->body,
+            'photo' => $message->image_path ? route('support.photo', [$message->support_thread_id, $message]) : null,
             'mine' => (int) $message->sender_id === (int) $viewer->id,
             // Users see one support team; admins see which admin answered.
             'sender' => $fromAdmin && ! $viewer->hasRole('admin') ? 'ZAYLO support' : $message->sender?->name,

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\DeliveryEvent;
+use App\Models\IdentityVerification;
 use App\Models\OrderStatusHistory;
 use App\Models\Product;
 use App\Models\User;
@@ -128,6 +129,26 @@ class BuyerNotificationFeed
                         'url' => route('buyer.orders'),
                         'action' => 'View orders',
                         'at' => $history->created_at,
+                    ]);
+                });
+        }
+
+        // The admin's decision on an uploaded ID (the ID form is on the account page).
+        if (Schema::hasTable('identity_verifications')) {
+            IdentityVerification::where('user_id', $buyer->id)->whereIn('status', ['approved', 'rejected'])
+                ->whereNotNull('reviewed_at')->where('reviewed_at', '>=', $cutoff)->latest('reviewed_at')->get()
+                ->each(function (IdentityVerification $check) use ($notifications) {
+                    $approved = $check->status === 'approved';
+                    $notifications->push([
+                        'key' => 'identity:'.$check->id.':'.$check->status,
+                        'type' => 'account',
+                        'title' => $approved ? 'Your ID was approved' : 'Your ID was not approved',
+                        'message' => $approved
+                            ? 'Your account is now verified.'
+                            : 'Please upload a clearer photo of a valid ID.'.($check->rejection_reason ? ' Reason: '.$check->rejection_reason : ''),
+                        'url' => route('buyer.account'),
+                        'action' => $approved ? 'View account' : 'Upload again',
+                        'at' => $check->reviewed_at,
                     ]);
                 });
         }

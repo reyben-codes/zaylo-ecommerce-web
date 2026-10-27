@@ -70,6 +70,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         );
       case 'voucher':
         ShopActions.showTab(context, 2);
+      case 'account':
+        // ID check results: the message says everything; tapping only marks it read.
+        break;
       default:
         Navigator.of(context).push(MaterialPageRoute(builder: (_) => const OrdersScreen()));
     }
@@ -113,6 +116,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           child: Icon(switch (item.type) {
                             'voucher' => Icons.confirmation_number_outlined,
                             'product' => Icons.new_releases_outlined,
+                            'account' => Icons.verified_user_outlined,
                             _ => Icons.local_shipping_outlined,
                           }, size: 20),
                         ),

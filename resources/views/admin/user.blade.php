@@ -6,6 +6,11 @@
     <link rel="stylesheet" href="{{ asset('css/admin-modules.css') }}?v={{ filemtime(public_path('css/admin-modules.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/disputes.css') }}?v={{ filemtime(public_path('css/disputes.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/activity-log.css') }}?v={{ filemtime(public_path('css/activity-log.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/document-viewer.css') }}?v={{ filemtime(public_path('css/document-viewer.css')) }}">
+@endpush
+
+@push('scripts')
+    <script src="{{ asset('js/document-viewer.js') }}?v={{ filemtime(public_path('js/document-viewer.js')) }}" defer></script>
 @endpush
 
 @section('content')
@@ -18,6 +23,9 @@
         </div>
         <div class="seller-page-heading__actions">
             <span class="role-pill account-status--{{ $account->status }}">{{ $statusLabels[$account->status] ?? Str::headline($account->status) }}</span>
+            @if($sellerStats['shopUrl'] ?? null)
+                <a href="{{ $sellerStats['shopUrl'] }}" target="_blank" rel="noopener" class="seller-button seller-button--secondary"><i class="fas fa-store" aria-hidden="true"></i> View shop</a>
+            @endif
             @unless($account->hasRole('admin'))
                 <form method="POST" action="{{ route('admin.chat.start') }}">
                     @csrf
@@ -33,6 +41,7 @@
             <section class="seller-panel">
                 <header class="seller-panel__header"><div><h2>Profile</h2></div></header>
                 <dl class="workspace-detail-list admin-profile">
+                    <div><dt>User ID</dt><dd><strong>#{{ $account->id }}</strong></dd></div>
                     <div><dt>Email</dt><dd>{{ $account->email }}{{ $account->email_verified_at ? '' : ' (not verified)' }}</dd></div>
                     <div><dt>Mobile</dt><dd>{{ $account->phone ?: '—' }}</dd></div>
                     <div><dt>Birthday</dt><dd>{{ $account->date_of_birth ? \Illuminate\Support\Carbon::parse($account->date_of_birth)->format('M j, Y').' (age '.\Illuminate\Support\Carbon::parse($account->date_of_birth)->age.')' : '—' }}</dd></div>
@@ -54,6 +63,42 @@
                         <div><dt>Application</dt><dd><a href="{{ route('admin.seller-applications.show', $account) }}" class="workspace-link">View application and documents</a></dd></div>
                     @endif
                 </dl>
+            </section>
+
+            <section class="seller-panel" aria-labelledby="user-docs-heading">
+                <header class="seller-panel__header">
+                    <div>
+                        <h2 id="user-docs-heading"><i class="fas fa-id-card" aria-hidden="true"></i> Documents &amp; Valid IDs</h2>
+                        <p>{{ count($userDocuments ?? []) }} {{ Str::plural('document', count($userDocuments ?? [])) }} on file &middot; Click to view in popup modal</p>
+                    </div>
+                </header>
+                <div class="seller-panel__body">
+                    @if(!empty($userDocuments) && count($userDocuments) > 0)
+                        <ul class="workspace-documents" data-document-gallery>
+                            @foreach($userDocuments as $doc)
+                                <li>
+                                    <div style="display:flex; flex-direction:column; gap:2px;">
+                                        <span><i class="fas fa-file-shield" aria-hidden="true"></i> <strong>{{ $doc['title'] }}</strong></span>
+                                        <span class="seller-cell-note">{{ $doc['category'] }} &middot; {{ $doc['date'] ?? 'Submitted' }} &middot; <span class="role-pill account-status--{{ $doc['status'] }}">{{ $doc['status_label'] }}</span></span>
+                                    </div>
+                                    <a href="{{ $doc['url'] }}" target="_blank" rel="noopener"
+                                       class="seller-button seller-button--small seller-button--secondary"
+                                       data-document-viewer
+                                       data-document-title="{{ $doc['title'] }} &middot; {{ $account->name }}"
+                                       data-document-type="{{ $doc['type'] }}">
+                                        <i class="fas fa-eye" aria-hidden="true"></i> View in modal
+                                    </a>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @else
+                        <div class="seller-empty" style="padding: 24px 16px;">
+                            <i class="fas fa-file-circle-xmark" aria-hidden="true"></i>
+                            <strong>No documents or IDs uploaded yet</strong>
+                            <span>When this user submits a valid government ID or registration papers, they will appear here ready for viewing.</span>
+                        </div>
+                    @endif
+                </div>
             </section>
 
             @if($buyerStats)
@@ -80,6 +125,39 @@
                         <div><dt>Sales</dt><dd>&#8369;{{ number_format($sellerStats['row']['sales'] ?? 0, 2) }}</dd></div>
                         <div><dt>Commission earned</dt><dd>&#8369;{{ number_format(($sellerStats['row']['earned'] ?? 0) + ($sellerStats['row']['settled'] ?? 0), 2) }}</dd></div>
                     </dl>
+                </section>
+
+                <section class="seller-panel" aria-labelledby="shop-products-heading">
+                    <header class="seller-panel__header">
+                        <div>
+                            <h2 id="shop-products-heading">Shop products</h2>
+                            <p>Every product, including ones buyers cannot see.{{ $sellerStats['shopUrl'] ? '' : ' The public shop page is offline while this account is not active.' }}</p>
+                        </div>
+                        @if($sellerStats['shopUrl'])
+                            <a href="{{ $sellerStats['shopUrl'] }}" target="_blank" rel="noopener" class="seller-link">Open shop page</a>
+                        @endif
+                    </header>
+                    @if($sellerStats['shopProducts']->isEmpty())
+                        <p class="admin-empty-inline">No products yet.</p>
+                    @else
+                        <ul class="admin-shop-products">
+                            @foreach($sellerStats['shopProducts'] as $item)
+                                @php $product = $item['product']; @endphp
+                                <li class="admin-shop-product">
+                                    <img src="{{ $item['image'] ?: asset('images/ZAYLO_ICON_DARK.png') }}" alt="" loading="lazy">
+                                    <div class="admin-shop-product__copy">
+                                        @if($item['state'][0] === 'live')
+                                            <a href="{{ route('products.show', $product) }}" target="_blank" rel="noopener" class="workspace-link">{{ $product->name }}</a>
+                                        @else
+                                            <strong>{{ $product->name }}</strong>
+                                        @endif
+                                        <span class="seller-cell-note">{{ $product->category_label }} · &#8369;{{ number_format((float) $product->price, 2) }} · {{ $item['stock'] }} in stock</span>
+                                    </div>
+                                    <span class="admin-shop-product__state admin-shop-product__state--{{ $item['state'][0] }}">{{ $item['state'][1] }}</span>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
                 </section>
             @endif
         </div>

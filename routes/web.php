@@ -13,6 +13,7 @@ use App\Http\Controllers\BuyerNotificationController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\PolicyController;
 use App\Http\Controllers\ProfilePhotoController;
+use App\Http\Controllers\PublicFileController;
 use App\Http\Controllers\ProductSaleController;
 use App\Http\Controllers\ComplianceWarningController;
 use App\Http\Controllers\CourierController;
@@ -30,6 +31,7 @@ use App\Http\Controllers\ShopController;
 use App\Http\Controllers\SortingCenterController;
 use App\Http\Controllers\SupportChatController;
 use App\Http\Controllers\WaybillController;
+use App\Http\Controllers\WorkspaceNotificationController;
 use App\Models\Product;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
@@ -55,6 +57,8 @@ Route::get('/', function () {
 
     return view('index', compact('newArrivals'));
 })->name('home');
+// Uploaded photos saved as "/storage/..." links: redirected to Cloudflare R2, or sent from storage/app/public.
+Route::get('/storage/{path}', PublicFileController::class)->where('path', '.*')->name('storage.public');
 // Shoppers on Android land here instead of the web store (App\Http\Middleware\RequireAndroidApp).
 Route::view('/get-the-app', 'app-download', ['downloadUrl' => config('marketplace.android_app.download_url')])->name('app.download');
 Route::get('/terms', [PolicyController::class, 'show'])->name('terms');
@@ -153,6 +157,9 @@ Route::middleware(['auth', 'verified', 'role:seller', 'nocache'])->prefix('selle
 
 Route::middleware(['auth', 'active', 'verified', 'role:seller', 'nocache'])->prefix('seller')->name('seller.')->group(function () {
     Route::get('/dashboard', [SellerController::class, 'dashboard'])->name('dashboard');
+    Route::get('/notifications', [WorkspaceNotificationController::class, 'index'])->name('notifications');
+    Route::post('/notifications/open', [WorkspaceNotificationController::class, 'open'])->name('notifications.open');
+    Route::post('/notifications/read-all', [WorkspaceNotificationController::class, 'markAllRead'])->name('notifications.read-all');
     Route::get('/products', [SellerController::class, 'products'])->name('products');
     Route::post('/products', [SellerController::class, 'storeProduct'])->name('products.store');
     Route::get('/products/create', [SellerController::class, 'createProduct'])->name('products.create');
@@ -213,6 +220,9 @@ Route::middleware(['auth', 'active', 'verified', 'role:sorting_center', 'nocache
 
 Route::middleware(['auth', 'active', 'verified', 'role:admin', 'nocache'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
+    Route::get('/notifications', [WorkspaceNotificationController::class, 'index'])->name('notifications');
+    Route::post('/notifications/open', [WorkspaceNotificationController::class, 'open'])->name('notifications.open');
+    Route::post('/notifications/read-all', [WorkspaceNotificationController::class, 'markAllRead'])->name('notifications.read-all');
     Route::get('/users', [AdminController::class, 'users'])->name('users');
     Route::patch('/users/{user}/status', [AdminController::class, 'updateUserStatus'])->name('users.status');
     Route::get('/registrations', [AdminController::class, 'registrations'])->name('registrations');
@@ -221,6 +231,7 @@ Route::middleware(['auth', 'active', 'verified', 'role:admin', 'nocache'])->pref
     Route::get('/logistics', [AdminController::class, 'logistics'])->name('logistics');
     Route::get('/logistics/{provider}', [AdminController::class, 'logisticsApplication'])->name('logistics.show');
     Route::get('/logistics/{provider}/documents/{document}', [AdminController::class, 'logisticsDocument'])->name('logistics.document');
+    Route::get('/riders/{rider}/documents/{document}', [AdminController::class, 'riderDocument'])->name('riders.document');
     Route::get('/identity', [AdminController::class, 'identity'])->name('identity');
     Route::get('/identity/{verification}/document', [AdminController::class, 'identityDocument'])->name('identity.document');
     Route::patch('/identity/{verification}', [AdminController::class, 'reviewIdentity'])->name('identity.review');
@@ -246,6 +257,7 @@ Route::middleware(['auth', 'active', 'verified', 'role:admin', 'nocache'])->pref
     Route::post('/commissions/record', [AdminFinanceController::class, 'recordCommissions'])->name('commissions.record');
     Route::post('/commissions/settle', [AdminFinanceController::class, 'settleCommissions'])->name('commissions.settle');
     Route::get('/reports', [AdminFinanceController::class, 'reports'])->name('reports');
+    Route::get('/reports/download', [AdminFinanceController::class, 'downloadReport'])->middleware('throttle:30,1')->name('reports.download');
     Route::get('/reports/{report}.pdf', [AdminFinanceController::class, 'reportPdf'])->whereIn('report', ['sales', 'commission'])->name('reports.pdf');
 
     Route::get('/settings', [AdminSettingsController::class, 'index'])->name('settings');
@@ -283,6 +295,7 @@ Route::middleware(['auth', 'active', 'verified', 'nocache'])->group(function () 
     Route::get('/support', [SupportChatController::class, 'user'])->middleware('role:buyer,seller,rider,logistics')->name('support');
     Route::get('/support/{thread}/messages', [SupportChatController::class, 'messages'])->middleware('throttle:120,1')->name('support.messages');
     Route::post('/support/{thread}', [SupportChatController::class, 'send'])->middleware('throttle:30,1')->name('support.send');
+    Route::get('/support/{thread}/messages/{message}/photo', [SupportChatController::class, 'photo'])->middleware('throttle:240,1')->name('support.photo');
 });
 
 // Pending and rejected logistics partners can still reach their application, so this group skips the active check.
@@ -293,6 +306,9 @@ Route::middleware(['auth', 'verified', 'role:logistics', 'nocache'])->prefix('lo
 
 Route::middleware(['auth', 'active', 'verified', 'role:logistics', 'nocache'])->prefix('logistics')->name('logistics.')->group(function () {
     Route::get('/dashboard', [LogisticsController::class, 'dashboard'])->name('dashboard');
+    Route::get('/notifications', [WorkspaceNotificationController::class, 'index'])->name('notifications');
+    Route::post('/notifications/open', [WorkspaceNotificationController::class, 'open'])->name('notifications.open');
+    Route::post('/notifications/read-all', [WorkspaceNotificationController::class, 'markAllRead'])->name('notifications.read-all');
     Route::get('/riders', [LogisticsController::class, 'riders'])->name('riders');
     Route::get('/riders/{rider}/documents/{document}', [LogisticsController::class, 'riderDocument'])->name('riders.document');
     Route::patch('/riders/{rider}', [LogisticsController::class, 'updateRider'])->middleware('throttle:60,1')->name('riders.update');
@@ -314,6 +330,7 @@ Route::middleware(['auth', 'active', 'verified', 'role:logistics', 'nocache'])->
     Route::patch('/parcels/{shipment}/pickup', [LogisticsOperationsController::class, 'pickup'])->middleware('throttle:120,1')->name('parcels.pickup');
     Route::patch('/parcels/{shipment}/sort', [LogisticsOperationsController::class, 'sort'])->middleware('throttle:120,1')->name('parcels.sort');
     Route::patch('/parcels/{shipment}/status', [LogisticsOperationsController::class, 'advance'])->middleware('throttle:120,1')->name('parcels.advance');
+    Route::patch('/returns/{dispute}/scan', [LogisticsOperationsController::class, 'updateReturnScan'])->middleware('throttle:120,1')->name('returns.scan');
     Route::post('/parcels/{shipment}/rider', [LogisticsOperationsController::class, 'assign'])->middleware('throttle:120,1')->name('parcels.assign');
     Route::post('/areas/rider', [LogisticsOperationsController::class, 'assignArea'])->middleware('throttle:60,1')->name('areas.assign');
     Route::get('/messages', [LogisticsChatController::class, 'logistics'])->name('messages');

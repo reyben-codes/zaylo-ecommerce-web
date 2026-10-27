@@ -17,11 +17,15 @@ use App\Models\User;
 use App\Notifications\AccountReviewed;
 use App\Notifications\SellerApplicationReviewed;
 use App\Services\MarketplaceLedger;
+use App\Support\DocumentPreview;
+use App\Support\Shop;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -52,6 +56,18 @@ class AdminController extends Controller
         'suspended' => 'suspended',
         'deactivated' => 'suspended',
         'rejected' => 'rejected',
+    ];
+
+    /**
+     * The status changes an admin may make, by current status. A rejection is final: the applicant has to fix and
+     * resubmit their application (which puts them back to pending) before anyone can approve them.
+     */
+    public const STATUS_CHANGES = [
+        'pending' => ['active', 'rejected'],
+        'active' => ['suspended', 'deactivated'],
+        'suspended' => ['active'],
+        'deactivated' => ['active'],
+        'rejected' => [],
     ];
 
     public function dashboard(MarketplaceLedger $ledger)
@@ -96,7 +112,12 @@ class AdminController extends Controller
                 $ledger = app(MarketplaceLedger::class);
                 $row = $ledger->bySeller($ledger->rows()->where('seller_id', $user->id))->first();
 
+                $shopId = Shop::idForSeller($user);
+
                 return [
+                    // The public page exists only while the seller is active; the product list works for any status.
+                    'shopUrl' => $shopId ? Shop::find($shopId)?->url() : null,
+                    'shopProducts' => $shopId ? $this->shopProducts($shopId) : collect(),
                     'shop' => MarketplaceLedger::sellerName($user),
                     'products' => Product::usesLegacySchema() ? Product::where('seller_id', $user->id)->count() : Product::whereIn('seller_id', $user->sellers()->pluck('id'))->count(),
                     'row' => $row,
@@ -105,6 +126,7 @@ class AdminController extends Controller
             'disputes' => Schema::hasTable('dispute_messages') ? Dispute::involving($user)->with('order')->latest()->limit(10)->get() : collect(),
             'warnings' => Schema::hasTable('compliance_warnings') ? ComplianceWarning::with('product')->where('seller_id', $user->id)->latest()->get() : collect(),
             'activity' => Schema::hasTable('activity_logs') ? ActivityLog::where('user_id', $user->id)->latest('created_at')->latest('id')->limit(8)->get() : collect(),
+            'userDocuments' => $this->userDocuments($user),
         ]);
     }
 
@@ -215,6 +237,19 @@ class AdminController extends Controller
         ]);
     }
 
+    /** A rider's uploaded license or OR/CR, shown in the document viewer on the rider's account page. */
+    public function riderDocument(Rider $rider, string $document)
+    {
+        abort_unless(array_key_exists($document, Rider::DOCUMENTS), 404);
+        $path = $rider->{$document.'_path'};
+        abort_unless($path && Storage::disk('local')->exists($path), 404);
+
+        return Storage::disk('local')->response($path, str_replace('/', '-', Rider::DOCUMENTS[$document]).'.'.pathinfo($path, PATHINFO_EXTENSION), [
+            'Cache-Control' => 'private, no-store',
+            'X-Content-Type-Options' => 'nosniff',
+        ], 'inline');
+    }
+
     public function logisticsDocument(LogisticsProvider $provider, string $document)
     {
         abort_unless(array_key_exists($document, LogisticsProvider::DOCUMENTS), 404);
@@ -238,10 +273,18 @@ class AdminController extends Controller
             // Rejected sellers and logistics partners see the reason, so it is required when one has applied.
             'reason' => [$application || $partnerApplied ? 'required_if:status,rejected' : 'nullable', 'nullable', 'string', 'max:500'],
         ], ['reason.required_if' => 'Give the reason for rejecting this application. The applicant sees it.']);
-        $deciding = in_array($user->status, ['pending', 'rejected'], true) && in_array($data['status'], ['active', 'rejected'], true);
+        $deciding = $user->status === 'pending' && in_array($data['status'], ['active', 'rejected'], true);
         $previous = $user->status;
 
         DB::transaction(function () use ($user, $data, $application) {
+            // Checked on the locked row, so an old page or two clicks at once cannot approve a rejected account.
+            $current = User::whereKey($user->id)->lockForUpdate()->value('status');
+            if (! in_array($data['status'], self::STATUS_CHANGES[$current] ?? [], true)) {
+                throw ValidationException::withMessages(['status' => $current === 'rejected'
+                    ? "{$user->name} was rejected. They can be reviewed again only after they fix and resubmit their application."
+                    : "{$user->name} is already ".Str::lower(self::STATUS_LABELS[$current] ?? $current).'. Refresh the page.']);
+            }
+
             $user->update([
                 'status' => $data['status'],
                 'approved_at' => $data['status'] === 'active' ? ($user->approved_at ?? now()) : null,
@@ -424,7 +467,104 @@ class AdminController extends Controller
             Schema::hasTable('logistics_providers') ? 'logisticsProvider' : null,
             Schema::hasTable('riders') ? 'rider.provider' : null,
             Schema::hasTable('seller_applications') ? 'sellerApplication' : null,
+            Schema::hasTable('identity_verifications') ? 'identityVerifications' : null,
             Schema::hasColumn('users', 'role') ? null : 'roles',
         ]));
+    }
+
+    /** Every product of a shop, newest first, with what buyers see: live, pending review, not approved, hidden or archived. */
+    private function shopProducts(int $shopId): Collection
+    {
+        $legacy = Product::usesLegacySchema();
+
+        return Product::where('seller_id', $shopId)->with($legacy ? ['images'] : ['images', 'variants'])->latest()->limit(60)->get()
+            ->map(fn (Product $product) => [
+                'product' => $product,
+                'image' => $product->image_url ?: $product->images->first()?->path,
+                'stock' => $legacy ? (int) $product->stock : (int) $product->variants->sum('stock'),
+                'state' => match (true) {
+                    $product->archived_at !== null => ['archived', 'Archived'],
+                    $product->is_pending_review => ['pending', 'Pending review'],
+                    $product->is_rejected => ['rejected', 'Not approved'],
+                    ! $product->is_active => ['hidden', 'Hidden'],
+                    default => ['live', 'Live'],
+                },
+            ]);
+    }
+
+    /** All uploaded identity verification and application documents for this user, ready for modal viewing. */
+    private function userDocuments(User $user): array
+    {
+        $documents = [];
+
+        // Buyer identity verification documents
+        if (Schema::hasTable('identity_verifications')) {
+            foreach ($user->identityVerifications()->latest()->get() as $iv) {
+                if (! empty($iv->document_path)) {
+                    $documents[] = [
+                        'category' => 'Identity Verification',
+                        'title' => $iv->id_type_label ?: 'Valid Government ID',
+                        'status' => $iv->status,
+                        'status_label' => ucfirst($iv->status),
+                        'date' => $iv->created_at?->timezone('Asia/Manila')->format('M j, Y'),
+                        'url' => route('admin.identity.document', $iv),
+                        'type' => DocumentPreview::type($iv->document_path),
+                    ];
+                }
+            }
+        }
+
+        // Seller application documents (field names from SellerApplication::DOCUMENTS).
+        if ($sellerApp = $user->sellerApplication) {
+            foreach (SellerApplication::DOCUMENTS as $field => $label) {
+                if (! empty($sellerApp->{$field.'_path'})) {
+                    $documents[] = [
+                        'category' => 'Seller Application',
+                        'title' => $label,
+                        'status' => $sellerApp->status,
+                        'status_label' => ucfirst($sellerApp->status),
+                        'date' => $sellerApp->submitted_at?->timezone('Asia/Manila')->format('M j, Y'),
+                        'url' => route('admin.seller-applications.document', [$user, $field]),
+                        'type' => DocumentPreview::type($sellerApp->{$field.'_path'}),
+                    ];
+                }
+            }
+        }
+
+        // Logistics partner documents (LogisticsProvider::DOCUMENTS).
+        if (Schema::hasTable('logistics_providers') && $provider = $user->logisticsProvider) {
+            foreach (LogisticsProvider::DOCUMENTS as $field => $label) {
+                if (! empty($provider->{$field.'_path'})) {
+                    $documents[] = [
+                        'category' => 'Logistics Partner',
+                        'title' => $label,
+                        'status' => $provider->status,
+                        'status_label' => ucfirst($provider->status),
+                        'date' => $provider->submitted_at?->timezone('Asia/Manila')->format('M j, Y'),
+                        'url' => route('admin.logistics.document', [$provider, $field]),
+                        'type' => DocumentPreview::type($provider->{$field.'_path'}),
+                    ];
+                }
+            }
+        }
+
+        // Rider application documents (Rider::DOCUMENTS): driver's license and vehicle OR/CR.
+        if (Schema::hasColumn('riders', 'license_document_path') && $rider = $user->rider) {
+            foreach (Rider::DOCUMENTS as $field => $label) {
+                if (! empty($rider->{$field.'_path'})) {
+                    $documents[] = [
+                        'category' => 'Rider Application'.($rider->provider ? ' · '.$rider->provider->name : ''),
+                        'title' => $label,
+                        'status' => $rider->status ?? 'pending',
+                        'status_label' => ucfirst($rider->status ?? 'pending'),
+                        'date' => $rider->created_at?->timezone('Asia/Manila')->format('M j, Y'),
+                        'url' => route('admin.riders.document', [$rider, $field]),
+                        'type' => DocumentPreview::type($rider->{$field.'_path'}),
+                    ];
+                }
+            }
+        }
+
+        return $documents;
     }
 }

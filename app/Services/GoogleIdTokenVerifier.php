@@ -32,7 +32,7 @@ class GoogleIdTokenVerifier
         }
         $claims = $response->json();
         if (! is_array($claims)
-            || ! in_array($claims['aud'] ?? null, $this->audiences(), true)
+            || ! $this->matchesAudience($claims)
             || ! in_array($claims['iss'] ?? null, self::ISSUERS, true)
             || (int) ($claims['exp'] ?? 0) <= now()->timestamp
             || ! is_string($claims['sub'] ?? null) || $claims['sub'] === ''
@@ -51,8 +51,53 @@ class GoogleIdTokenVerifier
         ]);
     }
 
+    /** Validates that the token was issued to this app's client IDs or project. */
+    public function matchesAudience(array $claims): bool
+    {
+        $audiences = $this->audiences();
+        if ($audiences === []) {
+            return false;
+        }
+
+        $candidates = [];
+        $rawAud = $claims['aud'] ?? null;
+        if (is_array($rawAud)) {
+            $candidates = array_merge($candidates, array_filter($rawAud, 'is_string'));
+        } elseif (is_string($rawAud) && $rawAud !== '') {
+            $candidates[] = $rawAud;
+        }
+
+        $azp = $claims['azp'] ?? null;
+        if (is_string($azp) && $azp !== '') {
+            $candidates[] = $azp;
+        }
+
+        // 1. Direct match against configured audiences
+        foreach ($candidates as $candidate) {
+            if (in_array($candidate, $audiences, true)) {
+                return true;
+            }
+        }
+
+        // 2. Project number prefix match
+        // All OAuth client IDs (Web, Android, iOS) under the same Google Cloud project share the project number prefix.
+        // Only a real project number counts, so a mistyped client ID setting cannot widen this to other projects.
+        foreach ($audiences as $configuredAud) {
+            if (! preg_match('/^(\d{6,})-[a-z0-9]+\.apps\.googleusercontent\.com$/D', $configuredAud, $match)) {
+                continue;
+            }
+            foreach ($candidates as $candidate) {
+                if (preg_match('/^'.$match[1].'-[a-z0-9]+\.apps\.googleusercontent\.com$/D', $candidate)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     /** Client IDs a token may be issued to: the website's, plus any extra app clients (GOOGLE_MOBILE_CLIENT_IDS). */
-    private function audiences(): array
+    public function audiences(): array
     {
         return array_values(array_filter(array_merge(
             [config('services.google.client_id')],

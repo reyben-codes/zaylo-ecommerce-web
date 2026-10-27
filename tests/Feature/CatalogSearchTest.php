@@ -60,6 +60,16 @@ class CatalogSearchTest extends TestCase
             ->assertSeeInOrder(['data-live-catalog-results', '<strong>1</strong> product found', 'Blue shoes'], false);
     }
 
+    public function test_the_home_page_and_catalog_search_bars_suggest_products_as_you_type(): void
+    {
+        foreach ([route('home'), route('products.index')] as $page) {
+            $this->get($page)->assertOk()
+                ->assertSee('data-live-search', false)
+                ->assertSee('id="live-search-results"', false)
+                ->assertSee('js/live-search.js', false);
+        }
+    }
+
     public function test_search_treats_wildcards_as_literal_text_and_escapes_html(): void
     {
         $matching = $this->product(['name' => '100% cotton_shoe']);

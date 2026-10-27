@@ -10,6 +10,7 @@ import 'package:zaylo_mobile/api/rider_api.dart';
 import 'package:zaylo_mobile/app.dart';
 import 'package:zaylo_mobile/auth/buyer/login_screen.dart';
 import 'package:zaylo_mobile/auth/google_auth.dart';
+import 'package:zaylo_mobile/auth/rider/rider_login_screen.dart';
 import 'package:zaylo_mobile/auth/rider/rider_registration_screen.dart';
 import 'package:zaylo_mobile/auth/rider/widgets/rider_terms_dialog.dart';
 import 'package:zaylo_mobile/auth/token_store.dart';
@@ -238,6 +239,26 @@ class FakeGoogleIdTokenSource implements GoogleIdTokenSource {
 /// Rider API that answers from memory, in the shape MobileRiderDashboardController returns.
 class FakeRiderApi extends RiderApi {
   FakeRiderApi() : super(baseUrl: 'http://fake.test/api');
+
+  /// ID tokens sent to [googleSignIn].
+  final googleTokens = <String>[];
+
+  @override
+  Future<AuthResult> googleSignIn(String idToken) async {
+    googleTokens.add(idToken);
+    if (idToken == 'rejected') {
+      throw ApiException.fromResponse(422, {
+        'errors': {
+          'google': ['No rider account uses this Google email. Register as a rider first, or sign in with your email and password.'],
+        },
+      });
+    }
+    return AuthResult.fromJson({
+      'message': 'Signed in with Google.',
+      'token': 'rider-google-session',
+      'user': {'id': 34, 'name': 'Jun Reyes', 'email': 'jun.rider@example.test', 'role': 'rider', 'google_linked': true},
+    });
+  }
 
   /// Steps sent to [updateDelivery] and [scanParcel], as "id:status" (and ":reason" for a failed attempt), and
   /// answers to new assignments as "accept:id" or "decline:id:reason".
@@ -1029,6 +1050,57 @@ void main() {
 
       expect(find.text('Continue with Google'), findsNothing);
       expect(find.text('SIGN IN'), findsOneWidget);
+    });
+  });
+
+  group('rider continue with Google', () {
+    late GoogleIdTokenSource original;
+    setUp(() => original = GoogleAuth.source);
+    tearDown(() => GoogleAuth.source = original);
+
+    Future<(FakeRiderApi, AppState)> openRiderLogin(WidgetTester tester, FakeGoogleIdTokenSource google) async {
+      GoogleAuth.source = google;
+      final rider = FakeRiderApi();
+      await pumpApp(tester, api: FakeApi());
+      tester.state<NavigatorState>(find.byType(Navigator).first)
+          .push(MaterialPageRoute(builder: (_) => RiderLoginScreen(api: rider)));
+      await tester.pumpAndSettle();
+      return (rider, AppScope.read(tester.element(find.byType(RiderLoginScreen))));
+    }
+
+    Future<void> tapGoogle(WidgetTester tester) async {
+      await tester.ensureVisible(find.text('Continue with Google'));
+      await tester.tap(find.text('Continue with Google'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('signs the rider in and opens the rider app', (tester) async {
+      final (rider, buyer) = await openRiderLogin(tester, FakeGoogleIdTokenSource());
+
+      await tapGoogle(tester);
+      expect(rider.googleTokens, ['google-id-token']);
+      expect(rider.token, 'rider-google-session');
+      expect(find.byType(RiderShell), findsOneWidget);
+      expect(find.byType(RiderLoginScreen), findsNothing);
+      expect(buyer.signedIn, isFalse, reason: 'the rider session never replaces a buyer session');
+    });
+
+    testWidgets('shows why the server refused and lets the rider pick another account', (tester) async {
+      final google = FakeGoogleIdTokenSource(token: 'rejected');
+      final (rider, _) = await openRiderLogin(tester, google);
+
+      await tapGoogle(tester);
+      expect(rider.token, isNull);
+      expect(find.textContaining('No rider account uses this Google email.'), findsOneWidget);
+      expect(find.byType(RiderLoginScreen), findsOneWidget);
+      expect(google.signOuts, 1);
+    });
+
+    testWidgets('is hidden until Google sign-in is configured for the build', (tester) async {
+      await openRiderLogin(tester, FakeGoogleIdTokenSource(available: false));
+
+      expect(find.text('Continue with Google'), findsNothing);
+      expect(find.text('SIGN IN AS RIDER'), findsOneWidget);
     });
   });
 

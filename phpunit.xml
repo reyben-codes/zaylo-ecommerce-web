@@ -28,6 +28,9 @@
         <env name="DB_URL" value=""/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
+        <!-- Tests never touch the real Cloudflare R2 buckets, even when .env has the R2 settings. -->
+        <env name="R2_PUBLIC_BUCKET" value="" force="true"/>
+        <env name="R2_PRIVATE_BUCKET" value="" force="true"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>

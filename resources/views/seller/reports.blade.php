@@ -19,16 +19,19 @@
         $maxCategory = max(1, (float) $categories->max('amount'));
     @endphp
 
-    @include('partials.print-header', ['title' => 'Sales report · '.$from->format('M j, Y').' – '.$to->format('M j, Y')])
+    @include('partials.print-header', ['title' => ($product ? $product['name'].' · ' : '').'Sales report · '.$from->format('M j, Y').' – '.$to->format('M j, Y')])
     <section class="seller-page-heading">
         <div>
             <p class="seller-eyebrow">Seller Center</p>
-            <h1>Sales reports</h1>
-            <p>Orders placed {{ $from->format('M j, Y') }} – {{ $to->format('M j, Y') }} (Philippine time).</p>
+            <h1>{{ $product ? $product['name'].' · sales' : 'Sales reports' }}</h1>
+            <p>{{ $product ? 'Sales and performance for "'.$product['name'].'"' : 'Shop sales across all products' }} for orders placed {{ $from->format('M j, Y') }} – {{ $to->format('M j, Y') }} (Philippine time).</p>
         </div>
         <div class="seller-page-heading__actions">
+            @if($product)
+                <a href="{{ route('seller.reports', ['from' => $from->format('Y-m-d'), 'to' => $to->format('Y-m-d')]) }}" class="seller-button seller-button--secondary"><i class="fas fa-boxes-stacked" aria-hidden="true"></i> All products</a>
+            @endif
             <button type="button" class="seller-button seller-button--secondary" data-print hidden><i class="fas fa-print" aria-hidden="true"></i> Print</button>
-            <a href="{{ route('seller.reports.pdf', ['from' => $from->format('Y-m-d'), 'to' => $to->format('Y-m-d')]) }}" class="seller-button" target="_blank" rel="noopener"><i class="fas fa-file-pdf" aria-hidden="true"></i> PDF report</a>
+            <a href="{{ route('seller.reports.pdf', array_filter(['from' => $from->format('Y-m-d'), 'to' => $to->format('Y-m-d'), 'product' => $product['id'] ?? null])) }}" class="seller-button" target="_blank" rel="noopener"><i class="fas fa-file-pdf" aria-hidden="true"></i> PDF report</a>
         </div>
     </section>
 
@@ -42,14 +45,25 @@
                 <label for="report-to">To</label>
                 <input type="date" id="report-to" name="to" value="{{ $to->format('Y-m-d') }}" required>
             </div>
+            <div class="seller-field">
+                <label for="report-product">Item</label>
+                <select id="report-product" name="product">
+                    <option value="">All products</option>
+                    @foreach($products as $id => $name)
+                        <option value="{{ $id }}" @selected(($product['id'] ?? null) === $id)>{{ $name }}</option>
+                    @endforeach
+                </select>
+            </div>
             <button type="submit" class="seller-button"><i class="fas fa-chart-line" aria-hidden="true"></i> Update report</button>
         </form>
         <nav class="report-presets" aria-label="Quick date ranges">
             @foreach($presets as $label => [$presetFrom, $presetTo])
                 @php
                     $active = $presetFrom->isSameDay($from) && $presetTo->isSameDay($to);
+                    $presetParams = ['from' => $presetFrom->format('Y-m-d'), 'to' => $presetTo->format('Y-m-d')];
+                    if ($product) $presetParams['product'] = $product['id'];
                 @endphp
-                <a href="{{ route('seller.reports', ['from' => $presetFrom->format('Y-m-d'), 'to' => $presetTo->format('Y-m-d')]) }}"
+                <a href="{{ route('seller.reports', $presetParams) }}"
                    class="report-preset{{ $active ? ' is-active' : '' }}" @if($active) aria-current="true" @endif>{{ $label }}</a>
             @endforeach
         </nav>

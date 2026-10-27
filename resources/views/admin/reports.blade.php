@@ -10,47 +10,76 @@
     @php
         $maxSales = max(1, (float) $series->max('sales'));
         $percent = rtrim(rtrim(number_format($rate * 100, 2), '0'), '.');
+        $scopeTitle = $seller ? $seller['name'] : 'Marketplace';
+        if ($product) {
+            $scopeTitle .= ' · '.$product['name'];
+        }
     @endphp
-    @include('partials.print-header', ['title' => 'Marketplace reports · '.$range['label']])
+    @include('partials.print-header', ['title' => $scopeTitle.' reports · '.$range['label']])
     <section class="seller-page-heading">
         <div>
             <p class="seller-eyebrow">Finance</p>
-            <h1>Reports</h1>
-            <p>Marketplace sales and platform commission for orders placed {{ $range['label'] }} (Philippine time).</p>
+            <h1>{{ $scopeTitle.' · reports' }}</h1>
+            <p>{{ $seller ? 'Sales and commission for '.$seller['name'] : 'Marketplace sales and platform commission across all sellers' }}{{ $product ? ' for "'.$product['name'].'"' : '' }} for orders placed {{ $range['label'] }} (Philippine time).</p>
         </div>
         <div class="seller-page-heading__actions">
-            <button type="button" class="seller-button seller-button--secondary" data-print hidden><i class="fas fa-print" aria-hidden="true"></i> Print</button>
-            <a href="{{ route('admin.reports.pdf', ['report' => 'sales', 'from' => $range['from'], 'to' => $range['to']]) }}" class="seller-button"><i class="fas fa-file-pdf" aria-hidden="true"></i> Sales summary PDF</a>
-            <a href="{{ route('admin.reports.pdf', ['report' => 'commission', 'from' => $range['from'], 'to' => $range['to']]) }}" class="seller-button seller-button--secondary"><i class="fas fa-file-pdf" aria-hidden="true"></i> Commission PDF</a>
+            @if($product)
+                <a href="{{ route('admin.reports', array_filter(['from' => $range['from'], 'to' => $range['to'], 'seller' => $seller['id'] ?? null])) }}" class="seller-button seller-button--secondary"><i class="fas fa-boxes-stacked" aria-hidden="true"></i> All items</a>
+            @endif
+            @if($seller)
+                <a href="{{ route('admin.reports', array_filter(['from' => $range['from'], 'to' => $range['to'], 'product' => $product['id'] ?? null])) }}" class="seller-button seller-button--secondary"><i class="fas fa-users" aria-hidden="true"></i> All sellers</a>
+            @endif
+            {{-- Reports are printed or saved only from "Download report" below, after choosing the options. --}}
         </div>
     </section>
 
     <section class="seller-panel admin-filter-panel">
-        @include('admin.partials.date-range', ['action' => route('admin.reports'), 'range' => $range])
+        @include('admin.partials.date-range', ['action' => route('admin.reports'), 'range' => $range, 'sellers' => $sellers, 'seller' => $seller, 'products' => $products, 'product' => $product])
     </section>
 
-    <section class="seller-stat-grid" aria-label="Sales summary">
-        <div class="seller-stat">
-            <span class="seller-stat__label"><i class="fas fa-peso-sign" aria-hidden="true"></i> Gross sales</span>
-            <strong class="seller-stat__value">&#8369;{{ number_format($summary['gross'], 2) }}</strong>
-            <span class="seller-stat__note">Merchandise in non-cancelled orders</span>
-        </div>
-        <div class="seller-stat">
-            <span class="seller-stat__label"><i class="fas fa-receipt" aria-hidden="true"></i> Orders</span>
-            <strong class="seller-stat__value">{{ number_format($summary['orders']) }}</strong>
-            <span class="seller-stat__note">{{ $summary['completedOrders'] }} completed · {{ $summary['cancelled'] }} cancelled</span>
-        </div>
-        <div class="seller-stat">
-            <span class="seller-stat__label"><i class="fas fa-basket-shopping" aria-hidden="true"></i> Average order</span>
-            <strong class="seller-stat__value">&#8369;{{ number_format($summary['average'], 2) }}</strong>
-            <span class="seller-stat__note">Including shipping</span>
-        </div>
-        <div class="seller-stat">
-            <span class="seller-stat__label"><i class="fas fa-percent" aria-hidden="true"></i> Commission earned</span>
-            <strong class="seller-stat__value">&#8369;{{ number_format($summary['commissionEarned'], 2) }}</strong>
-            <span class="seller-stat__note">{{ $percent }}% of completed sales</span>
-        </div>
+    <section class="seller-panel admin-download-panel">
+        <header class="seller-panel__header"><div><h2>Download report</h2><p>Choose the report, the seller, specific item, and dates, then download it as a PDF.</p></div></header>
+        <form method="GET" action="{{ route('admin.reports.download') }}" class="seller-filter-bar admin-range">
+            <div class="seller-field">
+                <label class="seller-field__label" for="download-report">Report</label>
+                <select id="download-report" name="report">
+                    <option value="sales">Sales summary</option>
+                    <option value="commission">Commission report</option>
+                </select>
+            </div>
+            <div class="seller-field">
+                <label class="seller-field__label" for="download-seller">Seller</label>
+                <select id="download-seller" name="seller">
+                    <option value="">All sellers</option>
+                    @foreach($sellers as $id => $name)
+                        <option value="{{ $id }}" @selected(($seller['id'] ?? null) === $id)>{{ $name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="seller-field">
+                <label class="seller-field__label" for="download-product">Item</label>
+                <select id="download-product" name="product">
+                    <option value="">All items</option>
+                    @foreach($products as $id => $name)
+                        <option value="{{ $id }}" @selected(($product['id'] ?? null) === $id)>{{ $name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="seller-field">
+                <label class="seller-field__label" for="download-from">From</label>
+                <input type="date" id="download-from" name="from" value="{{ $range['from'] }}" max="{{ now('Asia/Manila')->toDateString() }}">
+            </div>
+            <div class="seller-field">
+                <label class="seller-field__label" for="download-to">To</label>
+                <input type="date" id="download-to" name="to" value="{{ $range['to'] }}" max="{{ now('Asia/Manila')->toDateString() }}">
+            </div>
+            <button type="submit" class="seller-button seller-button--small"><i class="fas fa-file-arrow-down" aria-hidden="true"></i> Download PDF</button>
+            @error('from')<p class="seller-field__error" role="alert">{{ $message }}</p>@enderror
+            @error('report')<p class="seller-field__error" role="alert">{{ $message }}</p>@enderror
+        </form>
     </section>
+
+    @include('admin.partials.money-summary')
 
     <section class="seller-panel">
         <header class="seller-panel__header"><div><h2>Sales over time</h2><p>Merchandise sales per {{ $monthly ? 'month' : 'day' }}.</p></div></header>
@@ -78,12 +107,12 @@
             <header class="seller-panel__header"><div><h2>Top sellers</h2><p>By sales in this period.</p></div></header>
             <div class="seller-table-wrap">
                 <table class="seller-table workspace-table admin-money">
-                    <thead><tr><th>Seller</th><th>Orders</th><th>Sales</th><th>Commission</th></tr></thead>
+                    <thead><tr><th>Seller</th><th>Gross</th><th>Net</th><th>Commission</th><th>Orders</th></tr></thead>
                     <tbody>
-                        @forelse($bySeller->take(10) as $seller)
-                            <tr><td>{{ $seller['seller'] }}</td><td>{{ $seller['orders'] }}</td><td>&#8369;{{ number_format($seller['sales'], 2) }}</td><td>&#8369;{{ number_format($seller['earned'] + $seller['settled'], 2) }}</td></tr>
+                        @forelse($bySeller->take(10) as $shop)
+                            <tr><td>{{ $shop['seller'] }}</td><td>&#8369;{{ number_format($shop['sales'], 2) }}</td><td>&#8369;{{ number_format($shop['net'], 2) }}</td><td>&#8369;{{ number_format($shop['commission'], 2) }}</td><td>{{ $shop['orders'] }}</td></tr>
                         @empty
-                            <tr><td colspan="4"><p class="admin-empty-inline">No sales.</p></td></tr>
+                            <tr><td colspan="5"><p class="admin-empty-inline">No sales.</p></td></tr>
                         @endforelse
                     </tbody>
                 </table>

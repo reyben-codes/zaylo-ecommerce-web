@@ -48,6 +48,23 @@ class ShopPageTest extends TestCase
         $this->get('/shops/linen-house')->assertNotFound();
     }
 
+    public function test_shop_product_cards_show_how_many_are_in_stock(): void
+    {
+        $this->product('Linen Sheet', 1200, ['home_living']);
+        $soldOut = $this->product('Linen Napkin', 150, ['home_living']);
+        $soldOut->update(['stock' => 0]);
+        $admin = User::factory()->create(['role' => 'admin', 'status' => 'active']);
+
+        // The admin opens the shop from the account page; buyers and guests see the same counts.
+        foreach ([null, $admin] as $viewer) {
+            ($viewer ? $this->actingAs($viewer) : $this)->get(route('shops.show', $this->shopId))->assertOk()
+                ->assertSeeInOrder(['Linen Sheet', '5 in stock'])
+                ->assertSeeInOrder(['Linen Napkin', 'Currently sold out']);
+        }
+        $this->assertSame(5, Product::where('name', 'Linen Sheet')->first()->available_stock);
+        $this->assertSame(0, $soldOut->fresh()->available_stock);
+    }
+
     public function test_shops_of_sellers_who_are_not_active_are_hidden(): void
     {
         $this->seller->update(['status' => 'suspended']);

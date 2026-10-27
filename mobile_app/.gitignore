@@ -5,4 +5,4 @@ build/
 .flutter-plugins
 .flutter-plugins-dependencies
 .packages
-pubspec.lock
+# pubspec.lock is committed: the release build on GitHub must use the same package versions as local builds.

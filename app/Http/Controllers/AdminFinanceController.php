@@ -2,10 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Product;
 use App\Services\MarketplaceLedger;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -28,10 +32,12 @@ class AdminFinanceController extends Controller
     {
         [$from, $to, $range] = $this->range($request, defaultDays: 90);
         $state = $request->validate(['state' => ['nullable', Rule::in(array_keys(self::COMMISSION_STATES))]])['state'] ?? null;
-        $rows = $this->ledger->rows($from, $to);
+        [$rows, $seller, $sellers] = $this->forSeller($request, $this->ledger->rows($from, $to));
 
         return view('admin.commissions', [
             'range' => $range,
+            'seller' => $seller,
+            'sellers' => $sellers,
             'rate' => MarketplaceLedger::rate(),
             'summary' => $this->ledger->summary($rows),
             'bySeller' => $this->ledger->bySeller($rows),
@@ -61,8 +67,25 @@ class AdminFinanceController extends Controller
     public function reports(Request $request)
     {
         [$from, $to, $range] = $this->range($request, defaultDays: 30);
+        // Every seller who has had an order, so a report can be downloaded for any of them and any dates.
+        [$rows, $seller, $sellers] = $this->forSeller($request, $this->ledger->rows($from, $to), $this->ledger->rows());
+        [$rows, $product, $products] = $this->forProduct($request, $rows, $seller['id'] ?? null);
 
-        return view('admin.reports', $this->report($from, $to) + ['range' => $range]);
+        return view('admin.reports', $this->report($from, $to, $rows) + [
+            'range' => $range,
+            'seller' => $seller,
+            'sellers' => $sellers,
+            'product' => $product,
+            'products' => $products,
+        ]);
+    }
+
+    /** The "Download report" form on the Reports page: the chosen report, seller, item and dates as a PDF. */
+    public function downloadReport(Request $request)
+    {
+        $report = $request->validate(['report' => ['required', Rule::in(['sales', 'commission'])]])['report'];
+
+        return $this->reportPdf($request, $report);
     }
 
     /** The sales summary or commission report as a PDF. */
@@ -70,9 +93,13 @@ class AdminFinanceController extends Controller
     {
         abort_unless(in_array($report, ['sales', 'commission'], true), 404);
         [$from, $to, $range] = $this->range($request, defaultDays: 30);
-        $data = $this->report($from, $to) + [
+        [$rows, $seller] = $this->forSeller($request, $this->ledger->rows($from, $to), $this->ledger->rows());
+        [$rows, $product, $products] = $this->forProduct($request, $rows, $seller['id'] ?? null);
+        $data = $this->report($from, $to, $rows) + [
             'range' => $range,
             'report' => $report,
+            'seller' => $seller,
+            'product' => $product,
             'generatedAt' => now(MarketplaceLedger::TIMEZONE),
             'generatedBy' => $request->user()->name,
         ];
@@ -83,12 +110,60 @@ class AdminFinanceController extends Controller
         $canvas = $dompdf->getCanvas();
         $canvas->page_text($canvas->get_width() - 90, $canvas->get_height() - 24, 'Page {PAGE_NUM} of {PAGE_COUNT}', $dompdf->getFontMetrics()->getFont('DejaVu Sans'), 7, [0.42, 0.37, 0.33]);
 
-        return $pdf->download("zaylo-{$report}-report-{$range['from']}-to-{$range['to']}.pdf");
+        $shop = $seller ? '-'.Str::slug($seller['name']) : '';
+        $item = $product ? '-'.Str::slug($product['name']) : '';
+
+        return $pdf->download("zaylo-{$report}-report{$shop}{$item}-{$range['from']}-to-{$range['to']}.pdf");
     }
 
-    private function report(Carbon $from, Carbon $to): array
+    /**
+     * Filters rows by a specific product/item when ?product= is passed, and returns the available products list.
+     *
+     * @return array{0: Collection, 1: array{id: int, name: string}|null, 2: Collection<int, string>}
+     */
+    private function forProduct(Request $request, Collection $rows, ?int $sellerId = null): array
     {
-        $rows = $this->ledger->rows($from, $to);
+        $productsQuery = Product::query()->when($sellerId, fn ($q) => $q->where('seller_id', $sellerId));
+        $products = $productsQuery->orderBy('name')->pluck('name', 'id');
+        $id = $request->validate(['product' => ['nullable', 'integer']])['product'] ?? null;
+
+        if ($id === null) {
+            return [$rows, null, $products];
+        }
+
+        $id = (int) $id;
+        $name = Product::find($id)?->name ?? $products->get($id, 'Product #'.$id);
+        $orderIds = DB::table('order_items')->where('product_id', $id)->pluck('order_id');
+        $filtered = $rows->whereIn('order_id', $orderIds)->values();
+
+        return [$filtered, ['id' => $id, 'name' => $name], $products->put($id, $name)->sort()];
+    }
+
+    /**
+     * One seller's rows when ?seller= names a shop (the individual report), else every seller's. The picker lists the
+     * sellers in $all (default: the rows themselves).
+     *
+     * @return array{0: Collection, 1: array{id: int, name: string}|null, 2: Collection<int, string>}
+     */
+    private function forSeller(Request $request, Collection $rows, ?Collection $all = null): array
+    {
+        $sellers = ($all ?? $rows)->whereNotNull('seller_id')->mapWithKeys(fn ($row) => [$row['seller_id'] => $row['seller']])->sort();
+        $id = $request->validate(['seller' => ['nullable', 'integer']])['seller'] ?? null;
+        if ($id === null) {
+            return [$rows, null, $sellers];
+        }
+
+        $id = (int) $id;
+        // A shop with no orders in the period stays selected in the picker. (seller_id is a user on the deployed
+        // schema and a shop on the newer one, so it is not looked up by name.)
+        $name = $sellers->get($id, 'Seller #'.$id);
+
+        return [$rows->where('seller_id', $id)->values(), ['id' => $id, 'name' => $name], $sellers->put($id, $name)->sort()];
+    }
+
+    private function report(Carbon $from, Carbon $to, ?Collection $rows = null): array
+    {
+        $rows ??= $this->ledger->rows($from, $to);
 
         return [
             'rate' => MarketplaceLedger::rate(),

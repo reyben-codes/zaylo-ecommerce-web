@@ -61,6 +61,74 @@
 
             <p class="order-status-message">{{ $statusMessages[$order->status] ?? 'Your order status has been updated.' }}</p>
 
+            <div class="order-delivery-truck-banner" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; margin:10px 0; font-size:.84rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                    <div>
+                        <span style="color:#64748b; font-size:.78rem; text-transform:uppercase; letter-spacing:.03em; font-weight:600;">Delivery Courier Truck</span>
+                        <p style="margin:2px 0 0; font-weight:600; color:#1e293b;">
+                            <i class="fas fa-truck-moving" aria-hidden="true" style="color:#0284c7;"></i> {{ $order->courierName() }}
+                        </p>
+                    </div>
+                    <div style="text-align:right;">
+                        <span style="color:#64748b; font-size:.78rem; text-transform:uppercase; letter-spacing:.03em; font-weight:600;">Waiting Time &amp; Arrival Window</span>
+                        <p style="margin:2px 0 0; color:#0f766e; font-weight:600;">
+                            <i class="fas fa-clock" aria-hidden="true"></i>
+                            @if(in_array($order->status, ['placed', 'confirmed', 'processing'], true))
+                                Est. arrival {{ $order->placed_at ? $order->placed_at->addDays(3)->format('M j') . ' – ' . $order->placed_at->addDays(5)->format('M j') : '3–5 days' }}
+                            @elseif(in_array($order->status, ['ready_for_pickup', 'assigned', 'picked_up', 'in_transit', 'out_for_delivery'], true))
+                                Out on the road &middot; ETA {{ $order->placed_at ? $order->placed_at->addDays(2)->format('M j') : '1–2 days' }}
+                            @elseif($order->status === 'completed')
+                                Delivered {{ $order->shipment?->delivered_at?->format('M j, Y') ?? $order->updated_at?->format('M j, Y') }}
+                            @else
+                                {{ ucfirst($order->status) }}
+                            @endif
+                        </p>
+                    </div>
+                </div>
+
+                @php
+                    $timeline = [
+                        ['key' => 'placed', 'label' => 'Placed', 'icon' => 'fa-clipboard-check'],
+                        ['key' => 'processing', 'label' => 'Preparing', 'icon' => 'fa-box'],
+                        ['key' => 'picked_up', 'label' => 'Truck Pickup', 'icon' => 'fa-truck-ramp-box'],
+                        ['key' => 'in_transit', 'label' => 'In Transit', 'icon' => 'fa-truck-fast'],
+                        ['key' => 'completed', 'label' => 'Delivered', 'icon' => 'fa-house-circle-check'],
+                    ];
+                    $statusRanks = [
+                        'placed' => 1,
+                        'confirmed' => 2,
+                        'processing' => 2,
+                        'ready_for_pickup' => 2,
+                        'assigned' => 3,
+                        'picked_up' => 3,
+                        'in_transit' => 4,
+                        'out_for_delivery' => 4,
+                        'completed' => 5,
+                    ];
+                    $currentRank = $statusRanks[$order->status] ?? 1;
+                @endphp
+                <div class="order-timeline-bar" style="display:grid; grid-template-columns: repeat(5, 1fr); gap:6px; margin-top:12px; text-align:center;">
+                    @foreach($timeline as $idx => $step)
+                        @php $isStepActive = $currentRank >= ($idx + 1); @endphp
+                        <div style="padding:6px 4px; border-radius:6px; background:{{ $isStepActive ? '#ecfdf5' : '#f1f5f9' }}; border:1px solid {{ $isStepActive ? '#6ee7b7' : '#cbd5e1' }}; color:{{ $isStepActive ? '#047857' : '#94a3b8' }}; font-size:.72rem;">
+                            <i class="fas {{ $step['icon'] }}" aria-hidden="true"></i>
+                            <div style="font-weight:{{ $isStepActive ? '600' : 'normal' }}; margin-top:2px;">{{ $step['label'] }}</div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+
+            <details class="order-handover-scan" style="margin:8px 0; font-size:.82rem;">
+                <summary style="cursor:pointer; color:#0284c7; font-weight:600;"><i class="fas fa-barcode" aria-hidden="true"></i> Show delivery handover barcode for courier scan</summary>
+                <div style="padding:12px; background:#fff; border:1px solid #e2e8f0; border-radius:8px; margin-top:6px; text-align:center;">
+                    <p style="margin:0 0 6px; color:#475569; font-size:.78rem;">Courier truck driver can scan this barcode upon doorstep delivery</p>
+                    <div style="display:inline-block; max-width:100%; overflow-x:auto;">
+                        {!! \App\Support\Code128::svg($order->order_number, 44, 2) !!}
+                    </div>
+                    <p style="margin:2px 0 0; font-family:monospace; font-weight:bold; letter-spacing:1px;">{{ $order->order_number }}</p>
+                </div>
+            </details>
+
             <div class="order-items">
                 @foreach($order->items as $item)
                     <div class="summary-row">
@@ -98,7 +166,16 @@
                 @if($order->relationLoaded('disputes'))
                     @php $complaint = $order->disputes->first(); @endphp
                     @if($complaint)
-                        <a class="text-button" href="{{ route('disputes.show', $complaint) }}"><i class="fas fa-flag" aria-hidden="true"></i> Complaint: {{ $complaint->status_label }}</a>
+                        <a class="text-button" href="{{ route('disputes.show', $complaint) }}" style="color:#0284c7; font-weight:600;">
+                            <i class="fas fa-rotate-left" aria-hidden="true"></i> Return / Refund: {{ $complaint->return_status ? ucfirst(str_replace('_', ' ', $complaint->return_status)) : $complaint->status_label }}
+                            @if($complaint->return_tracking_number)
+                                ({{ $complaint->return_tracking_number }})
+                            @endif
+                        </a>
+                    @elseif($order->status === 'completed')
+                        <a class="text-button" href="{{ route('buyer.disputes.create', $order) }}" style="color:#b45309; font-weight:600;">
+                            <i class="fas fa-rotate-left" aria-hidden="true"></i> Return / Refund
+                        </a>
                     @elseif($order->status !== 'cancelled' && ! in_array($order->status, ['placed', 'confirmed'], true))
                         <a class="text-button" href="{{ route('buyer.disputes.create', $order) }}"><i class="fas fa-flag" aria-hidden="true"></i> Report a problem</a>
                     @endif
@@ -112,7 +189,7 @@
                         <h2>Delivery details</h2>
                         <p><strong>Recipient:</strong> {{ $order->recipient_name }}</p>
                         <p><strong>Phone:</strong> {{ $order->phone }}</p>
-                        <p class="order-address"><strong>Address:</strong> {{ $order->shipping_address }}</p>
+                        <p class="order-address"><strong>Address:</strong> {{ $order->formattedShippingAddress() }}</p>
                         @if($order->shipment?->picked_up_at)
                             <p><strong>Picked up:</strong> {{ $order->shipment->picked_up_at->format('M j, Y · g:i A') }}</p>
                         @endif

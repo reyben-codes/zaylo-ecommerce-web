@@ -19,6 +19,12 @@
                     @endif
                     <p class="report-eyebrow">Logistics report</p>
                     <h1>{{ $provider?->name ?? 'Logistics Center' }}</h1>
+                    @if(!empty($item))
+                        <p style="margin:2px 0; font-size:10px; color:#4a4138;"><strong>Filtered Item:</strong> {{ $item }}</p>
+                    @endif
+                    @if(!empty($stage))
+                        <p style="margin:2px 0; font-size:10px; color:#4a4138;"><strong>Filtered Stage:</strong> {{ ucfirst(str_replace('_', ' ', $stage)) }}</p>
+                    @endif
                 </td>
                 <td class="report-meta">
                     <p><strong>Period:</strong> {{ $period }}</p>

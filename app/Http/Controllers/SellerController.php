@@ -758,8 +758,9 @@ class SellerController extends Controller
             'generatedBy' => auth()->user()->name,
         ];
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('seller.report-pdf', $report)->setPaper('a4', 'portrait');
+        $item = ! empty($report['product']) ? '-'.Str::slug($report['product']['name']) : '';
 
-        return $pdf->stream('zaylo-sales-report-'.$report['from']->format('Y-m-d').'-to-'.$report['to']->format('Y-m-d').'.pdf');
+        return $pdf->stream('zaylo-sales-report'.$item.'-'.$report['from']->format('Y-m-d').'-to-'.$report['to']->format('Y-m-d').'.pdf');
     }
 
     private function salesReport(Request $request): array
@@ -767,6 +768,7 @@ class SellerController extends Controller
         $input = $request->validate([
             'from' => 'nullable|date_format:Y-m-d',
             'to' => 'nullable|date_format:Y-m-d',
+            'product' => 'nullable|integer',
         ]);
         $today = CarbonImmutable::now(self::REPORT_TIMEZONE);
         $to = isset($input['to']) ? CarbonImmutable::createFromFormat('Y-m-d', $input['to'], self::REPORT_TIMEZONE)->endOfDay() : $today->endOfDay();
@@ -779,13 +781,21 @@ class SellerController extends Controller
             throw ValidationException::withMessages(['from' => 'Choose a report range of one year or less.']);
         }
 
+        $shopId = $this->shopId();
+        $products = Product::where('seller_id', $shopId)->where('is_active', true)->orderBy('name')->pluck('name', 'id');
+        $productId = isset($input['product']) ? (int) $input['product'] : null;
+        $productModel = $productId ? Product::where('seller_id', $shopId)->find($productId) : null;
+        $product = $productModel ? ['id' => $productModel->id, 'name' => $productModel->name] : null;
+
         $report = Order::usesLegacySchema()
-            ? $this->legacyReport($this->shopId(), $from, $to)
-            : $this->sellerOrderReport($this->shopId(), $from, $to);
+            ? $this->legacyReport($shopId, $from, $to, $productId)
+            : $this->sellerOrderReport($shopId, $from, $to);
 
         return $report + [
             'from' => $from,
             'to' => $to,
+            'products' => $products,
+            'product' => $product,
             'seriesMonthly' => $this->seriesIsMonthly($from, $to),
             'commissionPercent' => (int) round(self::COMMISSION_RATE * 100),
         ];
@@ -911,7 +921,8 @@ class SellerController extends Controller
     /**
      * Stock states: "out" has nothing to sell, "low" has some stock at or under the fixed alert level, "in" is healthy.
      */
-    private function whereStock(Builder $query, string $state): Builder
+    /** Products in a stock state (in, low or out). Also used by the seller notifications. */
+    public static function whereStock(Builder $query, string $state): Builder
     {
         $threshold = Product::lowStockThreshold();
         if (Product::usesLegacySchema()) {
@@ -998,15 +1009,23 @@ class SellerController extends Controller
         return ['average' => $count ? round((float) (clone $reviews)->avg('rating'), 1) : null, 'count' => $count];
     }
 
-    private function legacyReport(int $shopId, CarbonImmutable $from, CarbonImmutable $to): array
+    private function legacyReport(int $shopId, CarbonImmutable $from, CarbonImmutable $to, ?int $productId = null): array
     {
         $orders = Order::where('seller_id', $shopId)->whereBetween('placed_at', [$from->utc(), $to->utc()]);
+        if ($productId) {
+            $matchingOrderIds = OrderItem::where('product_id', $productId)->pluck('order_id');
+            $orders->whereIn('id', $matchingOrderIds);
+        }
         $completedQuery = (clone $orders)->where('status', 'completed');
         $completed = (clone $completedQuery)->get(['id', 'subtotal', 'placed_at']);
         $sales = (float) $completed->sum(fn (Order $order) => (float) $order->subtotal);
         $openValue = (float) (clone $orders)->whereNotIn('status', ['completed', 'cancelled'])->sum('subtotal');
 
-        $productTotals = OrderItem::whereIn('order_id', (clone $completedQuery)->select('id'))
+        $productTotalsQuery = OrderItem::whereIn('order_id', (clone $completedQuery)->select('id'));
+        if ($productId) {
+            $productTotalsQuery->where('product_id', $productId);
+        }
+        $productTotals = $productTotalsQuery
             ->selectRaw('product_id, MAX(product_name) as product_name, SUM(quantity) as units, SUM(line_total) as revenue')
             ->groupBy('product_id')
             ->get();
@@ -1018,6 +1037,10 @@ class SellerController extends Controller
             'units' => (int) $row->units,
             'revenue' => (float) $row->revenue,
         ]);
+
+        if ($productId && $productRows->isNotEmpty()) {
+            $sales = (float) $productRows->sum('revenue');
+        }
 
         return [
             'supportsBreakdown' => true,
@@ -1176,7 +1199,7 @@ class SellerController extends Controller
         $order = (int) $product->images()->max(Product::usesLegacySchema() ? 'sort_order' : 'position');
         foreach ($request->file('photos', []) as $file) {
             $product->images()->create([
-                'path' => Storage::url($file->store('products/'.auth()->id(), 'public')),
+                'path' => '/storage/'.$file->store('products/'.auth()->id(), 'public'),
                 'alt_text' => $product->name,
                 'sort_order' => ++$order,
             ]);
@@ -1214,7 +1237,8 @@ class SellerController extends Controller
             Storage::disk('public')->delete($oldPath);
         }
 
-        $data['image_url'] = Storage::url($path);
+        // Saved as a "/storage/..." link so it keeps working wherever the file lives (see PublicFileController).
+        $data['image_url'] = '/storage/'.$path;
 
         return $data;
     }

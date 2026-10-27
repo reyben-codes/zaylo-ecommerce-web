@@ -7,6 +7,7 @@ use App\Models\MobileToken;
 use App\Models\User;
 use App\Services\ActivityLogger;
 use App\Services\BuyerNotificationFeed;
+use App\Services\WorkspaceNotificationFeed;
 use App\Support\SnapshotSchemaBuilder;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\PasswordReset;
@@ -14,10 +15,13 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
+use Symfony\Component\Mailer\Bridge\Brevo\Transport\BrevoTransportFactory;
+use Symfony\Component\Mailer\Transport\Dsn;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -26,6 +30,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+
         // Web requests answer schema checks from one snapshot query instead of a round trip each.
         // Console commands (migrations above all) keep the stock builder; see SnapshotSchemaBuilder.
         if (! $this->app->runningInConsole()) {
@@ -44,8 +49,23 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Email over Brevo's HTTPS API (config/mail.php 'brevo'), for hosts that block SMTP ports.
+        Mail::extend('brevo', fn (array $config) => (new BrevoTransportFactory)->create(
+            new Dsn('brevo+api', 'default', (string) ($config['key'] ?? ''))
+        ));
+
         View::composer('partials.seller-header', function ($view) {
             $view->with('sellerHeaderStoreName', auth()->user()?->sellerStoreName() ?? 'My Shop');
+        });
+
+        // Unread notifications on the Admin and Seller Center sidebars, plus the seller's account and product warnings.
+        View::composer(['partials.seller-sidebar', 'layouts.workspace', 'seller.partials.alert-banner'], function ($view) {
+            $user = auth()->user();
+            $feed = app(WorkspaceNotificationFeed::class);
+            $view->with([
+                'sidebarUnreadNotifications' => $user ? $feed->unreadCount($user) : 0,
+                'sidebarUrgentNotifications' => $user ? $feed->urgent($user) : collect(),
+            ]);
         });
 
         View::composer('partials.buyer-nav-icons', function ($view) {

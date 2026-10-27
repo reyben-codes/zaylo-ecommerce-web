@@ -99,6 +99,16 @@ class RiderApplicationTest extends TestCase
             ->assertSee('js/document-viewer.js', false)->assertSee('data-document-viewer', false)->assertSee('data-document-gallery', false);
         $this->get(route('logistics.riders.document', [$rider, 'license_document']))->assertOk();
         $this->patch(route('logistics.riders.update', $rider), ['action' => 'reject', 'reason' => 'The OR/CR photo is blurred.'])->assertSessionHasNoErrors();
+
+        // A rejected rider cannot be approved afterwards, by the partner or by an admin.
+        $this->get(route('logistics.riders', ['status' => 'rejected']))->assertOk()
+            ->assertSee('a rejected application cannot be approved')->assertDontSee('name="action" value="approve"', false);
+        $this->patch(route('logistics.riders.update', $rider), ['action' => 'approve'])->assertSessionHasErrors('action');
+        $this->assertSame('rejected', $rider->fresh()->status);
+        $this->assertSame('rejected', $user->fresh()->status);
+        $admin = User::factory()->create(['role' => 'admin', 'status' => 'active']);
+        $this->actingAs($admin)->patch(route('admin.users.status', $user), ['status' => 'active'])->assertSessionHasErrors('status');
+        $this->assertSame('rejected', $user->fresh()->status);
         $this->post(route('logout'));
 
         $this->post(route('rider.login.submit'), ['email' => $user->email, 'password' => 'Rider@2026'])

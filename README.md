@@ -100,9 +100,17 @@ flutter test
 
 The download link above always points to the newest GitHub release that has a file named exactly `zaylo.apk`.
 
-1. Raise `version:` in `mobile_app/pubspec.yaml` (for example `1.0.1+2`; the number after `+` must go up for Android to install it as an update).
-2. Build it: `cd mobile_app && flutter build apk --release`. The file is `mobile_app/build/app/outputs/flutter-apk/app-release.apk`.
-3. Rename that file to `zaylo.apk`.
-4. On GitHub, open **Releases → Draft a new release**, create a tag such as `v1.0.1`, attach `zaylo.apk`, and publish it.
+Push the app changes to `main`, then push a version tag. GitHub builds the APK and publishes the release (about 10 minutes; watch it under **Actions → Release APK**):
+
+```bash
+git tag v1.0.1
+git push origin v1.0.1
+```
+
+The version comes from the tag, so `pubspec.yaml` needs no edit; use a higher number each time (`v1.0.2`, `v1.1.0`, ...).
+
+One-time setup: the build signs with the same debug key as local builds, because Google sign-in and app updates only accept that key. Copy it into a repository secret: in PowerShell run `[Convert]::ToBase64String([IO.File]::ReadAllBytes("$env:USERPROFILE\.android\debug.keystore")) | Set-Clipboard`, then on GitHub open **Settings → Secrets and variables → Actions → New repository secret**, name it `DEBUG_KEYSTORE_BASE64` and paste.
+
+To publish by hand instead: build with `cd mobile_app && flutter build apk --release`, rename `build/app/outputs/flutter-apk/app-release.apk` to `zaylo.apk`, and attach it to a new release under **Releases → Draft a new release**.
 
 Do not commit APK files to the repository; `mobile_app/build/` is ignored on purpose. Release builds are currently signed with the debug key, which is fine for direct downloads. Before publishing on the Play Store, create a release keystore, keep it out of git, and register its SHA-1 for Google sign-in.

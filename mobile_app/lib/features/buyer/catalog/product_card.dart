@@ -56,9 +56,15 @@ class ProductCard extends StatelessWidget {
     final saved = AppScope.of(context).isSaved(product);
     final surface = ProductCard.surface;
     final badge = product.discountPercent != null ? '-${product.discountPercent}%' : product.badge;
+    // A warm brown outline and a soft shadow lift the card off the page, as on the website.
     return Material(
       color: surface,
-      borderRadius: BorderRadius.circular(_radius),
+      elevation: 1,
+      shadowColor: ZayloColors.shadow.withValues(alpha: .4),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(_radius),
+        side: BorderSide(color: ZayloColors.cardBorder),
+      ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () => ShopActions.openProduct(context, product),

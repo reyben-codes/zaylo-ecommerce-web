@@ -11,6 +11,7 @@ use App\Models\Product;
 use App\Models\SellerApplication;
 use App\Models\SellerOrder;
 use App\Models\Shipment;
+use App\Models\SupportMessage;
 use App\Models\SupportThread;
 use App\Models\User;
 use App\Notifications\AccountReviewed;
@@ -150,9 +151,73 @@ class AdminModulesTest extends TestCase
         $this->get(route('admin.commissions'))->assertOk()
             ->assertViewHas('summary', fn ($summary) => $summary['commissionEarned'] === 200.0 && $summary['commissionPending'] === 50.0 && $summary['gross'] === 2500.0);
         $this->get(route('admin.reports'))->assertOk()
+            ->assertSeeInOrder(['Gross', 'Net', 'Commission', 'Total orders'])
+            ->assertSeeInOrder(['<th>Gross</th>', '<th>Net</th>', '<th>Commission</th>', '<th>Orders</th>'], false)
+            ->assertViewHas('summary', fn ($summary) => $summary['net'] === $summary['gross'] - $summary['commission'])
             ->assertViewHas('summary', fn ($summary) => $summary['orders'] === 3 && $summary['completedOrders'] === 1 && $summary['cancelled'] === 1)
             ->assertViewHas('bySeller', fn ($rows) => $rows->count() === 3);
         $this->get(route('admin.reports', ['from' => '2026-10-10', 'to' => '2026-10-01']))->assertSessionHasErrors('from');
+    }
+
+    public function test_reports_can_be_viewed_and_downloaded_for_all_sellers_or_one(): void
+    {
+        $this->order('delivered', 200000);
+        $this->order('shipped', 50000);
+        $this->actingAs($this->admin);
+
+        $page = $this->get(route('admin.reports'))->assertOk()
+            ->assertSee('Download report')
+            ->assertSee('action="'.route('admin.reports.download').'"', false)
+            ->assertSee('<option value="">All sellers</option>', false)
+            ->assertViewHas('sellers', fn ($sellers) => $sellers->count() === 2);
+        $shopId = $page->viewData('bySeller')->firstWhere('sales', 500.0)['seller_id'];
+        $shopName = $page->viewData('sellers')->get($shopId);
+
+        // Sellers stay listed even when the chosen dates have none of their orders.
+        $this->get(route('admin.reports', ['from' => '2020-01-01', 'to' => '2020-01-31']))->assertOk()
+            ->assertViewHas('sellers', fn ($sellers) => $sellers->count() === 2);
+
+        $this->get(route('admin.reports', ['seller' => $shopId]))->assertOk()
+            ->assertSee($shopName.' · reports')
+            ->assertSee('All sellers')
+            ->assertSee(route('admin.reports', ['from' => now('Asia/Manila')->subDays(29)->toDateString(), 'to' => now('Asia/Manila')->toDateString()]))
+            // No print or PDF shortcuts at the top: reports come only from "Download report", with this seller preselected.
+            ->assertDontSee('data-print', false)->assertDontSee(route('admin.reports.pdf', ['report' => 'sales']), false)
+            ->assertSee('<option value="'.$shopId.'" selected>', false)
+            ->assertViewHas('summary', fn ($summary) => $summary['gross'] === 500.0 && $summary['orders'] === 1);
+
+        foreach (['sales', 'commission'] as $report) {
+            $all = $this->get(route('admin.reports.download', ['report' => $report]))->assertOk();
+            $this->assertStringContainsString("zaylo-{$report}-report-20", $all->headers->get('content-disposition'));
+            $one = $this->get(route('admin.reports.download', ['report' => $report, 'seller' => $shopId, 'from' => '2026-01-01']))->assertOk();
+            $this->assertStringContainsString("zaylo-{$report}-report-shop-", $one->headers->get('content-disposition'));
+            $this->assertStringContainsString('-2026-01-01-to-', $one->headers->get('content-disposition'));
+        }
+        $this->get(route('admin.reports.download', ['report' => 'payroll']))->assertSessionHasErrors('report');
+    }
+
+    public function test_commission_shows_gross_net_commission_and_orders_for_all_or_one_seller(): void
+    {
+        $this->order('delivered', 200000);
+        $this->order('shipped', 50000);
+        $this->actingAs($this->admin);
+
+        $all = $this->get(route('admin.commissions'))->assertOk()
+            ->assertSeeInOrder(['Gross', 'Net', 'Commission', 'Total orders'])
+            ->assertSee('View report')
+            ->assertViewHas('summary', fn ($summary) => $summary['gross'] === 2500.0 && $summary['commission'] === 250.0 && $summary['net'] === 2250.0 && $summary['orders'] === 2)
+            ->assertViewHas('bySeller', fn ($rows) => $rows->count() === 2 && $rows->every(fn ($row) => $row['net'] === $row['sales'] - $row['commission']));
+        $shopId = $all->viewData('bySeller')->firstWhere('sales', 500.0)['seller_id'];
+
+        $this->get(route('admin.commissions', ['seller' => $shopId]))->assertOk()
+            ->assertSee('All sellers')
+            ->assertViewHas('seller', fn ($seller) => $seller['id'] === $shopId)
+            ->assertViewHas('summary', fn ($summary) => $summary['gross'] === 500.0 && $summary['commission'] === 50.0 && $summary['net'] === 450.0 && $summary['orders'] === 1)
+            ->assertViewHas('sellers', fn ($sellers) => $sellers->count() === 2);
+
+        $pdf = $this->get(route('admin.reports.pdf', ['report' => 'commission', 'seller' => $shopId]))->assertOk();
+        $this->assertStringContainsString('-report-shop-', $pdf->headers->get('content-disposition'));
+        $this->get(route('admin.commissions', ['seller' => 'abc']))->assertSessionHasErrors('seller');
     }
 
     public function test_announcements_reach_their_audience_and_policies_are_editable(): void
@@ -206,6 +271,43 @@ class AdminModulesTest extends TestCase
         // Admins can start a conversation with anyone from their profile.
         $this->actingAs($this->admin)->post(route('admin.chat.start'), ['participant_id' => $other->id])->assertRedirect();
         $this->assertTrue(SupportThread::where('user_id', $other->id)->exists());
+    }
+
+    public function test_admins_and_users_can_send_photos_in_support_messages(): void
+    {
+        $buyer = User::factory()->create(['role' => 'buyer', 'status' => 'active', 'name' => 'Bea Buyer']);
+        $other = User::factory()->create(['role' => 'buyer', 'status' => 'active']);
+        $thread = SupportThread::create(['user_id' => $buyer->id]);
+
+        $this->actingAs($this->admin)->get(route('admin.chat', ['thread' => $thread->id]))->assertOk()
+            ->assertSee('data-chat-photo', false)->assertSee('enctype="multipart/form-data"', false);
+
+        // A photo alone is a message; it is re-encoded and kept on the private disk.
+        $sent = $this->post(route('support.send', $thread), ['photo' => UploadedFile::fake()->image('damaged-box.jpg', 2400, 1800)], ['Accept' => 'application/json'])
+            ->assertCreated()->json('message');
+        $message = SupportMessage::findOrFail($sent['id']);
+        $this->assertSame('', $message->body);
+        Storage::disk('local')->assertExists($message->image_path);
+        $this->assertStringStartsWith("support/{$thread->id}/", $message->image_path);
+        $this->assertSame(route('support.photo', [$thread, $message]), $sent['photo']);
+        [$width] = getimagesizefromstring(Storage::disk('local')->get($message->image_path));
+        $this->assertSame(1600, $width);
+
+        // Text and a photo together, from the user's Help & support page.
+        $this->actingAs($buyer)->get(route('support'))->assertOk()->assertSee('data-chat-photo', false)->assertSee($sent['photo']);
+        $this->post(route('support.send', $thread), ['body' => 'Here is the receipt.', 'photo' => UploadedFile::fake()->image('receipt.png', 400, 600)], ['Accept' => 'application/json'])
+            ->assertCreated()->assertJsonPath('message.body', 'Here is the receipt.');
+        $this->get($sent['photo'])->assertOk();
+
+        // Only the people in the conversation can open the photo; empty messages and other files are refused.
+        $this->actingAs($other)->get($sent['photo'])->assertForbidden();
+        $this->actingAs($buyer)->postJson(route('support.send', $thread), [])->assertJsonValidationErrors('body');
+        $this->post(route('support.send', $thread), ['photo' => UploadedFile::fake()->create('notes.pdf', 10, 'application/pdf')], ['Accept' => 'application/json'])
+            ->assertJsonValidationErrors('photo');
+
+        // The admin's list and notifications describe a photo-only message.
+        $this->actingAs($this->admin)->get(route('admin.chat'))->assertSee('Here is the receipt.');
+        $this->assertSame('📷 Photo', $message->preview);
     }
 
     public function test_account_decisions_and_deactivation_are_emailed(): void

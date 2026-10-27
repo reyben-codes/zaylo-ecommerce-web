@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\QueriesLogisticsParcels;
+use App\Models\Dispute;
 use App\Models\Order;
 use App\Models\Rider;
 use App\Models\Shipment;
@@ -16,6 +17,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -85,16 +87,58 @@ class LogisticsOperationsController extends Controller
     public function scan(Request $request)
     {
         $tracking = trim((string) $request->query('tracking', ''));
-        $shipment = $tracking === '' ? null : $this->withParcelDetails($this->parcels())
-            ->where(fn (Builder $query) => $this->matchTracking($query, $tracking, exact: true))
-            ->first();
+        $shipment = null;
+        $returnCase = null;
+
+        if ($tracking !== '') {
+            $shipment = $this->withParcelDetails($this->parcels())
+                ->where(fn (Builder $query) => $this->matchTracking($query, $tracking, exact: true))
+                ->first();
+
+            if (! $shipment) {
+                $returnCase = Dispute::where('return_tracking_number', $tracking)
+                    ->orWhere(function ($q) use ($tracking) {
+                        if (str_starts_with($tracking, 'RET-')) {
+                            $q->where('return_tracking_number', 'like', '%'.$tracking.'%');
+                        }
+                    })
+                    ->with(['order.items', 'order.buyer', 'order.seller'])
+                    ->first();
+            }
+        }
 
         return view('logistics.operations.scan', [
             'tracking' => $tracking,
             'shipment' => $shipment,
+            'returnCase' => $returnCase,
             'riders' => $shipment ? $this->availableRiders() : collect(),
             'knownAreas' => $shipment && ShipmentWorkflow::awaitingSort($shipment) ? $this->knownAreas() : collect(),
         ]);
+    }
+
+    /** Updates the status of a return parcel scanned at pickup or in the hub. */
+    public function updateReturnScan(Request $request, Dispute $dispute)
+    {
+        $data = $request->validate([
+            'return_status' => ['required', Rule::in(['picked_up', 'sorted', 'in_transit', 'received_by_seller', 'refunded'])],
+            'note' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $dispute->update([
+            'return_status' => $data['return_status'],
+            'status' => in_array($data['return_status'], ['received_by_seller', 'refunded'], true) ? 'resolved' : $dispute->status,
+        ]);
+
+        $labels = [
+            'picked_up' => 'Courier confirmed pickup of return parcel from buyer.',
+            'sorted' => 'Return parcel received and sorted at the hub.',
+            'in_transit' => 'Return parcel in transit back to the seller.',
+            'received_by_seller' => 'Return parcel successfully delivered back to seller.',
+            'refunded' => 'Return completed and refund released to buyer.',
+        ];
+
+        return redirect()->route('logistics.scan', ['tracking' => $dispute->return_tracking_number])
+            ->with('status', $labels[$data['return_status']] ?? 'Return parcel updated.');
     }
 
     /** Sorted parcels waiting for a rider, by delivery area: give a whole area to one rider, or parcel by parcel. */
@@ -163,11 +207,16 @@ class LogisticsOperationsController extends Controller
     public function reports(Request $request)
     {
         [$from, $to, $filters] = $this->reportRange($request);
-        $report = $this->buildReport($from, $to);
+        $report = $this->buildReport($from, $to, $filters);
 
         return view('logistics.operations.reports', $report + [
             'from' => $filters['from'] ?? '',
             'to' => $filters['to'] ?? '',
+            'item' => $filters['item'] ?? '',
+            'stage' => $filters['stage'] ?? '',
+            'selectedRider' => $filters['rider'] ?? null,
+            'riders' => $this->availableRiders(),
+            'stages' => ShipmentWorkflow::STAGES,
         ]);
     }
 
@@ -178,8 +227,8 @@ class LogisticsOperationsController extends Controller
     public function exportReport(Request $request)
     {
         [$from, $to, $filters] = $this->reportRange($request);
-        $report = $this->buildReport($from, $to);
-        $parcels = $this->withParcelDetails($this->reportQuery($from, $to))->oldest()->limit(self::PDF_PARCEL_LIMIT)->get()
+        $report = $this->buildReport($from, $to, $filters);
+        $parcels = $this->withParcelDetails($this->reportQuery($from, $to, $filters))->oldest()->limit(self::PDF_PARCEL_LIMIT)->get()
             ->map(fn (Shipment $shipment) => ParcelView::for($shipment) + [
                 'created' => $shipment->created_at?->timezone('Asia/Manila')->format('M j, Y'),
             ]);
@@ -194,6 +243,9 @@ class LogisticsOperationsController extends Controller
         $pdf = Pdf::loadView('logistics.operations.report-pdf', $report + [
             'provider' => $this->logisticsProvider(),
             'period' => $period,
+            'item' => $filters['item'] ?? null,
+            'stage' => $filters['stage'] ?? null,
+            'selectedRider' => $filters['rider'] ?? null,
             'generatedAt' => now('Asia/Manila'),
             'generatedBy' => $request->user()->name,
             'parcels' => $parcels,
@@ -205,7 +257,8 @@ class LogisticsOperationsController extends Controller
         $canvas = $dompdf->getCanvas();
         $canvas->page_text($canvas->get_width() - 100, $canvas->get_height() - 24, 'Page {PAGE_NUM} of {PAGE_COUNT}', $dompdf->getFontMetrics()->getFont('DejaVu Sans'), 7, [0.42, 0.37, 0.33]);
 
-        $file = 'zaylo-logistics-report-'.($filters['from'] ?? 'all').'-to-'.($filters['to'] ?? now('Asia/Manila')->toDateString()).'.pdf';
+        $itemSlug = ! empty($filters['item']) ? '-'.Str::slug($filters['item']) : '';
+        $file = 'zaylo-logistics-report'.$itemSlug.'-'.($filters['from'] ?? 'all').'-to-'.($filters['to'] ?? now('Asia/Manila')->toDateString()).'.pdf';
 
         return $pdf->download($file);
     }
@@ -396,6 +449,9 @@ class LogisticsOperationsController extends Controller
         $filters = $request->validate([
             'from' => ['nullable', 'date'],
             'to' => ['nullable', 'date', 'after_or_equal:from'],
+            'item' => ['nullable', 'string', 'max:100'],
+            'stage' => ['nullable', Rule::in(array_keys(ShipmentWorkflow::STAGES))],
+            'rider' => ['nullable', 'integer'],
         ], ['to.after_or_equal' => 'The end date must be on or after the start date.']);
         $from = isset($filters['from']) ? Carbon::parse($filters['from'], 'Asia/Manila')->startOfDay()->utc() : null;
         $to = isset($filters['to']) ? Carbon::parse($filters['to'], 'Asia/Manila')->endOfDay()->utc() : null;
@@ -403,27 +459,44 @@ class LogisticsOperationsController extends Controller
         return [$from, $to, $filters];
     }
 
-    private function reportQuery(?Carbon $from, ?Carbon $to): Builder
+    private function reportQuery(?Carbon $from, ?Carbon $to, array $filters = []): Builder
     {
+        $item = trim((string) ($filters['item'] ?? ''));
+        $stage = $filters['stage'] ?? null;
+        $riderId = $filters['rider'] ?? null;
+
         return $this->parcels()
             ->when($from, fn (Builder $q) => $q->where('created_at', '>=', $from))
-            ->when($to, fn (Builder $q) => $q->where('created_at', '<=', $to));
+            ->when($to, fn (Builder $q) => $q->where('created_at', '<=', $to))
+            ->when($stage, fn (Builder $q) => ShipmentWorkflow::whereStage($q, [$stage]))
+            ->when($riderId, fn (Builder $q) => Schema::hasColumn('shipments', 'rider_id') ? $q->where('rider_id', $riderId) : $q->where('courier_id', $riderId))
+            ->when($item !== '', function (Builder $q) use ($item) {
+                $like = '%'.$item.'%';
+                $q->where(function (Builder $sub) use ($like) {
+                    if (Schema::hasColumn('shipments', 'order_id')) {
+                        $sub->whereHas('order.items', fn ($items) => $items->where('product_name', 'like', $like));
+                    }
+                    if (Schema::hasColumn('shipments', 'seller_order_id')) {
+                        $sub->orWhereHas('sellerOrder.items', fn ($items) => $items->where('product_name', 'like', $like));
+                    }
+                });
+            });
     }
 
-    private function buildReport(?Carbon $from, ?Carbon $to): array
+    private function buildReport(?Carbon $from, ?Carbon $to, array $filters = []): array
     {
         $byStage = collect(ShipmentWorkflow::STAGES)
             ->reject(fn ($label, $stage) => in_array($stage, ['confirmed', 'sorted'], true) && ! ShipmentWorkflow::hasHubSteps())
             ->map(fn ($label, $stage) => [
                 'label' => $label,
-                'total' => ShipmentWorkflow::whereStage($this->reportQuery($from, $to), [$stage])->count(),
+                'total' => ShipmentWorkflow::whereStage($this->reportQuery($from, $to, $filters), [$stage])->count(),
             ]);
-        $total = $this->reportQuery($from, $to)->count();
+        $total = $this->reportQuery($from, $to, $filters)->count();
         $delivered = $byStage['delivered']['total'];
         $finished = $delivered + $byStage['failed']['total'] + $byStage['returned']['total'];
 
         // Per rider and per area, from the parcels themselves.
-        $parcels = $this->withParcelDetails($this->reportQuery($from, $to))->get();
+        $parcels = $this->withParcelDetails($this->reportQuery($from, $to, $filters))->get();
         $byRider = $parcels->filter(fn (Shipment $shipment) => ShipmentWorkflow::riderOf($shipment))
             ->groupBy(fn (Shipment $shipment) => ParcelView::for($shipment)['rider'] ?? 'Unknown rider')
             ->map(fn (Collection $group, $name) => $this->tally($name, $group))

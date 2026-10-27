@@ -26,7 +26,7 @@ class LogisticsController extends Controller
 
     // Each review action: the rider statuses it applies to, the resulting status, and the rider's account status.
     private const RIDER_ACTIONS = [
-        'approve' => ['from' => ['pending', 'rejected'], 'to' => 'approved', 'account' => 'active'],
+        'approve' => ['from' => ['pending'], 'to' => 'approved', 'account' => 'active'],
         'reject' => ['from' => ['pending'], 'to' => 'rejected', 'account' => 'rejected'],
         'suspend' => ['from' => ['approved'], 'to' => 'suspended', 'account' => 'suspended'],
         'reinstate' => ['from' => ['suspended'], 'to' => 'approved', 'account' => 'active'],
@@ -89,7 +89,7 @@ class LogisticsController extends Controller
         $path = $rider->{$document.'_path'};
         abort_unless($path && Storage::disk('local')->exists($path), 404);
 
-        return Storage::disk('local')->response($path, Rider::DOCUMENTS[$document].'.'.pathinfo($path, PATHINFO_EXTENSION), [
+        return Storage::disk('local')->response($path, str_replace('/', '-', Rider::DOCUMENTS[$document]).'.'.pathinfo($path, PATHINFO_EXTENSION), [
             'Cache-Control' => 'private, no-store',
             'X-Content-Type-Options' => 'nosniff',
         ], 'inline');

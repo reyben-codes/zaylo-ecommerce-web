@@ -24,6 +24,14 @@ class RiderApi extends ApiClient {
         'device_name': deviceName,
       }));
 
+  /// Signs in an existing rider with a Google ID token. Never creates an account:
+  /// riders apply with the sign-up form first.
+  Future<AuthResult> googleSignIn(String idToken) async =>
+      AuthResult.fromJson(await send('POST', '/mobile/rider/google', body: {
+        'id_token': idToken,
+        'device_name': deviceName,
+      }));
+
   /// Logistics partners accepting riders, and the vehicle types, for sign-up.
   Future<RiderSignUpOptions> signUpOptions() async =>
       RiderSignUpOptions.fromJson(await send('GET', '/mobile/rider/logistics-partners'));

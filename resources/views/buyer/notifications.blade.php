@@ -8,7 +8,7 @@
         <i class="far fa-bell" aria-hidden="true"></i>
         <div>
             <h1>Notifications</h1>
-            <p>Recent arrivals, voucher reminders, and updates on your orders.</p>
+            <p>Recent arrivals, voucher reminders, updates on your orders, and your ID check.</p>
         </div>
     </div>
 </div>
@@ -39,7 +39,7 @@
             @foreach($notifications as $notification)
                 <article class="notification-item{{ $notification['read'] ? '' : ' is-unread' }}">
                     <div class="notification-type-icon notification-type-{{ $notification['type'] }}" aria-hidden="true">
-                    <i class="fas {{ match($notification['type']) { 'product' => 'fa-bag-shopping', 'voucher' => 'fa-ticket', default => 'fa-receipt' } }}"></i>
+                    <i class="fas {{ match($notification['type']) { 'product' => 'fa-bag-shopping', 'voucher' => 'fa-ticket', 'account' => 'fa-id-card', default => 'fa-receipt' } }}"></i>
                     </div>
                     <div class="notification-item-copy">
                         <div class="notification-item-top">

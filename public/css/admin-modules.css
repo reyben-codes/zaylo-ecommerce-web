@@ -502,3 +502,69 @@
         margin: 0 12px;
     }
 }
+
+.admin-download-panel {
+    margin-bottom: 22px;
+}
+
+/* Account page: a seller's products with what buyers see. */
+.admin-shop-products {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.admin-shop-product {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--c-e5d8c9);
+}
+
+.admin-shop-product:last-child {
+    border-bottom: 0;
+}
+
+.admin-shop-product img {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    background: var(--c-f5f0ea);
+    object-fit: cover;
+}
+
+.admin-shop-product__copy {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 2px;
+    overflow-wrap: anywhere;
+}
+
+.admin-shop-product__state {
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: var(--c-f5f0ea);
+    color: var(--c-6b5f54);
+    font-size: .72rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.admin-shop-product__state--live {
+    background: var(--c-e6f2e7);
+    color: var(--c-2d6d3e);
+}
+
+.admin-shop-product__state--pending {
+    background: var(--c-fbf0dc);
+    color: var(--c-9a6810);
+}
+
+.admin-shop-product__state--rejected,
+.admin-shop-product__state--hidden {
+    background: var(--c-fdf1ef);
+    color: var(--c-a4413b);
+}

@@ -121,6 +121,19 @@ class SellerApplicationTest extends TestCase
         $this->patch(route('admin.users.status', $seller), ['status' => 'rejected', 'reason' => $reason])->assertSessionHasNoErrors();
         $this->assertSame('rejected', $seller->fresh()->status);
         $this->assertSame($reason, $seller->sellerApplication()->value('rejection_reason'));
+
+        // A rejection is final until the seller resubmits: no Approve button, and a stale form or crafted request fails.
+        $this->get(route('admin.users.show', $seller))->assertOk()
+            ->assertSee('can be reviewed again once they resubmit')
+            ->assertDontSee('name="status" value="active"', false);
+        $this->get(route('admin.seller-applications.show', $seller))->assertOk()->assertDontSee('name="status" value="active"', false);
+        foreach (['active', 'pending', 'suspended'] as $status) {
+            $this->patch(route('admin.users.status', $seller), ['status' => $status])->assertSessionHasErrors('status');
+        }
+        $this->assertSame('rejected', $seller->fresh()->status);
+        $this->assertNull($seller->fresh()->approved_at);
+        $this->assertSame('rejected', $seller->sellerApplication()->value('status'));
+        Notification::assertSentToTimes($seller, SellerApplicationReviewed::class, 1);
         Notification::assertSentTo($seller, SellerApplicationReviewed::class, fn ($notification) => ! $notification->approved && $notification->reason === $reason
             && str_contains(implode(' ', $notification->toMail($seller)->introLines), $reason));
 
