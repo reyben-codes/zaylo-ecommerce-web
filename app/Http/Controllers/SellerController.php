@@ -12,7 +12,12 @@ use App\Models\ProductVariant;
 use App\Models\SellerOrder;
 use App\Models\SellerProfile;
 use App\Models\Shipment;
+use App\Services\LogisticsMessenger;
 use App\Services\SellerApplicationService;
+use App\Services\SellerQueues;
+use App\Services\SellerRankings;
+use App\Services\ShipmentWorkflow;
+use App\Services\WorkspaceNotificationFeed;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -47,6 +52,9 @@ class SellerController extends Controller
         'delivered' => ['completed'],
         'cancelled' => ['cancelled'],
     ];
+
+    /** Parcel steps after the logistics partner scanned it at pickup. */
+    public const COLLECTED_STAGES = ['picked_up', 'in_transit', 'sorted', 'assigned', 'out_for_delivery', 'delivered', 'failed', 'returned'];
 
     // Status names used by the normalized seller_orders table.
     private const SELLER_ORDER_STATUS_GROUPS = [
@@ -109,6 +117,7 @@ class SellerController extends Controller
             'monthRevenue' => $orders['monthRevenue'],
             'recentOrders' => $orders['recent'],
             'rating' => $this->ratingSummary($shopId),
+            'rankings' => app(SellerRankings::class)->for(auth()->user()),
             'statusLabels' => self::STATUS_LABELS,
         ]);
     }
@@ -312,6 +321,48 @@ class SellerController extends Controller
         };
 
         return back()->with('status', $message);
+    }
+
+    /** What open Seller Center pages poll: a signature that changes with any order, parcel or return, and the badges. */
+    public function updates(SellerQueues $queues, WorkspaceNotificationFeed $feed)
+    {
+        $seller = auth()->user();
+
+        return response()->json([
+            'signature' => $queues->signature($seller),
+            'badges' => [
+                'orders' => $queues->ordersToPrepare($seller),
+                'returns' => $queues->returnsNeedingAction($seller),
+                'notifications' => $feed->unreadCount($seller),
+            ],
+        ]);
+    }
+
+    /**
+     * The seller confirms the logistics partner really collected the parcel after the partner scanned it, so both
+     * sides agree on the handover. The partner sees the confirmation in its chat with the seller.
+     */
+    public function confirmHandover(Order $order, LogisticsMessenger $messenger)
+    {
+        abort_unless((int) $order->seller_id === $this->shopId(), 403);
+        abort_unless(Shipment::tracksHandover(), 503, 'Handover confirmation is being set up. Please try again later.');
+        $shipment = $order->shipment;
+        if (! $shipment || ! in_array(ShipmentWorkflow::stageOf($shipment), self::COLLECTED_STAGES, true)) {
+            throw ValidationException::withMessages(['handover' => 'Confirm the handover after your logistics partner scans the parcel at pickup.']);
+        }
+        if ($shipment->handover_confirmed_at) {
+            return back()->with('status', 'You already confirmed this handover.');
+        }
+
+        $shipment->update(['handover_confirmed_at' => now()]);
+        $provider = Shipment::tracksProvider() ? $shipment->provider : null;
+        if ($provider && LogisticsMessenger::available()) {
+            $seller = auth()->user();
+            $messenger->send($messenger->threadFor($provider, $seller), $seller,
+                "I confirm that {$provider->name} collected order {$order->order_number} (parcel {$shipment->tracking_number}).");
+        }
+
+        return back()->with('status', "Handover of order {$order->order_number} confirmed.");
     }
 
     /** Logistics partners this seller can hand a parcel to (none when parcels do not record a partner). */

@@ -1,5 +1,6 @@
 @extends('layouts.seller')
 
+@section('auto-refresh', 'on')
 @section('title', request()->routeIs('seller.handover') ? 'Delivery' : 'Order Fulfillment')
 
 @push('styles')
@@ -83,6 +84,9 @@
                     @forelse($orders as $order)
                         @php
                             $nextAction = $nextActions[$order->status] ?? null;
+                            // The partner scanned the parcel at pickup; the seller confirms the handover once.
+                            $collected = $order->shipment && \App\Models\Shipment::tracksHandover() && in_array(\App\Services\ShipmentWorkflow::stageOf($order->shipment), \App\Http\Controllers\SellerController::COLLECTED_STAGES, true);
+                            $awaitingHandover = $collected && ! $order->shipment->handover_confirmed_at;
                             $itemNames = $order->items->pluck('product_name')->filter();
                             $searchText = str($order->order_number.' '.$order->buyer?->name.' '.$itemNames->join(' ').' '.$order->status)->lower();
                         @endphp
@@ -134,8 +138,27 @@
                                                 <i class="fas {{ $nextAction['icon'] }}" aria-hidden="true"></i> {{ $nextAction['label'] }}
                                             </button>
                                         </form>
-                                    @else
+                                    @elseif(! $awaitingHandover)
                                         <span class="seller-cell-note">No action needed</span>
+                                    @endif
+
+                                    {{-- After the partner scans the parcel at pickup, the seller confirms the handover. --}}
+                                    @if($collected)
+                                        @if($order->shipment->handover_confirmed_at)
+                                            <span class="pickup-status pickup-status--scheduled"><i class="fas fa-handshake" aria-hidden="true"></i> Handover confirmed</span>
+                                        @else
+                                            <form method="POST" action="{{ route('seller.orders.handover', $order) }}"
+                                                  data-confirm="Confirm that your logistics partner collected the parcel for order {{ $order->order_number }}?" data-confirm-title="Confirm handover?" data-confirm-button="Confirm handover">
+                                                @csrf
+                                                @method('PATCH')
+                                                <button type="submit" class="seller-button seller-button--small"><i class="fas fa-handshake" aria-hidden="true"></i> Confirm handed over</button>
+                                            </form>
+                                        @endif
+                                    @endif
+
+                                    @if($order->shipment?->delivery_proof_path)
+                                        <a href="{{ route('delivery-proof', $order->shipment) }}" class="seller-button seller-button--small seller-button--secondary" target="_blank" rel="noopener"
+                                           aria-label="View the rider's delivery photo for order {{ $order->order_number }} (opens in a new tab)"><i class="fas fa-camera" aria-hidden="true"></i> Delivery photo</a>
                                     @endif
 
                                     {{-- The rider scans the waybill's barcode or QR code to start the delivery and again to confirm it. --}}
@@ -155,6 +178,9 @@
                                             @endif
                                             @if($order->shipment?->delivered_at)
                                                 <p>Delivered: {{ $order->shipment->delivered_at->timezone('Asia/Manila')->format('M j, Y · g:i A') }}</p>
+                                            @endif
+                                            @if($order->shipment?->handover_confirmed_at)
+                                                <p>You confirmed the handover: {{ $order->shipment->handover_confirmed_at->timezone('Asia/Manila')->format('M j, Y · g:i A') }}</p>
                                             @endif
                                             <strong>Items</strong>
                                             <ul>

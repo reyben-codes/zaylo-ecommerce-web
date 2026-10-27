@@ -40,10 +40,11 @@ class Product extends Model
         'weight_grams',
         'category_id',
         'sale_type', 'sale_value', 'sale_starts_at', 'sale_ends_at', 'sale_variant_id',
+        'sale_is_flash', 'flash_quantity', 'flash_sold',
         'archived_at',
     ];
 
-    protected $casts = ['is_active' => 'boolean', 'sale_value' => 'decimal:2', 'sale_starts_at' => 'datetime', 'sale_ends_at' => 'datetime', 'sale_variant_id' => 'integer', 'archived_at' => 'datetime', 'reviewed_at' => 'datetime'];
+    protected $casts = ['is_active' => 'boolean', 'sale_value' => 'decimal:2', 'sale_starts_at' => 'datetime', 'sale_ends_at' => 'datetime', 'sale_variant_id' => 'integer', 'sale_is_flash' => 'boolean', 'flash_quantity' => 'integer', 'flash_sold' => 'integer', 'archived_at' => 'datetime', 'reviewed_at' => 'datetime'];
 
     protected static function booted(): void
     {
@@ -168,14 +169,52 @@ class Product extends Model
         $now = now();
         return in_array($this->sale_type, ['price', 'percent'], true)
             && $this->sale_starts_at && $this->sale_ends_at
-            && $now->gte($this->sale_starts_at) && $now->lt($this->sale_ends_at);
+            && $now->gte($this->sale_starts_at) && $now->lt($this->sale_ends_at)
+            && ! ($this->sale_is_flash && $this->flashRemaining() <= 0);
+    }
+
+    /** Flash sales: a sale of at most a day on a limited number of units (after the 2026_10_27_000002 migration). */
+    public static function tracksFlashSales(): bool
+    {
+        return Schema::hasColumn('products', 'sale_is_flash');
+    }
+
+    public function isFlashSale(): bool
+    {
+        return (bool) $this->sale_is_flash && $this->saleIsActive();
+    }
+
+    /** Products whose flash sale is running now with units left. */
+    public function scopeOnFlashSale($query)
+    {
+        if (! static::tracksFlashSales()) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->where('sale_is_flash', true)->whereNotNull('sale_type')
+            ->where('sale_starts_at', '<=', now())->where('sale_ends_at', '>', now())
+            ->whereColumn('flash_sold', '<', 'flash_quantity');
+    }
+
+    /** Units still available at the flash price. */
+    public function flashRemaining(): int
+    {
+        return max(0, (int) $this->flash_quantity - (int) $this->flash_sold);
+    }
+
+    /** Whether buying [$variant] now uses the flash price (and counts against the flash quantity). */
+    public function flashAppliesTo(?ProductVariant $variant = null): bool
+    {
+        return $this->isFlashSale() && (! $this->sale_variant_id || $this->sale_variant_id === $variant?->id);
     }
 
     public function getSaleStatusAttribute(): string
     {
         if (! $this->sale_type) return 'No scheduled sale';
-        if (now()->lt($this->sale_starts_at)) return 'Scheduled';
-        return $this->saleIsActive() ? 'On sale' : 'Ended';
+        if (now()->lt($this->sale_starts_at)) return $this->sale_is_flash ? 'Flash sale scheduled' : 'Scheduled';
+        if ($this->sale_is_flash && $this->flashRemaining() <= 0 && now()->lt($this->sale_ends_at)) return 'Flash sale sold out';
+        if ($this->saleIsActive()) return $this->sale_is_flash ? 'Flash sale · '.$this->flashRemaining().' left' : 'On sale';
+        return 'Ended';
     }
 
     public function getDiscountPercentageAttribute(): int
@@ -199,7 +238,9 @@ class Product extends Model
     {
         $regular = static::regularPriceSql();
         $variant = static::usesLegacySchema() ? 'NULL' : '(SELECT id FROM product_variants WHERE product_id = products.id ORDER BY id LIMIT 1)';
-        return "CASE WHEN sale_type IS NOT NULL AND sale_starts_at <= ? AND sale_ends_at > ? AND (sale_variant_id IS NULL OR sale_variant_id = {$variant}) THEN CASE WHEN sale_type = 'percent' THEN ROUND({$regular} * (100 - sale_value) / 100, 2) WHEN sale_value < {$regular} THEN sale_value ELSE {$regular} END ELSE {$regular} END";
+        // A flash sale stops once its units are sold.
+        $flash = static::tracksFlashSales() ? ' AND (sale_is_flash IS NULL OR sale_is_flash = 0 OR flash_sold < flash_quantity)' : '';
+        return "CASE WHEN sale_type IS NOT NULL AND sale_starts_at <= ? AND sale_ends_at > ?{$flash} AND (sale_variant_id IS NULL OR sale_variant_id = {$variant}) THEN CASE WHEN sale_type = 'percent' THEN ROUND({$regular} * (100 - sale_value) / 100, 2) WHEN sale_value < {$regular} THEN sale_value ELSE {$regular} END ELSE {$regular} END";
     }
     public function setStockAttribute(mixed $value): void { static::usesLegacySchema() ? $this->attributes['stock'] = (int) $value : $this->variantInput['stock'] = (int) $value; }
     public function getStockAttribute(mixed $value): int { return static::usesLegacySchema() ? (int) $value : (int) ($this->defaultVariant?->stock ?? 0); }

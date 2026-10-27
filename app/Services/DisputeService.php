@@ -84,6 +84,19 @@ class DisputeService
         }
     }
 
+    /**
+     * A step the seller takes on a return (item received, refund issued): saved on the case, noted in its thread,
+     * and emailed to the buyer and courier.
+     */
+    public function sellerStep(Dispute $dispute, User $seller, string $event, array $changes, string $note): void
+    {
+        DB::transaction(function () use ($dispute, $seller, $changes, $note) {
+            $dispute->update($changes);
+            $dispute->messages()->create(['sender_id' => $seller->id, 'body' => $note]);
+        });
+        $this->notify($dispute, $event, except: $seller->id);
+    }
+
     public function deleteFiles(Dispute $dispute): void
     {
         Storage::disk('local')->delete(array_merge($dispute->evidence ?? [], $dispute->messages->pluck('attachment_path')->filter()->all()));

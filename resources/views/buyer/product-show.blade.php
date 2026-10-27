@@ -70,7 +70,9 @@
             <del class="sale-price-original" data-sale-regular @if($displayPrice >= $displayRegular) hidden @endif>₱{{ number_format($displayRegular, 2) }}</del>
             <span class="sale-price-saving" data-sale-saving @if($displayPrice >= $displayRegular) hidden @endif>{{ $displayRegular > 0 ? round((1 - $displayPrice / $displayRegular) * 100) : 0 }}% off</span>
         </p>
-        @if($product->saleIsActive())
+        @if($product->isFlashSale())
+            <p class="sale-period"><i class="fas fa-bolt" aria-hidden="true"></i> Flash sale: {{ number_format($product->flashRemaining()) }} left at this price, until {{ $product->sale_ends_at->copy()->timezone('Asia/Manila')->format('M j, g:i A') }} (Philippine time).</p>
+        @elseif($product->saleIsActive())
             <p class="sale-period">Promotion for eligible options ends {{ $product->sale_ends_at->copy()->timezone('Asia/Manila')->format('M j, Y, g:i A') }} (Philippine time).</p>
         @endif
         <section class="product-description" aria-labelledby="product-description-title">

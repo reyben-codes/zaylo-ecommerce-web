@@ -10,3 +10,7 @@
 .sale-price-original { margin-left: 8px; color: var(--c-81756b); font-size: .8em; }
 .sale-price-saving { margin-left: 8px; font-size: .75rem; color: var(--c-795a43); }
 .sale-period { font-size: .78rem; color: var(--c-795a43); margin: -12px 0 18px; }
+.product-sale__kind { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0; padding: 0; border: 0; }
+.product-sale__kind legend { margin-bottom: 6px; padding: 0; font-weight: 600; }
+.product-sale .product-sale__kind label { display: inline-flex; gap: 6px; align-items: center; font-weight: 500; }
+.product-sale .product-sale__kind input { width: auto; padding: 0; }

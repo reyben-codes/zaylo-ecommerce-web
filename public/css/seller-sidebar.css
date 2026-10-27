@@ -256,3 +256,13 @@
     color: var(--c-a4413b);
     font-weight: 600;
 }
+
+.seller-sidebar__badge[hidden] {
+    display: none;
+}
+
+/* Work waiting (orders to prepare, returns to handle) is shown in the ink colour; red stays for unread notifications. */
+.seller-sidebar__badge[data-sidebar-count="orders"],
+.seller-sidebar__badge[data-sidebar-count="returns"] {
+    background: var(--c-1a1714);
+}

@@ -6,8 +6,9 @@
             $sellerNavigation = [
                 ['route' => 'seller.dashboard', 'label' => 'Dashboard', 'icon' => 'fa-home'],
                 ['route' => 'seller.notifications', 'label' => 'Notifications', 'icon' => 'fa-bell', 'badge' => true],
-                ['route' => 'seller.orders', 'label' => 'Orders', 'icon' => 'fa-box'],
+                ['route' => 'seller.orders', 'label' => 'Orders', 'icon' => 'fa-box', 'count' => 'orders'],
                 ['route' => 'seller.handover', 'label' => 'Delivery', 'icon' => 'fa-truck'],
+                ['route' => 'seller.returns', 'label' => 'Returns', 'icon' => 'fa-rotate-left', 'count' => 'returns'],
                 ['route' => 'seller.inventory', 'label' => 'Inventory', 'icon' => 'fa-warehouse'],
                 ['route' => 'seller.products', 'label' => 'Products', 'icon' => 'fa-shopping-bag'],
                 ['route' => 'seller.reports', 'label' => 'Reports', 'icon' => 'fa-chart-bar'],
@@ -16,6 +17,15 @@
                 ['route' => 'support', 'label' => 'Help & support', 'icon' => 'fa-life-ring'],
                 ['route' => 'seller.activity', 'label' => 'Activity log', 'icon' => 'fa-clock-rotate-left'],
                 ['route' => 'seller.account', 'label' => 'Account', 'icon' => 'fa-user'],
+            ];
+        @endphp
+
+        @php
+            // Orders to prepare and returns to handle; seller-workspace.js keeps them current.
+            $sidebarCounts = [
+                'orders' => [$sidebarOrdersToPrepare ?? 0, 'to prepare'],
+                'returns' => [$sidebarReturnsToHandle ?? 0, 'to handle'],
+                'notifications' => [$sidebarUnreadNotifications, 'unread'],
             ];
         @endphp
 
@@ -31,8 +41,10 @@
             >
                 <i class="fas {{ $item['icon'] }}" aria-hidden="true"></i>
                 <span>{{ $item['label'] }}</span>
-                @if(! empty($item['badge']) && $sidebarUnreadNotifications > 0)
-                    <span class="seller-sidebar__badge">{{ $sidebarUnreadNotifications > 99 ? '99+' : $sidebarUnreadNotifications }}<span class="sr-only"> unread</span></span>
+                @php $count = $item['count'] ?? (! empty($item['badge']) ? 'notifications' : null); @endphp
+                @if($count)
+                    @php [$total, $meaning] = $sidebarCounts[$count]; @endphp
+                    <span class="seller-sidebar__badge" data-sidebar-count="{{ $count }}" data-sidebar-count-label="{{ $meaning }}" @if($total < 1) hidden @endif>@if($total > 0){{ $total > 99 ? '99+' : $total }}<span class="sr-only"> {{ $meaning }}</span>@endif</span>
                 @endif
             </a>
         @endforeach

@@ -26,6 +26,7 @@ class SellerSidebarConsistencyTest extends TestCase
             route('seller.dashboard') => 'Dashboard',
             route('seller.orders') => 'Orders',
             route('seller.handover') => 'Delivery',
+            route('seller.returns') => 'Returns',
             route('seller.inventory') => 'Inventory',
             route('seller.products') => 'Products',
             // Product sub-pages keep the Products section highlighted.
@@ -46,7 +47,7 @@ class SellerSidebarConsistencyTest extends TestCase
             $xpath = new DOMXPath($document);
 
             $this->assertSame(1, $xpath->query('//aside[contains(concat(" ", normalize-space(@class), " "), " seller-sidebar ")]')->length);
-            $this->assertSame(12, $xpath->query('//aside[contains(@class, "seller-sidebar")]//nav/a')->length);
+            $this->assertSame(13, $xpath->query('//aside[contains(@class, "seller-sidebar")]//nav/a')->length);
             $this->assertSame(1, $xpath->query('//aside[contains(@class, "seller-sidebar")]//a[@aria-current="page" and normalize-space(.)="'.$activeLabel.'"]')->length);
             $this->assertSame(1, $xpath->query('//aside[contains(@class, "seller-sidebar")]//a[@aria-current="page"]')->length);
             $this->assertSame(1, $xpath->query('//aside[contains(@class, "seller-sidebar")]//form[@action="'.route('logout').'"]//button')->length);

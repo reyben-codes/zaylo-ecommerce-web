@@ -8,6 +8,19 @@
         @csrf @method('PUT')
         <input type="hidden" name="sale_product_id" value="{{ $product->id }}">
         <p>Regular price: ₱{{ number_format($product->regular_price, 2) }}. Sale times use Philippine time (UTC+8).</p>
+        @if(\App\Models\Product::tracksFlashSales())
+            @php $saleKind = $saleInput('sale_kind', $product->sale_is_flash ? 'flash' : 'regular'); @endphp
+            <fieldset class="product-sale__kind">
+                <legend>Kind of sale</legend>
+                <label><input type="radio" name="sale_kind" value="regular" @checked($saleKind !== 'flash')> Regular sale</label>
+                <label><input type="radio" name="sale_kind" value="flash" @checked($saleKind === 'flash')> Flash sale</label>
+            </fieldset>
+            <p class="product-sale__hint">A flash sale lasts up to {{ \App\Http\Controllers\ProductSaleController::FLASH_MAX_HOURS }} hours on a limited number of units, and appears in Flash Sales with a countdown. It ends early once those units sell.</p>
+            <label>Units at the flash price (flash sale only)<input name="flash_quantity" type="number" min="1" max="100000" step="1" value="{{ $saleInput('flash_quantity', $product->flash_quantity) }}"></label>
+            @if($product->sale_is_flash && $product->sale_type)
+                <p>{{ (int) $product->flash_sold }} of {{ (int) $product->flash_quantity }} flash units sold.</p>
+            @endif
+        @endif
         <label>Discount type
             <select name="sale_type">
                 <option value="">No sale / cancel sale</option>

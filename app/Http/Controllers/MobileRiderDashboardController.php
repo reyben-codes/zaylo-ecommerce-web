@@ -5,13 +5,17 @@ namespace App\Http\Controllers;
 use App\Models\Announcement;
 use App\Models\Shipment;
 use App\Models\User;
+use App\Services\ChatPhotos;
 use App\Services\RiderDeliveries;
+use App\Services\ShipmentWorkflow;
 use App\Support\MobilePayload;
 use App\Support\ParcelView;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 /**
  * The rider app's dashboard, history, earnings, reports and delivery actions. Parcels come from the rider's
@@ -221,6 +225,34 @@ class MobileRiderDashboardController extends Controller
         ]);
     }
 
+    /**
+     * The rider's photo of the parcel at the door, taken right after the delivery scan. The seller and buyer can open
+     * it from the order. A new photo replaces the old one for a day after delivery.
+     */
+    public function proof(Request $request, Shipment $shipment, ChatPhotos $photos): JsonResponse
+    {
+        abort_unless($this->deliveries->owns($shipment, $request->user()), 403, 'This delivery is assigned to another rider.');
+        abort_unless(Shipment::tracksDeliveryProof(), 503, 'Delivery photos are being set up. Please try again later.');
+        $request->validate(['photo' => ['required', ...ChatPhotos::rules()['photo']]], ChatPhotos::messages() + [
+            'photo.required' => 'Take a photo of the parcel at the door.',
+        ]);
+        $deliveredAt = RiderDeliveries::deliveredAt($shipment);
+        if (ShipmentWorkflow::stageOf($shipment) !== 'delivered' || ($deliveredAt && $deliveredAt->lt(now()->subDay()))) {
+            throw ValidationException::withMessages(['photo' => 'Add the photo within a day of delivering the parcel.']);
+        }
+
+        $old = $shipment->delivery_proof_path;
+        $shipment->update(['delivery_proof_path' => $photos->store($request->file('photo'), 'delivery-proof/'.$shipment->id)]);
+        if ($old) {
+            Storage::disk('local')->delete($old);
+        }
+
+        return response()->json([
+            'message' => 'Delivery photo saved. The seller and buyer can see it on the order.',
+            'delivery' => $this->shipmentPayload($shipment->fresh()->load($this->relations())),
+        ]);
+    }
+
     private function since(string $period): ?\Illuminate\Support\Carbon
     {
         $now = now(self::TIMEZONE);
@@ -339,6 +371,10 @@ class MobileRiderDashboardController extends Controller
             'created_at' => $shipment->created_at?->toIso8601String(),
             // The rider–buyer chat, open while the parcel is with the rider.
             'chat_open' => $shipment->chatIsOpen(),
+            // Proof of delivery: the rider is asked for a photo right after the delivery scan.
+            'has_delivery_photo' => filled($shipment->delivery_proof_path),
+            'can_add_delivery_photo' => Shipment::tracksDeliveryProof() && $stage === 'delivered'
+                && (RiderDeliveries::deliveredAt($shipment)?->gte(now()->subDay()) ?? true),
             'unread_messages' => $shipment->chatIsOpen() ? $shipment->unreadMessagesFor(rider: true) : 0,
         ] + ($withTimeline ? ['timeline' => RiderDeliveries::timeline($shipment, self::TIMEZONE)] : []);
     }

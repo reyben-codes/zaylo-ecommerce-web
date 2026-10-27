@@ -90,10 +90,21 @@
     <section class="flash-sales">
         <div class="flash-header">
             <div class="flash-header-left">
-                <h2>Flash Sales</h2>
-                <span class="flash-badge">🔥 Limited Time</span>
+                <h2>{{ $flashEndsAt ? 'Flash Sales' : 'On Sale' }}</h2>
+                <span class="flash-badge">{{ $flashEndsAt ? '🔥 Limited Time' : 'Seller offers' }}</span>
             </div>
-            <p class="flash-timer">Current seller offers · See each product for its sale period.</p>
+            @if($flashEndsAt)
+                <p class="flash-timer" role="timer" data-flash-countdown="{{ $flashEndsAt->toIso8601String() }}" aria-label="Next flash sale ends {{ $flashEndsAt->timezone('Asia/Manila')->format('M j, g:i A') }}">
+                    <span>Ends in</span>
+                    <span class="time-block"><span class="number" data-unit="hours">--</span><span class="label">hrs</span></span>
+                    <span class="separator" aria-hidden="true">:</span>
+                    <span class="time-block"><span class="number" data-unit="minutes">--</span><span class="label">min</span></span>
+                    <span class="separator" aria-hidden="true">:</span>
+                    <span class="time-block"><span class="number" data-unit="seconds">--</span><span class="label">sec</span></span>
+                </p>
+            @else
+                <p class="flash-timer">Current seller offers · See each product for its sale period.</p>
+            @endif
         </div>
         <div class="flash-grid" id="flashGrid">
             @foreach($flashProducts as $product)
@@ -220,8 +231,6 @@
     reducedMotion.addEventListener('change', () => reducedMotion.matches ? stopRotation() : startRotation());
     startRotation();
 })();
-
-// Flash timer
-
 </script>
+<script src="{{ asset('js/flash-countdown.js') }}?v={{ filemtime(public_path('js/flash-countdown.js')) }}" defer></script>
 @endpush
