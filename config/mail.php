@@ -65,6 +65,13 @@ return [
             'transport' => 'resend',
         ],
 
+        // Brevo's HTTPS API. Render's free plan blocks SMTP ports 25, 465 and 587, so the live site sends through
+        // this instead (MAIL_MAILER=brevo with BREVO_API_KEY). Registered in AppServiceProvider.
+        'brevo' => [
+            'transport' => 'brevo',
+            'key' => env('BREVO_API_KEY'),
+        ],
+
         'sendmail' => [
             'transport' => 'sendmail',
             'path' => env('MAIL_SENDMAIL_PATH', '/usr/sbin/sendmail -bs -i'),
