@@ -304,3 +304,34 @@ class ComplaintCategory {
   factory ComplaintCategory.fromJson(Map<String, dynamic> json) =>
       ComplaintCategory(id: json['id'] as String, label: json['label'] as String);
 }
+
+/// The newest published app (MobileAppVersionController), which the app
+/// compares with its own version when it opens.
+class AppVersionInfo {
+  const AppVersionInfo({this.latestVersion, this.downloadUrl});
+
+  /// "1.0.4", or null when the server could not tell.
+  final String? latestVersion;
+  final String? downloadUrl;
+
+  /// Whether [latestVersion] is newer than [current] ("1.0.3"); false when either is unknown.
+  bool isNewerThan(String current) {
+    final latest = _parts(latestVersion);
+    final mine = _parts(current);
+    if (latest == null || mine == null) return false;
+    for (var index = 0; index < 3; index++) {
+      if (latest[index] != mine[index]) return latest[index] > mine[index];
+    }
+    return false;
+  }
+
+  static List<int>? _parts(String? version) {
+    final match = RegExp(r'^v?(\d+)\.(\d+)\.(\d+)').firstMatch(version?.trim() ?? '');
+    return match == null ? null : [for (var group = 1; group <= 3; group++) int.parse(match.group(group)!)];
+  }
+
+  factory AppVersionInfo.fromJson(Map<String, dynamic> json) => AppVersionInfo(
+        latestVersion: json['latest_version'] as String?,
+        downloadUrl: json['download_url'] as String?,
+      );
+}

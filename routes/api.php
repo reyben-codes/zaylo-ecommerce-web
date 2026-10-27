@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\MobileAccountController;
+use App\Http\Controllers\MobileAppVersionController;
 use App\Http\Controllers\MobileAuthenticationController;
 use App\Http\Controllers\MobileChatController;
 use App\Http\Controllers\MobileComplaintController;
@@ -40,6 +41,7 @@ $complaintRoutes = function () {
 };
 
 Route::prefix('mobile')->name('mobile.')->middleware('throttle:60,1')->group(function () use ($complaintRoutes) {
+    Route::get('/app-version', [MobileAppVersionController::class, 'show'])->name('app-version');
     Route::get('/home', [MobileStorefrontController::class, 'home'])->name('home');
     Route::get('/products', [MobileStorefrontController::class, 'products'])->name('products');
     Route::get('/products/{product:slug}', [MobileStorefrontController::class, 'show'])->name('products.show');

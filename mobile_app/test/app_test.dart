@@ -15,6 +15,7 @@ import 'package:zaylo_mobile/auth/rider/rider_registration_screen.dart';
 import 'package:zaylo_mobile/auth/rider/widgets/rider_terms_dialog.dart';
 import 'package:zaylo_mobile/auth/token_store.dart';
 import 'package:zaylo_mobile/components/announcement_banner.dart';
+import 'package:zaylo_mobile/components/app_update.dart';
 import 'package:zaylo_mobile/components/chat/delivery_chat.dart';
 import 'package:zaylo_mobile/components/chat/typing_dots.dart';
 import 'package:zaylo_mobile/components/complaints.dart';
@@ -565,6 +566,60 @@ Future<void> pumpApp(WidgetTester tester,
 }
 
 void main() {
+  group('app updates', () {
+    test('a newer published version is told apart from the installed one', () {
+      const info = AppVersionInfo(latestVersion: '1.0.10', downloadUrl: 'https://example.test/zaylo.apk');
+      expect(info.isNewerThan('1.0.9'), isTrue, reason: 'numbers, not text');
+      expect(info.isNewerThan('1.0.10'), isFalse);
+      expect(info.isNewerThan('1.1.0'), isFalse);
+      expect(info.isNewerThan(''), isFalse, reason: 'local builds have no version');
+      expect(const AppVersionInfo().isNewerThan('1.0.0'), isFalse, reason: 'server could not tell');
+    });
+
+    Future<(AppUpdatePrompt, List<Uri>)> pumpPrompt(WidgetTester tester, {required String latest, String current = '1.0.3'}) async {
+      final key = GlobalKey<NavigatorState>();
+      final opened = <Uri>[];
+      final prompt = AppUpdatePrompt(
+        navigatorKey: key,
+        currentVersion: current,
+        load: () async => AppVersionInfo(latestVersion: latest, downloadUrl: 'https://example.test/zaylo.apk'),
+        open: (url) async => opened.add(url),
+      );
+      await tester.pumpWidget(MaterialApp(navigatorKey: key, home: const Scaffold(body: Text('Home'))));
+      return (prompt, opened);
+    }
+
+    testWidgets('opening an outdated app suggests updating and opens the download', (tester) async {
+      final (prompt, opened) = await pumpPrompt(tester, latest: '1.0.4');
+      prompt.check();
+      await tester.pumpAndSettle();
+
+      expect(find.text('Update available'), findsOneWidget);
+      expect(find.textContaining('ZAYLO 1.0.4 is out'), findsOneWidget);
+      await tester.tap(find.text('UPDATE'));
+      await tester.pumpAndSettle();
+      expect(opened, [Uri.parse('https://example.test/zaylo.apk')]);
+    });
+
+    testWidgets('"Later" hides the suggestion until the app is opened again, and an up-to-date app sees none',
+        (tester) async {
+      final (prompt, opened) = await pumpPrompt(tester, latest: '1.0.4');
+      prompt.check();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('LATER'));
+      await tester.pumpAndSettle();
+      prompt.check();
+      await tester.pumpAndSettle();
+      expect(find.text('Update available'), findsNothing);
+      expect(opened, isEmpty);
+
+      final (current, _) = await pumpPrompt(tester, latest: '1.0.3');
+      current.check();
+      await tester.pumpAndSettle();
+      expect(find.text('Update available'), findsNothing);
+    });
+  });
+
   testWidgets('a return shows its slip for the rider, who picks it up, and each step', (tester) async {
     final info = ComplaintReturn.fromJson({
       'tracking_number': 'RET-ABC123',

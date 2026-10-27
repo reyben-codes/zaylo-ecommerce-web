@@ -142,5 +142,9 @@ return [
     'android_app' => [
         'required' => env('REQUIRE_ANDROID_APP', true),
         'download_url' => env('ANDROID_APP_URL', 'https://github.com/reyben-codes/zaylo-ecommerce-web/releases/latest/download/zaylo.apk'),
+        // The app asks for the newest version when it opens and suggests updating (MobileAppVersionController).
+        // It is read from the latest release, or set here to pin it (for example while releases are paused).
+        'latest_version' => env('ANDROID_APP_LATEST_VERSION'),
+        'releases_api' => env('ANDROID_APP_RELEASES_API', 'https://api.github.com/repos/reyben-codes/zaylo-ecommerce-web/releases/latest'),
     ],
 ];
