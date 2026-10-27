@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 /**
- * Questions and answers for the help bot (config/faq.php): the signed-in account's own, plus the ones for everyone.
+ * Questions and answers for Zay, the help bot (config/faq.php): the signed-in account's own, plus the ones for everyone.
  * The bot matches typed questions itself and hands over to Help & support when nothing fits.
  */
 class FaqController extends Controller
@@ -22,7 +22,7 @@ class FaqController extends Controller
         $role = self::roleOf($request->user());
 
         return response()->json([
-            'greeting' => 'Hi '.(strtok((string) $request->user()->name, ' ') ?: 'there').'! I answer common questions about ZAYLO. Pick one below or type your own.',
+            'greeting' => 'Hi '.(strtok((string) $request->user()->name, ' ') ?: 'there')."! I'm Zay, ZAYLO's helper. Tap a question below or ask me in your own words.",
             'items' => self::items($role, withLinks: true),
             // Admins are the support team, so they get their inbox instead.
             'support' => $role === 'admin'
@@ -37,7 +37,7 @@ class FaqController extends Controller
         $role = $request->validate(['role' => ['nullable', 'in:buyer,rider']])['role'] ?? 'buyer';
 
         return response()->json([
-            'greeting' => 'Hi! I answer common questions about ZAYLO. Pick one below or type your own.',
+            'greeting' => "Hi! I'm Zay, ZAYLO's helper. Tap a question below or ask me in your own words.",
             'items' => self::items($role, withLinks: false),
         ]);
     }
