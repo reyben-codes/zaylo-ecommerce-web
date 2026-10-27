@@ -81,6 +81,8 @@ Route::prefix('mobile')->name('mobile.')->middleware('throttle:60,1')->group(fun
             Route::post('/deliveries/{shipment}/accept', [MobileRiderDashboardController::class, 'accept'])->middleware('throttle:60,1,mobile-rider-answer')->name('deliveries.accept');
             Route::post('/deliveries/{shipment}/decline', [MobileRiderDashboardController::class, 'decline'])->middleware('throttle:60,1,mobile-rider-answer')->name('deliveries.decline');
             Route::get('/deliveries/{shipment}', [MobileRiderDashboardController::class, 'show'])->name('deliveries.show');
+            // Proof of delivery: a photo of the parcel at the door, right after the delivery scan.
+            Route::post('/deliveries/{shipment}/proof', [MobileRiderDashboardController::class, 'proof'])->middleware('throttle:20,1,mobile-rider-proof')->name('deliveries.proof');
             Route::patch('/deliveries/{shipment}', [MobileRiderDashboardController::class, 'update'])->name('deliveries.update');
             // Chat with the buyer while the parcel is with the rider.
             Route::get('/deliveries/{shipment}/chat', [MobileDeliveryChatController::class, 'riderShow'])->name('deliveries.chat');

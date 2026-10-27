@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:zaylo_mobile/api/api_client.dart';
 import 'package:zaylo_mobile/components/address/ph_address_section.dart';
 import 'package:zaylo_mobile/components/chat/delivery_chat.dart';
@@ -78,6 +80,11 @@ class RiderApi extends ApiClient {
   /// the seller) is notified by the server.
   Future<RiderScanResult> scanParcel(String code) async =>
       RiderScanResult.fromJson(await send('POST', '/mobile/rider/deliveries/scan', body: {'code': code.trim()}));
+
+  /// Proof of delivery: a [photo] of the parcel at the door. Returns the server's message.
+  Future<String> uploadDeliveryPhoto(int id, File photo) async =>
+      (await sendMultipart('/mobile/rider/deliveries/$id/proof', fields: const {}, files: {'photo': photo}))['message']
+          as String;
 
   /// Completed deliveries for [period], newest first; [page] starts at 1.
   Future<RiderHistoryPage> history({RiderPeriod period = RiderPeriod.all, int page = 1}) async =>

@@ -32,10 +32,15 @@ class MobileStorefrontController extends Controller
         // Signed-in buyers also get the web dashboard's sale and suggestion sections.
         $dashboard = [];
         if ($request->user('mobile')) {
-            $flash = $this->availableProducts();
-            ProductCatalog::onSale($flash);
+            // Running flash sales first (ending soonest); without any, the current sale offers.
+            $flash = $this->availableProducts()->onFlashSale()->orderBy('sale_ends_at')->limit(10)->get();
+            if ($flash->isEmpty()) {
+                $onSale = $this->availableProducts();
+                ProductCatalog::onSale($onSale);
+                $flash = $onSale->inRandomOrder()->limit(5)->get();
+            }
             $dashboard = [
-                'flash_sales' => $present($flash->inRandomOrder()->limit(5)->get()),
+                'flash_sales' => $present($flash),
                 'suggested' => $present($this->availableProducts()->inRandomOrder()->limit(10)->get()),
             ];
         }

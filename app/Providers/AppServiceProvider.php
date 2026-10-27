@@ -7,6 +7,7 @@ use App\Models\MobileToken;
 use App\Models\User;
 use App\Services\ActivityLogger;
 use App\Services\BuyerNotificationFeed;
+use App\Services\SellerQueues;
 use App\Services\WorkspaceNotificationFeed;
 use App\Support\SnapshotSchemaBuilder;
 use Illuminate\Auth\Events\Failed;
@@ -65,6 +66,15 @@ class AppServiceProvider extends ServiceProvider
             $view->with([
                 'sidebarUnreadNotifications' => $user ? $feed->unreadCount($user) : 0,
                 'sidebarUrgentNotifications' => $user ? $feed->urgent($user) : collect(),
+            ]);
+        });
+
+        View::composer('partials.seller-sidebar', function ($view) {
+            $seller = auth()->user();
+            $queues = app(SellerQueues::class);
+            $view->with([
+                'sidebarOrdersToPrepare' => $seller ? $queues->ordersToPrepare($seller) : 0,
+                'sidebarReturnsToHandle' => $seller ? $queues->returnsNeedingAction($seller) : 0,
             ]);
         });
 

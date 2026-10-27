@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 
 /**
@@ -57,6 +58,7 @@ class Dispute extends Model
         'category', 'evidence', 'resolved_at',
         'return_type', 'return_method', 'return_courier', 'pickup_date', 'pickup_slot',
         'dropoff_location', 'dropoff_deadline', 'return_tracking_number', 'return_status',
+        'return_received_at', 'refund_amount', 'refunded_at',
     ];
 
     protected $casts = [
@@ -64,7 +66,55 @@ class Dispute extends Model
         'resolved_at' => 'datetime',
         'pickup_date' => 'date',
         'dropoff_deadline' => 'date',
+        'return_received_at' => 'datetime',
+        'refund_amount' => 'decimal:2',
+        'refunded_at' => 'datetime',
     ];
+
+    /** A returned parcel's steps, in order (logistics scans the first four; the seller can confirm receipt). */
+    public const RETURN_STEPS = [
+        'scheduled' => 'Scheduled',
+        'picked_up' => 'Picked up',
+        'sorted' => 'Sorted at hub',
+        'in_transit' => 'On the way to you',
+        'received_by_seller' => 'Received',
+        'refunded' => 'Refunded',
+    ];
+
+    /** Whether sellers can confirm returns and record refunds (after the 2026_10_27_000002 migration). */
+    public static function tracksRefunds(): bool
+    {
+        return Schema::hasColumn('disputes', 'refunded_at');
+    }
+
+    public function hasReturnParcel(): bool
+    {
+        return filled($this->return_tracking_number);
+    }
+
+    public function returnReceived(): bool
+    {
+        return $this->return_received_at !== null || in_array($this->return_status, ['received_by_seller', 'refunded'], true);
+    }
+
+    /** The seller can confirm receipt once the courier has collected the returned item. */
+    public function canConfirmReceipt(): bool
+    {
+        return $this->hasReturnParcel() && ! $this->returnReceived() && $this->status !== 'rejected'
+            && in_array($this->return_status, ['picked_up', 'sorted', 'in_transit'], true);
+    }
+
+    /** Refunds follow the returned item's arrival, or need no parcel for a refund-only request. Exchanges are not refunded. */
+    public function canRefund(): bool
+    {
+        return $this->refunded_at === null && $this->return_status !== 'refunded' && $this->status !== 'rejected' && $this->return_type !== 'exchange'
+            && ($this->hasReturnParcel() ? $this->returnReceived() : $this->return_type === 'refund_only');
+    }
+
+    public function returnStepLabel(): string
+    {
+        return self::RETURN_STEPS[$this->return_status ?? 'scheduled'] ?? ucfirst(str_replace('_', ' ', (string) $this->return_status));
+    }
 
     public function returnCourierName(): string
     {

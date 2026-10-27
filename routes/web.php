@@ -20,6 +20,7 @@ use App\Http\Controllers\CourierController;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\IdentityVerificationController;
 use App\Http\Controllers\LocationController;
+use App\Http\Controllers\DeliveryProofController;
 use App\Http\Controllers\DisputeController;
 use App\Http\Controllers\LogisticsApplicationController;
 use App\Http\Controllers\LogisticsChatController;
@@ -27,6 +28,7 @@ use App\Http\Controllers\LogisticsController;
 use App\Http\Controllers\LogisticsOperationsController;
 use App\Http\Controllers\SellerApplicationController;
 use App\Http\Controllers\SellerController;
+use App\Http\Controllers\SellerReturnController;
 use App\Http\Controllers\ShopController;
 use App\Http\Controllers\SortingCenterController;
 use App\Http\Controllers\SupportChatController;
@@ -172,6 +174,12 @@ Route::middleware(['auth', 'active', 'verified', 'role:seller', 'nocache'])->pre
     Route::delete('/products/{product}', [SellerController::class, 'deleteProduct'])->name('products.destroy');
     Route::get('/orders', [SellerController::class, 'orders'])->name('orders');
     Route::patch('/orders/{order}/status', [SellerController::class, 'updateOrderStatus'])->name('orders.status');
+    Route::patch('/orders/{order}/handover', [SellerController::class, 'confirmHandover'])->name('orders.handover');
+    Route::get('/returns', [SellerReturnController::class, 'index'])->name('returns');
+    Route::patch('/returns/{dispute}/received', [SellerReturnController::class, 'receive'])->name('returns.receive');
+    Route::patch('/returns/{dispute}/refund', [SellerReturnController::class, 'refund'])->middleware('throttle:30,1')->name('returns.refund');
+    // Polled by open Seller Center pages so they refresh when an order, parcel or return changes.
+    Route::get('/updates', [SellerController::class, 'updates'])->middleware('throttle:60,1')->name('updates');
     Route::get('/orders/{order}/waybill', [WaybillController::class, 'seller'])->middleware('throttle:60,1')->name('orders.waybill');
     Route::get('/orders/{order}/waybill/print', [WaybillController::class, 'sellerPrint'])->middleware('throttle:60,1')->name('orders.waybill.print');
     Route::get('/reports/pdf', [SellerController::class, 'reportPdf'])->middleware('throttle:30,1')->name('reports.pdf');
@@ -296,6 +304,8 @@ Route::middleware(['auth', 'active', 'verified', 'nocache'])->group(function () 
     Route::get('/support/{thread}/messages', [SupportChatController::class, 'messages'])->middleware('throttle:120,1')->name('support.messages');
     Route::post('/support/{thread}', [SupportChatController::class, 'send'])->middleware('throttle:30,1')->name('support.send');
     Route::get('/support/{thread}/messages/{message}/photo', [SupportChatController::class, 'photo'])->middleware('throttle:240,1')->name('support.photo');
+    // The rider's photo of a delivered parcel, for the people in the order.
+    Route::get('/deliveries/{shipment}/proof', [DeliveryProofController::class, 'show'])->middleware('throttle:120,1')->name('delivery-proof');
 });
 
 // Pending and rejected logistics partners can still reach their application, so this group skips the active check.

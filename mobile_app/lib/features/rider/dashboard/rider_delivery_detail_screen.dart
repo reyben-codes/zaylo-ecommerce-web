@@ -4,6 +4,7 @@ import 'package:zaylo_mobile/api/rider_api.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
 import 'package:zaylo_mobile/components/layout.dart';
 import 'package:zaylo_mobile/features/rider/dashboard/widgets/rider_dashboard_widgets.dart';
+import 'package:zaylo_mobile/features/rider/dashboard/widgets/rider_delivery_actions.dart';
 import 'package:zaylo_mobile/models/rider/rider_dashboard_models.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 import 'package:zaylo_mobile/utils/formatters.dart';
@@ -23,8 +24,20 @@ class RiderDeliveryDetailScreen extends StatefulWidget {
   State<RiderDeliveryDetailScreen> createState() => _RiderDeliveryDetailScreenState();
 }
 
-class _RiderDeliveryDetailScreenState extends State<RiderDeliveryDetailScreen> {
+class _RiderDeliveryDetailScreenState extends State<RiderDeliveryDetailScreen>
+    with RiderDeliveryActions<RiderDeliveryDetailScreen> {
   late Future<RiderDelivery> _delivery = widget.api.deliveryDetails(widget.deliveryId);
+
+  @override
+  RiderApi get riderApi => widget.api;
+
+  @override
+  Future<void> reloadDeliveries() => _reload();
+
+  Future<void> _addPhoto(RiderDelivery delivery) async {
+    await addDeliveryPhoto(delivery);
+    if (mounted) await _reload();
+  }
 
   Future<void> _reload() async {
     final delivery = widget.api.deliveryDetails(widget.deliveryId);
@@ -62,6 +75,28 @@ class _RiderDeliveryDetailScreenState extends State<RiderDeliveryDetailScreen> {
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
                 children: [
                   RiderDeliveryCard(delivery: shown),
+                  if (delivery != null && (delivery.canAddDeliveryPhoto || delivery.hasDeliveryPhoto))
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Row(children: [
+                        Icon(
+                          delivery.hasDeliveryPhoto ? Icons.task_alt : Icons.photo_camera_outlined,
+                          size: 20,
+                          color: delivery.hasDeliveryPhoto ? ZayloColors.success : ZayloColors.muted,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(delivery.hasDeliveryPhoto
+                              ? 'Delivery photo sent to the seller and buyer.'
+                              : 'No delivery photo yet.'),
+                        ),
+                        if (delivery.canAddDeliveryPhoto)
+                          OutlinedButton(
+                            onPressed: busyDeliveryId == delivery.id ? null : () => _addPhoto(delivery),
+                            child: Text(delivery.hasDeliveryPhoto ? 'Retake' : 'Add photo'),
+                          ),
+                      ]),
+                    ),
                   const RiderSectionHeader(title: 'Timeline'),
                   if (delivery == null)
                     const Padding(padding: EdgeInsets.all(16), child: Loader())

@@ -281,6 +281,8 @@ class RiderDelivery {
     this.needsAcceptance = false,
     this.lastFailure,
     this.timeline = const [],
+    this.hasDeliveryPhoto = false,
+    this.canAddDeliveryPhoto = false,
   });
 
   final int id;
@@ -324,6 +326,12 @@ class RiderDelivery {
 
   /// Everything the rider did with the parcel; only on the details screen.
   final List<RiderTimelineEntry> timeline;
+
+  /// Proof of delivery: the rider's photo of the parcel at the door, shown to the seller and buyer.
+  final bool hasDeliveryPhoto;
+
+  /// The parcel was delivered in the last day, so a photo can still be added or replaced.
+  final bool canAddDeliveryPhoto;
 
   int get itemCount => items.fold(0, (sum, item) => sum + item.quantity);
 
@@ -370,6 +378,8 @@ class RiderDelivery {
         timeline: (json['timeline'] as List<dynamic>? ?? const [])
             .map((item) => RiderTimelineEntry.fromJson(item as Map<String, dynamic>))
             .toList(),
+        hasDeliveryPhoto: json['has_delivery_photo'] as bool? ?? false,
+        canAddDeliveryPhoto: json['can_add_delivery_photo'] as bool? ?? false,
       );
 }
 

@@ -17,11 +17,13 @@ class Shipment extends Model
         'seller_order_id', 'logistics_provider_id', 'rider_id', 'tracking_code',
         'status', 'fee_minor', 'cod_amount_minor', 'cod_collected', 'attempts',
         'pickup_confirmed_at', 'pickup_scheduled_for', 'sorted_at', 'sort_area',
+        'delivery_proof_path', 'handover_confirmed_at',
     ];
 
     protected $casts = [
         'cod_collected' => 'boolean', 'picked_up_at' => 'datetime', 'delivered_at' => 'datetime',
         'pickup_confirmed_at' => 'datetime', 'pickup_scheduled_for' => 'date', 'sorted_at' => 'datetime',
+        'handover_confirmed_at' => 'datetime',
     ];
 
     public function order(): BelongsTo
@@ -48,6 +50,18 @@ class Shipment extends Model
     public static function tracksProvider(): bool
     {
         return Schema::hasColumn('shipments', 'logistics_provider_id');
+    }
+
+    /** Whether parcels keep the rider's photo at the door (after the 2026_10_27_000002 migration). */
+    public static function tracksDeliveryProof(): bool
+    {
+        return Schema::hasColumn('shipments', 'delivery_proof_path');
+    }
+
+    /** Whether sellers can confirm they handed a parcel to the logistics partner (same migration). */
+    public static function tracksHandover(): bool
+    {
+        return Schema::hasColumn('shipments', 'handover_confirmed_at');
     }
 
     public function rider(): BelongsTo

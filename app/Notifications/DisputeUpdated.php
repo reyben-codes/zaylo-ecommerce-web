@@ -28,6 +28,12 @@ class DisputeUpdated extends Notification
             'decided' => $mail->subject("Complaint about order {$order}: {$this->dispute->status_label}")
                 ->line("The ZAYLO team has marked the complaint about order {$order} as {$this->dispute->status_label}.")
                 ->line('Decision: '.($this->dispute->resolution ?: 'No details were given.')),
+            'return_received' => $mail->subject("Your return for order {$order} reached the seller")
+                ->line("The seller received the item you returned from order {$order}.")
+                ->line('They will now process your refund or replacement. You can follow it in the case.'),
+            'refunded' => $mail->subject("Refund issued for order {$order}")
+                ->line('The seller issued a refund of ₱'.number_format((float) $this->dispute->refund_amount, 2)." for order {$order}.")
+                ->line('The case is now closed. Contact ZAYLO support if the money does not reach you.'),
             default => $mail->subject("Update on the complaint about order {$order}")
                 ->line("There is a new update on the complaint about order {$order}."),
         };

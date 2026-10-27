@@ -196,6 +196,9 @@
                         @if($order->shipment?->delivered_at)
                             <p><strong>Delivered:</strong> {{ $order->shipment->delivered_at->format('M j, Y · g:i A') }}</p>
                         @endif
+                        @if($order->shipment?->delivery_proof_path)
+                            <p><strong>Proof of delivery:</strong> <a href="{{ route('delivery-proof', $order->shipment) }}" target="_blank" rel="noopener">View the rider's photo</a></p>
+                        @endif
                         @if($order->notes)
                             <p><strong>Order note:</strong> {{ $order->notes }}</p>
                         @endif

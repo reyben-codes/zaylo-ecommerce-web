@@ -64,3 +64,72 @@
         margin-left: auto;
     }
 }
+
+/* Ranking on ZAYLO: the shop's place and its best-selling products. */
+.seller-ranking {
+    margin-bottom: 24px;
+}
+
+.seller-ranking__body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+    gap: 18px;
+    padding: 0 24px 22px;
+}
+
+.seller-ranking__shop {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    padding: 18px;
+    border: 1px solid var(--c-ece4db);
+    border-radius: 12px;
+    background: var(--c-faf7f2);
+}
+
+.seller-ranking__shop > i {
+    color: var(--c-9a755e);
+    font-size: 1.6rem;
+}
+
+.seller-ranking__shop div {
+    display: grid;
+    gap: 4px;
+}
+
+.seller-ranking__shop span {
+    color: var(--c-6b5f54);
+    font-size: .82rem;
+}
+
+.seller-ranking__shop.is-best {
+    border-color: var(--c-b28b6f);
+    background: var(--c-fffaf3);
+}
+
+.seller-ranking__shop.is-best > i {
+    color: var(--c-b28b6f);
+}
+
+.seller-ranking__products h3 {
+    margin: 0 0 4px;
+    font-size: .9rem;
+}
+
+.seller-ranking__pill {
+    background: var(--c-f5f0ea);
+    color: var(--c-644c37);
+    white-space: nowrap;
+}
+
+.seller-ranking__pill.is-best {
+    background: var(--c-1a1714);
+    color: var(--c-fbf8f4);
+}
+
+@media (max-width: 760px) {
+    .seller-ranking__body {
+        grid-template-columns: minmax(0, 1fr);
+        padding: 0 16px 18px;
+    }
+}

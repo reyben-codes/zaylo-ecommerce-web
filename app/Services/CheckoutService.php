@@ -119,6 +119,13 @@ class CheckoutService
                     )) {
                         throw ValidationException::withMessages(['cart' => 'A product price changed since you reviewed checkout. Please review the updated total before placing your order.']);
                     }
+                    // Flash sale units are counted as they sell; the row is locked, so two buyers cannot take the last one.
+                    if ($product->flashAppliesTo($variant)) {
+                        if ($item->quantity > $product->flashRemaining()) {
+                            throw ValidationException::withMessages(['cart' => "Only {$product->flashRemaining()} of {$product->name} are left at the flash sale price. Lower the quantity to buy them."]);
+                        }
+                        Product::whereKey($product->id)->increment('flash_sold', $item->quantity);
+                    }
                     $prepared->push(compact('item', 'product', 'variant', 'unitPrice'));
                 }
 

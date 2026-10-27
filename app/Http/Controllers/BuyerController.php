@@ -39,7 +39,10 @@ class BuyerController extends Controller
                 ->with(['images', 'defaultVariant', 'category', 'additionalCategories'])
                 ->withCount(['variants as active_variants_count' => fn ($query) => $query->where('is_active', true)]);
         }
-        $flashProducts = (clone $base)->where(function ($query) {
+        // Flash sales first, ending soonest first; without any running, the section shows current sale offers.
+        $flashProducts = (clone $base)->onFlashSale()->orderBy('sale_ends_at')->limit(10)->get();
+        $flashEndsAt = $flashProducts->min('sale_ends_at');
+        $flashProducts = $flashProducts->isNotEmpty() ? $flashProducts : (clone $base)->where(function ($query) {
             $query->whereRaw('('.Product::sellingPriceSql().') < ('.Product::regularPriceSql().')', [now(), now()])
                 ->orWhere(function ($legacySale) {
                     $legacySale->whereNull('sale_type');
@@ -50,7 +53,7 @@ class BuyerController extends Controller
         })->inRandomOrder()->limit(5)->get();
         $suggestedProducts = (clone $base)->inRandomOrder()->limit(10)->get();
 
-        return view('buyer.dashboard', compact('flashProducts', 'suggestedProducts') + ['user' => auth()->user()]);
+        return view('buyer.dashboard', compact('flashProducts', 'flashEndsAt', 'suggestedProducts') + ['user' => auth()->user()]);
     }
 
     public function products(Request $request)

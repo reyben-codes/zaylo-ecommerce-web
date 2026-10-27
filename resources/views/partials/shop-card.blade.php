@@ -57,6 +57,9 @@
                 @endif
             @endunless
         </div>
+        @if($product->isFlashSale())
+            <p class="shop-card__flash"><i class="fas fa-bolt" aria-hidden="true"></i> Flash sale · {{ number_format($product->flashRemaining()) }} left at this price</p>
+        @endif
         @if($showStock ?? false)
             <p class="catalog-stock {{ $soldOut ? 'is-sold-out' : '' }}">{{ $soldOut ? 'Currently sold out' : number_format($product->available_stock).' in stock' }}</p>
         @endif

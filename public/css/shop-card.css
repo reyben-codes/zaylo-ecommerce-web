@@ -184,6 +184,8 @@
 .shop-card__price del { color: var(--c-8a7a6b); font-size: .76rem; white-space: nowrap; }
 
 .shop-card .catalog-stock { margin: 0; }
+/* Flash sale: units left at the flash price. */
+.shop-card__flash { margin: 0; color: var(--c-c0392b); font-size: .74rem; font-weight: 600; }
 
 @media (max-width: 640px) {
     .shop-card { border-radius: 16px; }

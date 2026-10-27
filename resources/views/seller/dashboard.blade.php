@@ -1,5 +1,6 @@
 @extends('layouts.seller')
 
+@section('auto-refresh', 'on')
 @section('title', 'Dashboard')
 
 @push('styles')
@@ -66,6 +67,57 @@
                 <span class="seller-stat__note">Your shop page opens once your account is approved</span>
             </article>
         @endif
+    </section>
+
+    @php
+        $shopRank = $rankings['shop']['rank'];
+        $topShops = \App\Services\SellerRankings::TOP_SHOPS;
+    @endphp
+    <section class="seller-panel seller-ranking" aria-labelledby="ranking-title">
+        <header class="seller-panel__header">
+            <div>
+                <h2 id="ranking-title">Your ranking on ZAYLO</h2>
+                <p>Last {{ \App\Services\SellerRankings::DAYS }} days, by sales across all shops</p>
+            </div>
+        </header>
+        <div class="seller-ranking__body">
+            <div class="seller-ranking__shop{{ $shopRank === 1 ? ' is-best' : ($shopRank && $shopRank <= $topShops ? ' is-top' : '') }}">
+                <i class="fas {{ $shopRank === 1 ? 'fa-trophy' : 'fa-ranking-star' }}" aria-hidden="true"></i>
+                <div>
+                    @if($shopRank === 1)
+                        <strong>Best shop on ZAYLO</strong>
+                        <span>Your shop has the most sales of all {{ $rankings['shop']['shops'] }} shops.</span>
+                    @elseif($shopRank)
+                        <strong>#{{ $shopRank }} of {{ $rankings['shop']['shops'] }} shops{{ $shopRank <= $topShops ? ' · Top '.$topShops : '' }}</strong>
+                        <span>&#8369;{{ number_format($rankings['shop']['sales'], 2) }} in sales.</span>
+                    @else
+                        <strong>Not ranked yet</strong>
+                        <span>Your shop is ranked once it makes a sale.</span>
+                    @endif
+                </div>
+            </div>
+
+            <div class="seller-ranking__products">
+                <h3>Best-selling products</h3>
+                @if($rankings['products']->isEmpty())
+                    <p class="seller-cell-note">Products you sell in this period appear here.</p>
+                @else
+                    <ol class="dashboard-list">
+                        @foreach($rankings['products'] as $product)
+                            <li class="dashboard-list__item">
+                                <div class="dashboard-list__main">
+                                    <strong>{{ $product['name'] }}</strong>
+                                    <span>{{ number_format($product['quantity']) }} sold</span>
+                                </div>
+                                @if($product['rank'])
+                                    <span class="stock-pill seller-ranking__pill{{ $product['rank'] === 1 ? ' is-best' : '' }}">{{ $product['rank'] === 1 ? 'Best seller on ZAYLO' : '#'.$product['rank'].' on ZAYLO' }}</span>
+                                @endif
+                            </li>
+                        @endforeach
+                    </ol>
+                @endif
+            </div>
+        </div>
     </section>
 
     <div class="seller-panel-grid">
