@@ -6,6 +6,7 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/home.css') }}?v={{ filemtime(public_path('css/home.css')) }}">
+<link rel="stylesheet" href="{{ asset('css/top-picks.css') }}?v={{ filemtime(public_path('css/top-picks.css')) }}">
 <style>
     .icon-group a { color: var(--c-1e1e1e); text-decoration: none; transition: 0.15s; position: relative; }
     .icon-group a:hover { color: var(--c-8a7a6b); }
@@ -100,6 +101,65 @@
             @endforeach
         </div>
     </section>
+
+    @if($topProducts->isNotEmpty())
+        <!-- Top Selling Products -->
+        <section class="top-picks" aria-labelledby="top-products-title">
+            <div class="section-header">
+                <div>
+                    <span class="section-label">What buyers love</span>
+                    <h2 id="top-products-title">Top Selling Products</h2>
+                </div>
+                <a href="{{ route('products.index') }}">Shop all →</a>
+            </div>
+            <div class="flash-grid">
+                @foreach($topProducts as $product)
+                    @include('partials.shop-card', ['product' => $product, 'unitsSold' => (int) $product->units_sold, 'rank' => $loop->iteration])
+                @endforeach
+            </div>
+        </section>
+    @endif
+
+    @if($topShops->isNotEmpty())
+        <!-- Top Shops -->
+        <section class="top-picks top-picks--shops" aria-labelledby="top-shops-title">
+            <div class="section-header">
+                <div>
+                    <span class="section-label">Trusted by buyers</span>
+                    <h2 id="top-shops-title">Top Shops</h2>
+                </div>
+                <a href="{{ route('buyer.following') }}">Shops you follow →</a>
+            </div>
+            <ol class="top-shops">
+                @foreach($topShops as $row)
+                    @php $shop = $row['shop']; $rating = $row['rating']; @endphp
+                    <li class="top-shop">
+                        <span class="top-shop__rank" aria-hidden="true">#{{ $loop->iteration }}</span>
+                        <a href="{{ $shop->url() }}" class="top-shop__identity">
+                            <span class="top-shop__avatar" aria-hidden="true">{{ $shop->initials() }}</span>
+                            <span class="top-shop__text">
+                                <strong>{{ $shop->name }}</strong>
+                                @if($shop->location)<small><i class="fas fa-location-dot" aria-hidden="true"></i> {{ $shop->location }}</small>@endif
+                            </span>
+                        </a>
+                        <dl class="top-shop__stats">
+                            <div><dt>Sold</dt><dd>{{ number_format($row['sold']) }}</dd></div>
+                            <div><dt>Rating</dt><dd>@if($rating['average'])<i class="fas fa-star" aria-hidden="true"></i> {{ number_format($rating['average'], 1) }}@else New @endif</dd></div>
+                            <div><dt>Followers</dt><dd>{{ number_format($row['followers']) }}</dd></div>
+                        </dl>
+                        @if($row['preview']->isNotEmpty())
+                            <div class="top-shop__preview" aria-hidden="true">
+                                @foreach($row['preview'] as $product)
+                                    <img src="{{ $product->image_url ?: asset('images/ZAYLO_ICON_DARK.png') }}" alt="" loading="lazy">
+                                @endforeach
+                            </div>
+                        @endif
+                        <a href="{{ $shop->url() }}" class="top-shop__visit" aria-label="Visit {{ $shop->name }}">Visit shop</a>
+                    </li>
+                @endforeach
+            </ol>
+        </section>
+    @endif
 
     <!-- Suggested Products -->
     <section class="suggested-products">

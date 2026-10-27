@@ -89,6 +89,17 @@ class ProductCatalog
         });
     }
 
+    /** Products buyers have received, most units first, with the count as units_sold. */
+    public static function bestSelling(Builder $query): void
+    {
+        $delivered = fn ($items) => Product::usesLegacySchema()
+            ? $items->whereHas('order', fn ($order) => $order->where('status', 'completed'))
+            : $items->whereHas('sellerOrder', fn ($order) => $order->whereIn('status', ['delivered', 'completed']));
+        $query->whereHas('orderItems', $delivered)
+            ->withSum(['orderItems as units_sold' => $delivered], 'quantity')
+            ->orderByDesc('units_sold')->orderByDesc('products.id');
+    }
+
     /** Sorts by relevance (with a search), newest, or selling price. */
     public static function sort(Builder $query, string $sort, string $search = ''): void
     {

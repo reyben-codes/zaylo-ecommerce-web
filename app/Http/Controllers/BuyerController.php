@@ -11,6 +11,8 @@ use App\Models\Voucher;
 use App\Models\Wishlist;
 use App\Services\CartService;
 use App\Services\CheckoutService;
+use App\Support\ProductCatalog;
+use App\Support\Shop;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -49,8 +51,10 @@ class BuyerController extends Controller
                 });
         })->inRandomOrder()->limit(5)->get();
         $suggestedProducts = (clone $base)->inRandomOrder()->limit(10)->get();
+        $topProducts = (clone $base)->tap(fn ($query) => ProductCatalog::bestSelling($query))->limit(5)->get();
+        $topShops = Shop::topSelling();
 
-        return view('buyer.dashboard', compact('flashProducts', 'suggestedProducts') + ['user' => auth()->user()]);
+        return view('buyer.dashboard', compact('flashProducts', 'suggestedProducts', 'topProducts', 'topShops') + ['user' => auth()->user()]);
     }
 
     public function products(Request $request)

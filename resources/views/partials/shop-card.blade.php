@@ -2,7 +2,8 @@
     A storefront product tile in the mobile app's style (mobile_app/lib/features/buyer/catalog/product_card.dart):
     the photo fades into a soft card, with the save button, badge and rating over it, then the categories, name,
     description, price and a compact bag button. Expects $product; optional $heading ('h2' or 'h3', default 'h3')
-    and $showStock (how many are in stock, or Sold out). $savedProductIds comes from AppServiceProvider.
+    and $showStock (how many are in stock, or Sold out); $unitsSold, with an optional $rank, for best-seller lists.
+    $savedProductIds comes from AppServiceProvider.
 --}}
 @php
     $heading = ($heading ?? 'h3') === 'h2' ? 'h2' : 'h3';
@@ -38,6 +39,9 @@
         @include('partials.category-tags', ['href' => fn ($key) => route('products.index', ['category' => $key])])
         <{{ $heading }} class="shop-card__name"><a href="{{ $url }}">{{ $product->name }}</a></{{ $heading }}>
         @include('partials.product-card-description')
+        @isset($unitsSold)
+            <p class="shop-card__sold">@isset($rank)<span class="shop-card__rank">#{{ $rank }}</span>@endisset {{ number_format($unitsSold) }} sold</p>
+        @endisset
         <div class="shop-card__footer">
             <p class="shop-card__price">
                 <strong>₱{{ number_format($product->price, 2) }}</strong>
