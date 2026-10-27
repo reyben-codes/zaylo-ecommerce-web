@@ -3,7 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\ComplianceWarning;
+use App\Models\IdentityVerification;
+use App\Models\LogisticsProvider;
 use App\Models\Product;
+use App\Models\Rider;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -68,6 +71,65 @@ class WorkspaceNotificationsTest extends TestCase
 
         $this->post(route('seller.notifications.read-all'));
         $this->get(route('seller.products'))->assertOk()->assertDontSee('seller-alert-banner', false);
+    }
+
+    public function test_admin_decisions_show_for_every_admin_and_for_the_account_owner(): void
+    {
+        $ada = User::factory()->create(['role' => 'admin', 'status' => 'active', 'name' => 'Ada Admin']);
+        $ben = User::factory()->create(['role' => 'admin', 'status' => 'active', 'name' => 'Ben Admin']);
+        $seller = User::factory()->create(['role' => 'seller', 'status' => 'pending', 'name' => 'Linen House']);
+
+        $this->actingAs($ada)->patch(route('admin.users.status', $seller), ['status' => 'active'])->assertSessionHasNoErrors();
+
+        // The admin who decided sees it as history (already read); the other admin sees it as new.
+        $this->get(route('admin.notifications'))->assertOk()
+            ->assertSeeInOrder(['Account approved', 'You · Linen House is approved and can now sign in.'])
+            ->assertViewHas('notifications', fn ($items) => $items->firstWhere('title', 'Account approved')['read'] === true);
+        $this->actingAs($ben)->get(route('admin.notifications'))->assertOk()
+            ->assertSee('Ada Admin · Linen House is approved and can now sign in.')
+            ->assertViewHas('notifications', fn ($items) => $items->firstWhere('title', 'Account approved')['read'] === false);
+
+        // The seller sees the approval; a later suspension and reactivation show too.
+        $this->actingAs($seller->fresh())->get(route('seller.notifications'))->assertOk()->assertSee('Your account was approved');
+        $this->actingAs($ben)->patch(route('admin.users.status', $seller), ['status' => 'suspended', 'reason' => 'Repeated prohibited listings.'])->assertSessionHasNoErrors();
+        $this->patch(route('admin.users.status', $seller), ['status' => 'active'])->assertSessionHasNoErrors();
+        $this->get(route('admin.notifications'))->assertSee('Account suspended')->assertSee('Reason: Repeated prohibited listings.')->assertSee('Account reactivated');
+        $this->actingAs($seller->fresh())->get(route('seller.notifications'))->assertOk()
+            ->assertSeeInOrder(['Your account is active again', 'Your account was suspended', 'Reason: Repeated prohibited listings.', 'Your account was approved']);
+    }
+
+    public function test_logistics_partners_see_their_approval_and_rider_applications(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'status' => 'active']);
+        $owner = User::factory()->create(['role' => 'logistics', 'status' => 'pending']);
+        $provider = LogisticsProvider::create(['user_id' => $owner->id, 'name' => 'Swift Parcels', 'slug' => 'swift-parcels', 'status' => 'pending', 'contact_phone' => '09170000001']);
+        $this->actingAs($admin)->patch(route('admin.users.status', $owner), ['status' => 'active'])->assertSessionHasNoErrors();
+        $applicant = User::factory()->create(['role' => 'courier', 'status' => 'pending', 'name' => 'Pedro Rider']);
+        Rider::create(['user_id' => $applicant->id, 'logistics_provider_id' => $provider->id, 'vehicle_type' => 'Motorcycle', 'status' => 'pending']);
+
+        $this->actingAs($owner->fresh())->get(route('logistics.dashboard'))->assertOk()
+            ->assertSee(route('logistics.notifications'))->assertSee('seller-sidebar__badge', false);
+        $this->get(route('logistics.notifications'))->assertOk()
+            ->assertSee('Your account was approved')
+            ->assertSee('New rider application')->assertSee('Pedro Rider applied to deliver for you.');
+        $this->post(route('logistics.notifications.read-all'))->assertRedirect(route('logistics.notifications'));
+        $this->get(route('logistics.dashboard'))->assertDontSee('seller-sidebar__badge', false);
+    }
+
+    public function test_buyers_are_told_when_their_id_is_approved_or_rejected(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'status' => 'active']);
+        $buyer = User::factory()->create(['role' => 'buyer', 'status' => 'active']);
+        $check = IdentityVerification::create(['user_id' => $buyer->id, 'id_type' => 'passport', 'document_path' => 'identity/id.jpg', 'status' => 'pending']);
+
+        $this->actingAs($admin)->patch(route('admin.identity.review', $check), ['decision' => 'reject', 'reason' => 'The photo is too blurry to read.'])->assertSessionHasNoErrors();
+        $this->actingAs($buyer)->get(route('buyer.notifications'))->assertOk()
+            ->assertSee('Your ID was not approved')->assertSee('Reason: The photo is too blurry to read.');
+        // The app reads the same feed.
+        $token = $this->postJson('/api/mobile/login', ['email' => $buyer->email, 'password' => 'password', 'device_name' => 'Test phone'])->assertOk()->json('token');
+        $this->withToken($token)->getJson(route('mobile.notifications'))->assertOk()
+            ->assertJsonFragment(['type' => 'account', 'title' => 'Your ID was not approved']);
+        $this->actingAs($admin)->get(route('admin.notifications'))->assertSee('ID rejected');
     }
 
     public function test_notifications_pages_are_role_only(): void

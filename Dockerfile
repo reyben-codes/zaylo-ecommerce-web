@@ -14,6 +14,10 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-install gd exif pdo pdo_mysql \
     && rm -rf /var/lib/apt/lists/*
 
+# PHP's defaults (2 MB per file, 8 MB per form) are below what the site accepts: 5 MB photos and documents,
+# and product forms of up to 40 MB. Resizing a large phone photo also needs more than the default 128 MB of memory.
+RUN printf "upload_max_filesize=10M\npost_max_size=40M\nmemory_limit=256M\n" > /usr/local/etc/php/conf.d/uploads.ini
+
 # Enable Apache Mod_Rewrite for Laravel routing
 RUN a2enmod rewrite
 

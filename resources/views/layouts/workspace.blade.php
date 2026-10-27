@@ -37,6 +37,7 @@
             'icon' => 'fa-truck-fast',
             'nav' => [
                 ['route' => 'logistics.dashboard', 'label' => 'Dashboard', 'icon' => 'fa-home'],
+                ['route' => 'logistics.notifications', 'label' => 'Notifications', 'icon' => 'fa-bell', 'badge' => true],
                 ['heading' => 'Sorting center'],
                 ['route' => 'logistics.pickups', 'label' => 'Pickups', 'icon' => 'fa-box-open'],
                 ['route' => 'logistics.incoming', 'label' => 'Incoming', 'icon' => 'fa-arrow-down'],

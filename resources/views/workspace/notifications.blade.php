@@ -1,4 +1,4 @@
-@extends($portal === 'admin' ? 'layouts.workspace' : 'layouts.seller', ['workspace' => 'admin'])
+@extends($portal === 'seller' ? 'layouts.seller' : 'layouts.workspace', ['workspace' => $portal])
 
 @section('title', 'Notifications')
 
@@ -9,12 +9,13 @@
 @section('content')
     <section class="seller-page-heading">
         <div>
-            <p class="seller-eyebrow">{{ $portal === 'admin' ? 'Admin Center' : 'Seller Center' }}</p>
+            <p class="seller-eyebrow">{{ ['admin' => 'Admin Center', 'logistics' => 'Logistics Center'][$portal] ?? 'Seller Center' }}</p>
             <h1>Notifications</h1>
             <p>
-                {{ $portal === 'admin'
-                    ? 'Applications, ID checks, listings, complaints and support messages waiting for you.'
-                    : 'New orders, listing reviews, stock alerts and warnings about your shop.' }}
+                {{ [
+                    'admin' => 'Applications, ID checks, listings, complaints and support messages waiting for you, and the decisions admins made.',
+                    'logistics' => 'Decisions about your account and rider applications waiting for your review.',
+                ][$portal] ?? 'New orders, listing reviews, stock alerts, account decisions and warnings about your shop.' }}
                 {{ $unreadCount }} unread.
             </p>
         </div>

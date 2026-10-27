@@ -10,7 +10,6 @@
     @php
         $maxSales = max(1, (float) $series->max('sales'));
         $percent = rtrim(rtrim(number_format($rate * 100, 2), '0'), '.');
-        $period = ['from' => $range['from'], 'to' => $range['to'], 'seller' => $seller['id'] ?? null, 'product' => $product['id'] ?? null];
         $scopeTitle = $seller ? $seller['name'] : 'Marketplace';
         if ($product) {
             $scopeTitle .= ' · '.$product['name'];
@@ -30,9 +29,7 @@
             @if($seller)
                 <a href="{{ route('admin.reports', array_filter(['from' => $range['from'], 'to' => $range['to'], 'product' => $product['id'] ?? null])) }}" class="seller-button seller-button--secondary"><i class="fas fa-users" aria-hidden="true"></i> All sellers</a>
             @endif
-            <button type="button" class="seller-button seller-button--secondary" data-print hidden><i class="fas fa-print" aria-hidden="true"></i> Print</button>
-            <a href="{{ route('admin.reports.pdf', ['report' => 'sales'] + array_filter($period)) }}" class="seller-button"><i class="fas fa-file-pdf" aria-hidden="true"></i> Sales summary PDF</a>
-            <a href="{{ route('admin.reports.pdf', ['report' => 'commission'] + array_filter($period)) }}" class="seller-button seller-button--secondary"><i class="fas fa-file-pdf" aria-hidden="true"></i> Commission PDF</a>
+            {{-- Reports are printed or saved only from "Download report" below, after choosing the options. --}}
         </div>
     </section>
 

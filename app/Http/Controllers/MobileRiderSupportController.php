@@ -78,7 +78,10 @@ class MobileRiderSupportController extends Controller
             'id' => $message->id,
             // Messages sent from the website have no client id; the app only needs one that is unique.
             'client_id' => $clientId ?? $message->client_id ?? 'server-'.$message->id,
-            'body' => $message->body,
+            // The app shows text only; a photo sent on the website is mentioned so the bubble is never blank.
+            'body' => $message->image_path
+                ? trim($message->body.' 📷 Photo (open ZAYLO on the web to view it)')
+                : $message->body,
             'from_staff' => $fromStaff,
             'sender_name' => $fromStaff ? 'ZAYLO Support' : null,
             'read' => $message->read_at !== null,

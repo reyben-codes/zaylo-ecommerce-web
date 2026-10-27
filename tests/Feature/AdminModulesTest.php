@@ -11,6 +11,7 @@ use App\Models\Product;
 use App\Models\SellerApplication;
 use App\Models\SellerOrder;
 use App\Models\Shipment;
+use App\Models\SupportMessage;
 use App\Models\SupportThread;
 use App\Models\User;
 use App\Notifications\AccountReviewed;
@@ -180,7 +181,9 @@ class AdminModulesTest extends TestCase
             ->assertSee($shopName.' · reports')
             ->assertSee('All sellers')
             ->assertSee(route('admin.reports', ['from' => now('Asia/Manila')->subDays(29)->toDateString(), 'to' => now('Asia/Manila')->toDateString()]))
-            ->assertSee(route('admin.reports.pdf', ['report' => 'sales', 'from' => now('Asia/Manila')->subDays(29)->toDateString(), 'to' => now('Asia/Manila')->toDateString(), 'seller' => $shopId]))
+            // No print or PDF shortcuts at the top: reports come only from "Download report", with this seller preselected.
+            ->assertDontSee('data-print', false)->assertDontSee(route('admin.reports.pdf', ['report' => 'sales']), false)
+            ->assertSee('<option value="'.$shopId.'" selected>', false)
             ->assertViewHas('summary', fn ($summary) => $summary['gross'] === 500.0 && $summary['orders'] === 1);
 
         foreach (['sales', 'commission'] as $report) {
@@ -268,6 +271,43 @@ class AdminModulesTest extends TestCase
         // Admins can start a conversation with anyone from their profile.
         $this->actingAs($this->admin)->post(route('admin.chat.start'), ['participant_id' => $other->id])->assertRedirect();
         $this->assertTrue(SupportThread::where('user_id', $other->id)->exists());
+    }
+
+    public function test_admins_and_users_can_send_photos_in_support_messages(): void
+    {
+        $buyer = User::factory()->create(['role' => 'buyer', 'status' => 'active', 'name' => 'Bea Buyer']);
+        $other = User::factory()->create(['role' => 'buyer', 'status' => 'active']);
+        $thread = SupportThread::create(['user_id' => $buyer->id]);
+
+        $this->actingAs($this->admin)->get(route('admin.chat', ['thread' => $thread->id]))->assertOk()
+            ->assertSee('data-chat-photo', false)->assertSee('enctype="multipart/form-data"', false);
+
+        // A photo alone is a message; it is re-encoded and kept on the private disk.
+        $sent = $this->post(route('support.send', $thread), ['photo' => UploadedFile::fake()->image('damaged-box.jpg', 2400, 1800)], ['Accept' => 'application/json'])
+            ->assertCreated()->json('message');
+        $message = SupportMessage::findOrFail($sent['id']);
+        $this->assertSame('', $message->body);
+        Storage::disk('local')->assertExists($message->image_path);
+        $this->assertStringStartsWith("support/{$thread->id}/", $message->image_path);
+        $this->assertSame(route('support.photo', [$thread, $message]), $sent['photo']);
+        [$width] = getimagesizefromstring(Storage::disk('local')->get($message->image_path));
+        $this->assertSame(1600, $width);
+
+        // Text and a photo together, from the user's Help & support page.
+        $this->actingAs($buyer)->get(route('support'))->assertOk()->assertSee('data-chat-photo', false)->assertSee($sent['photo']);
+        $this->post(route('support.send', $thread), ['body' => 'Here is the receipt.', 'photo' => UploadedFile::fake()->image('receipt.png', 400, 600)], ['Accept' => 'application/json'])
+            ->assertCreated()->assertJsonPath('message.body', 'Here is the receipt.');
+        $this->get($sent['photo'])->assertOk();
+
+        // Only the people in the conversation can open the photo; empty messages and other files are refused.
+        $this->actingAs($other)->get($sent['photo'])->assertForbidden();
+        $this->actingAs($buyer)->postJson(route('support.send', $thread), [])->assertJsonValidationErrors('body');
+        $this->post(route('support.send', $thread), ['photo' => UploadedFile::fake()->create('notes.pdf', 10, 'application/pdf')], ['Accept' => 'application/json'])
+            ->assertJsonValidationErrors('photo');
+
+        // The admin's list and notifications describe a photo-only message.
+        $this->actingAs($this->admin)->get(route('admin.chat'))->assertSee('Here is the receipt.');
+        $this->assertSame('📷 Photo', $message->preview);
     }
 
     public function test_account_decisions_and_deactivation_are_emailed(): void

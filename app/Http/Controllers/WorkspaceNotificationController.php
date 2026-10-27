@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Services\WorkspaceNotificationFeed;
 use Illuminate\Http\Request;
 
-/** The Admin Center and Seller Center notifications pages (admin.notifications, seller.notifications). */
+/** The Admin, Seller and Logistics Center notifications pages (admin., seller. and logistics.notifications). */
 class WorkspaceNotificationController extends Controller
 {
     public function __construct(private WorkspaceNotificationFeed $feed) {}
@@ -41,6 +41,10 @@ class WorkspaceNotificationController extends Controller
 
     private function portal(Request $request): string
     {
-        return $request->routeIs('admin.*') ? 'admin' : 'seller';
+        return match (true) {
+            $request->routeIs('admin.*') => 'admin',
+            $request->routeIs('logistics.*') => 'logistics',
+            default => 'seller',
+        };
     }
 }

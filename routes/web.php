@@ -295,6 +295,7 @@ Route::middleware(['auth', 'active', 'verified', 'nocache'])->group(function () 
     Route::get('/support', [SupportChatController::class, 'user'])->middleware('role:buyer,seller,rider,logistics')->name('support');
     Route::get('/support/{thread}/messages', [SupportChatController::class, 'messages'])->middleware('throttle:120,1')->name('support.messages');
     Route::post('/support/{thread}', [SupportChatController::class, 'send'])->middleware('throttle:30,1')->name('support.send');
+    Route::get('/support/{thread}/messages/{message}/photo', [SupportChatController::class, 'photo'])->middleware('throttle:240,1')->name('support.photo');
 });
 
 // Pending and rejected logistics partners can still reach their application, so this group skips the active check.
@@ -305,6 +306,9 @@ Route::middleware(['auth', 'verified', 'role:logistics', 'nocache'])->prefix('lo
 
 Route::middleware(['auth', 'active', 'verified', 'role:logistics', 'nocache'])->prefix('logistics')->name('logistics.')->group(function () {
     Route::get('/dashboard', [LogisticsController::class, 'dashboard'])->name('dashboard');
+    Route::get('/notifications', [WorkspaceNotificationController::class, 'index'])->name('notifications');
+    Route::post('/notifications/open', [WorkspaceNotificationController::class, 'open'])->name('notifications.open');
+    Route::post('/notifications/read-all', [WorkspaceNotificationController::class, 'markAllRead'])->name('notifications.read-all');
     Route::get('/riders', [LogisticsController::class, 'riders'])->name('riders');
     Route::get('/riders/{rider}/documents/{document}', [LogisticsController::class, 'riderDocument'])->name('riders.document');
     Route::patch('/riders/{rider}', [LogisticsController::class, 'updateRider'])->middleware('throttle:60,1')->name('riders.update');
