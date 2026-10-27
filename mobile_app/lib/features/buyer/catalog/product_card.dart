@@ -19,7 +19,7 @@ class ProductGridDelegate extends SliverGridDelegate {
 
   static const _crossSpacing = 12.0;
   static const _mainSpacing = 14.0;
-  static const infoHeight = 98.0;
+  static const infoHeight = 118.0;
 
   @override
   SliverGridLayout getLayout(SliverConstraints constraints) {
@@ -132,6 +132,18 @@ class ProductCard extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(fontSize: 13.5, height: 1.25, fontWeight: FontWeight.w500, color: ZayloColors.muted)),
+                if (product.stock != null) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    product.stock! > 0 ? '${product.stock} in stock' : 'Sold out',
+                    maxLines: 1,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: product.stock! > 0 ? ZayloColors.success : ZayloColors.danger,
+                    ),
+                  ),
+                ],
                 const Spacer(),
                 Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
                   Expanded(child: PriceLine(product: product, size: 15)),

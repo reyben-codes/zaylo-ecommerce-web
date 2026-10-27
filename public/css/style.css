@@ -462,6 +462,15 @@ img.is-sold-out, .detail-image.is-sold-out img[data-gallery-main], .detail-thumb
 .order-status-card .status-picked_up,
 .order-status-card .status-in_transit { background: var(--c-e7eef7); color: var(--c-2f5373); }
 .order-status-card .status-completed { background: var(--c-e5f1e6); color: var(--c-245b38); }
+.order-status-card .status-delivered { background: var(--c-f5f0ea); color: var(--c-7b563c); }
+/* A delivered order waiting for the buyer to confirm they received it. */
+.order-receipt { display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: center; justify-content: space-between; margin: 0 0 14px; padding: 14px 16px; border: 1px solid var(--c-d9d0c7); border-radius: 10px; background: var(--c-f5f0ea); }
+.order-receipt p { margin: 0; color: var(--c-4a4037); font-size: .84rem; }
+.order-receipt p + p { margin-top: 4px; }
+.order-receipt strong { color: var(--c-1a1714); }
+.order-receipt__actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.order-receipt__actions form { margin: 0; }
+.order-receipt__photo { color: var(--c-7b563c); font-size: .82rem; font-weight: 600; }
 .order-status-card .status-cancelled { background: var(--c-f7e6e3); color: var(--c-883b33); }
 .order-status-card header p { margin-top: 5px; color: var(--c-74685e); font-size: .8rem; }
 .order-status-message { margin-bottom: 14px; color: var(--c-51463d); font-size: .88rem; }
@@ -514,6 +523,8 @@ th { color: var(--c-6b5f54); font-size: .72rem; text-transform: uppercase; lette
 .inline-form { display: flex; gap: 7px; }
 .delivery-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 18px 0; }
 .delivery-card { background: var(--c-ffffff); border: 1px solid var(--c-e5dfd8); padding: 22px; display: grid; gap: 12px; }
+.delivery-card form { display: grid; gap: 10px; }
+.delivery-proof-field { display: grid; gap: 6px; color: var(--c-6b5f54); font-size: .82rem; font-weight: 600; }
 .section-heading { margin-top: 44px; }
 .empty-note { color: var(--c-6b5f54); padding: 16px 0; }
 

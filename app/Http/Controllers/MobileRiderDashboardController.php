@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Announcement;
+use App\Models\Dispute;
 use App\Models\Shipment;
 use App\Models\User;
 use App\Services\ChatPhotos;
+use App\Services\ReturnPickups;
 use App\Services\RiderDeliveries;
 use App\Services\ShipmentWorkflow;
 use App\Support\MobilePayload;
@@ -31,7 +33,19 @@ class MobileRiderDashboardController extends Controller
 
     private const PERIODS = ['today', 'week', 'month', 'all'];
 
-    public function __construct(private readonly RiderDeliveries $deliveries) {}
+    public function __construct(private readonly RiderDeliveries $deliveries, private readonly ReturnPickups $returns) {}
+
+    /** The rider scanned a return slip at the buyer's door: the item is on its way to the hub. */
+    public function scanReturn(Request $request): JsonResponse
+    {
+        $data = $request->validate(['code' => 'required|string|max:100']);
+        $dispute = $this->returns->scan($request->user(), $data['code'])->load(['order.items', 'order.buyer']);
+
+        return response()->json([
+            'message' => 'Return picked up. Bring the item to your logistics hub.',
+            'return' => ReturnPickups::riderPayload($dispute),
+        ]);
+    }
 
     public function dashboard(Request $request): JsonResponse
     {
@@ -59,6 +73,8 @@ class MobileRiderDashboardController extends Controller
                 'earnings_total' => $this->fees($completed),
             ],
             'active' => $active->map(fn (Shipment $shipment) => $this->shipmentPayload($shipment))->values(),
+            // Returned items to collect from buyers and bring to the hub.
+            'returns' => $this->returns->forRider($rider)->map(fn (Dispute $dispute) => ReturnPickups::riderPayload($dispute))->values(),
             'available' => [],
             'recent' => $completed->sortByDesc(fn (Shipment $s) => RiderDeliveries::deliveredAt($s))->take(5)
                 ->map(fn (Shipment $shipment) => $this->shipmentPayload($shipment))->values(),
@@ -180,17 +196,18 @@ class MobileRiderDashboardController extends Controller
     }
 
     /**
-     * The rider scanned a parcel label: the parcel goes out for delivery, or is delivered if it already was out.
-     * The buyer (and on delivery, the seller) is notified.
+     * The rider scanned a parcel label: the parcel goes out for delivery, or is delivered if it already was out,
+     * which needs a photo as proof (a 422 on "photo" without one). The buyer (and on delivery, the seller) is
+     * notified; the buyer then confirms they received it.
      */
     public function scan(Request $request): JsonResponse
     {
-        $data = $request->validate(['code' => 'required|string|max:100']);
-        [$shipment, $step] = $this->deliveries->scan($request->user(), $data['code']);
+        $data = $request->validate(['code' => 'required|string|max:100'] + ChatPhotos::rules(), ChatPhotos::messages());
+        [$shipment, $step] = $this->deliveries->scan($request->user(), $data['code'], $request->file('photo'));
 
         return response()->json([
             'message' => $step === 'delivered'
-                ? 'Delivered. The buyer and seller were notified.'
+                ? 'Delivered. The buyer was asked to confirm they received it.'
                 : 'Out for delivery. The buyer was told their parcel is on its way.',
             'step' => $step,
             'delivery' => $this->shipmentPayload($shipment->load($this->relations())),
@@ -226,8 +243,8 @@ class MobileRiderDashboardController extends Controller
     }
 
     /**
-     * The rider's photo of the parcel at the door, taken right after the delivery scan. The seller and buyer can open
-     * it from the order. A new photo replaces the old one for a day after delivery.
+     * Retakes the rider's photo of the parcel at the door, which the delivery scan sends. The seller and buyer can
+     * open it from the order. A new photo replaces the old one for a day after delivery.
      */
     public function proof(Request $request, Shipment $shipment, ChatPhotos $photos): JsonResponse
     {

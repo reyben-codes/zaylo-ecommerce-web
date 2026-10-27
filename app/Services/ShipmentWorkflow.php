@@ -71,7 +71,10 @@ class ShipmentWorkflow
     /** Steps of a parcel that is still on its way. */
     public const ACTIVE = ['ready', 'confirmed', 'picked_up', 'in_transit', 'sorted', 'assigned', 'out_for_delivery', 'failed'];
 
-    /** Order status (deployed schema) at each parcel step; failures and returns keep the order where it was. */
+    /**
+     * Order status (deployed schema) at each parcel step; failures and returns keep the order where it was. A
+     * delivered order waits for the buyer to confirm it (App\Services\OrderReceipts), which completes it.
+     */
     private const ORDER_STATUS = [
         'ready' => 'ready_for_pickup',
         'confirmed' => 'ready_for_pickup',
@@ -80,7 +83,7 @@ class ShipmentWorkflow
         'sorted' => 'in_transit',
         'assigned' => 'in_transit',
         'out_for_delivery' => 'out_for_delivery',
-        'delivered' => 'completed',
+        'delivered' => 'delivered',
     ];
 
     /** Seller order status (newer schema) at each parcel step. */
@@ -373,22 +376,13 @@ class ShipmentWorkflow
         $order = $shipment->order ?: $shipment->sellerOrder?->order;
 
         if ($shipment->sellerOrder && isset(self::SELLER_ORDER_STATUS[$stage])) {
-            $shipment->sellerOrder->update(['status' => self::SELLER_ORDER_STATUS[$stage]]);
+            $shipment->sellerOrder->update(['status' => self::SELLER_ORDER_STATUS[$stage]]
+                + ($stage === 'delivered' ? ['delivered_at' => now()] : []));
         }
 
         if ($order && Order::usesLegacySchema() && isset(self::ORDER_STATUS[$stage])) {
-            $status = self::ORDER_STATUS[$stage];
-            $order->update(['status' => $status] + ($status === 'completed' ? ['completed_at' => now()] : []));
-            if ($status === 'completed') {
-                $order->payment?->update(['status' => 'paid', 'paid_at' => now()]);
-                if ($order->seller_id && Schema::hasTable('commissions')) {
-                    DB::table('commissions')->updateOrInsert(['order_id' => $order->id], [
-                        'seller_id' => $order->seller_id, 'rate' => 10,
-                        'amount' => round((float) $order->subtotal * 0.10, 2),
-                        'status' => 'earned', 'created_at' => now(), 'updated_at' => now(),
-                    ]);
-                }
-            }
+            $delivered = $stage === 'delivered' && Schema::hasColumn('orders', 'delivered_at');
+            $order->update(['status' => self::ORDER_STATUS[$stage]] + ($delivered ? ['delivered_at' => now()] : []));
         }
 
         if ($order && Schema::hasTable('order_status_histories')) {

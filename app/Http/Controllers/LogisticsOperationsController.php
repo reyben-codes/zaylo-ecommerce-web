@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\Rider;
 use App\Models\Shipment;
 use App\Services\LogisticsMessenger;
+use App\Services\ReturnPickups;
 use App\Services\ShipmentWorkflow;
 use App\Support\ParcelView;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -32,7 +33,7 @@ class LogisticsOperationsController extends Controller
     /** Active parcels with no update for this long are flagged on the monitoring page. */
     private const STALE_HOURS = 24;
 
-    public function __construct(private ShipmentWorkflow $workflow, private LogisticsMessenger $messenger) {}
+    public function __construct(private ShipmentWorkflow $workflow, private LogisticsMessenger $messenger, private ReturnPickups $returns) {}
 
     /** Seller pickup requests to confirm or decline, and confirmed pickups to collect. */
     public function pickups(Request $request)
@@ -107,38 +108,60 @@ class LogisticsOperationsController extends Controller
             }
         }
 
+        if ($returnCase && ! $this->returns->handledBy($returnCase, $this->logisticsProvider())) {
+            $returnCase = null;
+        }
+
         return view('logistics.operations.scan', [
             'tracking' => $tracking,
             'shipment' => $shipment,
             'returnCase' => $returnCase,
-            'riders' => $shipment ? $this->availableRiders() : collect(),
+            'riders' => $shipment || $returnCase ? $this->availableRiders() : collect(),
             'knownAreas' => $shipment && ShipmentWorkflow::awaitingSort($shipment) ? $this->knownAreas() : collect(),
         ]);
     }
 
-    /** Updates the status of a return parcel scanned at pickup or in the hub. */
+    /**
+     * Returned items this partner brings back to sellers: pickups to give to a rider, items on the way to or at the
+     * hub, and ones handed back. The rider scans a pickup at the buyer's door; the hub takes it from there.
+     */
+    public function returns(Request $request)
+    {
+        $tab = $request->validate(['tab' => ['nullable', Rule::in(['active', 'done'])]])['tab'] ?? 'active';
+        $cases = $this->returns->forProvider($this->logisticsProvider());
+        $done = fn (Dispute $case) => $case->returnReceived() || $case->status === 'rejected';
+
+        return view('logistics.operations.returns', [
+            'tab' => $tab,
+            'cases' => $cases->filter(fn (Dispute $case) => $tab === 'done' ? $done($case) : ! $done($case))->values(),
+            'counts' => ['active' => $cases->reject($done)->count(), 'done' => $cases->filter($done)->count()],
+            'riders' => $this->availableRiders(),
+        ]);
+    }
+
+    /** A pickup return goes to one of the partner's riders, who collects it from the buyer. */
+    public function assignReturn(Request $request, Dispute $dispute)
+    {
+        $this->ownsReturn($dispute);
+        $rider = $this->chosenRider($request);
+        $this->returns->assign($dispute, $rider, $request->user());
+
+        return back()->with('status', 'Return '.$dispute->return_tracking_number.' assigned to '.$rider->user->name.'.');
+    }
+
+    /** A return parcel scanned at the hub: received there, sent back out, or handed to the seller. */
     public function updateReturnScan(Request $request, Dispute $dispute)
     {
-        $data = $request->validate([
-            'return_status' => ['required', Rule::in(['picked_up', 'sorted', 'in_transit', 'received_by_seller', 'refunded'])],
-            'note' => ['nullable', 'string', 'max:500'],
-        ]);
+        $this->ownsReturn($dispute);
+        $data = $request->validate(['return_status' => ['required', Rule::in(array_keys(ReturnPickups::LOGISTICS_LABELS))]]);
+        $this->returns->advance($dispute, $data['return_status'], $request->user());
 
-        $dispute->update([
-            'return_status' => $data['return_status'],
-            'status' => in_array($data['return_status'], ['received_by_seller', 'refunded'], true) ? 'resolved' : $dispute->status,
-        ]);
+        return back()->with('status', 'Return '.$dispute->return_tracking_number.': '.ReturnPickups::LOGISTICS_LABELS[$data['return_status']].'.');
+    }
 
-        $labels = [
-            'picked_up' => 'Courier confirmed pickup of return parcel from buyer.',
-            'sorted' => 'Return parcel received and sorted at the hub.',
-            'in_transit' => 'Return parcel in transit back to the seller.',
-            'received_by_seller' => 'Return parcel successfully delivered back to seller.',
-            'refunded' => 'Return completed and refund released to buyer.',
-        ];
-
-        return redirect()->route('logistics.scan', ['tracking' => $dispute->return_tracking_number])
-            ->with('status', $labels[$data['return_status']] ?? 'Return parcel updated.');
+    private function ownsReturn(Dispute $dispute): void
+    {
+        abort_unless($dispute->hasReturnParcel() && $this->returns->handledBy($dispute, $this->logisticsProvider()), 404);
     }
 
     /** Sorted parcels waiting for a rider, by delivery area: give a whole area to one rider, or parcel by parcel. */

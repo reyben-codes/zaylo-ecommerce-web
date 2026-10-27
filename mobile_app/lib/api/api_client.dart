@@ -41,6 +41,9 @@ class ApiClient {
 
   Future<void> logout() => send('POST', '/mobile/logout');
 
+  /// The newest published app and where to download it.
+  Future<AppVersionInfo> appVersion() async => AppVersionInfo.fromJson(await send('GET', '/mobile/app-version'));
+
   Future<String> forgotPassword(String email) async =>
       (await send('POST', '/mobile/forgot-password', body: {'email': email}))['message'] as String;
 

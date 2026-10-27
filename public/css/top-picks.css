@@ -1,0 +1,205 @@
+/* Buyer dashboard: top selling products and top shops. */
+.top-picks {
+    padding: 60px 48px 52px;
+    border-bottom: 1px solid var(--c-ece4db);
+    background: var(--c-f5f0ea);
+}
+
+.top-picks--shops {
+    background: var(--c-faf7f2);
+}
+
+/* Units sold line on best-seller product cards (partials.shop-card). */
+.shop-card__sold {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin: 0;
+    color: var(--c-6b5f54);
+    font-size: .74rem;
+}
+
+.shop-card__rank {
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: var(--c-1a1714);
+    color: var(--c-ffffff);
+    font-size: .66rem;
+    font-weight: 700;
+}
+
+/* Shop tiles */
+.top-shops {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 18px;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0;
+    list-style: none;
+}
+
+.top-shop {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0;
+    padding: 20px 18px 18px;
+    border: 1px solid var(--c-e5dfd8);
+    border-radius: 18px;
+    background: var(--c-ffffff);
+    box-shadow: 0 4px 16px rgba(26, 23, 20, .05);
+}
+
+.top-shop__rank {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    color: var(--c-b28b6f);
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
+    font-weight: 600;
+}
+
+.top-shop__identity {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    min-width: 0;
+    padding-right: 36px;
+    color: inherit;
+    text-decoration: none;
+}
+
+.top-shop__identity:hover strong {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.top-shop__avatar {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    border: 3px solid var(--c-ffffff);
+    border-radius: 50%;
+    background: var(--c-1a1714);
+    color: var(--c-ffffff);
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem;
+    letter-spacing: .04em;
+    box-shadow: 0 4px 12px rgba(26, 23, 20, .12);
+}
+
+.top-shop__text {
+    min-width: 0;
+}
+
+.top-shop__text strong,
+.top-shop__text small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.top-shop__text strong {
+    color: var(--c-1a1714);
+    font-size: 1rem;
+}
+
+.top-shop__text small {
+    color: var(--c-6b5f54);
+    font-size: .76rem;
+}
+
+.top-shop__stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin: 0;
+    border-block: 1px solid var(--c-ece4db);
+    text-align: center;
+}
+
+.top-shop__stats div {
+    padding: 10px 4px;
+}
+
+.top-shop__stats div + div {
+    border-left: 1px solid var(--c-ece4db);
+}
+
+.top-shop__stats dt {
+    color: var(--c-6b5f54);
+    font-size: .64rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.top-shop__stats dd {
+    margin: 2px 0 0;
+    color: var(--c-1a1714);
+    font-weight: 700;
+}
+
+.top-shop__stats dd i {
+    color: var(--c-b28b6f);
+    font-size: .75rem;
+}
+
+.top-shop__preview {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.top-shop__preview img {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 10px;
+    object-fit: cover;
+    background: var(--c-f5efe8);
+}
+
+.top-shop__visit {
+    margin-top: auto;
+    padding: 10px 14px;
+    border-radius: 999px;
+    background: var(--c-1a1714);
+    color: var(--c-ffffff);
+    font-size: .82rem;
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
+    transition: opacity .15s;
+}
+
+.top-shop__visit:hover {
+    opacity: .85;
+}
+
+.top-shop__identity:focus-visible,
+.top-shop__visit:focus-visible {
+    outline: 2px solid var(--c-b28b6f);
+    outline-offset: 3px;
+    border-radius: 12px;
+}
+
+@media (max-width: 1100px) {
+    .top-shops {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+    .top-picks {
+        padding: 36px 16px;
+    }
+
+    .top-shops {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 12px;
+    }
+}

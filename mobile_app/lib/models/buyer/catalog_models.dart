@@ -77,8 +77,10 @@ class Product {
   final double? rating;
   final int reviewCount;
 
-  /// Detail-only fields; empty or null on list payloads.
+  /// How many can be bought across its active options; null from older servers.
   final int? stock;
+
+  /// Detail-only fields; empty or null on list payloads.
   final String? sellerName;
   final List<String> images;
   final List<ProductVariant> variants;

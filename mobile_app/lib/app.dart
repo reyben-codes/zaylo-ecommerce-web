@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:zaylo_mobile/components/app_update.dart';
 import 'package:zaylo_mobile/features/buyer/messages/chat_head_overlay.dart';
 import 'package:zaylo_mobile/navigation/buyer_shell.dart';
 import 'package:zaylo_mobile/state/app_state.dart';
@@ -20,12 +21,21 @@ class ZayloApp extends StatefulWidget {
 }
 
 class _ZayloAppState extends State<ZayloApp> with WidgetsBindingObserver {
+  /// Suggests updating when a newer app has been published.
+  late final _updates = AppUpdatePrompt(navigatorKey: zayloNavigatorKey, load: widget.state.api.appVersion);
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     widget.theme.addListener(_applyTheme);
     ZayloColors.use(_brightness);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _updates.check());
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _updates.check();
   }
 
   @override

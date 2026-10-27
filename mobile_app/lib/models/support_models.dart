@@ -165,12 +165,16 @@ class Complaint {
     this.canReply = false,
     this.evidence = const [],
     this.messages = const [],
+    this.returnInfo,
   });
 
   final int id;
   final int? orderId;
   final String? orderNumber;
   final String categoryLabel;
+
+  /// The item being sent back, when the buyer asked for a return.
+  final ComplaintReturn? returnInfo;
 
   /// open, in_review, resolved or rejected.
   final String status;
@@ -206,6 +210,88 @@ class Complaint {
         messages: (json['messages'] as List<dynamic>? ?? const [])
             .map((item) => ComplaintMessage.fromJson(item as Map<String, dynamic>))
             .toList(),
+        returnInfo: json['return'] is Map<String, dynamic>
+            ? ComplaintReturn.fromJson(json['return'] as Map<String, dynamic>)
+            : null,
+      );
+}
+
+/// A returned item on its way back: a rider collects it (or the buyer drops it
+/// off at the hub), the logistics partner brings it to the seller, who refunds.
+class ComplaintReturn {
+  const ComplaintReturn({
+    required this.trackingNumber,
+    required this.typeLabel,
+    required this.method,
+    required this.methodLabel,
+    required this.status,
+    required this.statusLabel,
+    this.pickupDate,
+    this.pickupSlot,
+    this.dropoffLocation,
+    this.dropoffDeadline,
+    this.riderName,
+    this.refundAmount,
+    this.steps = const [],
+    this.barcode = const [],
+  });
+
+  final String trackingNumber;
+
+  /// Code 128 bar and space widths (starting with a bar) for the rider's scanner.
+  final List<int> barcode;
+  final String typeLabel;
+
+  /// pickup or dropoff.
+  final String? method;
+  final String methodLabel;
+  final String status;
+  final String statusLabel;
+  final DateTime? pickupDate;
+
+  /// morning or afternoon.
+  final String? pickupSlot;
+  final String? dropoffLocation;
+  final DateTime? dropoffDeadline;
+
+  /// First name of the rider picking it up, once the logistics partner assigns one.
+  final String? riderName;
+  final double? refundAmount;
+  final List<ReturnStep> steps;
+
+  bool get isPickup => method != 'dropoff';
+
+  factory ComplaintReturn.fromJson(Map<String, dynamic> json) => ComplaintReturn(
+        trackingNumber: json['tracking_number'] as String? ?? '',
+        barcode: (json['barcode'] as List<dynamic>? ?? const []).map((width) => (width as num).toInt()).toList(),
+        typeLabel: json['type_label'] as String? ?? 'Return and Refund',
+        method: json['method'] as String?,
+        methodLabel: json['method_label'] as String? ?? 'Pickup',
+        status: json['status'] as String? ?? 'scheduled',
+        statusLabel: json['status_label'] as String? ?? 'Waiting for pickup',
+        pickupDate: parseDate(json['pickup_date']),
+        pickupSlot: json['pickup_slot'] as String?,
+        dropoffLocation: json['dropoff_location'] as String?,
+        dropoffDeadline: parseDate(json['dropoff_deadline']),
+        riderName: json['rider_name'] as String?,
+        refundAmount: (json['refund_amount'] as num?)?.toDouble(),
+        steps: (json['steps'] as List<dynamic>? ?? const [])
+            .map((item) => ReturnStep.fromJson(item as Map<String, dynamic>))
+            .toList(),
+      );
+}
+
+class ReturnStep {
+  const ReturnStep({required this.key, required this.label, required this.done});
+
+  final String key;
+  final String label;
+  final bool done;
+
+  factory ReturnStep.fromJson(Map<String, dynamic> json) => ReturnStep(
+        key: json['key'] as String? ?? '',
+        label: json['label'] as String? ?? '',
+        done: json['done'] as bool? ?? false,
       );
 }
 
@@ -217,4 +303,35 @@ class ComplaintCategory {
 
   factory ComplaintCategory.fromJson(Map<String, dynamic> json) =>
       ComplaintCategory(id: json['id'] as String, label: json['label'] as String);
+}
+
+/// The newest published app (MobileAppVersionController), which the app
+/// compares with its own version when it opens.
+class AppVersionInfo {
+  const AppVersionInfo({this.latestVersion, this.downloadUrl});
+
+  /// "1.0.4", or null when the server could not tell.
+  final String? latestVersion;
+  final String? downloadUrl;
+
+  /// Whether [latestVersion] is newer than [current] ("1.0.3"); false when either is unknown.
+  bool isNewerThan(String current) {
+    final latest = _parts(latestVersion);
+    final mine = _parts(current);
+    if (latest == null || mine == null) return false;
+    for (var index = 0; index < 3; index++) {
+      if (latest[index] != mine[index]) return latest[index] > mine[index];
+    }
+    return false;
+  }
+
+  static List<int>? _parts(String? version) {
+    final match = RegExp(r'^v?(\d+)\.(\d+)\.(\d+)').firstMatch(version?.trim() ?? '');
+    return match == null ? null : [for (var group = 1; group <= 3; group++) int.parse(match.group(group)!)];
+  }
+
+  factory AppVersionInfo.fromJson(Map<String, dynamic> json) => AppVersionInfo(
+        latestVersion: json['latest_version'] as String?,
+        downloadUrl: json['download_url'] as String?,
+      );
 }

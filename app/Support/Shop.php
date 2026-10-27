@@ -11,6 +11,7 @@ use App\Models\ShopFollow;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -108,7 +109,7 @@ class Shop
     {
         if (Product::usesLegacySchema()) {
             return (int) DB::table('order_items')->join('orders', 'orders.id', '=', 'order_items.order_id')
-                ->where('orders.status', 'completed')
+                ->whereIn('orders.status', ['delivered', 'completed'])
                 ->whereIn('order_items.product_id', Product::where('seller_id', $this->id)->select('id'))
                 ->sum('order_items.quantity');
         }
@@ -116,6 +117,34 @@ class Shop
         return (int) DB::table('order_items')->join('seller_orders', 'seller_orders.id', '=', 'order_items.seller_order_id')
             ->where('seller_orders.seller_id', $this->id)->whereIn('seller_orders.status', ['delivered', 'completed'])
             ->sum('order_items.quantity');
+    }
+
+    /**
+     * Open shops with the most units delivered, best first, each with its sold count, rating, followers and a few
+     * product photos. Counts the same way as soldCount().
+     *
+     * @return Collection<int, array{shop: self, sold: int, rating: array, followers: int, preview: Collection}>
+     */
+    public static function topSelling(int $limit = 4): Collection
+    {
+        $sales = Product::usesLegacySchema()
+            ? DB::table('order_items')->join('orders', 'orders.id', '=', 'order_items.order_id')
+                ->join('products', 'products.id', '=', 'order_items.product_id')
+                ->whereIn('orders.status', ['delivered', 'completed'])
+                ->selectRaw('products.seller_id as shop_id, SUM(order_items.quantity) as sold')->groupBy('products.seller_id')
+            : DB::table('order_items')->join('seller_orders', 'seller_orders.id', '=', 'order_items.seller_order_id')
+                ->whereIn('seller_orders.status', ['delivered', 'completed'])
+                ->selectRaw('seller_orders.seller_id as shop_id, SUM(order_items.quantity) as sold')->groupBy('seller_orders.seller_id');
+
+        // Extra candidates cover shops that are closed or suspended now.
+        return $sales->orderByDesc('sold')->limit($limit * 3)->get()
+            ->map(fn ($row) => ($shop = self::find((int) $row->shop_id)) ? ['shop' => $shop, 'sold' => (int) $row->sold] : null)
+            ->filter()->take($limit)
+            ->map(fn (array $row) => $row + [
+                'rating' => $row['shop']->rating(),
+                'followers' => $row['shop']->followerCount(),
+                'preview' => $row['shop']->products()->with('images')->latest()->limit(3)->get(),
+            ])->values();
     }
 
     /** Categories the shop's visible products are listed under, for the shop's filter. */

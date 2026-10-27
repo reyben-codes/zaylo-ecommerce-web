@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\MobileAccountController;
+use App\Http\Controllers\MobileAppVersionController;
 use App\Http\Controllers\MobileAuthenticationController;
 use App\Http\Controllers\MobileChatController;
 use App\Http\Controllers\MobileComplaintController;
@@ -40,6 +41,7 @@ $complaintRoutes = function () {
 };
 
 Route::prefix('mobile')->name('mobile.')->middleware('throttle:60,1')->group(function () use ($complaintRoutes) {
+    Route::get('/app-version', [MobileAppVersionController::class, 'show'])->name('app-version');
     Route::get('/home', [MobileStorefrontController::class, 'home'])->name('home');
     Route::get('/products', [MobileStorefrontController::class, 'products'])->name('products');
     Route::get('/products/{product:slug}', [MobileStorefrontController::class, 'show'])->name('products.show');
@@ -76,6 +78,7 @@ Route::prefix('mobile')->name('mobile.')->middleware('throttle:60,1')->group(fun
             Route::get('/dashboard', [MobileRiderDashboardController::class, 'dashboard'])->name('dashboard');
             // Scanning a parcel label's QR code starts a delivery, and again at the door confirms it.
             Route::post('/deliveries/scan', [MobileRiderDashboardController::class, 'scan'])->middleware('throttle:30,1,mobile-rider-scan')->name('deliveries.scan');
+            Route::post('/returns/scan', [MobileRiderDashboardController::class, 'scanReturn'])->middleware('throttle:30,1,mobile-rider-return-scan')->name('returns.scan');
             Route::post('/deliveries/{shipment}/claim', [MobileRiderDashboardController::class, 'claim'])->name('deliveries.claim');
             // The rider answers each assignment from the logistics partner: accept it, or decline it with a reason.
             Route::post('/deliveries/{shipment}/accept', [MobileRiderDashboardController::class, 'accept'])->middleware('throttle:60,1,mobile-rider-answer')->name('deliveries.accept');
@@ -120,6 +123,8 @@ Route::prefix('mobile')->name('mobile.')->middleware('throttle:60,1')->group(fun
             Route::get('/orders', [MobileOrderController::class, 'index'])->name('orders');
             Route::get('/orders/{order}', [MobileOrderController::class, 'show'])->name('orders.show');
             Route::post('/orders/{order}/cancel', [MobileOrderController::class, 'cancel'])->name('orders.cancel');
+            Route::post('/orders/{order}/received', [MobileOrderController::class, 'received'])->middleware('throttle:20,1,mobile-order-received')->name('orders.received');
+            Route::get('/orders/{order}/delivery-photo', [MobileOrderController::class, 'deliveryPhoto'])->name('orders.delivery-photo');
             Route::get('/orders/{order}/chat', [MobileDeliveryChatController::class, 'buyerShow'])->name('orders.chat');
             Route::post('/orders/{order}/chat', [MobileDeliveryChatController::class, 'buyerSend'])->middleware('throttle:20,1,mobile-delivery-chat')->name('orders.chat.send');
             Route::post('/orders/{order}/complaint', [MobileComplaintController::class, 'store'])->middleware('throttle:10,1,mobile-complaint')->name('orders.complaint');

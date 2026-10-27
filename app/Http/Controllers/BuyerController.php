@@ -11,6 +11,11 @@ use App\Models\Voucher;
 use App\Models\Wishlist;
 use App\Services\CartService;
 use App\Services\CheckoutService;
+use App\Services\OrderReceipts;
+use App\Support\MobilePayload;
+use App\Support\OrderParties;
+use App\Support\ProductCatalog;
+use App\Support\Shop;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -33,11 +38,13 @@ class BuyerController extends Controller
         $base = Product::withReviewSummary()->visibleToBuyers();
         if (Product::usesLegacySchema()) {
             $base->where('stock', '>', 0)->with(['images', 'additionalCategories'])
-                ->withCount(['variants as active_variants_count' => fn ($query) => $query->where('is_active', true)]);
+                ->withCount(['variants as active_variants_count' => fn ($query) => $query->where('is_active', true)])
+                ->withSum(['variants as catalog_variant_stock' => fn ($query) => $query->where('is_active', true)], 'stock');
         } else {
             $base->whereHas('variants', fn ($query) => $query->where('is_active', true)->where('stock', '>', 0))
                 ->with(['images', 'defaultVariant', 'category', 'additionalCategories'])
-                ->withCount(['variants as active_variants_count' => fn ($query) => $query->where('is_active', true)]);
+                ->withCount(['variants as active_variants_count' => fn ($query) => $query->where('is_active', true)])
+                ->withSum(['variants as catalog_variant_stock' => fn ($query) => $query->where('is_active', true)], 'stock');
         }
         // Flash sales first, ending soonest first; without any running, the section shows current sale offers.
         $flashProducts = (clone $base)->onFlashSale()->orderBy('sale_ends_at')->limit(10)->get();
@@ -52,8 +59,10 @@ class BuyerController extends Controller
                 });
         })->inRandomOrder()->limit(5)->get();
         $suggestedProducts = (clone $base)->inRandomOrder()->limit(10)->get();
+        $topProducts = (clone $base)->tap(fn ($query) => ProductCatalog::bestSelling($query))->limit(5)->get();
+        $topShops = Shop::topSelling();
 
-        return view('buyer.dashboard', compact('flashProducts', 'flashEndsAt', 'suggestedProducts') + ['user' => auth()->user()]);
+        return view('buyer.dashboard', compact('flashProducts', 'flashEndsAt', 'suggestedProducts', 'topProducts', 'topShops') + ['user' => auth()->user()]);
     }
 
     public function products(Request $request)
@@ -292,18 +301,14 @@ class BuyerController extends Controller
         return view('buyer.product-show', compact('product', 'galleryImages', 'reviews', 'reviewCount', 'reviewAverage', 'optionLabel', 'variantImages', 'colorGroups', 'shop', 'preview'));
     }
 
-    public function orders(Request $request)
+    public function orders(Request $request, OrderReceipts $receipts)
     {
         $filter = $request->validate([
             'status' => ['nullable', Rule::in(['all', 'to_ship', 'shipped', 'delivered', 'cancelled'])],
         ])['status'] ?? 'all';
+        $receipts->autoConfirmDue();
 
-        $statusGroups = [
-            'to_ship' => ['placed', 'confirmed', 'processing', 'ready_for_pickup', 'assigned'],
-            'shipped' => ['picked_up', 'in_transit', 'out_for_delivery'],
-            'delivered' => ['completed'],
-            'cancelled' => ['cancelled'],
-        ];
+        $statusGroups = MobilePayload::STATUS_GROUPS;
         $statusCounts = auth()->user()->orders()
             ->selectRaw('status, COUNT(*) as total')
             ->groupBy('status')
@@ -329,6 +334,15 @@ class BuyerController extends Controller
         $this->checkoutService->cancel($order, auth()->user());
 
         return back()->with('status', 'Order cancelled and stock restored.');
+    }
+
+    /** The buyer received a delivered order, which completes it. */
+    public function confirmReceived(Order $order, OrderReceipts $receipts)
+    {
+        abort_unless(OrderParties::for($order)['buyer'] === (int) auth()->id(), 404);
+        $receipts->confirm($order, auth()->user());
+
+        return back()->with('status', 'Thank you! Order '.$order->order_number.' is complete. You can now rate your items.');
     }
 
     public function cart()
@@ -522,7 +536,8 @@ class BuyerController extends Controller
         $items = auth()->user()->wishlistItems()->whereHas('product', fn ($product) => $product->visibleToBuyers())
             ->with(['product' => fn ($product) => $product->withReviewSummary()
                 ->with(['images', 'additionalCategories'])
-                ->withCount(['variants as active_variants_count' => fn ($variants) => $variants->where('is_active', true)])])
+                ->withCount(['variants as active_variants_count' => fn ($variants) => $variants->where('is_active', true)])
+                ->withSum(['variants as catalog_variant_stock' => fn ($variants) => $variants->where('is_active', true)], 'stock')])
             ->latest()->get();
 
         return view('buyer.wishlist', compact('items'));

@@ -37,8 +37,8 @@
                         <h2><i class="fas fa-truck-ramp-box" aria-hidden="true"></i> Return &amp; Refund Tracker</h2>
                         <p>Return Tracking No: <strong>{{ $dispute->return_tracking_number }}</strong> &middot; Method: {{ $dispute->returnMethodName() }}</p>
                     </div>
-                    <span class="case-pill case-pill--{{ $dispute->return_status ?? 'scheduled' }}">
-                        {{ ucfirst(str_replace('_', ' ', $dispute->return_status ?? 'scheduled')) }}
+                    <span class="case-pill case-pill--{{ $dispute->return_status ?: 'scheduled' }}">
+                        {{ $dispute->returnStepLabel() }}
                     </span>
                 </header>
                 <div class="case-body return-tracking-body">
@@ -47,7 +47,10 @@
                         @if($dispute->return_method === 'pickup')
                             <p><strong>Pickup Schedule:</strong> {{ $dispute->pickup_date ? $dispute->pickup_date->format('l, F j, Y') : 'Scheduled' }} ({{ $dispute->pickup_slot === 'afternoon' ? 'Afternoon 1:00 PM - 6:00 PM' : 'Morning 9:00 AM - 1:00 PM' }})</p>
                             <p><strong>Pickup Address:</strong> {{ $dispute->order?->formattedShippingAddress() ?? 'Registered buyer delivery address' }}</p>
-                            <p class="seller-cell-note"><i class="fas fa-clock" aria-hidden="true"></i> <strong>Waiting time &amp; process:</strong> The assigned courier delivery truck driver will arrive during the scheduled window and scan the barcode below upon collecting the parcel.</p>
+                            @if(\App\Models\Dispute::tracksReturnRiders())
+                                <p><strong>Pickup rider:</strong> {{ $dispute->returnRider?->name ?? 'The logistics partner will assign a rider soon' }}{{ $dispute->return_picked_up_at ? ' · picked up '.$dispute->return_picked_up_at->timezone('Asia/Manila')->format('M j, g:i A') : '' }}</p>
+                            @endif
+                            <p class="seller-cell-note"><i class="fas fa-clock" aria-hidden="true"></i> <strong>Waiting time &amp; process:</strong> The rider arrives during the scheduled window and scans the barcode below when collecting the item, then brings it to the logistics hub, which returns it to the seller.</p>
                         @else
                             <p><strong>Drop-off Location:</strong> {{ $dispute->dropoff_location ?? 'Authorized Logistics Hub' }}</p>
                             <p><strong>Drop-off Deadline:</strong> {{ $dispute->dropoff_deadline ? $dispute->dropoff_deadline->format('F j, Y') : '7 days from filing' }}</p>
@@ -68,14 +71,11 @@
                         <h3>Return Progress</h3>
                         <div class="return-steps" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:10px; margin-top:8px;">
                             @php
-                                $steps = [
-                                    'scheduled' => '1. Scheduled',
-                                    'picked_up' => '2. Picked Up',
-                                    'sorted' => '3. Sorted at Hub',
-                                    'in_transit' => '4. In Transit',
-                                    'received_by_seller' => '5. Delivered & Refunded',
-                                ];
-                                $orderStatusOrder = ['scheduled', 'picked_up', 'sorted', 'in_transit', 'received_by_seller', 'refunded'];
+                                // A drop-off is never picked up by a rider, and an exchange is not refunded.
+                                $steps = collect(\App\Models\Dispute::RETURN_STEPS)
+                                    ->reject(fn ($label, $key) => ($key === 'picked_up' && $dispute->return_method === 'dropoff') || ($key === 'refunded' && $dispute->return_type === 'exchange'))
+                                    ->keys()->mapWithKeys(fn ($key, $index) => [$key => ($index + 1).'. '.\App\Models\Dispute::RETURN_STEPS[$key]])->all();
+                                $orderStatusOrder = array_keys(\App\Models\Dispute::RETURN_STEPS);
                                 $currentIdx = array_search($dispute->return_status ?? 'scheduled', $orderStatusOrder, true);
                                 if ($currentIdx === false) $currentIdx = 0;
                             @endphp

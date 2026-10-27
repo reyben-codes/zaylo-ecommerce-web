@@ -412,6 +412,67 @@ class RiderDeliveryCard extends StatelessWidget {
       };
 }
 
+/// A returned item to collect from the buyer (scan its slip) or bring to the hub.
+class RiderReturnCard extends StatelessWidget {
+  const RiderReturnCard({super.key, required this.item, this.busy = false, this.onScan});
+
+  final RiderReturn item;
+  final bool busy;
+
+  /// Set while the item is still at the buyer's door.
+  final VoidCallback? onScan;
+
+  @override
+  Widget build(BuildContext context) => SectionCard(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Icon(Icons.assignment_return_outlined, color: ZayloColors.ink),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(item.trackingNumber,
+                  style: TextStyle(fontWeight: FontWeight.w800, color: ZayloColors.ink, letterSpacing: .4)),
+            ),
+            _Pill(label: item.statusLabel, color: item.canScan ? _amber : ZayloColors.info),
+          ]),
+          if (item.orderNumber != null || item.reason != null) ...[
+            const SizedBox(height: 4),
+            Text([if (item.orderNumber != null) 'Order ${item.orderNumber}', if (item.reason != null) item.reason!].join(' · '),
+                style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
+          ],
+          const SizedBox(height: 10),
+          _Stop(
+            icon: Icons.home_outlined,
+            label: item.canScan ? 'COLLECT FROM' : 'COLLECTED FROM',
+            title: item.buyerName ?? 'Buyer',
+            lines: [
+              if (item.phone != null) item.phone!,
+              if (item.address != null) item.address!,
+              if (item.pickupDate != null) '${shortDate(item.pickupDate)} · ${item.pickupSlot ?? ''}',
+            ],
+          ),
+          if (item.items.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(item.items.join(', '), style: const TextStyle(fontSize: 12)),
+          ],
+          const SizedBox(height: 8),
+          Text(item.nextStep, style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
+          if (onScan != null) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: busy ? null : onScan,
+                icon: busy
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.qr_code_scanner),
+                label: const Text('SCAN TO COLLECT', style: TextStyle(fontWeight: FontWeight.w700)),
+              ),
+            ),
+          ],
+        ]),
+      );
+}
+
 /// Shown when a list is empty, inside the scrolling dashboard.
 class RiderEmptyCard extends StatelessWidget {
   const RiderEmptyCard({super.key, required this.icon, required this.message});

@@ -47,11 +47,13 @@ Route::get('/', function () {
         if (Schema::hasColumn('products', 'stock')) {
             $query->where('stock', '>', 0)
                 ->with(['images', 'additionalCategories'])
-                ->withCount(['variants as active_variants_count' => fn ($builder) => $builder->where('is_active', true)]);
+                ->withCount(['variants as active_variants_count' => fn ($builder) => $builder->where('is_active', true)])
+                ->withSum(['variants as catalog_variant_stock' => fn ($builder) => $builder->where('is_active', true)], 'stock');
         } else {
             $query->whereHas('variants', fn ($builder) => $builder->where('is_active', true)->where('stock', '>', 0))
                 ->with(['images', 'defaultVariant', 'category', 'additionalCategories'])
-                ->withCount(['variants as active_variants_count' => fn ($builder) => $builder->where('is_active', true)]);
+                ->withCount(['variants as active_variants_count' => fn ($builder) => $builder->where('is_active', true)])
+                ->withSum(['variants as catalog_variant_stock' => fn ($builder) => $builder->where('is_active', true)], 'stock');
         }
 
         $newArrivals = $query->latest()->limit(10)->get();
@@ -130,6 +132,7 @@ Route::middleware(['auth', 'active', 'verified', 'role:buyer', 'nocache'])->pref
     Route::get('/order-items/{orderItem}/review', [\App\Http\Controllers\ProductReviewController::class, 'create'])->name('reviews.create');
     Route::post('/order-items/{orderItem}/review', [\App\Http\Controllers\ProductReviewController::class, 'store'])->middleware('throttle:10,1')->name('reviews.store');
     Route::post('/orders/{order}/cancel', [BuyerController::class, 'cancelOrder'])->name('orders.cancel');
+    Route::post('/orders/{order}/received', [BuyerController::class, 'confirmReceived'])->middleware('throttle:20,1')->name('orders.received');
     Route::get('/cart', [BuyerController::class, 'cart'])->name('cart');
     Route::post('/cart/selection', [BuyerController::class, 'cartSelection'])->name('cart.selection');
     Route::post('/cart/{product}', [BuyerController::class, 'addToCart'])->name('cart.add');
@@ -329,6 +332,7 @@ Route::middleware(['auth', 'active', 'verified', 'role:logistics', 'nocache'])->
     Route::get('/incoming', [LogisticsOperationsController::class, 'incoming'])->name('incoming');
     Route::get('/scan', [LogisticsOperationsController::class, 'scan'])->name('scan');
     Route::get('/assignments', [LogisticsOperationsController::class, 'assignments'])->name('assignments');
+    Route::get('/returns', [LogisticsOperationsController::class, 'returns'])->name('returns');
     Route::get('/deliveries', [LogisticsOperationsController::class, 'deliveries'])->name('deliveries');
     Route::get('/sorting', [LogisticsOperationsController::class, 'sorting'])->name('sorting');
     Route::get('/monitoring', [LogisticsOperationsController::class, 'monitoring'])->name('monitoring');
@@ -341,6 +345,7 @@ Route::middleware(['auth', 'active', 'verified', 'role:logistics', 'nocache'])->
     Route::patch('/parcels/{shipment}/sort', [LogisticsOperationsController::class, 'sort'])->middleware('throttle:120,1')->name('parcels.sort');
     Route::patch('/parcels/{shipment}/status', [LogisticsOperationsController::class, 'advance'])->middleware('throttle:120,1')->name('parcels.advance');
     Route::patch('/returns/{dispute}/scan', [LogisticsOperationsController::class, 'updateReturnScan'])->middleware('throttle:120,1')->name('returns.scan');
+    Route::post('/returns/{dispute}/rider', [LogisticsOperationsController::class, 'assignReturn'])->middleware('throttle:120,1')->name('returns.assign');
     Route::post('/parcels/{shipment}/rider', [LogisticsOperationsController::class, 'assign'])->middleware('throttle:120,1')->name('parcels.assign');
     Route::post('/areas/rider', [LogisticsOperationsController::class, 'assignArea'])->middleware('throttle:60,1')->name('areas.assign');
     Route::get('/messages', [LogisticsChatController::class, 'logistics'])->name('messages');

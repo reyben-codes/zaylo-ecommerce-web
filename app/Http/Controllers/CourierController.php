@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Shipment;
+use App\Services\ChatPhotos;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class CourierController extends Controller
@@ -45,43 +48,49 @@ class CourierController extends Controller
         return back()->with('status', 'Delivery accepted.');
     }
 
-    public function updateDelivery(Request $request, Shipment $shipment)
+    /**
+     * Moves the courier's parcel one step. Delivering needs a photo as proof, and leaves the order for the buyer to
+     * confirm they received it (App\Services\OrderReceipts), which completes it.
+     */
+    public function updateDelivery(Request $request, Shipment $shipment, ChatPhotos $photos)
     {
         abort_unless($shipment->courier_id === auth()->id(), 403);
-        $data = $request->validate(['status' => 'required|in:picked_up,in_transit,delivered']);
+        $proof = Shipment::tracksDeliveryProof();
+        $data = $request->validate([
+            'status' => 'required|in:picked_up,in_transit,delivered',
+            'photo' => [Rule::requiredIf($proof && $request->input('status') === 'delivered'), ...ChatPhotos::rules()['photo']],
+        ], ChatPhotos::messages() + ['photo.required' => 'Take a photo of the parcel with the recipient or at the door.']);
         $allowed = ['assigned' => ['picked_up'], 'picked_up' => ['in_transit'], 'in_transit' => ['delivered']];
+        $path = $data['status'] === 'delivered' && $proof ? $photos->store($request->file('photo'), 'delivery-proof/'.$shipment->id) : null;
 
-        DB::transaction(function () use ($shipment, $data, $allowed) {
-            $locked = Shipment::whereKey($shipment->id)->lockForUpdate()->firstOrFail();
-            if (! in_array($data['status'], $allowed[$locked->status] ?? [], true)) {
-                throw ValidationException::withMessages(['status' => 'That delivery status transition is not allowed.']);
-            }
-            $timestamps = match ($data['status']) {
-                'picked_up' => ['picked_up_at' => now()],
-                'delivered' => ['delivered_at' => now()],
-                default => [],
-            };
-            $locked->update(['status' => $data['status']] + $timestamps);
-            $orderStatus = $data['status'] === 'delivered' ? 'completed' : $data['status'];
-            $locked->order()->update(['status' => $orderStatus] + ($orderStatus === 'completed' ? ['completed_at' => now()] : []));
-            $locked->order->statusHistory()->create([
-                'changed_by' => auth()->id(), 'status' => $orderStatus, 'note' => 'Updated by courier.',
-            ]);
-            if ($data['status'] === 'delivered') {
-                $locked->order->payment?->update(['status' => 'paid', 'paid_at' => now()]);
-                if ($locked->order->seller_id) {
-                    DB::table('commissions')->updateOrInsert(
-                        ['order_id' => $locked->order_id],
-                        [
-                            'seller_id' => $locked->order->seller_id, 'rate' => 10,
-                            'amount' => round((float) $locked->order->subtotal * 0.10, 2),
-                            'status' => 'earned', 'created_at' => now(), 'updated_at' => now(),
-                        ]
-                    );
+        try {
+            DB::transaction(function () use ($shipment, $data, $allowed, $path) {
+                $locked = Shipment::whereKey($shipment->id)->lockForUpdate()->firstOrFail();
+                if (! in_array($data['status'], $allowed[$locked->status] ?? [], true)) {
+                    throw ValidationException::withMessages(['status' => 'That delivery status transition is not allowed.']);
                 }
+                $timestamps = match ($data['status']) {
+                    'picked_up' => ['picked_up_at' => now()],
+                    'delivered' => ['delivered_at' => now()],
+                    default => [],
+                };
+                $locked->update(['status' => $data['status']] + $timestamps + ($path ? ['delivery_proof_path' => $path] : []));
+                $delivered = $data['status'] === 'delivered' && Schema::hasColumn('orders', 'delivered_at');
+                $locked->order()->update(['status' => $data['status']] + ($delivered ? ['delivered_at' => now()] : []));
+                $locked->order->statusHistory()->create([
+                    'changed_by' => auth()->id(), 'status' => $data['status'], 'note' => 'Updated by courier.',
+                ]);
+            });
+        } catch (\Throwable $error) {
+            if ($path) {
+                Storage::disk('local')->delete($path);
             }
-        });
-        return back()->with('status', 'Delivery status updated.');
+            throw $error;
+        }
+
+        return back()->with('status', $data['status'] === 'delivered'
+            ? 'Marked as delivered. The buyer was asked to confirm they received it.'
+            : 'Delivery status updated.');
     }
 
     public function earnings()

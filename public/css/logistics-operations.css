@@ -585,6 +585,18 @@
     color: #15803d;
 }
 
+/* What can be done with a return parcel: give it to a rider, or take the next hub step. */
+.return-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.return-actions form {
+    margin: 0;
+}
+
 @media (max-width: 640px) {
     .parcel-scan__row {
         flex-wrap: wrap;

@@ -31,6 +31,9 @@ class DisputeUpdated extends Notification
             'return_received' => $mail->subject("Your return for order {$order} reached the seller")
                 ->line("The seller received the item you returned from order {$order}.")
                 ->line('They will now process your refund or replacement. You can follow it in the case.'),
+            'return_step' => $mail->subject("Return for order {$order}: {$this->dispute->returnStepLabel()}")
+                ->line("The returned item from order {$order} is now: {$this->dispute->returnStepLabel()}.")
+                ->line('You can follow every step of the return in the case.'),
             'refunded' => $mail->subject("Refund issued for order {$order}")
                 ->line('The seller issued a refund of ₱'.number_format((float) $this->dispute->refund_amount, 2)." for order {$order}.")
                 ->line('The case is now closed. Contact ZAYLO support if the money does not reach you.'),

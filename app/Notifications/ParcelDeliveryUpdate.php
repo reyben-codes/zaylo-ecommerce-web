@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Models\Order;
 use App\Models\Shipment;
+use App\Services\OrderReceipts;
 use App\Services\RiderDeliveries;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -49,8 +50,10 @@ class ParcelDeliveryUpdate extends Notification
         return match ($this->step) {
             'delivered' => (new MailMessage)
                 ->subject("Your order {$order} was delivered")
-                ->line("Your parcel {$parcel} was handed over by the rider.")
-                ->line('If you did not receive it, you can file a complaint from your orders.')
+                ->line("Your parcel {$parcel} was handed over by the rider, who took a photo as proof of delivery.")
+                ->line('Once you have it, press "Order received" in your orders. If you do not, the order completes on its own after '
+                    .OrderReceipts::graceDays().' days.')
+                ->line('If you did not receive it, file a complaint from your orders before then.')
                 ->action('View orders', route('buyer.orders')),
             'failed' => (new MailMessage)
                 ->subject("We could not deliver your order {$order}")

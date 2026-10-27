@@ -1,8 +1,12 @@
 # Builds the Android app and publishes it as zaylo.apk on the Releases page, which the README's
-# "Download the latest APK" link points to. Start it by pushing a version tag:
+# "Download the latest APK" link and the website's Android download page point to.
 #
-#   git tag v1.0.1
-#   git push origin v1.0.1
+# It runs on its own whenever a push to main changes the app (mobile_app/), so the download is always the
+# newest app: the release is tagged one patch above the latest version tag (v1.0.3 -> v1.0.4). A version can
+# also be chosen by pushing a tag yourself (for example a minor release):
+#
+#   git tag v1.1.0
+#   git push origin v1.1.0
 #
 # The app version comes from the tag (v1.0.1 -> 1.0.1), so pubspec.yaml does not need editing.
 # The APK is signed with the team's debug key (the DEBUG_KEYSTORE_BASE64 secret). Phones can only update an app
@@ -11,10 +15,19 @@ name: Release APK
 
 on:
   push:
+    branches: [main]
+    # Tag pushes ignore this filter, so a pushed tag always builds.
+    paths: ['mobile_app/**', '.github/workflows/release-apk.yml']
     tags: ['v*']
+  workflow_dispatch:
 
 permissions:
   contents: write
+
+# One release at a time, so two quick pushes do not pick the same version number.
+concurrency:
+  group: release-apk
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -24,6 +37,26 @@ jobs:
         working-directory: mobile_app
     steps:
       - uses: actions/checkout@v5
+        with:
+          # The tags, to find the latest version.
+          fetch-depth: 0
+
+      - name: Choose the version
+        id: version
+        run: |
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            TAG="$GITHUB_REF_NAME"
+          else
+            LATEST=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n 1)
+            if [ -z "$LATEST" ]; then
+              TAG=v1.0.0
+            else
+              IFS=. read -r MAJOR MINOR PATCH <<< "${LATEST#v}"
+              TAG="v$MAJOR.$MINOR.$((PATCH + 1))"
+            fi
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Releasing $TAG"
 
       - uses: actions/setup-java@v5
         with:
@@ -72,15 +105,22 @@ jobs:
       - run: flutter pub get
 
       - name: Build the APK
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          VERSION="${TAG#v}"
           # Android only installs an update with a higher build number; the first manual release was 1.
           BUILD_NUMBER=$(( GITHUB_RUN_NUMBER + 1 ))
-          flutter build apk --release --build-name="$VERSION" --build-number="$BUILD_NUMBER"
+          # APP_VERSION lets the app compare itself with the newest release and suggest updating.
+          flutter build apk --release --build-name="$VERSION" --build-number="$BUILD_NUMBER" --dart-define=APP_VERSION="$VERSION"
           mv build/app/outputs/flutter-apk/app-release.apk zaylo.apk
 
+      # Creates the tag on this commit when the push did not bring one, and makes the release the latest.
       - uses: softprops/action-gh-release@v2
         with:
-          name: ZAYLO ${{ github.ref_name }}
+          tag_name: ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: ZAYLO ${{ steps.version.outputs.tag }}
           files: mobile_app/zaylo.apk
           generate_release_notes: true
+          make_latest: true

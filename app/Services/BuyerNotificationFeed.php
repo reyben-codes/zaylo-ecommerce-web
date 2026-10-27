@@ -84,8 +84,8 @@ class BuyerNotificationFeed
             'picked_up' => 'The seller shipped your order.',
             'in_transit' => 'Your order is on its way.',
             'out_for_delivery' => 'Your order is out for delivery.',
-            'completed' => 'Your order was delivered.',
-            'delivered' => 'Your order was delivered.',
+            'completed' => 'Your order is complete.',
+            'delivered' => 'Your order was delivered. Confirm you received it.',
             'failed' => 'The rider could not deliver your order.',
             'cancelled' => 'Your order was cancelled.',
         ];

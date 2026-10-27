@@ -32,6 +32,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   Order? _order;
   Object? _error;
   bool _cancelling = false;
+  bool _confirming = false;
 
   /// Tells the list to refresh when we pop after a cancel.
   bool _changed = false;
@@ -128,6 +129,38 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     }
   }
 
+  /// Finishes a delivered order once the buyer has it, which pays the seller.
+  Future<void> _confirmReceipt(Order order) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Order received?'),
+        content: Text('Confirm that you received ${order.orderNumber}. This completes the order and pays the seller.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Not yet')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Yes, I received it')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _confirming = true);
+    try {
+      final updated = await _api.confirmReceipt(order.id);
+      if (!mounted) return;
+      setState(() {
+        _order = updated;
+        _changed = true;
+      });
+      showMessage(context, 'Thank you! Your order is complete. You can now rate your items.');
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      showMessage(context, error.message);
+      _load();
+    } finally {
+      if (mounted) setState(() => _confirming = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final order = _order;
@@ -167,6 +200,15 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                         ],
                       ]),
                     ),
+                    if (order.canConfirmReceipt || order.deliveryPhotoUrl != null) ...[
+                      const SizedBox(height: 16),
+                      _ReceiptCard(
+                        order: order,
+                        headers: _api.authHeaders,
+                        busy: _confirming,
+                        onConfirm: order.canConfirmReceipt ? () => _confirmReceipt(order) : null,
+                      ),
+                    ],
                     if (order.riderChat != null) ...[
                       const SizedBox(height: 16),
                       _RiderChatCard(chat: order.riderChat!, onOpen: () => _openRiderChat(order)),
@@ -410,6 +452,71 @@ class _Timeline extends StatelessWidget {
 }
 
 /// The rider delivering the order, with a button to message them.
+/// The rider's photo of the delivered parcel and, while the order waits for
+/// the buyer, the button that confirms it was received.
+class _ReceiptCard extends StatelessWidget {
+  const _ReceiptCard({required this.order, required this.headers, required this.busy, this.onConfirm});
+
+  final Order order;
+
+  /// The rider's photo is private to the order, so it loads with the session's token.
+  final Map<String, String> headers;
+  final bool busy;
+
+  /// Set while the buyer can still confirm the order was received.
+  final VoidCallback? onConfirm;
+
+  @override
+  Widget build(BuildContext context) => SectionCard(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Eyebrow('Proof of delivery'),
+          if (order.deliveryPhotoUrl != null) ...[
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: AspectRatio(
+                aspectRatio: 4 / 3,
+                child: Image.network(
+                  order.deliveryPhotoUrl!,
+                  headers: headers,
+                  fit: BoxFit.cover,
+                  semanticLabel: "The rider's photo of your delivered parcel",
+                  errorBuilder: (_, __, ___) => Container(
+                    color: ZayloColors.sand,
+                    alignment: Alignment.center,
+                    child: const Text('Could not load the photo', style: TextStyle(fontSize: 12)),
+                  ),
+                ),
+              ),
+            ),
+          ],
+          if (onConfirm != null) ...[
+            const SizedBox(height: 12),
+            Text('Did you receive your order?', style: TextStyle(fontWeight: FontWeight.w700, color: ZayloColors.ink)),
+            const SizedBox(height: 4),
+            Text(
+              order.autoConfirmAt == null
+                  ? 'Confirm it so the seller gets paid.'
+                  : 'Confirm it so the seller gets paid. If you don\'t, it is confirmed automatically on '
+                      '${dateTimeLabel(order.autoConfirmAt!.toLocal())}. Not received? Report a problem before then.',
+              style: const TextStyle(fontSize: 12),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: busy ? null : onConfirm,
+                style: primaryButtonStyle,
+                child: busy
+                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text('ORDER RECEIVED'),
+              ),
+            ),
+          ],
+        ]),
+      );
+}
+
 class _RiderChatCard extends StatelessWidget {
   const _RiderChatCard({required this.chat, required this.onOpen});
 

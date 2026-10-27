@@ -11,7 +11,7 @@ class Order extends Model
 {
     protected $fillable = [
         'order_number', 'user_id', 'seller_id', 'status', 'subtotal', 'shipping_fee',
-        'total', 'currency', 'recipient_name', 'phone', 'notes', 'placed_at', 'completed_at', 'shipping_discount',
+        'total', 'currency', 'recipient_name', 'phone', 'notes', 'placed_at', 'completed_at', 'delivered_at', 'shipping_discount',
         'buyer_id', 'reference', 'total_minor', 'payment_method', 'payment_status',
         'shipping_address', 'note', 'voucher_code', 'shipping_discount_minor', 'courier_choice',
     ];
@@ -28,7 +28,7 @@ class Order extends Model
     protected function casts(): array
     {
         return static::usesLegacySchema()
-            ? ['subtotal' => 'decimal:2', 'shipping_fee' => 'decimal:2', 'total' => 'decimal:2', 'placed_at' => 'datetime', 'completed_at' => 'datetime']
+            ? ['subtotal' => 'decimal:2', 'shipping_fee' => 'decimal:2', 'total' => 'decimal:2', 'placed_at' => 'datetime', 'completed_at' => 'datetime', 'delivered_at' => 'datetime']
             : ['shipping_address' => 'array'];
     }
 

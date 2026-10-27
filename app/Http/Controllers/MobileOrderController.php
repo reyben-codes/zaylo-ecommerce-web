@@ -5,22 +5,28 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Services\CheckoutService;
+use App\Services\OrderReceipts;
 use App\Services\ProductReviews;
 use App\Support\MobilePayload;
 use App\Support\OrderParties;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
-/** A buyer's orders in the mobile app: the list by status, one order with its history, cancelling, and reviews. */
+/**
+ * A buyer's orders in the mobile app: the list by status, one order with its history, cancelling, confirming a
+ * delivered order was received (with the rider's photo), and reviews.
+ */
 class MobileOrderController extends Controller
 {
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, OrderReceipts $receipts): JsonResponse
     {
         $filter = $request->validate([
             'status' => ['nullable', Rule::in(['all', ...array_keys(MobilePayload::STATUS_GROUPS)])],
         ])['status'] ?? 'all';
+        $receipts->autoConfirmDue();
 
         $statusCounts = $request->user()->orders()
             ->selectRaw('status, COUNT(*) as total')
@@ -43,9 +49,11 @@ class MobileOrderController extends Controller
         ]);
     }
 
-    public function show(Request $request, Order $order): JsonResponse
+    public function show(Request $request, Order $order, OrderReceipts $receipts): JsonResponse
     {
         abort_unless(OrderParties::for($order)['buyer'] === (int) $request->user()->id, 404);
+        $receipts->autoConfirmDue();
+        $order->refresh();
 
         return response()->json(['order' => $this->detailed($order)]);
     }
@@ -58,6 +66,31 @@ class MobileOrderController extends Controller
         return response()->json([
             'message' => 'Order cancelled and stock restored.',
             'order' => $this->detailed($order->fresh()),
+        ]);
+    }
+
+    /** The buyer received a delivered order, which completes it. */
+    public function received(Request $request, Order $order, OrderReceipts $receipts): JsonResponse
+    {
+        abort_unless(OrderParties::for($order)['buyer'] === (int) $request->user()->id, 404);
+        $receipts->confirm($order, $request->user());
+
+        return response()->json([
+            'message' => 'Thank you! Your order is complete. You can now rate your items.',
+            'order' => $this->detailed($order->fresh()),
+        ]);
+    }
+
+    /** The rider's photo of the delivered parcel. */
+    public function deliveryPhoto(Request $request, Order $order)
+    {
+        abort_unless(OrderParties::for($order)['buyer'] === (int) $request->user()->id, 404);
+        $path = $order->deliveryShipment()?->delivery_proof_path;
+        abort_unless($path && Storage::disk('local')->exists($path), 404);
+
+        return Storage::disk('local')->response($path, null, [
+            'Cache-Control' => 'private, max-age=3600',
+            'X-Content-Type-Options' => 'nosniff',
         ]);
     }
 

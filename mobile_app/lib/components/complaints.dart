@@ -234,6 +234,10 @@ class _ComplaintDetailScreenState extends State<ComplaintDetailScreen> {
                     padding: const EdgeInsets.all(ZayloSpace.page),
                     children: [
                       _CaseCard(complaint: complaint, headers: widget.api.authHeaders),
+                      if (complaint.returnInfo != null) ...[
+                        const SizedBox(height: 12),
+                        ReturnCard(info: complaint.returnInfo!),
+                      ],
                       if (complaint.resolution != null && complaint.resolution!.trim().isNotEmpty) ...[
                         const SizedBox(height: 12),
                         SectionCard(
@@ -371,6 +375,120 @@ class _CaseCard extends StatelessWidget {
           ],
         ]),
       );
+}
+
+/// The returned item's slip (a barcode the rider scans when collecting it),
+/// how it goes back, and each step until the seller refunds.
+class ReturnCard extends StatelessWidget {
+  const ReturnCard({super.key, required this.info});
+
+  final ComplaintReturn info;
+
+  @override
+  Widget build(BuildContext context) {
+    final waiting = info.status == 'scheduled';
+    final when = info.isPickup
+        ? [
+            if (info.pickupDate != null) shortDate(info.pickupDate!),
+            info.pickupSlot == 'afternoon' ? 'Afternoon, 1–6 PM' : 'Morning, 9 AM–1 PM',
+          ].join(' · ')
+        : 'Drop off at ${info.dropoffLocation ?? 'your logistics hub'}'
+            '${info.dropoffDeadline != null ? ' by ${shortDate(info.dropoffDeadline!)}' : ''}';
+    return SectionCard(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Expanded(child: Eyebrow('Return · ${info.typeLabel}')),
+          ComplaintStatusPill(
+              status: const {'received_by_seller', 'refunded'}.contains(info.status) ? 'resolved' : 'in_review',
+              label: info.statusLabel),
+        ]),
+        const SizedBox(height: 8),
+        Text(when, style: TextStyle(fontWeight: FontWeight.w700, color: ZayloColors.ink)),
+        if (info.isPickup) ...[
+          const SizedBox(height: 2),
+          Text(
+            info.riderName != null
+                ? 'Your rider: ${info.riderName}'
+                : 'Your logistics partner will assign a rider before the pickup day.',
+            style: const TextStyle(fontSize: 12),
+          ),
+        ],
+        if (waiting && info.barcode.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+              child: Column(children: [
+                Semantics(
+                  label: 'Return slip barcode ${info.trackingNumber}',
+                  child: CustomPaint(size: const Size(260, 64), painter: _BarcodePainter(info.barcode)),
+                ),
+                const SizedBox(height: 6),
+                Text(info.trackingNumber,
+                    style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.w700, letterSpacing: 1, color: Colors.black)),
+              ]),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            info.isPickup
+                ? 'Show this to the rider, who scans it when collecting the item.'
+                : 'Show this at the hub when you hand over the item.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 12),
+          ),
+        ] else ...[
+          const SizedBox(height: 4),
+          Text('Return slip ${info.trackingNumber}', style: const TextStyle(fontSize: 12)),
+        ],
+        const SizedBox(height: 14),
+        for (final step in info.steps)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Row(children: [
+              Icon(step.done ? Icons.check_circle : Icons.radio_button_unchecked,
+                  size: 18, color: step.done ? ZayloColors.success : ZayloColors.muted),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(step.label,
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: step.key == info.status ? FontWeight.w800 : FontWeight.w500,
+                        color: step.done ? ZayloColors.ink : ZayloColors.muted)),
+              ),
+            ]),
+          ),
+        if (info.refundAmount != null)
+          Text('Refunded ₱${info.refundAmount!.toStringAsFixed(2)}',
+              style: TextStyle(fontWeight: FontWeight.w700, color: ZayloColors.success)),
+      ]),
+    );
+  }
+}
+
+/// Draws Code 128 from its alternating bar and space widths, in black on the
+/// card's white box so scanners read it in dark mode too.
+class _BarcodePainter extends CustomPainter {
+  const _BarcodePainter(this.widths);
+
+  final List<int> widths;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final total = widths.fold<int>(0, (sum, width) => sum + width);
+    if (total == 0) return;
+    final module = size.width / total;
+    final paint = Paint()..color = Colors.black;
+    var x = 0.0;
+    for (final (index, width) in widths.indexed) {
+      if (index.isEven) canvas.drawRect(Rect.fromLTWH(x, 0, width * module, size.height), paint);
+      x += width * module;
+    }
+  }
+
+  @override
+  bool shouldRepaint(_BarcodePainter oldDelegate) => oldDelegate.widths != widths;
 }
 
 class _MessageBubble extends StatelessWidget {

@@ -5,12 +5,17 @@ namespace Tests\Feature;
 use App\Models\Announcement;
 use App\Models\LogisticsMessage;
 use App\Models\LogisticsProvider;
+use App\Models\Order;
 use App\Models\Rider;
 use App\Models\User;
 use App\Notifications\ParcelDeliveryUpdate;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Tests\Support\LegacyOrderTables;
 use Tests\Support\SignsInMobile;
 use Tests\TestCase;
@@ -131,8 +136,64 @@ class MobileRiderDashboardTest extends TestCase
             ->assertJsonPath('stats.earnings_today', 49)
             ->assertJsonCount(1, 'recent')
             ->assertJsonPath('recent.0.chat_open', false);
-        $this->assertSame('completed', DB::table('orders')->value('status'));
-        $this->assertSame('paid', DB::table('payments')->value('status'));
+        // The rider does not finish the order: it waits for the buyer to confirm they received it.
+        $this->assertSame('delivered', DB::table('orders')->value('status'));
+        $this->assertSame('pending', DB::table('payments')->value('status'));
+    }
+
+    public function test_delivering_needs_a_photo_when_parcels_keep_proof(): void
+    {
+        Storage::fake('local');
+        Schema::table('shipments', fn (Blueprint $table) => $table->string('delivery_proof_path')->nullable());
+        $rider = $this->rider();
+        $shipmentId = $this->parcel('out_for_delivery', $rider);
+        $code = DB::table('shipments')->where('id', $shipmentId)->value('tracking_number');
+        $this->signInMobile($rider);
+
+        $this->postJson('/api/mobile/rider/deliveries/scan', ['code' => $code])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('photo');
+        $this->assertSame('out_for_delivery', DB::table('shipments')->value('status'));
+
+        $this->post('/api/mobile/rider/deliveries/scan', ['code' => $code, 'photo' => UploadedFile::fake()->image('door.jpg', 800, 600)], ['Accept' => 'application/json'])
+            ->assertOk()
+            ->assertJsonPath('step', 'delivered')
+            ->assertJsonPath('delivery.has_delivery_photo', true);
+        Storage::disk('local')->assertExists(DB::table('shipments')->value('delivery_proof_path'));
+        $this->assertSame('delivered', DB::table('orders')->value('status'));
+    }
+
+    public function test_the_buyer_confirms_receipt_or_the_order_completes_after_the_grace_period(): void
+    {
+        $rider = $this->rider();
+        $first = $this->parcel('out_for_delivery', $rider);
+        $second = $this->parcel('out_for_delivery', $rider);
+        $this->signInMobile($rider);
+        foreach ([$first, $second] as $shipmentId) {
+            $this->postJson('/api/mobile/rider/deliveries/scan', ['code' => DB::table('shipments')->where('id', $shipmentId)->value('tracking_number')])->assertOk();
+        }
+        $firstOrder = Order::find(DB::table('shipments')->where('id', $first)->value('order_id'));
+        $secondOrder = Order::find(DB::table('shipments')->where('id', $second)->value('order_id'));
+
+        // Only the order's buyer can confirm it, once.
+        $this->app['auth']->forgetGuards();
+        $this->actingAs(User::factory()->create(['role' => 'buyer', 'status' => 'active']))
+            ->post(route('buyer.orders.received', $firstOrder))->assertNotFound();
+        $this->actingAs($firstOrder->buyer)->get(route('buyer.orders'))->assertOk()->assertSee('Order received');
+        $this->post(route('buyer.orders.received', $firstOrder))->assertSessionHasNoErrors();
+        $this->assertSame('completed', $firstOrder->fresh()->status);
+        $this->assertSame('paid', DB::table('payments')->where('order_id', $firstOrder->id)->value('status'));
+        $this->post(route('buyer.orders.received', $firstOrder))->assertSessionHasErrors('order');
+
+        // The other buyer never confirms: the order completes on its own after three days.
+        $this->travel(2)->days();
+        $this->artisan('orders:confirm-delivered')->assertSuccessful();
+        $this->assertSame('delivered', $secondOrder->fresh()->status);
+        $this->travel(2)->days();
+        $this->artisan('orders:confirm-delivered')->assertSuccessful();
+        $this->assertSame('completed', $secondOrder->fresh()->status);
+        $this->assertSame('paid', DB::table('payments')->where('order_id', $secondOrder->id)->value('status'));
+        $this->assertDatabaseHas('order_status_histories', ['order_id' => $secondOrder->id, 'status' => 'completed', 'changed_by' => null]);
     }
 
     public function test_a_failed_attempt_can_be_retried(): void
@@ -182,7 +243,7 @@ class MobileRiderDashboardTest extends TestCase
         $this->postJson('/api/mobile/rider/deliveries/scan', ['code' => $code])->assertOk();
         Notification::assertSentTo($buyer, ParcelDeliveryUpdate::class, fn ($n) => $n->step === 'delivered');
         Notification::assertSentTo($seller, ParcelDeliveryUpdate::class, fn ($n) => $n->step === 'delivered' && $n->forSeller);
-        $this->assertSame('completed', DB::table('orders')->value('status'));
+        $this->assertSame('delivered', DB::table('orders')->value('status'));
         $this->assertTrue(LogisticsMessage::where('body', 'like', "%{$code}%delivered%")->exists());
 
         $this->postJson('/api/mobile/rider/deliveries/scan', ['code' => $code])
