@@ -28,6 +28,7 @@ class _ZayAvatarState extends State<ZayAvatar> with TickerProviderStateMixin {
   late final AnimationController _motion =
       AnimationController(vsync: this, duration: const Duration(milliseconds: 3200));
   Timer? _nextBlink;
+  Timer? _doubleBlink;
 
   @override
   void initState() {
@@ -51,10 +52,14 @@ class _ZayAvatarState extends State<ZayAvatar> with TickerProviderStateMixin {
       if (!mounted) return;
       await _blinkOnce();
       if (mounted && _random.nextDouble() < .2) {
-        await Future<void>.delayed(const Duration(milliseconds: 120));
-        if (mounted) await _blinkOnce();
+        _doubleBlink?.cancel();
+        _doubleBlink = Timer(const Duration(milliseconds: 120), () async {
+          if (mounted) await _blinkOnce();
+          if (mounted) _scheduleBlink();
+        });
+      } else if (mounted) {
+        _scheduleBlink();
       }
-      if (mounted) _scheduleBlink();
     });
   }
 
@@ -66,6 +71,7 @@ class _ZayAvatarState extends State<ZayAvatar> with TickerProviderStateMixin {
   @override
   void dispose() {
     _nextBlink?.cancel();
+    _doubleBlink?.cancel();
     _blink.dispose();
     _motion.dispose();
     super.dispose();

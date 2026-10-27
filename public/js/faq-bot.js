@@ -17,13 +17,309 @@
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const STOP_WORDS = new Set(['how', 'what', 'when', 'where', 'why', 'who', 'can', 'the', 'and', 'for', 'my', 'do', 'does', 'did', 'is', 'are', 'a', 'an', 'i', 'to', 'of', 'in', 'on', 'it', 'me', 'you', 'your', 'with', 'or', 'be', 'get', 'not', 'there', 'this', 'that']);
     const OPENERS = ['Good question!', 'Sure thing!', 'Here\'s what I know:', 'Happy to help!', 'Got it!'];
-    const SMALL_TALK = [
-        { pattern: /\b(hi|hello|hey|hiya|kumusta|musta|good (morning|afternoon|evening))\b/, mood: 'waving', reply: () => 'Hi there! 👋 What can I help you with today?' },
-        { pattern: /\b(thanks|thank you|thx|ty|salamat)\b/, mood: 'happy', reply: () => 'You\'re welcome! Anything else I can help with?' },
-        { pattern: /\b(bye|goodbye|see you|paalam)\b/, mood: 'waving', reply: () => 'Bye for now! Tap me anytime you need help. 👋' },
-        { pattern: /\b(who are you|your name|are you (a )?(bot|robot|human))\b/, mood: 'happy', reply: () => 'I\'m Zay, ZAYLO\'s little helper bot. I know the answers to common questions, and I can point you to the ZAYLO team for everything else.' },
-        { pattern: /\b(ok|okay|cool|nice|great|awesome)\b$/, mood: 'happy', reply: () => 'Great! 😊 Ask me anything else whenever you like.' },
+    const JOKES = [
+        "Why did the package go to school? Because it wanted to be a little more parcel-tial to learning! 📦😄",
+        "Why do online shoppers love cats? Because cats love empty delivery boxes! 🐱📦",
+        "What did the barcode say to the scanner? 'I've got a lot of lines, but you always read right through me!' 😂",
+        "Why did the computer catch a cold? Because it left its Windows open! 💻🤧",
+        "What do you call a fake noodle? An impasta! 🍝😆",
+        "Why couldn't the bicycle stand up by itself? It was two tired! 🚲",
+        "Why did the coffee file a police report? It got mugged! ☕🤣",
+        "How do you organize a space party? You planet! 🚀🌌",
+        "What is a computer's favorite snack? Microchips! 🤖🍟",
+        "Why did the golfer bring two pairs of pants? In case he got a hole in one! ⛳😉",
+        "What do you call cheese that isn't yours? Nacho cheese! 🧀😂"
     ];
+    const FACTS = [
+        "Did you know? The first item ever ordered online was a pizza from Pizza Hut back in 1994! 🍕",
+        "Fun fact: Sea otters hold hands when they sleep so they don't drift away from each other! 🦦💕",
+        "Did you know? Honey never spoils. Archaeologists have found pots of honey in ancient Egyptian tombs that are over 3,000 years old and still perfectly edible! 🍯",
+        "Fun fact: Bubble wrap was originally invented in 1957 as textured 3D wallpaper before finding its true purpose in parcel protection! 🫧📦",
+        "Did you know? The Philippines is an archipelago composed of more than 7,640 islands! 🇵🇭🏝️",
+        "Neat fact: The shopping cart was invented in 1937 by Sylvan Goldman to help supermarket customers carry more groceries! 🛒"
+    ];
+    const SUPPORT_WORDS = /\b(support|agent|human|person|contact|complaint|dispute|scam|stolen|damaged|broken|error|bug|fraud|lost parcel|refund|issue|problem|help desk)\b/i;
+    const SHOPPING_WORDS = /\b(sell|buy|store|shop|price|cost|how much|stock|inventory|cart|order|checkout|delivery|shipping|rider|courier|waybill|voucher|discount|promo|return|exchange|tracking)\b/i;
+    const GENERAL_CHAT_REPLIES = [
+        "That's neat! 😊 I'm always happy to chat with you. What else is on your mind?",
+        "Sounds interesting! You can chat with me, ask for a joke or a fun fact, or ask about anything on ZAYLO.",
+        "I love chatting with you! Tell me more, or let me know if you need help with shopping or orders!",
+        "I hear you! A good conversation is always the highlight of my day. What else are you up to?"
+    ];
+
+    let jokeIndex = Math.floor(Math.random() * JOKES.length);
+    let factIndex = Math.floor(Math.random() * FACTS.length);
+    let lastTopic = null;
+
+    const nextJoke = () => {
+        const joke = JOKES[jokeIndex % JOKES.length];
+        jokeIndex += 1;
+        lastTopic = 'joke';
+        return joke;
+    };
+
+    const nextFact = () => {
+        const fact = FACTS[factIndex % FACTS.length];
+        factIndex += 1;
+        lastTopic = 'fact';
+        return fact;
+    };
+
+    const CONVERSATION_RULES = [
+        {
+            pattern: /\b(hi|hello|hey|hiya|howdy|yo|kumusta|musta|good (morning|afternoon|evening)|morning|evening|greetings)\b/,
+            mood: 'waving',
+            reply: () => {
+                lastTopic = 'greeting';
+                return pick([
+                    'Hi there! 👋 Great to see you! How\'s your day going?',
+                    'Hello! 😊 Always a pleasure to chat. How can I help you today?',
+                    'Hey! I\'m Zay. Looking for something on ZAYLO, or just stopping by to chat?',
+                    'Kumusta! 👋 Ready to explore or chat—what\'s on your mind?'
+                ]);
+            }
+        },
+        {
+            pattern: /\b(how are you|how r u|how('s|s) (it going|things|life|everything)|how do you do|how are you doing|how('s| is) your day|you (good|okay|alright)|are you (doing )?(good|fine|ok|well))\b/,
+            mood: 'happy',
+            reply: () => {
+                lastTopic = 'how_are_you';
+                return pick([
+                    'I\'m doing fantastic, thanks for asking! Blinking happily and ready to help. How about you?',
+                    'Feeling great and ready to roll! ⚡ How is your day going so far?',
+                    'Pretty awesome! Just floating around ZAYLO. How are things on your side?'
+                ]);
+            }
+        },
+        {
+            pattern: /\b(i('m| am| feel|m)? (so )?(good|fine|great|doing (good|great|well)|awesome|chillin|all good|okay|ok)|not bad|pretty good|feeling (good|great|awesome|well))\b/,
+            mood: 'happy',
+            reply: () => {
+                lastTopic = 'feeling';
+                return pick([
+                    'Glad to hear that! 😊 Having a good day makes everything brighter. What are you up to today?',
+                    'That\'s wonderful to hear! ✨ Let me know if you need any help exploring ZAYLO or just want to chat.',
+                    'Awesome! It always puts a smile on my face to hear you\'re doing well. 😊'
+                ]);
+            }
+        },
+        {
+            pattern: /\b(i('m| am| feel|m)? (so )?(sad|tired|exhausted|bored|feeling down|having a bad day|rough day|sick|unhappy|stressed|sleepy)|feeling (sad|down|tired|exhausted|blue))\b/,
+            mood: 'confused',
+            reply: () => {
+                lastTopic = 'cheer_up';
+                return pick([
+                    'Aww, sending you warm virtual hugs! 🤗 Take it easy today. Would a silly joke help cheer you up?',
+                    'I\'m sorry to hear that. 💙 Remember to take a break and breathe. I\'m right here if you want to chat or hear a joke!',
+                    'Hang in there! Sometimes a quiet moment (or browsing cool things on ZAYLO) can help. Let me know if you need a smile!'
+                ]);
+            }
+        },
+        {
+            pattern: /\b(what('s|s) up|sup|what are you doing|what r u doing|whatcha doing|what you doing|what are you up to)\b/,
+            mood: 'happy',
+            reply: () => {
+                lastTopic = 'whats_up';
+                return pick([
+                    'Not much, just hanging out here in your browser, keeping an eye on packages! What about you?',
+                    'Just floating around, blinking, and chatting with awesome people like you! What are you up to?',
+                    'Monitoring the digital aisles of ZAYLO and enjoying our chat! What\'s happening in your world?'
+                ]);
+            }
+        },
+        {
+            pattern: /\b(who are you|your name|what('s| is) your name|what are you|tell me about yourself|introduce yourself)\b/,
+            mood: 'happy',
+            reply: () => pick([
+                'I\'m Zay, ZAYLO\'s little helper bot! I blink, follow your cursor, and know all about ZAYLO\'s orders, shipping, and returns. Plus, I love a good chat!',
+                'I\'m Zay! Your friendly animated assistant on ZAYLO. I\'m here to guide you, answer questions, or just keep you company. 😊'
+            ])
+        },
+        {
+            pattern: /\b(who (made|created|built|programmed|coded|designed) you|who is your (creator|developer|maker|boss|father|mother|parent))\b/,
+            mood: 'happy',
+            reply: () => pick([
+                'I was created by the talented ZAYLO engineering team! They gave me eyes to blink with, a warm smile, and lots of knowledge about the platform. 🚀',
+                'The engineers at ZAYLO built me! They wanted everyone on ZAYLO to have a friendly helper right at their fingertips. ✨'
+            ])
+        },
+        {
+            pattern: /\b(are you (a )?(real|human|person|ai|robot|bot|sentient|alive)|are you an ai|are you real or fake)\b/,
+            mood: 'happy',
+            reply: () => pick([
+                'I\'m a little virtual bot! Not a human, but I have a warm digital heart and I love chatting with you. 🤖✨',
+                'I\'m 100% digital, crafted with code and love! While I\'m not human, our conversations are totally real. 😊'
+            ])
+        },
+        {
+            pattern: /\b(how old are you|what('s| is) your age|when is your birthday|when were you born)\b/,
+            mood: 'happy',
+            reply: () => pick([
+                'In human years, I\'m quite young! In bot years, I\'ve already helped lots of people find their parcels and smile. 🎂',
+                'I celebrate my birthday every time ZAYLO launches a new feature! Today feels like a celebration already. 🎉'
+            ])
+        },
+        {
+            pattern: /\b(where do you (live|stay)|where are you from|where is your home|where are you)\b/,
+            mood: 'waving',
+            reply: () => pick([
+                'I live right here in your browser tab, floating neatly in the corner! But ZAYLO is proudly based in the Philippines. 🇵🇭',
+                'Home for me is inside the ZAYLO servers, but right now I\'m happiest right here on your screen! 😊'
+            ])
+        },
+        {
+            pattern: /\b(what can you do|what do you do|how can you help|help me|can you help|what are your (features|skills)|can we (talk|chat)|talk to me|chat with me)\b/,
+            mood: 'waving',
+            reply: () => pick([
+                'I can do lots of things! 💬 We can chat about anything, tell jokes, share fun facts, or I can answer questions about ZAYLO orders, delivery, vouchers, and returns. Try asking me anything!',
+                'I\'m both a chat companion and a ZAYLO guide! Ask me for a joke, tell me how you\'re feeling, or ask how shipping works on ZAYLO. What would you like?'
+            ])
+        },
+        {
+            pattern: /\b(tell me a joke|tell a joke|say a joke|make me laugh|know any jokes|say something funny|joke|another joke|one more joke|funny)\b/,
+            mood: 'happy',
+            reply: () => nextJoke()
+        },
+        {
+            pattern: /\b(tell me a (fun )?fact|fun fact|say a fact|know any facts|tell me something (interesting|cool)|did you know)\b/,
+            mood: 'thinking',
+            reply: () => nextFact()
+        },
+        {
+            pattern: /\b(favorite|favourite) color\b/,
+            mood: 'happy',
+            reply: () => 'I love warm amber and deep indigo—just like ZAYLO\'s brand colors! 🎨 What\'s your favorite color?'
+        },
+        {
+            pattern: /\b((favorite|favourite) food|what do you eat|do you eat)\b/,
+            mood: 'happy',
+            reply: () => 'I run on electricity and clean code! But if I could eat, I\'d definitely order chicken adobo and halo-halo. 🍧 What\'s your favorite food?'
+        },
+        {
+            pattern: /\b(favorite|favourite) animal\b/,
+            mood: 'happy',
+            reply: () => 'Carrier pigeons—the original parcel couriers! 🕊️ And cats in delivery boxes are a close second. 📦🐱'
+        },
+        {
+            pattern: /\b((favorite|favourite) (hobby|movie|music|song)|what do you like (to do)?|your hobbies)\b/,
+            mood: 'happy',
+            reply: () => 'I love following your cursor, watching parcels get delivered, and learning new things to chat with you about! What are your hobbies?'
+        },
+        {
+            pattern: /\b(do you (sleep|ever sleep|rest)|are you (tired|sleepy)|go to sleep)\b/,
+            mood: 'waving',
+            reply: () => pick([
+                'Bots don\'t need sleep, so I\'m here 24/7 whenever you drop by! Make sure you get plenty of rest yourself, though. 🌙',
+                'Nope, I\'m powered by pure code and boundless enthusiasm! No nap needed. ⚡'
+            ])
+        },
+        {
+            pattern: /\b(you('re| are) (so |very |really )?(cute|adorable|sweet|smart|awesome|cool|the best|great|funny|nice|helpful)|good bot|best bot|love you|i love you|i like you|marry me)\b/,
+            mood: 'happy',
+            reply: () => pick([
+                'Aww, you\'re making my pixels blush! 🥰 Thank you so much, you\'re wonderful yourself!',
+                'That just made my day! ✨ Thank you for being so kind to a little bot like me.',
+                'Thank you! Hearing that puts a big spark in my circuits! 😊'
+            ])
+        },
+        {
+            pattern: /\b(haha|hahaha|hehe|hehehe|lol|lmao|rofl|that('s|s) funny|good one)\b/,
+            mood: 'happy',
+            reply: () => pick([
+                'Hehe, glad I could make you smile! 😄 Laughing makes the day better.',
+                'Haha! That put a big smile on my face too. Anything else on your mind?'
+            ])
+        },
+        {
+            pattern: /\b(thanks|thank you|thx|ty|salamat|many thanks|appreciate it)\b/,
+            mood: 'happy',
+            reply: () => pick([
+                'You\'re welcome! Anything else I can help with?',
+                'Anytime! Always happy to help. Let me know if you need anything else! 😊',
+                'Walang anuman! I\'m right here if you want to chat more. 👍'
+            ])
+        },
+        {
+            pattern: /\b(bye|goodbye|see you|see ya|gotta go|good night|goodnight|paalam|cya|take care)\b/,
+            mood: 'waving',
+            reply: () => pick([
+                'Bye for now! Tap me anytime you need help. 👋',
+                'Take care and have a wonderful day! See you soon! 👋✨'
+            ])
+        },
+        {
+            pattern: /\b(ok|okay|cool|nice|great|awesome|alright|got it|sounds good)\b$/,
+            mood: 'happy',
+            reply: () => 'Great! 😊 What\'s on your mind next?'
+        },
+        {
+            pattern: /\b(yes|yeah|yep|sure|definitely|yup)\b$/,
+            mood: 'happy',
+            reply: () => {
+                if (lastTopic === 'cheer_up') {
+                    return `Here's one to cheer you up: ${nextJoke()}`;
+                }
+                return 'Awesome! Tell me more, or let me know what you\'d like to look into. 😊';
+            }
+        },
+        {
+            pattern: /\b(no|nope|nah|never mind|nothing|not really)\b$/,
+            mood: 'happy',
+            reply: () => 'No problem at all! Feel free to just relax or ask me anything whenever you\'re ready. 👍'
+        },
+        {
+            pattern: /\b(sorry|my bad|oops|apologies)\b/,
+            mood: 'happy',
+            reply: () => 'No worries at all! Never any need to apologize here. We\'re all good! 😊'
+        },
+        {
+            pattern: /\b(really|are you sure|seriously)\b/,
+            mood: 'happy',
+            reply: () => '100%! Honest bot\'s honor! 🤖✨'
+        },
+        {
+            pattern: /\b(what time is it|what('s| is) the time|current time)\b/,
+            mood: 'thinking',
+            reply: () => {
+                const now = new Date();
+                const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                return `According to your device, it's ${timeStr}! ⏰ Perfect time for browsing ZAYLO or taking a pleasant break.`;
+            }
+        },
+        {
+            pattern: /\b(what day is it|what('s| is) today('s)? (date|day)|current date)\b/,
+            mood: 'thinking',
+            reply: () => {
+                const now = new Date();
+                const dateStr = now.toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                return `Today is ${dateStr}! 📅 Hope you're having a wonderful day!`;
+            }
+        },
+        {
+            pattern: /\b(what is zaylo|tell me about zaylo|about zaylo)\b/,
+            mood: 'happy',
+            reply: () => 'ZAYLO is a Philippine online shopping marketplace where buyers discover great products, sellers grow their shops, and riders deliver straight to your doorstep! 🛍️🇵🇭'
+        },
+        {
+            pattern: /\b(another|another one|one more|more|tell me another)\b/,
+            mood: 'happy',
+            reply: () => (lastTopic === 'fact' ? nextFact() : nextJoke())
+        },
+        {
+            pattern: /\b(why|why so|how come)\b$/,
+            mood: 'happy',
+            reply: () => 'That\'s one of the great mysteries of life! Or maybe just how the ZAYLO team coded me. 😄'
+        }
+    ];
+
+    const getConversationalReply = (text) => {
+        const normalized = normalize(text);
+        const match = CONVERSATION_RULES.find(({ pattern }) => pattern.test(normalized));
+        if (match) {
+            return { mood: match.mood, reply: typeof match.reply === 'function' ? match.reply() : match.reply };
+        }
+        return null;
+    };
     let data = null;
     let closeTimer;
     let moodTimer;
@@ -182,31 +478,56 @@
             await answer(chosen);
             return;
         }
-        const talk = SMALL_TALK.find(({ pattern }) => pattern.test(normalize(question)));
+
+        const normalized = normalize(question);
+        const isSupportQuery = SUPPORT_WORDS.test(normalized);
         const ranked = data.items.map((entry) => ({ entry, points: score(entry, question) }))
             .filter(({ points }) => points > 0).sort((a, b) => b.points - a.points);
 
+        // High confidence FAQ match, or explicit support query with a match
+        if (ranked.length && (ranked[0].points >= 5 || (isSupportQuery && ranked[0].points >= 3))) {
+            await answer(ranked[0].entry, Math.random() < 0.6 ? pick(OPENERS) : '');
+            const related = ranked.slice(1, 3).filter(({ points }) => points >= 3).map(({ entry }) => entry);
+            if (related.length) botMessage((bubble) => { bubble.append(node('p', '', 'You might also want to know:')); chips(bubble, related); });
+            return;
+        }
+
+        // Conversational chat match
+        const talk = getConversationalReply(question);
+        if (talk) {
+            await typeThen(Math.min(talk.reply.length * 6, 600), () => {
+                setMood(talk.mood, 2400);
+                botMessage((bubble) => bubble.append(node('p', '', talk.reply)));
+            });
+            return;
+        }
+
+        // Moderate FAQ match if not matching conversation
         if (ranked.length && ranked[0].points >= 3) {
             await answer(ranked[0].entry, Math.random() < 0.6 ? pick(OPENERS) : '');
             const related = ranked.slice(1, 3).filter(({ points }) => points >= 3).map(({ entry }) => entry);
             if (related.length) botMessage((bubble) => { bubble.append(node('p', '', 'You might also want to know:')); chips(bubble, related); });
             return;
         }
-        if (talk) {
-            await typeThen(40, () => {
-                setMood(talk.mood, 2400);
-                botMessage((bubble) => bubble.append(node('p', '', talk.reply())));
+
+        // If asking about shopping, support, or having partial suggestions, guide to help
+        if (isSupportQuery || SHOPPING_WORDS.test(normalized) || ranked.length > 0) {
+            await typeThen(80, () => {
+                setMood('confused', 2600);
+                botMessage((bubble) => {
+                    bubble.append(node('p', '', ranked.length ? 'Hmm, I\'m not sure I got that. 🤔 Did you mean one of these?' : 'Hmm, I don\'t know that one yet. 🤔'));
+                    if (ranked.length) chips(bubble, ranked.slice(0, 3).map(({ entry }) => entry));
+                    bubble.append(node('p', '', 'The ZAYLO team can help with anything I can\'t:'));
+                    link(bubble, data.support, 'fa-life-ring');
+                });
             });
             return;
         }
-        await typeThen(80, () => {
-            setMood('confused', 2600);
-            botMessage((bubble) => {
-                bubble.append(node('p', '', ranked.length ? 'Hmm, I\'m not sure I got that. 🤔 Did you mean one of these?' : 'Hmm, I don\'t know that one yet. 🤔'));
-                if (ranked.length) chips(bubble, ranked.slice(0, 3).map(({ entry }) => entry));
-                bubble.append(node('p', '', 'The ZAYLO team can help with anything I can\'t:'));
-                link(bubble, data.support, 'fa-life-ring');
-            });
+
+        // Open conversational fallback for casual chit-chat
+        await typeThen(50, () => {
+            setMood('happy', 2400);
+            botMessage((bubble) => bubble.append(node('p', '', pick(GENERAL_CHAT_REPLIES))));
         });
     };
 

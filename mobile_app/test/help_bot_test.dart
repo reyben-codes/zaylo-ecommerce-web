@@ -60,4 +60,52 @@ void main() {
     await tester.pump(const Duration(seconds: 10));
     await tester.pumpWidget(const SizedBox());
   });
+
+  testWidgets('Zay answers who made it and tells jokes', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: HelpBotScreen(api: _FaqApi(), onContactSupport: () {}),
+    ));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 2));
+
+    // Ask who made Zay
+    await tester.enterText(find.byType(TextField), 'who created you');
+    await tester.testTextInput.receiveAction(TextInputAction.send);
+    await tester.pump(const Duration(seconds: 2));
+    expect(find.textContaining('ZAYLO engineering team'), findsOneWidget);
+
+    // Ask for a joke
+    await tester.enterText(find.byType(TextField), 'tell me a joke');
+    await tester.testTextInput.receiveAction(TextInputAction.send);
+    await tester.pump(const Duration(seconds: 2));
+    expect(find.textContaining('Because it wanted to be a little more parcel-tial'), findsOneWidget);
+
+    // Clean up
+    await tester.pump(const Duration(seconds: 10));
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('Zay responds warmly to how are you', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: HelpBotScreen(api: _FaqApi(), onContactSupport: () {}),
+    ));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 2));
+
+    await tester.enterText(find.byType(TextField), 'how are you doing?');
+    await tester.testTextInput.receiveAction(TextInputAction.send);
+    await tester.pump(const Duration(seconds: 2));
+    expect(
+      find.byWidgetPredicate((widget) =>
+          widget is Text &&
+          (widget.data?.contains('Blinking happily') == true ||
+              widget.data?.contains('ready to roll') == true ||
+              widget.data?.contains('floating around ZAYLO') == true)),
+      findsOneWidget,
+    );
+
+    // Clean up
+    await tester.pump(const Duration(seconds: 10));
+    await tester.pumpWidget(const SizedBox());
+  });
 }
