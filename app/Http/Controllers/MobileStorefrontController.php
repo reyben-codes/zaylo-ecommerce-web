@@ -171,7 +171,8 @@ class MobileStorefrontController extends Controller
     private function availableProducts(): Builder
     {
         $query = Product::withReviewSummary()->visibleToBuyers()->with($this->relations())
-            ->withCount(['variants as active_variants_count' => fn ($builder) => $builder->where('is_active', true)]);
+            ->withCount(['variants as active_variants_count' => fn ($builder) => $builder->where('is_active', true)])
+            ->withSum(['variants as catalog_variant_stock' => fn ($builder) => $builder->where('is_active', true)], 'stock');
 
         return Product::usesLegacySchema()
             ? $query->where('stock', '>', 0)

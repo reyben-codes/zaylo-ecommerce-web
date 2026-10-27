@@ -32,7 +32,8 @@ class MobileShoppingController extends Controller
         $items = $request->user()->wishlistItems()
             ->whereHas('product', fn ($query) => $query->visibleToBuyers())
             ->with(['product' => fn ($query) => $query->with(Product::usesLegacySchema() ? ['images'] : ['images', 'defaultVariant', 'category'])
-                ->withCount(['variants as active_variants_count' => fn ($variants) => $variants->where('is_active', true)])])
+                ->withCount(['variants as active_variants_count' => fn ($variants) => $variants->where('is_active', true)])
+                ->withSum(['variants as catalog_variant_stock' => fn ($variants) => $variants->where('is_active', true)], 'stock')])
             ->latest()->get();
 
         return response()->json([

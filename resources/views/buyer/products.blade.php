@@ -31,7 +31,7 @@
     @if($products->count())
         <div class="product-grid">
             @foreach($products as $product)
-            @include('partials.shop-card', ['product' => $product, 'heading' => 'h2', 'showStock' => true])
+            @include('partials.shop-card', ['product' => $product, 'heading' => 'h2'])
             @endforeach
         </div>
         <div class="pagination-wrap">{{ $products->links() }}</div>

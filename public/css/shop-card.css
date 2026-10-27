@@ -183,7 +183,9 @@
 .shop-card__price strong { color: var(--c-1a1714); font-size: .98rem; font-weight: 800; white-space: nowrap; }
 .shop-card__price del { color: var(--c-8a7a6b); font-size: .76rem; white-space: nowrap; }
 
-.shop-card .catalog-stock { margin: 0; }
+/* How many are in stock, on every card. */
+.shop-card .catalog-stock { margin: 0; color: var(--c-52714a); font-size: .73rem; }
+.shop-card .catalog-stock.is-sold-out { color: var(--c-8b6058); }
 /* Flash sale: units left at the flash price. */
 .shop-card__flash { margin: 0; color: var(--c-c0392b); font-size: .74rem; font-weight: 600; }
 

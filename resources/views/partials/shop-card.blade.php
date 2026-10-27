@@ -2,7 +2,8 @@
     A storefront product tile in the mobile app's style (mobile_app/lib/features/buyer/catalog/product_card.dart):
     the photo fades into a soft card, with the save button, badge and rating over it, then the categories, name,
     description, price and a compact bag button. Expects $product; optional $heading ('h2' or 'h3', default 'h3')
-    and $showStock (how many are in stock, or Sold out); $unitsSold, with an optional $rank, for best-seller lists.
+    and $showStock (how many are in stock, or Sold out; on by default); $unitsSold, with an optional $rank, for
+    best-seller lists.
     $savedProductIds comes from AppServiceProvider.
 --}}
 @php
@@ -64,7 +65,7 @@
         @if($product->isFlashSale())
             <p class="shop-card__flash"><i class="fas fa-bolt" aria-hidden="true"></i> Flash sale · {{ number_format($product->flashRemaining()) }} left at this price</p>
         @endif
-        @if($showStock ?? false)
+        @if($showStock ?? true)
             <p class="catalog-stock {{ $soldOut ? 'is-sold-out' : '' }}">{{ $soldOut ? 'Currently sold out' : number_format($product->available_stock).' in stock' }}</p>
         @endif
     </div>

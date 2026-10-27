@@ -98,6 +98,8 @@ class MobilePayload
             'image_url' => self::imageUrl($product->image_url ?: $product->images->first()?->path),
             'has_options' => (int) ($product->active_variants_count ?? 0) > 1,
             'saved' => $saved,
+            // How many can be bought across its active options, shown on every product card.
+            'stock' => $product->available_stock,
         ];
 
         // Present when the query used Product::withReviewSummary() or loaded the counts.
@@ -109,7 +111,6 @@ class MobilePayload
         if ($detailed) {
             $data += [
                 'description' => $product->description,
-                'stock' => (int) $product->stock,
                 'seller_name' => self::shopName($product->seller_id),
                 'images' => collect([$product->image_url])
                     ->concat($product->images->pluck('path'))

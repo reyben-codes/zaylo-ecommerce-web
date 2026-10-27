@@ -38,11 +38,13 @@ class BuyerController extends Controller
         $base = Product::withReviewSummary()->visibleToBuyers();
         if (Product::usesLegacySchema()) {
             $base->where('stock', '>', 0)->with(['images', 'additionalCategories'])
-                ->withCount(['variants as active_variants_count' => fn ($query) => $query->where('is_active', true)]);
+                ->withCount(['variants as active_variants_count' => fn ($query) => $query->where('is_active', true)])
+                ->withSum(['variants as catalog_variant_stock' => fn ($query) => $query->where('is_active', true)], 'stock');
         } else {
             $base->whereHas('variants', fn ($query) => $query->where('is_active', true)->where('stock', '>', 0))
                 ->with(['images', 'defaultVariant', 'category', 'additionalCategories'])
-                ->withCount(['variants as active_variants_count' => fn ($query) => $query->where('is_active', true)]);
+                ->withCount(['variants as active_variants_count' => fn ($query) => $query->where('is_active', true)])
+                ->withSum(['variants as catalog_variant_stock' => fn ($query) => $query->where('is_active', true)], 'stock');
         }
         // Flash sales first, ending soonest first; without any running, the section shows current sale offers.
         $flashProducts = (clone $base)->onFlashSale()->orderBy('sale_ends_at')->limit(10)->get();
@@ -534,7 +536,8 @@ class BuyerController extends Controller
         $items = auth()->user()->wishlistItems()->whereHas('product', fn ($product) => $product->visibleToBuyers())
             ->with(['product' => fn ($product) => $product->withReviewSummary()
                 ->with(['images', 'additionalCategories'])
-                ->withCount(['variants as active_variants_count' => fn ($variants) => $variants->where('is_active', true)])])
+                ->withCount(['variants as active_variants_count' => fn ($variants) => $variants->where('is_active', true)])
+                ->withSum(['variants as catalog_variant_stock' => fn ($variants) => $variants->where('is_active', true)], 'stock')])
             ->latest()->get();
 
         return view('buyer.wishlist', compact('items'));
