@@ -13,6 +13,7 @@ use App\Models\SellerOrder;
 use App\Models\SellerProfile;
 use App\Models\Shipment;
 use App\Services\LogisticsMessenger;
+use App\Services\OrderReceipts;
 use App\Services\SellerApplicationService;
 use App\Services\SellerQueues;
 use App\Services\SellerRankings;
@@ -49,7 +50,8 @@ class SellerController extends Controller
     private const ORDER_STATUS_GROUPS = [
         'to_prepare' => ['placed', 'confirmed', 'processing'],
         'shipping' => ['ready_for_pickup', 'picked_up', 'in_transit', 'out_for_delivery'],
-        'delivered' => ['completed'],
+        // Delivered orders wait for the buyer to confirm they received them, which completes them.
+        'delivered' => ['delivered', 'completed'],
         'cancelled' => ['cancelled'],
     ];
 
@@ -77,7 +79,7 @@ class SellerController extends Controller
         'picked_up' => 'Shipped',
         'in_transit' => 'In transit',
         'out_for_delivery' => 'Out for delivery',
-        'completed' => 'Delivered',
+        'completed' => 'Completed',
         'cancelled' => 'Cancelled',
         'pending' => 'Placed',
         'accepted' => 'Confirmed',
@@ -230,11 +232,12 @@ class SellerController extends Controller
         return redirect()->route('seller.products', ['view' => 'archived'])->with('status', "{$product->name} was deleted permanently.");
     }
 
-    public function orders(Request $request)
+    public function orders(Request $request, OrderReceipts $receipts)
     {
         $filter = $request->validate([
             'status' => ['nullable', Rule::in(['all', 'to_prepare', 'shipping', 'delivered', 'cancelled'])],
         ])['status'] ?? 'all';
+        $receipts->autoConfirmDue();
         $statusLabels = self::STATUS_LABELS;
 
         if (! Order::usesLegacySchema()) {

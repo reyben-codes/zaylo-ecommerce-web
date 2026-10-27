@@ -77,9 +77,12 @@ class RiderApi extends ApiClient {
 
   /// Sends the code read from the waybill's barcode or QR code. The parcel goes out for
   /// delivery, or is delivered if it already was; the buyer (and on delivery,
-  /// the seller) is notified by the server.
-  Future<RiderScanResult> scanParcel(String code) async =>
-      RiderScanResult.fromJson(await send('POST', '/mobile/rider/deliveries/scan', body: {'code': code.trim()}));
+  /// the seller) is notified by the server. Delivering needs a [photo] of the
+  /// parcel with the recipient or at the door: without one the server answers
+  /// with a "photo" field error.
+  Future<RiderScanResult> scanParcel(String code, {File? photo}) async => RiderScanResult.fromJson(photo == null
+      ? await send('POST', '/mobile/rider/deliveries/scan', body: {'code': code.trim()})
+      : await sendMultipart('/mobile/rider/deliveries/scan', fields: {'code': code.trim()}, files: {'photo': photo}));
 
   /// Proof of delivery: a [photo] of the parcel at the door. Returns the server's message.
   Future<String> uploadDeliveryPhoto(int id, File photo) async =>

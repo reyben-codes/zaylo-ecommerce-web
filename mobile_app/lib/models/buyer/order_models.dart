@@ -62,6 +62,7 @@ class Order {
     required this.statusLabel,
     required this.statusMessage,
     required this.canCancel,
+    this.canConfirmReceipt = false,
     required this.subtotal,
     required this.shippingFee,
     required this.shippingDiscount,
@@ -77,6 +78,8 @@ class Order {
     this.notes,
     this.paymentStatus,
     this.trackingNumber,
+    this.autoConfirmAt,
+    this.deliveryPhotoUrl,
     this.history = const [],
     this.riderChat,
     this.complaint,
@@ -89,6 +92,10 @@ class Order {
   final String statusLabel;
   final String statusMessage;
   final bool canCancel;
+
+  /// The rider delivered the order; the buyer finishes it by confirming they
+  /// received it, or it completes on its own at [autoConfirmAt].
+  final bool canConfirmReceipt;
   final double subtotal;
   final double shippingFee;
   final double shippingDiscount;
@@ -106,6 +113,10 @@ class Order {
   final String? notes;
   final String? paymentStatus;
   final String? trackingNumber;
+  final DateTime? autoConfirmAt;
+
+  /// The rider's photo of the delivered parcel; loading it needs the session's auth headers.
+  final String? deliveryPhotoUrl;
   final List<OrderHistoryEntry> history;
 
   /// Present once a rider has accepted the delivery.
@@ -129,6 +140,7 @@ class Order {
         statusLabel: json['status_label'] as String,
         statusMessage: json['status_message'] as String,
         canCancel: json['can_cancel'] as bool? ?? false,
+        canConfirmReceipt: json['can_confirm_receipt'] as bool? ?? false,
         subtotal: parseMoney(json['subtotal']),
         shippingFee: parseMoney(json['shipping_fee']),
         shippingDiscount: parseMoney(json['shipping_discount']),
@@ -146,6 +158,8 @@ class Order {
         notes: json['notes'] as String?,
         paymentStatus: json['payment_status'] as String?,
         trackingNumber: json['tracking_number'] as String?,
+        autoConfirmAt: parseDate(json['auto_confirm_at']),
+        deliveryPhotoUrl: json['delivery_photo_url'] as String?,
         history: (json['history'] as List<dynamic>? ?? const [])
             .map((item) => OrderHistoryEntry.fromJson(item as Map<String, dynamic>))
             .toList(),

@@ -131,6 +131,9 @@ return [
 
     'fashion_categories' => ['fashion', 'clothing', 'bags', 'shoes', 'watches', 'accessories'],
 
+    // Days a buyer has to confirm a delivered order before it completes on its own (App\Services\OrderReceipts).
+    'receipt_grace_days' => (int) env('RECEIPT_GRACE_DAYS', 3),
+
     /*
      * Shoppers on Android phones and tablets use the ZAYLO app instead of the web store: visiting the store sends
      * them to a page to download it (App\Http\Middleware\RequireAndroidApp). Seller, logistics and admin portals

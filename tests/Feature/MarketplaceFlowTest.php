@@ -7,6 +7,8 @@ use App\Models\Product;
 use App\Models\Shipment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Notification;
 use App\Notifications\VerifyEmailCode;
@@ -241,8 +243,14 @@ class MarketplaceFlowTest extends TestCase
         $this->actingAs($courier)->post(route('courier.deliveries.claim', $shipment))->assertSessionHasNoErrors();
         $this->patch(route('courier.deliveries.update', $shipment), ['status' => 'picked_up'])->assertSessionHasNoErrors();
         $this->patch(route('courier.deliveries.update', $shipment), ['status' => 'in_transit'])->assertSessionHasNoErrors();
-        $this->patch(route('courier.deliveries.update', $shipment), ['status' => 'delivered'])->assertSessionHasNoErrors();
+        Storage::fake('local');
+        $this->patch(route('courier.deliveries.update', $shipment), ['status' => 'delivered'])->assertSessionHasErrors('photo');
+        $this->patch(route('courier.deliveries.update', $shipment), ['status' => 'delivered', 'photo' => UploadedFile::fake()->image('door.jpg')])->assertSessionHasNoErrors();
 
+        // The courier's photo is proof; the buyer finishes the order by confirming they received it.
+        $this->assertSame('delivered', $order->fresh()->status);
+        $this->assertDatabaseMissing('commissions', ['order_id' => $order->id]);
+        $this->actingAs($buyer)->post(route('buyer.orders.received', $order))->assertSessionHasNoErrors();
         $this->assertSame('completed', $order->fresh()->status);
         $this->assertSame('paid', $order->payment->fresh()->status);
         $this->assertDatabaseHas('commissions', ['order_id' => $order->id, 'status' => 'earned']);

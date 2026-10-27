@@ -11,6 +11,9 @@ use App\Models\Voucher;
 use App\Models\Wishlist;
 use App\Services\CartService;
 use App\Services\CheckoutService;
+use App\Services\OrderReceipts;
+use App\Support\MobilePayload;
+use App\Support\OrderParties;
 use App\Support\ProductCatalog;
 use App\Support\Shop;
 use Illuminate\Http\Request;
@@ -296,18 +299,14 @@ class BuyerController extends Controller
         return view('buyer.product-show', compact('product', 'galleryImages', 'reviews', 'reviewCount', 'reviewAverage', 'optionLabel', 'variantImages', 'colorGroups', 'shop', 'preview'));
     }
 
-    public function orders(Request $request)
+    public function orders(Request $request, OrderReceipts $receipts)
     {
         $filter = $request->validate([
             'status' => ['nullable', Rule::in(['all', 'to_ship', 'shipped', 'delivered', 'cancelled'])],
         ])['status'] ?? 'all';
+        $receipts->autoConfirmDue();
 
-        $statusGroups = [
-            'to_ship' => ['placed', 'confirmed', 'processing', 'ready_for_pickup', 'assigned'],
-            'shipped' => ['picked_up', 'in_transit', 'out_for_delivery'],
-            'delivered' => ['completed'],
-            'cancelled' => ['cancelled'],
-        ];
+        $statusGroups = MobilePayload::STATUS_GROUPS;
         $statusCounts = auth()->user()->orders()
             ->selectRaw('status, COUNT(*) as total')
             ->groupBy('status')
@@ -333,6 +332,15 @@ class BuyerController extends Controller
         $this->checkoutService->cancel($order, auth()->user());
 
         return back()->with('status', 'Order cancelled and stock restored.');
+    }
+
+    /** The buyer received a delivered order, which completes it. */
+    public function confirmReceived(Order $order, OrderReceipts $receipts)
+    {
+        abort_unless(OrderParties::for($order)['buyer'] === (int) auth()->id(), 404);
+        $receipts->confirm($order, auth()->user());
+
+        return back()->with('status', 'Thank you! Order '.$order->order_number.' is complete. You can now rate your items.');
     }
 
     public function cart()

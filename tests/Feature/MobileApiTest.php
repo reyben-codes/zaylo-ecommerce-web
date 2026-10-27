@@ -128,6 +128,7 @@ class MobileApiTest extends TestCase
 
     public function test_a_rider_works_through_parcels_the_partner_assigned(): void
     {
+        Storage::fake('local');
         [, $provider] = $this->partner('Express Delivery');
         $marco = $this->rider($provider, 'Marco Rider');
         $other = $this->rider($provider, 'Other Rider');
@@ -161,8 +162,13 @@ class MobileApiTest extends TestCase
             ->assertJsonPath('delivery.status', 'out_for_delivery')->assertJsonPath('delivery.next_status', 'delivered')
             ->assertJsonPath('delivery.next_needs_scan', true)
             ->assertJsonPath('delivery.other_actions.0.status', 'failed')->assertJsonPath('delivery.other_actions.0.needs_scan', false);
-        $this->withToken($token)->postJson('/api/mobile/rider/deliveries/scan', ['code' => 'ZX-0101'])->assertOk()
-            ->assertJsonPath('step', 'delivered')->assertJsonPath('message', 'Delivered. The buyer and seller were notified.');
+        // Handing the parcel over needs a photo as proof of delivery.
+        $this->withToken($token)->postJson('/api/mobile/rider/deliveries/scan', ['code' => 'ZX-0101'])->assertUnprocessable()
+            ->assertJsonValidationErrors(['photo' => 'Take a photo of the parcel']);
+        $this->assertSame('out_for_delivery', ShipmentWorkflow::stageOf($parcel->fresh()));
+        $this->withToken($token)->post('/api/mobile/rider/deliveries/scan', ['code' => 'ZX-0101', 'photo' => UploadedFile::fake()->image('door.jpg', 800, 600)], ['Accept' => 'application/json'])->assertOk()
+            ->assertJsonPath('step', 'delivered')->assertJsonPath('message', 'Delivered. The buyer was asked to confirm they received it.');
+        Storage::disk('local')->assertExists($parcel->fresh()->delivery_proof_path);
         $this->withToken($token)->postJson('/api/mobile/rider/deliveries/scan', ['code' => 'ZX-0101'])->assertUnprocessable()
             ->assertJsonValidationErrors(['code' => 'already delivered']);
 
@@ -184,6 +190,7 @@ class MobileApiTest extends TestCase
     public function test_scanning_a_parcel_tells_the_buyer_and_the_seller(): void
     {
         Notification::fake();
+        Storage::fake('local');
         [, $provider] = $this->partner('Express Delivery');
         $marco = $this->rider($provider, 'Marco Rider');
         $parcel = $this->parcel('ZX-0201', $provider, $marco);
@@ -196,7 +203,7 @@ class MobileApiTest extends TestCase
         Notification::assertSentTo($buyer, ParcelDeliveryUpdate::class, fn (ParcelDeliveryUpdate $n) => $n->step === 'out_for_delivery');
         Notification::assertNotSentTo($seller, ParcelDeliveryUpdate::class);
 
-        $this->withToken($token)->postJson('/api/mobile/rider/deliveries/scan', ['code' => 'ZX-0201'])->assertOk();
+        $this->withToken($token)->post('/api/mobile/rider/deliveries/scan', ['code' => 'ZX-0201', 'photo' => UploadedFile::fake()->image('door.jpg')], ['Accept' => 'application/json'])->assertOk();
         Notification::assertSentTo($buyer, ParcelDeliveryUpdate::class, fn (ParcelDeliveryUpdate $n) => $n->step === 'delivered');
         Notification::assertSentTo($seller, ParcelDeliveryUpdate::class, fn (ParcelDeliveryUpdate $n) => $n->step === 'delivered');
     }

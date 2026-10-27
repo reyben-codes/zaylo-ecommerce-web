@@ -180,17 +180,18 @@ class MobileRiderDashboardController extends Controller
     }
 
     /**
-     * The rider scanned a parcel label: the parcel goes out for delivery, or is delivered if it already was out.
-     * The buyer (and on delivery, the seller) is notified.
+     * The rider scanned a parcel label: the parcel goes out for delivery, or is delivered if it already was out,
+     * which needs a photo as proof (a 422 on "photo" without one). The buyer (and on delivery, the seller) is
+     * notified; the buyer then confirms they received it.
      */
     public function scan(Request $request): JsonResponse
     {
-        $data = $request->validate(['code' => 'required|string|max:100']);
-        [$shipment, $step] = $this->deliveries->scan($request->user(), $data['code']);
+        $data = $request->validate(['code' => 'required|string|max:100'] + ChatPhotos::rules(), ChatPhotos::messages());
+        [$shipment, $step] = $this->deliveries->scan($request->user(), $data['code'], $request->file('photo'));
 
         return response()->json([
             'message' => $step === 'delivered'
-                ? 'Delivered. The buyer and seller were notified.'
+                ? 'Delivered. The buyer was asked to confirm they received it.'
                 : 'Out for delivery. The buyer was told their parcel is on its way.',
             'step' => $step,
             'delivery' => $this->shipmentPayload($shipment->load($this->relations())),
@@ -226,8 +227,8 @@ class MobileRiderDashboardController extends Controller
     }
 
     /**
-     * The rider's photo of the parcel at the door, taken right after the delivery scan. The seller and buyer can open
-     * it from the order. A new photo replaces the old one for a day after delivery.
+     * Retakes the rider's photo of the parcel at the door, which the delivery scan sends. The seller and buyer can
+     * open it from the order. A new photo replaces the old one for a day after delivery.
      */
     public function proof(Request $request, Shipment $shipment, ChatPhotos $photos): JsonResponse
     {

@@ -5,6 +5,7 @@ import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 
 Color orderStatusColor(String status) => switch (status) {
       'completed' => ZayloColors.success,
+      'delivered' => ZayloColors.info,
       'cancelled' => Colors.redAccent,
       'picked_up' || 'in_transit' => ZayloColors.info,
       _ => ZayloColors.taupe,

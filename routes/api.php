@@ -120,6 +120,8 @@ Route::prefix('mobile')->name('mobile.')->middleware('throttle:60,1')->group(fun
             Route::get('/orders', [MobileOrderController::class, 'index'])->name('orders');
             Route::get('/orders/{order}', [MobileOrderController::class, 'show'])->name('orders.show');
             Route::post('/orders/{order}/cancel', [MobileOrderController::class, 'cancel'])->name('orders.cancel');
+            Route::post('/orders/{order}/received', [MobileOrderController::class, 'received'])->middleware('throttle:20,1,mobile-order-received')->name('orders.received');
+            Route::get('/orders/{order}/delivery-photo', [MobileOrderController::class, 'deliveryPhoto'])->name('orders.delivery-photo');
             Route::get('/orders/{order}/chat', [MobileDeliveryChatController::class, 'buyerShow'])->name('orders.chat');
             Route::post('/orders/{order}/chat', [MobileDeliveryChatController::class, 'buyerSend'])->middleware('throttle:20,1,mobile-delivery-chat')->name('orders.chat.send');
             Route::post('/orders/{order}/complaint', [MobileComplaintController::class, 'store'])->middleware('throttle:10,1,mobile-complaint')->name('orders.complaint');

@@ -93,7 +93,7 @@ class ProductCatalog
     public static function bestSelling(Builder $query): void
     {
         $delivered = fn ($items) => Product::usesLegacySchema()
-            ? $items->whereHas('order', fn ($order) => $order->where('status', 'completed'))
+            ? $items->whereHas('order', fn ($order) => $order->whereIn('status', ['delivered', 'completed']))
             : $items->whereHas('sellerOrder', fn ($order) => $order->whereIn('status', ['delivered', 'completed']));
         $query->whereHas('orderItems', $delivered)
             ->withSum(['orderItems as units_sold' => $delivered], 'quantity')

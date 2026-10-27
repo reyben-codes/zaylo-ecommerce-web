@@ -109,7 +109,7 @@ class Shop
     {
         if (Product::usesLegacySchema()) {
             return (int) DB::table('order_items')->join('orders', 'orders.id', '=', 'order_items.order_id')
-                ->where('orders.status', 'completed')
+                ->whereIn('orders.status', ['delivered', 'completed'])
                 ->whereIn('order_items.product_id', Product::where('seller_id', $this->id)->select('id'))
                 ->sum('order_items.quantity');
         }
@@ -130,7 +130,7 @@ class Shop
         $sales = Product::usesLegacySchema()
             ? DB::table('order_items')->join('orders', 'orders.id', '=', 'order_items.order_id')
                 ->join('products', 'products.id', '=', 'order_items.product_id')
-                ->where('orders.status', 'completed')
+                ->whereIn('orders.status', ['delivered', 'completed'])
                 ->selectRaw('products.seller_id as shop_id, SUM(order_items.quantity) as sold')->groupBy('products.seller_id')
             : DB::table('order_items')->join('seller_orders', 'seller_orders.id', '=', 'order_items.seller_order_id')
                 ->whereIn('seller_orders.status', ['delivered', 'completed'])

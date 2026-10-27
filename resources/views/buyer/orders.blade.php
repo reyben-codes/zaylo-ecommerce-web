@@ -34,7 +34,8 @@
             'picked_up' => 'The seller has shipped your order.',
             'in_transit' => 'Your order is on its way.',
             'out_for_delivery' => 'Your order is out for delivery.',
-            'completed' => 'Your order has been delivered.',
+            'delivered' => 'The rider delivered your order.',
+            'completed' => 'Your order is complete.',
             'cancelled' => 'This order was cancelled.',
         ];
     @endphp
@@ -61,6 +62,28 @@
 
             <p class="order-status-message">{{ $statusMessages[$order->status] ?? 'Your order status has been updated.' }}</p>
 
+            @if($order->status === 'delivered')
+                @php $autoConfirmAt = \App\Services\OrderReceipts::autoConfirmAt($order); @endphp
+                <section class="order-receipt" aria-label="Confirm you received this order">
+                    <div>
+                        <p><strong>Did you receive your order?</strong> Confirm it so the seller gets paid.</p>
+                        @if($autoConfirmAt)
+                            <p>If you don't, it is confirmed automatically on {{ $autoConfirmAt->timezone('Asia/Manila')->format('M j, Y · g:i A') }}. Not received? File a complaint before then.</p>
+                        @endif
+                    </div>
+                    <div class="order-receipt__actions">
+                        @if($order->shipment?->delivery_proof_path)
+                            <a class="order-receipt__photo" href="{{ route('delivery-proof', $order->shipment) }}" target="_blank" rel="noopener"><i class="fas fa-camera" aria-hidden="true"></i> See the rider's photo</a>
+                        @endif
+                        <form method="POST" action="{{ route('buyer.orders.received', $order) }}"
+                              data-confirm="Confirm that you received order {{ $order->order_number }}? This completes the order and pays the seller." data-confirm-title="Order received?" data-confirm-button="Yes, I received it">
+                            @csrf
+                            <button class="market-button" type="submit">Order received</button>
+                        </form>
+                    </div>
+                </section>
+            @endif
+
             <div class="order-delivery-truck-banner" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; margin:10px 0; font-size:.84rem;">
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
                     <div>
@@ -77,8 +100,8 @@
                                 Est. arrival {{ $order->placed_at ? $order->placed_at->addDays(3)->format('M j') . ' – ' . $order->placed_at->addDays(5)->format('M j') : '3–5 days' }}
                             @elseif(in_array($order->status, ['ready_for_pickup', 'assigned', 'picked_up', 'in_transit', 'out_for_delivery'], true))
                                 Out on the road &middot; ETA {{ $order->placed_at ? $order->placed_at->addDays(2)->format('M j') : '1–2 days' }}
-                            @elseif($order->status === 'completed')
-                                Delivered {{ $order->shipment?->delivered_at?->format('M j, Y') ?? $order->updated_at?->format('M j, Y') }}
+                            @elseif(in_array($order->status, ['delivered', 'completed'], true))
+                                Delivered {{ ($order->delivered_at ?? $order->shipment?->delivered_at ?? $order->updated_at)?->format('M j, Y') }}
                             @else
                                 {{ ucfirst($order->status) }}
                             @endif
@@ -92,7 +115,8 @@
                         ['key' => 'processing', 'label' => 'Preparing', 'icon' => 'fa-box'],
                         ['key' => 'picked_up', 'label' => 'Truck Pickup', 'icon' => 'fa-truck-ramp-box'],
                         ['key' => 'in_transit', 'label' => 'In Transit', 'icon' => 'fa-truck-fast'],
-                        ['key' => 'completed', 'label' => 'Delivered', 'icon' => 'fa-house-circle-check'],
+                        ['key' => 'delivered', 'label' => 'Delivered', 'icon' => 'fa-house-circle-check'],
+                        ['key' => 'completed', 'label' => 'Received', 'icon' => 'fa-circle-check'],
                     ];
                     $statusRanks = [
                         'placed' => 1,
@@ -103,11 +127,12 @@
                         'picked_up' => 3,
                         'in_transit' => 4,
                         'out_for_delivery' => 4,
-                        'completed' => 5,
+                        'delivered' => 5,
+                        'completed' => 6,
                     ];
                     $currentRank = $statusRanks[$order->status] ?? 1;
                 @endphp
-                <div class="order-timeline-bar" style="display:grid; grid-template-columns: repeat(5, 1fr); gap:6px; margin-top:12px; text-align:center;">
+                <div class="order-timeline-bar" style="display:grid; grid-template-columns: repeat(6, 1fr); gap:6px; margin-top:12px; text-align:center;">
                     @foreach($timeline as $idx => $step)
                         @php $isStepActive = $currentRank >= ($idx + 1); @endphp
                         <div style="padding:6px 4px; border-radius:6px; background:{{ $isStepActive ? '#ecfdf5' : '#f1f5f9' }}; border:1px solid {{ $isStepActive ? '#6ee7b7' : '#cbd5e1' }}; color:{{ $isStepActive ? '#047857' : '#94a3b8' }}; font-size:.72rem;">
@@ -137,7 +162,7 @@
                     </div>
                     @if($item->review)
                         <p class="review-meta">Your rating: {{ $item->review->rating }}/5 ★ · Review submitted</p>
-                    @elseif($order->status === 'completed' && $item->product_id)
+                    @elseif(in_array($order->status, ['delivered', 'completed'], true) && $item->product_id)
                         <a class="order-review-link" href="{{ route('buyer.reviews.create', $item) }}" aria-label="Rate {{ $item->product_name }}">
                             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m12 3 2.78 5.63L21 9.54l-4.5 4.39 1.06 6.2L12 17.2l-5.56 2.93 1.06-6.2L3 9.54l6.22-.91Z"/></svg>
                             Rate product
@@ -172,7 +197,7 @@
                                 ({{ $complaint->return_tracking_number }})
                             @endif
                         </a>
-                    @elseif($order->status === 'completed')
+                    @elseif(in_array($order->status, ['delivered', 'completed'], true))
                         <a class="text-button" href="{{ route('buyer.disputes.create', $order) }}" style="color:#b45309; font-weight:600;">
                             <i class="fas fa-rotate-left" aria-hidden="true"></i> Return / Refund
                         </a>

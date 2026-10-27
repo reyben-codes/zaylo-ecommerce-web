@@ -116,53 +116,46 @@ mixin RiderDeliveryActions<T extends StatefulWidget> on State<T> {
       ));
 
   /// Sends a scanned [code]. Handing over a parcel ([delivery] out for
-  /// delivery) is confirmed first, with a cash reminder for COD.
+  /// delivery) is confirmed first, with a cash reminder for COD, and needs a
+  /// photo as proof of delivery. When the parcel was not known before the scan,
+  /// the server asks for the photo (a "photo" field error) and the scan is sent
+  /// again with it. The rider does not finish the order: the buyer confirms
+  /// they received it.
   Future<void> _sendScan(String code, RiderDelivery? delivery) async {
-    if (delivery?.nextStatus == 'delivered' && !await _confirmDelivered(delivery!)) return;
+    final delivering = delivery?.nextStatus == 'delivered';
+    if (delivering && !await _confirmDelivered(delivery!)) return;
     if (!mounted) return;
-    setState(() => busyDeliveryId = delivery?.id ?? -1);
-    RiderDelivery? delivered;
-    try {
-      // A typed code may differ in case from the label; send the parcel's own code when it is known.
-      final result = await riderApi.scanParcel(delivery == null || delivery.scanCode.isEmpty ? code : delivery.scanCode);
-      if (mounted) showMessage(context, result.message);
-      delivered = result.step == 'delivered' && result.delivery.canAddDeliveryPhoto ? result.delivery : null;
-    } on ApiException catch (error) {
-      debugPrint('[ZAYLO] Parcel scan failed: ${error.debugDescription}');
-      if (mounted) showMessage(context, error.message);
-    } finally {
-      if (mounted) setState(() => busyDeliveryId = null);
+    var photo = delivering ? await _takeDeliveryPhoto() : null;
+    if (delivering && photo == null) return;
+    // A typed code may differ in case from the label; send the parcel's own code when it is known.
+    final scanCode = delivery == null || delivery.scanCode.isEmpty ? code : delivery.scanCode;
+    while (mounted) {
+      setState(() => busyDeliveryId = delivery?.id ?? -1);
+      try {
+        final result = await riderApi.scanParcel(scanCode, photo: photo);
+        if (mounted) showMessage(context, result.message);
+      } on ApiException catch (error) {
+        debugPrint('[ZAYLO] Parcel scan failed: ${error.debugDescription}');
+        if (photo == null && error.fieldErrors.containsKey('photo') && mounted) {
+          setState(() => busyDeliveryId = null);
+          photo = await _takeDeliveryPhoto();
+          if (photo != null) continue;
+        } else if (mounted) {
+          showMessage(context, error.message);
+        }
+      } finally {
+        if (mounted) setState(() => busyDeliveryId = null);
+      }
+      break;
     }
-    // Proof of delivery: ask for a photo of the parcel at the door right away.
-    if (delivered != null && mounted) await addDeliveryPhoto(delivered, afterDelivery: true);
     if (mounted) await reloadDeliveries();
   }
 
-  /// Takes a camera photo of the delivered parcel and sends it as proof of
-  /// delivery; the seller and buyer can open it from the order. Right after a
-  /// delivery ([afterDelivery]) the rider is asked first and may skip it.
-  Future<void> addDeliveryPhoto(RiderDelivery delivery, {bool afterDelivery = false}) async {
-    if (afterDelivery && !await _wantsDeliveryPhoto()) return;
-    final File? photo;
-    try {
-      final picked = await ImagePicker().pickImage(
-        source: ImageSource.camera,
-        maxWidth: 2000,
-        maxHeight: 2000,
-        imageQuality: 80,
-      );
-      photo = picked == null ? null : File(picked.path);
-    } on Exception catch (error) {
-      debugPrint('[ZAYLO] Camera failed: $error');
-      if (mounted) showMessage(context, "Could not open the camera. Check the app's permissions.");
-      return;
-    }
+  /// Retakes the photo of a delivered parcel; the seller and buyer can open it
+  /// from the order.
+  Future<void> addDeliveryPhoto(RiderDelivery delivery) async {
+    final photo = await _takeDeliveryPhoto();
     if (photo == null || !mounted) return;
-    final problem = uploadFileError(photo, extensions: const ['jpg', 'jpeg', 'png', 'webp']);
-    if (problem != null) {
-      showMessage(context, problem);
-      return;
-    }
     setState(() => busyDeliveryId = delivery.id);
     try {
       final message = await riderApi.uploadDeliveryPhoto(delivery.id, photo);
@@ -175,20 +168,36 @@ mixin RiderDeliveryActions<T extends StatefulWidget> on State<T> {
     }
   }
 
-  Future<bool> _wantsDeliveryPhoto() async =>
-      await showDialog<bool>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Take a delivery photo?'),
-          content: const Text('Take a photo of the parcel with the recipient or at the door. '
-              'The seller and buyer see it as proof of delivery.'),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Skip')),
-            TextButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Take photo')),
-          ],
-        ),
-      ) ??
-      false;
+  /// Opens the camera for proof of delivery: the parcel with the recipient or
+  /// at the door. Returns null when the rider backs out or the photo is unusable.
+  Future<File?> _takeDeliveryPhoto() async {
+    showMessage(context, 'Take a photo of the parcel with the recipient or at the door as proof of delivery.');
+    final File? photo;
+    try {
+      final picked = await ImagePicker().pickImage(
+        source: ImageSource.camera,
+        maxWidth: 2000,
+        maxHeight: 2000,
+        imageQuality: 80,
+      );
+      photo = picked == null ? null : File(picked.path);
+    } on Exception catch (error) {
+      debugPrint('[ZAYLO] Camera failed: $error');
+      if (mounted) showMessage(context, "Could not open the camera. Check the app's permissions.");
+      return null;
+    }
+    if (!mounted) return null;
+    if (photo == null) {
+      showMessage(context, 'A photo is needed to finish the delivery.');
+      return null;
+    }
+    final problem = uploadFileError(photo, extensions: const ['jpg', 'jpeg', 'png', 'webp']);
+    if (problem != null) {
+      showMessage(context, problem);
+      return null;
+    }
+    return photo;
+  }
 
   /// Opens the chat with [delivery]'s buyer, then refreshes so its unread badge clears.
   Future<void> openDeliveryChat(RiderDelivery delivery) async {
@@ -208,8 +217,9 @@ mixin RiderDeliveryActions<T extends StatefulWidget> on State<T> {
         builder: (dialogContext) => AlertDialog(
           title: const Text('Mark as delivered?'),
           content: Text(delivery.cashToCollect > 0
-              ? 'Confirm the parcel was handed over and you collected the cash on delivery.'
-              : 'Confirm the parcel was handed over to the recipient.'),
+              ? 'Confirm the parcel was handed over and you collected the cash on delivery. '
+                  'Next, take a photo as proof of delivery.'
+              : 'Confirm the parcel was handed over to the recipient. Next, take a photo as proof of delivery.'),
           actions: [
             TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Not yet')),
             TextButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Delivered')),

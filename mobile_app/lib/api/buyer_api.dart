@@ -154,6 +154,10 @@ class BuyerApi extends ApiClient {
   Future<Order> cancelOrder(int id) async =>
       Order.fromJson((await send('POST', '/mobile/orders/$id/cancel'))['order'] as Map<String, dynamic>);
 
+  /// The buyer received delivered order [id], which completes it.
+  Future<Order> confirmReceipt(int id) async =>
+      Order.fromJson((await send('POST', '/mobile/orders/$id/received'))['order'] as Map<String, dynamic>);
+
   /// Chat with the rider delivering order [id]. Opening it marks the rider's messages as read.
   Future<DeliveryChat> orderChat(int id) async =>
       DeliveryChat.fromJson((await send('GET', '/mobile/orders/$id/chat'))['chat'] as Map<String, dynamic>);

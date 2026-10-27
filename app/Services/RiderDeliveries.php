@@ -8,8 +8,10 @@ use App\Models\Shipment;
 use App\Models\User;
 use App\Notifications\ParcelDeliveryUpdate;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -20,7 +22,9 @@ use Illuminate\Validation\ValidationException;
  * takes these steps; the logistics partner handles returns.
  *
  * Starting a delivery and handing the parcel over both need a scan of the waybill's barcode or QR code, so the
- * rider has the parcel in hand. Each step tells the buyer, and delivering or failing also tells the seller.
+ * rider has the parcel in hand; handing it over also needs a photo as proof. The rider does not finish the order:
+ * the buyer confirms they received it (OrderReceipts). Each step tells the buyer, and delivering or failing also
+ * tells the seller.
  * Every decision is kept in rider_delivery_logs, which the rider's reports are built from.
  */
 class RiderDeliveries
@@ -89,6 +93,7 @@ class RiderDeliveries
     public function __construct(
         private readonly ShipmentWorkflow $workflow,
         private readonly LogisticsMessenger $messenger,
+        private readonly ChatPhotos $photos,
     ) {}
 
     /** The tracking number printed on the waybill and encoded in its barcode and QR code. */
@@ -220,7 +225,11 @@ class RiderDeliveries
      *
      * @return array{0: Shipment, 1: string} the parcel, and the step it moved to
      */
-    public function scan(User $rider, string $code): array
+    /**
+     * Scans a waybill: the parcel goes out for delivery, or is delivered if it already was. Delivering needs the
+     * rider's [$photo] of the parcel with the recipient or at the door, which the buyer and seller see as proof.
+     */
+    public function scan(User $rider, string $code, ?UploadedFile $photo = null): array
     {
         $code = trim($code);
         $shipment = $this->forRider($rider)->where(function (Builder $query) use ($code) {
@@ -247,7 +256,22 @@ class RiderDeliveries
             throw ValidationException::withMessages(['code' => 'This parcel cannot be scanned while it is "'.(self::STATUS_LABELS[$stage] ?? ShipmentWorkflow::label($stage)).'". Refresh and try again.']);
         }
 
-        return [$this->advance($shipment, $rider, $to, scanned: true), $to];
+        if ($to !== 'delivered' || ! Shipment::tracksDeliveryProof()) {
+            return [$this->advance($shipment, $rider, $to, scanned: true), $to];
+        }
+        if (! $photo) {
+            throw ValidationException::withMessages(['photo' => 'Take a photo of the parcel with the recipient or at the door to finish the delivery.']);
+        }
+        $path = $this->photos->store($photo, 'delivery-proof/'.$shipment->id);
+        try {
+            $shipment = $this->advance($shipment, $rider, $to, scanned: true);
+        } catch (\Throwable $error) {
+            Storage::disk('local')->delete($path);
+            throw $error;
+        }
+        $shipment->update(['delivery_proof_path' => $path]);
+
+        return [$shipment, $to];
     }
 
     /**

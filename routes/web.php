@@ -130,6 +130,7 @@ Route::middleware(['auth', 'active', 'verified', 'role:buyer', 'nocache'])->pref
     Route::get('/order-items/{orderItem}/review', [\App\Http\Controllers\ProductReviewController::class, 'create'])->name('reviews.create');
     Route::post('/order-items/{orderItem}/review', [\App\Http\Controllers\ProductReviewController::class, 'store'])->middleware('throttle:10,1')->name('reviews.store');
     Route::post('/orders/{order}/cancel', [BuyerController::class, 'cancelOrder'])->name('orders.cancel');
+    Route::post('/orders/{order}/received', [BuyerController::class, 'confirmReceived'])->middleware('throttle:20,1')->name('orders.received');
     Route::get('/cart', [BuyerController::class, 'cart'])->name('cart');
     Route::post('/cart/selection', [BuyerController::class, 'cartSelection'])->name('cart.selection');
     Route::post('/cart/{product}', [BuyerController::class, 'addToCart'])->name('cart.add');

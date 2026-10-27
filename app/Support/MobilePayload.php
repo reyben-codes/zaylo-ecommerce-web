@@ -11,6 +11,7 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\User;
+use App\Services\OrderReceipts;
 use App\Services\ProductReviews;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -25,7 +26,7 @@ class MobilePayload
     public const STATUS_GROUPS = [
         'to_ship' => ['placed', 'confirmed', 'processing', 'ready_for_pickup', 'assigned'],
         'shipped' => ['picked_up', 'in_transit', 'out_for_delivery'],
-        'delivered' => ['completed'],
+        'delivered' => ['delivered', 'completed'],
         'cancelled' => ['cancelled'],
     ];
 
@@ -38,7 +39,8 @@ class MobilePayload
         'picked_up' => 'The courier has picked up your order.',
         'in_transit' => 'Your order is on its way.',
         'out_for_delivery' => 'Your order is out for delivery today.',
-        'completed' => 'Your order has been delivered.',
+        'delivered' => 'The rider delivered your order. Tap "Order received" once you have it.',
+        'completed' => 'Your order is complete.',
         'cancelled' => 'This order was cancelled.',
     ];
 
@@ -150,6 +152,7 @@ class MobilePayload
             'status_label' => Str::headline($order->status),
             'status_message' => self::STATUS_MESSAGES[$order->status] ?? 'Your order status was updated.',
             'can_cancel' => in_array($order->status, ['placed', 'confirmed'], true),
+            'can_confirm_receipt' => $order->status === 'delivered',
             'subtotal' => (float) $order->subtotal,
             'shipping_fee' => (float) $order->shipping_fee,
             'shipping_discount' => (float) $order->shipping_discount,
@@ -179,6 +182,9 @@ class MobilePayload
                 'notes' => $order->notes,
                 'payment_status' => $order->payment?->status,
                 'tracking_number' => ($shipment = $order->deliveryShipment())?->tracking_number ?? $shipment?->tracking_code,
+                // Completes on its own at this time unless the buyer confirms first (App\Services\OrderReceipts).
+                'auto_confirm_at' => OrderReceipts::autoConfirmAt($order)?->toIso8601String(),
+                'delivery_photo_url' => $shipment?->delivery_proof_path ? route('mobile.orders.delivery-photo', $order) : null,
                 'rider_chat' => self::riderChat($order),
                 'complaint' => self::complaint($order),
                 'can_complain' => $order->relationLoaded('disputes') && $order->status !== 'cancelled' && $order->disputes->isEmpty(),

@@ -431,7 +431,7 @@ class FakeRiderApi extends RiderApi {
   }
 
   @override
-  Future<RiderScanResult> scanParcel(String code) async {
+  Future<RiderScanResult> scanParcel(String code, {File? photo}) async {
     final id = int.parse(code.replaceFirst('TRK-', ''));
     final step = id == 1 ? 'out_for_delivery' : 'delivered';
     updates.add('$id:$step');
