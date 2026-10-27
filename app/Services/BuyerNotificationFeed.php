@@ -94,7 +94,8 @@ class BuyerNotificationFeed
             ? $note
             : ($statusMessages[$status] ?? 'Your order status was updated.');
 
-        if (Schema::hasTable('delivery_events')) {
+        // Delivery events belong to the newer schema, where parcels hang off seller orders.
+        if (Schema::hasTable('delivery_events') && Schema::hasColumn('shipments', 'seller_order_id')) {
             DeliveryEvent::query()
                 ->whereHas('shipment.sellerOrder.order', fn ($query) => $query->where('buyer_id', $buyer->id))
                 ->with('shipment.sellerOrder.order')

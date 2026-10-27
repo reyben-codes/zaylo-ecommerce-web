@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Address;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductReview;
 use App\Models\Seller;
@@ -107,7 +108,8 @@ class Shop
     /** Units delivered to buyers. */
     public function soldCount(): int
     {
-        if (Product::usesLegacySchema()) {
+        // The order tables decide where sales are kept; products can be on the other layout.
+        if (Order::usesLegacySchema()) {
             return (int) DB::table('order_items')->join('orders', 'orders.id', '=', 'order_items.order_id')
                 ->whereIn('orders.status', ['delivered', 'completed'])
                 ->whereIn('order_items.product_id', Product::where('seller_id', $this->id)->select('id'))
@@ -127,7 +129,7 @@ class Shop
      */
     public static function topSelling(int $limit = 4): Collection
     {
-        $sales = Product::usesLegacySchema()
+        $sales = Order::usesLegacySchema()
             ? DB::table('order_items')->join('orders', 'orders.id', '=', 'order_items.order_id')
                 ->join('products', 'products.id', '=', 'order_items.product_id')
                 ->whereIn('orders.status', ['delivered', 'completed'])

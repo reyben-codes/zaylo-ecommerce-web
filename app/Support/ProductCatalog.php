@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\Order;
 use App\Models\Product;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -92,7 +93,7 @@ class ProductCatalog
     /** Products buyers have received, most units first, with the count as units_sold. */
     public static function bestSelling(Builder $query): void
     {
-        $delivered = fn ($items) => Product::usesLegacySchema()
+        $delivered = fn ($items) => Order::usesLegacySchema()
             ? $items->whereHas('order', fn ($order) => $order->whereIn('status', ['delivered', 'completed']))
             : $items->whereHas('sellerOrder', fn ($order) => $order->whereIn('status', ['delivered', 'completed']));
         $query->whereHas('orderItems', $delivered)

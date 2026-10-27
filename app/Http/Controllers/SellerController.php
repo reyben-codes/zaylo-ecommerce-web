@@ -791,11 +791,11 @@ class SellerController extends Controller
         return ProductVariant::where('sku', $sku)->exists() ? 'ZAY-'.Str::upper(Str::random(8)) : $sku;
     }
 
-    public function handover(Request $request)
+    public function handover(Request $request, OrderReceipts $receipts)
     {
         $request->merge(['status' => 'shipping']);
 
-        return $this->orders($request);
+        return $this->orders($request, $receipts);
     }
 
     public function reports(Request $request)
