@@ -42,11 +42,23 @@ android {
         versionName = flutter.versionName
     }
 
+    // The release workflow names the team's keystore in ZAYLO_KEYSTORE. Relying on the default debug key there made
+    // the build machine sign each release with a new random key, which Google sign-in rejects and phones cannot
+    // install as an update. Local builds keep using this computer's debug key.
+    signingConfigs {
+        System.getenv("ZAYLO_KEYSTORE")?.takeIf { it.isNotBlank() }?.let { path ->
+            create("team") {
+                storeFile = file(path)
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.findByName("team") ?: signingConfigs.getByName("debug")
         }
     }
 }

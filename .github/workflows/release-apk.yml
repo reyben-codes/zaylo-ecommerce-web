@@ -32,6 +32,9 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # The team key's SHA-1, registered as the Android OAuth client in Google Cloud (package com.example.zaylo_mobile).
+      TEAM_SHA1: '76:70:DD:8F:BA:94:A9:5E:16:10:34:D3:11:69:A1:50:D3:B3:4B:37'
     defaults:
       run:
         working-directory: mobile_app
@@ -94,13 +97,12 @@ jobs:
           # different key stops the release instead of shipping an app whose Google button fails.
           SHA1=$(printf '%s\n' "$KEYTOOL_OUTPUT" | grep 'SHA1:' | head -n 1 | awk '{print $2}')
           echo "Signing key SHA-1: $SHA1"
-          case "$SHA1" in
-            20:4D:5D:DF:E5:29:63:1D:B7:9D:73:6D:FD:02:7D:53:4D:EC:5D:F9|76:70:DD:8F:BA:94:A9:5E:16:10:34:D3:11:69:A1:50:D3:B3:4B:37) ;;
-            *)
-              echo "::error::The signing key's SHA-1 ($SHA1) is not registered for Google sign-in. Add it as an Android OAuth client (package com.example.zaylo_mobile) in Google Cloud, then list it here."
-              exit 1
-              ;;
-          esac
+          if [ "$SHA1" != "$TEAM_SHA1" ]; then
+            echo "::error::The signing key's SHA-1 ($SHA1) is not the team key ($TEAM_SHA1) registered for Google sign-in."
+            exit 1
+          fi
+          # android/app/build.gradle.kts signs the release with this keystore.
+          echo "ZAYLO_KEYSTORE=$HOME/.android/debug.keystore" >> "$GITHUB_ENV"
 
       - run: flutter pub get
 
@@ -114,6 +116,17 @@ jobs:
           # APP_VERSION lets the app compare itself with the newest release and suggest updating.
           flutter build apk --release --build-name="$VERSION" --build-number="$BUILD_NUMBER" --dart-define=APP_VERSION="$VERSION"
           mv build/app/outputs/flutter-apk/app-release.apk zaylo.apk
+
+      # Checks the finished APK itself, so a release can never again go out signed with another key.
+      - name: Check the APK's signature
+        run: |
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -n 1)
+          SIGNED=$("$APKSIGNER" verify --print-certs zaylo.apk | grep -m1 'SHA-1 digest' | awk '{print toupper($NF)}' | sed 's/../&:/g; s/:$//')
+          echo "APK signed with SHA-1: $SIGNED"
+          if [ "$SIGNED" != "$TEAM_SHA1" ]; then
+            echo "::error::zaylo.apk is signed with $SIGNED instead of the team key, so Google sign-in and app updates would fail."
+            exit 1
+          fi
 
       # Creates the tag on this commit when the push did not bring one, and makes the release the latest.
       - uses: softprops/action-gh-release@v2
