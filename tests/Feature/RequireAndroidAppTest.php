@@ -22,7 +22,7 @@ class RequireAndroidAppTest extends TestCase
 
     public function test_android_shoppers_are_sent_to_download_the_app(): void
     {
-        foreach (['/', '/products', '/login', '/register', '/register?role=courier', '/rider/login'] as $page) {
+        foreach (['/', '/products', '/login', '/register', '/register?role=courier'] as $page) {
             $this->as(self::ANDROID)->get($page)->assertRedirect(route('app.download'));
         }
         // Pages that need a sign-in go to the login page first, which then sends the guest to the app.

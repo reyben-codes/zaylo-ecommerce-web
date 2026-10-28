@@ -57,6 +57,9 @@ body {
     line-height: 1.2;
 }
 
+/* A message after email verification or a rider's sign-in attempt. */
+.app-download__status { margin: 0 0 16px; padding: 10px 14px; border-radius: 10px; background: var(--c-e9eee3); color: var(--c-586747); font-size: .85rem; font-weight: 600; }
+
 .app-download__lead { margin: 0 0 22px; color: var(--c-4a4037); font-size: .92rem; line-height: 1.6; }
 
 .app-download__button {

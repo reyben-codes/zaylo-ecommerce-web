@@ -19,7 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
             $request->is('seller', 'seller/*') => route('seller.login'),
             $request->is('logistics', 'logistics/*') => route('logistics.login'),
             $request->is('admin', 'admin/*') => route('admin.login'),
-            $request->is('courier', 'courier/*') => route('rider.login'),
+            $request->is('courier', 'courier/*') => route('rider.app'),
             default => route('login'),
         });
 

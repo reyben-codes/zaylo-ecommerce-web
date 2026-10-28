@@ -21,12 +21,6 @@
             'subtitle' => 'Sign in to review rider applications and manage your delivery team.',
             'action' => route('logistics.login.submit'), 'button' => 'Enter Logistics Center',
         ],
-        'rider' => [
-            'title' => 'ZAYLO · Rider Sign In', 'tagline' => ['Every parcel counts.', 'Ride with ZAYLO'],
-            'back' => [route('home'), 'Back to ZAYLO'], 'label' => 'ZAYLO RIDERS', 'heading' => 'Welcome, Rider',
-            'subtitle' => 'Sign in to see your deliveries, print waybills, and track your earnings.',
-            'action' => route('rider.login.submit'), 'button' => 'Start Delivering',
-        ],
         'admin' => [
             'title' => 'ZAYLO · Admin Sign In', 'tagline' => ['Keep the marketplace running.', 'Lead with ZAYLO'],
             'back' => [route('home'), 'Back to ZAYLO'], 'label' => 'ZAYLO ADMIN CENTER', 'heading' => 'Welcome, Admin',
@@ -257,9 +251,6 @@
                     <p style="margin-top:8px;">Shopping on ZAYLO? <a href="{{ route('login') }}">Use the shop sign in</a></p>
                 @elseif($portal === 'admin')
                     <p>Not an administrator? <a href="{{ route('login') }}">Use the shop sign in</a></p>
-                @elseif($portal === 'rider')
-                    <p>New rider? <a href="{{ route('register', ['role' => 'courier']) }}">Apply to deliver with ZAYLO</a></p>
-                    <p style="margin-top:8px;">Shopping on ZAYLO? <a href="{{ route('login') }}">Use the shop sign in</a></p>
                 @elseif($portal === 'logistics')
                     <p>New partner? <a href="{{ route('register', ['role' => 'logistics']) }}">Apply to become a logistics partner</a></p>
                     <p style="margin-top:8px;">Shopping on ZAYLO? <a href="{{ route('login') }}">Use the shop sign in</a></p>
@@ -267,7 +258,7 @@
                     <p>Don't have an account? <a href="{{ route('register') }}">Create new account</a></p>
                     <p style="margin-top:8px;">Selling on ZAYLO? <a href="{{ route('seller.login') }}">Sign in to Seller Center</a></p>
                     <p style="margin-top:4px;">Delivery partner? <a href="{{ route('logistics.login') }}">Sign in to Logistics Center</a></p>
-                    <p style="margin-top:4px;">Rider? <a href="{{ route('rider.login') }}">Sign in to your deliveries</a></p>
+                    <p style="margin-top:4px;">Rider? <a href="{{ route('rider.app') }}">Sign in on the ZAYLO app</a></p>
                     <p style="margin-top:4px;">Administrator? <a href="{{ route('admin.login') }}">Sign in to Admin Center</a></p>
                 @endif
             </div>

@@ -67,6 +67,8 @@ Route::get('/', function () {
 Route::get('/storage/{path}', PublicFileController::class)->where('path', '.*')->name('storage.public');
 // Shoppers on Android land here instead of the web store (App\Http\Middleware\RequireAndroidApp).
 Route::view('/get-the-app', 'app-download', ['downloadUrl' => config('marketplace.android_app.download_url')])->name('app.download');
+// Riders sign up on the website but sign in only in the app; every rider sign-in link leads here.
+Route::view('/rider/get-the-app', 'app-download', ['downloadUrl' => config('marketplace.android_app.download_url'), 'audience' => 'rider'])->name('rider.app');
 Route::get('/terms', [PolicyController::class, 'show'])->name('terms');
 Route::get('/policies/{slug}', [PolicyController::class, 'show'])->name('policies.show');
 Route::get('/products', [BuyerController::class, 'products'])->name('products.index');
@@ -100,8 +102,6 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
     Route::get('/seller/login', [AuthController::class, 'showSellerLogin'])->name('seller.login');
     Route::post('/seller/login', [AuthController::class, 'sellerLogin'])->middleware('throttle:login')->name('seller.login.submit');
-    Route::get('/rider/login', [AuthController::class, 'showRiderLogin'])->name('rider.login');
-    Route::post('/rider/login', [AuthController::class, 'riderLogin'])->middleware('throttle:login')->name('rider.login.submit');
     Route::get('/logistics/login', [AuthController::class, 'showLogisticsLogin'])->name('logistics.login');
     Route::post('/logistics/login', [AuthController::class, 'logisticsLogin'])->middleware('throttle:login')->name('logistics.login.submit');
     Route::get('/admin/login', [AuthController::class, 'showAdminLogin'])->name('admin.login');

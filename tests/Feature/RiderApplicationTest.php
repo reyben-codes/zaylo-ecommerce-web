@@ -41,7 +41,7 @@ class RiderApplicationTest extends TestCase
         // Nothing is saved until the emailed code is entered.
         $this->assertDatabaseMissing('users', ['email' => 'pedrojose.garcia@example.com']);
         $this->assertDatabaseCount('riders', 0);
-        $this->post(route('verification.verify'), ['otp' => $this->signUpCode('pedrojose.garcia@example.com')])->assertRedirect(route('rider.login'));
+        $this->post(route('verification.verify'), ['otp' => $this->signUpCode('pedrojose.garcia@example.com')])->assertRedirect(route('rider.app'));
 
         $user = User::where('email', 'pedrojose.garcia@example.com')->firstOrFail();
         $rider = Rider::where('user_id', $user->id)->firstOrFail();
@@ -88,8 +88,9 @@ class RiderApplicationTest extends TestCase
         $user = $this->applied();
         $rider = Rider::where('user_id', $user->id)->firstOrFail();
 
-        $this->post(route('rider.login.submit'), ['email' => $user->email, 'password' => 'Rider@2026'])
-            ->assertSessionHasErrors(['email' => 'Your rider application is waiting for Bilis Hatid Express Inc. to review it.']);
+        // Riders sign in only in the app, which says who is reviewing them.
+        $this->postJson('/api/mobile/rider/login', ['email' => $user->email, 'password' => 'Rider@2026'])
+            ->assertJsonValidationErrors(['email' => 'Your rider application is still being reviewed by Bilis Hatid Express Inc.']);
 
         $other = $this->partner('Agila Cargo Movers Corp.');
         $this->actingAs($other->owner)->get(route('logistics.riders.document', [$rider, 'license_document']))->assertForbidden();
@@ -111,8 +112,27 @@ class RiderApplicationTest extends TestCase
         $this->assertSame('rejected', $user->fresh()->status);
         $this->post(route('logout'));
 
-        $this->post(route('rider.login.submit'), ['email' => $user->email, 'password' => 'Rider@2026'])
-            ->assertSessionHasErrors(['email' => 'Bilis Hatid Express Inc. did not approve your rider application. Reason: The OR/CR photo is blurred.']);
+        $this->postJson('/api/mobile/rider/login', ['email' => $user->email, 'password' => 'Rider@2026'])
+            ->assertJsonValidationErrors(['email' => 'Your rider application was not approved by Bilis Hatid Express Inc.: The OR/CR photo is blurred.']);
+    }
+
+    public function test_riders_sign_up_on_the_website_but_sign_in_only_in_the_app(): void
+    {
+        // The web sign-in for riders is gone; rider links lead to the app page instead.
+        $this->get('/rider/login')->assertNotFound();
+        $this->get(route('login'))->assertOk()->assertSee(route('rider.app'))->assertDontSee('Welcome, Rider');
+        $this->get('/courier/dashboard')->assertRedirect(route('rider.app'));
+        $this->get(route('rider.app'))->assertOk()
+            ->assertSee('Deliver with the ZAYLO app')
+            ->assertSee('Login as a Rider')
+            ->assertSee(route('register', ['role' => 'courier']), false);
+
+        // A rider who tries a website sign-in is pointed to the app.
+        $rider = User::factory()->create(['role' => 'rider', 'status' => 'active', 'password' => 'Rider@2026']);
+        $this->post(route('login'), ['email' => $rider->email, 'password' => 'Rider@2026'])
+            ->assertSessionHasErrors(['email' => 'This is a rider account, so it can\'t sign in here. Please use the ZAYLO app page instead.']);
+        $this->assertGuest();
+        $this->assertSame(route('rider.app'), session('portal_hint')['url']);
     }
 
     /** Apply, enter the emailed code, and return the rider's account (signed out). */

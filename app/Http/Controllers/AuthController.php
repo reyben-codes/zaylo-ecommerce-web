@@ -35,23 +35,14 @@ class AuthController extends Controller
         'buyer' => ['login' => 'login', 'dashboard' => 'buyer.dashboard', 'account' => 'buyer', 'page' => 'shop sign-in'],
         'seller' => ['login' => 'seller.login', 'dashboard' => 'seller.dashboard', 'account' => 'seller', 'page' => 'Seller Center sign-in'],
         'logistics' => ['login' => 'logistics.login', 'dashboard' => 'logistics.dashboard', 'account' => 'logistics partner', 'page' => 'Logistics Center sign-in'],
-        'rider' => ['login' => 'rider.login', 'dashboard' => 'courier.dashboard', 'account' => 'rider', 'page' => 'rider sign-in'],
+        // Riders sign in only in the app; their "login" is the page to get it.
+        'rider' => ['login' => 'rider.app', 'dashboard' => 'rider.app', 'account' => 'rider', 'page' => 'ZAYLO app'],
         'admin' => ['login' => 'admin.login', 'dashboard' => 'admin.dashboard', 'account' => 'admin', 'page' => 'Admin Center sign-in'],
     ];
 
     public function showLogin()
     {
         return view('auth.login');
-    }
-
-    public function showRiderLogin()
-    {
-        return view('auth.login', ['portal' => 'rider']);
-    }
-
-    public function riderLogin(Request $request)
-    {
-        return $this->portalLogin($request, 'rider');
     }
 
     public function showSellerLogin()
@@ -128,8 +119,7 @@ class AuthController extends Controller
         }
 
         if (! Auth::user()->isActive()) {
-            $message = $this->riderReviewMessage(Auth::user())
-                ?? 'This '.$portal.' account is pending approval or has been suspended.';
+            $message = 'This '.$portal.' account is pending approval or has been suspended.';
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
@@ -368,6 +358,15 @@ class AuthController extends Controller
             return redirect()->route($loginRoute)->with('status', "Email verified. Your account is still awaiting approval from {$reviewer}.");
         }
 
+        // Riders work in the app, so the website signs them out and shows where to get it.
+        if ($request->user()->hasRole('rider', 'courier')) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('rider.app')->with('status', 'Email verified. Sign in on the ZAYLO app to start delivering.');
+        }
+
         return $this->redirectByRole($request->user())->with('status', 'Email verified successfully.');
     }
 
@@ -489,27 +488,11 @@ class AuthController extends Controller
     }
 
     /** Tells a rider who is reviewing them, or why their application was rejected. */
-    private function riderReviewMessage(User $user): ?string
-    {
-        if (! $user->hasRole('rider') || ! Schema::hasTable('riders')) {
-            return null;
-        }
-        $rider = Rider::with('provider')->where('user_id', $user->id)->first();
-        $partner = $rider?->provider?->name ?? 'your logistics partner';
-
-        return match ($user->status) {
-            'pending' => "Your rider application is waiting for {$partner} to review it.",
-            'rejected' => "{$partner} did not approve your rider application.".($rider?->rejection_reason ? " Reason: {$rider->rejection_reason}" : ''),
-            default => null,
-        };
-    }
-
     private function redirectByRole(User $user)
     {
         if ($user->hasRole('admin')) return redirect()->route('admin.dashboard');
         if ($user->hasRole('seller')) return redirect()->route('seller.dashboard');
         if ($user->hasRole('logistics')) return redirect()->route('logistics.dashboard');
-        if ($user->hasRole('rider')) return redirect()->route('courier.dashboard');
         if ($user->hasRole('buyer')) return redirect()->route('buyer.dashboard');
 
         return redirect()->route('home');

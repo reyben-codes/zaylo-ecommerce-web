@@ -62,13 +62,17 @@ class GoogleAuthController extends Controller
                 return redirect()->route('login')->withErrors(['google' => $message]);
             }
 
+            // Riders sign in only in the app.
+            if ($user->hasRole('rider', 'courier')) {
+                return redirect()->route('rider.app')->with('status', 'Riders sign in on the ZAYLO app with Login as a Rider.');
+            }
+
             Auth::login($user);
             $request->session()->regenerate();
 
             return redirect()->route(match ($user->role) {
                 'buyer' => 'buyer.dashboard',
                 'seller' => 'seller.dashboard',
-                'courier', 'rider' => 'courier.dashboard',
                 'logistics' => 'logistics.dashboard',
                 'admin' => 'admin.dashboard',
                 default => 'home',

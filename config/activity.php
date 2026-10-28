@@ -30,7 +30,6 @@ return [
         // Sign-in and sign-out (recorded only when the account ends up signed in, or was signed in for logout).
         'login' => ['auth', 'Signed in'],
         'seller.login.submit' => ['auth', 'Signed in to Seller Center'],
-        'rider.login.submit' => ['auth', 'Signed in to the rider app'],
         'logistics.login.submit' => ['auth', 'Signed in to Logistics Center'],
         'admin.login.submit' => ['auth', 'Signed in to Admin Center'],
         'google.callback' => ['auth', 'Signed in with Google'],

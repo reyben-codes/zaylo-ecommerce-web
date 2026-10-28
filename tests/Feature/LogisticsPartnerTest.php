@@ -181,7 +181,7 @@ class LogisticsPartnerTest extends TestCase
             ->assertSee('ZAYLO ADMIN CENTER')
             ->assertSee('action="'.route('admin.login.submit').'"', false)
             ->assertDontSee('Continue with Google');
-        $this->get(route('login'))->assertSeeInOrder(['Sign in to your deliveries', 'Administrator?', route('admin.login')]);
+        $this->get(route('login'))->assertSeeInOrder(['Sign in on the ZAYLO app', 'Administrator?', route('admin.login')]);
 
         $admin = User::factory()->create(['role' => 'admin', 'status' => 'active', 'password' => 'Admin-pass1!']);
         $this->post(route('admin.login.submit'), ['email' => $admin->email, 'password' => 'Admin-pass1!'])
