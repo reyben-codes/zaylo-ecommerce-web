@@ -108,7 +108,7 @@ class _BuyerShellState extends State<BuyerShell> {
                     child: const CartIcon(filled: true),
                   ),
                 ),
-                label: 'Bag',
+                label: 'Cart',
               ),
               const NavigationDestination(
                 icon: Icon(Icons.person_outline),

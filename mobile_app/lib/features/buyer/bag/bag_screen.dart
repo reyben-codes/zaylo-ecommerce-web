@@ -79,7 +79,7 @@ class _BagScreenState extends State<BagScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Remove ${selected.length} ${selected.length == 1 ? 'item' : 'items'}?'),
-        content: const Text('They will be taken out of your bag. You can add them again anytime.'),
+        content: const Text('They will be taken out of your cart. You can add them again anytime.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
           TextButton(
@@ -94,7 +94,7 @@ class _BagScreenState extends State<BagScreen> {
     setState(() => _removing = true);
     try {
       _state.setCart(await _state.api.removeCartItems(selected.map((item) => item.id).toList()));
-      if (mounted) showMessage(context, 'Selected products removed from your bag.');
+      if (mounted) showMessage(context, 'Selected products removed from your cart.');
     } on ApiException catch (error) {
       if (mounted) showMessage(context, error.message);
     } finally {
@@ -120,10 +120,10 @@ class _BagScreenState extends State<BagScreen> {
     if (!state.signedIn) {
       return const SignedOutPrompt(
         iconWidget: CartIcon(size: 34),
-        heading: 'Bag',
+        heading: 'Cart',
         eyebrow: 'Ready for checkout',
-        title: 'Your bag',
-        message: 'Sign in to add products to your bag and check out.',
+        title: 'Your cart',
+        message: 'Sign in to add products to your cart and check out.',
       );
     }
     final cart = state.cart;
@@ -135,7 +135,7 @@ class _BagScreenState extends State<BagScreen> {
     final selectedTotal = selected.fold<double>(0, (sum, item) => sum + item.lineTotal);
 
     return Scaffold(
-      appBar: TabHeader(eyebrow: 'Ready for checkout', title: 'Bag', count: cart.count),
+      appBar: TabHeader(eyebrow: 'Ready for checkout', title: 'Cart', count: cart.count),
       bottomNavigationBar: cart.items.isEmpty
           ? null
           : Container(
@@ -171,12 +171,12 @@ class _BagScreenState extends State<BagScreen> {
             ),
       body: cart.items.isEmpty
           ? (_error != null
-              ? LoadError(error: _error, onRetry: _refresh, title: 'Could not load your bag')
+              ? LoadError(error: _error, onRetry: _refresh, title: 'Could not load your cart')
               : _loading
                   ? const Loader()
                   : EmptyState(
                       iconWidget: CartIcon(size: 34),
-                      title: 'Your bag is empty',
+                      title: 'Your cart is empty',
                       message: 'Find something you love and it will wait for you here.',
                       actionLabel: 'Start shopping',
                       onAction: () => ShopActions.showTab(context, 0),
@@ -231,7 +231,7 @@ class _BagScreenState extends State<BagScreen> {
                           onQuantity: (quantity) =>
                               _mutate(item.id, () => _state.api.updateCartItem(item.id, quantity)),
                           onRemove: () => _mutate(item.id, () => _state.api.removeCartItem(item.id),
-                              done: 'Removed from your bag.'),
+                              done: 'Removed from your cart.'),
                         ),
                       ),
                   ],

@@ -527,7 +527,7 @@ class _IdentityRequired extends StatelessWidget {
             ),
           ]),
           const SizedBox(height: 6),
-          const Text('An administrator approves your government ID once. Your bag is kept while you wait.',
+          const Text('An administrator approves your government ID once. Your cart is kept while you wait.',
               style: TextStyle(fontSize: 13)),
           const SizedBox(height: 12),
           OutlinedButton(onPressed: onVerify, style: secondaryButtonStyle, child: const Text('VERIFY MY ID')),

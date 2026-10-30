@@ -78,8 +78,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       if (buyNow && cart.addedItemId != null) {
         Navigator.of(context).push(MaterialPageRoute(builder: (_) => CheckoutScreen(cartItemIds: [cart.addedItemId!])));
       } else {
-        showMessage(context, 'Added to your bag.',
-            actionLabel: 'VIEW BAG', onAction: () => ShopActions.showTab(context, 2));
+        showMessage(context, 'Added to your cart.',
+            actionLabel: 'VIEW CART', onAction: () => ShopActions.showTab(context, 2));
         final images = product.images.isNotEmpty ? product.images : [product.imageUrl];
         CartFlight.fly(context, from: start, imageUrl: images[_imageIndex.clamp(0, images.length - 1)]);
       }
@@ -105,6 +105,24 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
   }
 
+  Future<void> _openZoomViewer(List<String?> images, int initialIndex, {required String title}) async {
+    final selectedIndex = await Navigator.of(context).push<int>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => _ProductZoomViewer(
+          images: images,
+          initialIndex: initialIndex,
+          title: title,
+        ),
+      ),
+    );
+    if (!mounted || selectedIndex == null || selectedIndex == _imageIndex) return;
+    setState(() => _imageIndex = selectedIndex);
+    if (_gallery.hasClients) {
+      _gallery.jumpToPage(selectedIndex);
+    }
+  }
+
   @override
   Widget build(BuildContext context) => FutureBuilder<Product>(
         future: _product,
@@ -125,7 +143,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       color: saved ? Colors.redAccent : ZayloColors.ink),
                 ),
                 IconButton(
-                  tooltip: 'Bag',
+                  tooltip: 'Cart',
                   onPressed: () => ShopActions.showTab(context, 2),
                   icon: CartTarget(
                     child: Badge(
@@ -164,25 +182,55 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             controller: _gallery,
                             itemCount: images.length,
                             onPageChanged: (index) => setState(() => _imageIndex = index),
-                            itemBuilder: (_, index) => NetworkImageBox(url: images[index]),
+                            itemBuilder: (_, index) => GestureDetector(
+                              onTap: () => _openZoomViewer(images, index, title: product.name),
+                              child: InteractiveViewer(
+                                minScale: 1,
+                                maxScale: 4,
+                                child: NetworkImageBox(url: images[index]),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            right: 12,
+                            bottom: 12,
+                            child: Material(
+                              color: ZayloColors.ink.withValues(alpha: 0.72),
+                              shape: const CircleBorder(),
+                              child: IconButton(
+                                tooltip: 'Zoom photo',
+                                onPressed: () => _openZoomViewer(
+                                  images,
+                                  _imageIndex.clamp(0, images.length - 1).toInt(),
+                                  title: product.name,
+                                ),
+                                icon: const Icon(
+                                  Icons.zoom_in_rounded,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                              ),
+                            ),
                           ),
                           if (images.length > 1)
                             Positioned(
                               bottom: 14,
                               left: 0,
                               right: 0,
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: List.generate(
-                                  images.length,
-                                  (index) => AnimatedContainer(
-                                    duration: const Duration(milliseconds: 180),
-                                    margin: const EdgeInsets.symmetric(horizontal: 3),
-                                    width: _imageIndex == index ? 18 : 7,
-                                    height: 7,
-                                    decoration: BoxDecoration(
-                                      color: _imageIndex == index ? ZayloColors.ink : ZayloColors.white,
-                                      borderRadius: BorderRadius.circular(9),
+                              child: IgnorePointer(
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: List.generate(
+                                    images.length,
+                                    (index) => AnimatedContainer(
+                                      duration: const Duration(milliseconds: 180),
+                                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                                      width: _imageIndex == index ? 18 : 7,
+                                      height: 7,
+                                      decoration: BoxDecoration(
+                                        color: _imageIndex == index ? ZayloColors.ink : ZayloColors.white,
+                                        borderRadius: BorderRadius.circular(9),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -361,7 +409,7 @@ class _ActionBar extends StatelessWidget {
                 key: addButtonKey,
                 onPressed: enabled && !busy ? onAdd : null,
                 style: secondaryButtonStyle,
-                child: const Text('ADD TO BAG'),
+                child: const Text('ADD TO CART'),
               ),
             ),
             const SizedBox(width: 12),
@@ -415,4 +463,169 @@ class _Assurance extends StatelessWidget {
           ]),
         ),
       ]);
+}
+
+class _ProductZoomViewer extends StatefulWidget {
+  const _ProductZoomViewer({
+    required this.images,
+    required this.initialIndex,
+    required this.title,
+  });
+
+  final List<String?> images;
+  final int initialIndex;
+  final String title;
+
+  @override
+  State<_ProductZoomViewer> createState() => _ProductZoomViewerState();
+}
+
+class _ProductZoomViewerState extends State<_ProductZoomViewer> {
+  late final PageController _pageController;
+  final TransformationController _zoomController = TransformationController();
+  late int _currentIndex;
+  double _scale = 1.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex.clamp(0, widget.images.length - 1).toInt();
+    _pageController = PageController(initialPage: _currentIndex);
+    _zoomController.addListener(_handleTransformChanged);
+  }
+
+  void _handleTransformChanged() {
+    final nextScale = _zoomController.value.getMaxScaleOnAxis();
+    if ((nextScale - _scale).abs() > 0.02 && mounted) {
+      setState(() => _scale = nextScale);
+    }
+  }
+
+  void _setZoom(double targetScale) {
+    final clamped = targetScale.clamp(1.0, 4.0).toDouble();
+    _zoomController.value = clamped <= 1.01
+        ? Matrix4.identity()
+        : (Matrix4.identity()..scaleByDouble(clamped, clamped, 1.0, 1.0));
+    setState(() => _scale = clamped);
+  }
+
+  void _toggleZoom() {
+    _setZoom(_scale > 1.05 ? 1.0 : 2.5);
+  }
+
+  @override
+  void dispose() {
+    _zoomController.removeListener(_handleTransformChanged);
+    _zoomController.dispose();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final zoomPercent = (_scale * 100).round();
+    return Scaffold(
+      backgroundColor: const Color(0xFF0E0D0C),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF0E0D0C),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          tooltip: 'Close zoom',
+          onPressed: () => Navigator.of(context).pop(_currentIndex),
+          icon: const Icon(Icons.close_rounded, color: Colors.white),
+        ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700),
+            ),
+            Text(
+              '${_currentIndex + 1} / ${widget.images.length} · $zoomPercent%',
+              style: const TextStyle(color: Colors.white70, fontSize: 11),
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Zoom out',
+            onPressed: _scale > 1.05 ? () => _setZoom(_scale - 0.5) : null,
+            icon: const Icon(Icons.remove_rounded, color: Colors.white),
+          ),
+          IconButton(
+            tooltip: 'Toggle zoom',
+            onPressed: _toggleZoom,
+            icon: Icon(
+              _scale > 1.05 ? Icons.zoom_out_map_rounded : Icons.zoom_in_rounded,
+              color: Colors.white,
+            ),
+          ),
+          IconButton(
+            tooltip: 'Zoom in',
+            onPressed: _scale < 3.95 ? () => _setZoom(_scale + 0.5) : null,
+            icon: const Icon(Icons.add_rounded, color: Colors.white),
+          ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          PageView.builder(
+            controller: _pageController,
+            physics: _scale > 1.05
+                ? const NeverScrollableScrollPhysics()
+                : const BouncingScrollPhysics(),
+            itemCount: widget.images.length,
+            onPageChanged: (index) {
+              _zoomController.value = Matrix4.identity();
+              setState(() {
+                _currentIndex = index;
+                _scale = 1.0;
+              });
+            },
+            itemBuilder: (_, index) => GestureDetector(
+              onDoubleTap: _toggleZoom,
+              child: Center(
+                child: InteractiveViewer(
+                  transformationController: index == _currentIndex ? _zoomController : null,
+                  minScale: 1,
+                  maxScale: 4,
+                  panEnabled: true,
+                  scaleEnabled: true,
+                  child: AspectRatio(
+                    aspectRatio: 1,
+                    child: NetworkImageBox(url: widget.images[index]),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: 24,
+            child: SafeArea(
+              top: false,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: const Text(
+                    'Pinch or double-tap to zoom',
+                    style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

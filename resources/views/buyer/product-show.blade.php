@@ -35,6 +35,7 @@
         <div class="detail-image{{ $availableStock <= 0 || ($mainImage['sold_out'] ?? false) ? ' is-sold-out' : '' }}" data-gallery-frame @if($availableStock <= 0) data-all-sold-out @endif>
             <img src="{{ $mainImage['path'] }}" alt="{{ $mainImage['alt_text'] }}" data-gallery-main>
             <span class="product-sold-out-label" aria-hidden="true" data-sold-out-label @unless($availableStock <= 0 || ($mainImage['sold_out'] ?? false)) hidden @endunless>Sold out</span>
+            <button type="button" class="detail-gallery-zoom" data-gallery-zoom aria-label="Zoom product photo" title="Click to zoom"><i class="fas fa-magnifying-glass-plus" aria-hidden="true"></i></button>
             @if($galleryImages->count() > 1)
                 <button type="button" class="detail-gallery-arrow detail-gallery-prev" data-gallery-prev aria-label="Previous product photo"><i class="fas fa-chevron-left" aria-hidden="true"></i></button>
                 <button type="button" class="detail-gallery-arrow detail-gallery-next" data-gallery-next aria-label="Next product photo"><i class="fas fa-chevron-right" aria-hidden="true"></i></button>

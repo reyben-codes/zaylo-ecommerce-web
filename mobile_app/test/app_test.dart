@@ -213,6 +213,12 @@ class FakeApi extends BuyerApi {
   @override
   Future<List<Product>> wishlist() async => [];
 
+  @override
+  Future<Product> product(String slug) async => Product.fromJson({
+        ...productJson(1),
+        'images': ['http://fake.test/1.jpg', 'http://fake.test/2.jpg'],
+      });
+
   /// ID tokens sent to POST /mobile/google; "rejected" answers like a seller's account.
   final googleTokens = <String>[];
 
@@ -671,13 +677,13 @@ void main() {
       expect(find.text('Suggested Products'), findsNothing);
     });
 
-    testWidgets('bag tab asks the guest to sign in', (tester) async {
+    testWidgets('cart tab asks the guest to sign in', (tester) async {
       await pumpApp(tester);
 
-      await tester.tap(find.text('Bag'));
+      await tester.tap(find.text('Cart'));
       await tester.pump();
 
-      expect(find.text('Sign in to add products to your bag and check out.'), findsOneWidget);
+      expect(find.text('Sign in to add products to your cart and check out.'), findsOneWidget);
       expect(find.text('SIGN IN'), findsOneWidget);
     });
   });
@@ -689,14 +695,14 @@ void main() {
       expect(find.textContaining('Welcome back'), findsNothing, reason: 'the hero comes right after search');
       expect(find.text('Flash Sales'), findsOneWidget);
       expect(find.text('Suggested Products'), findsOneWidget);
-      // Bag badge in the bottom navigation reflects the server cart.
+      // Cart badge in the bottom navigation reflects the server cart.
       expect(find.descendant(of: find.byType(NavigationBar), matching: find.text('2')), findsOneWidget);
     });
 
-    testWidgets('bag checks out only the selected items', (tester) async {
+    testWidgets('cart checks out only the selected items', (tester) async {
       await pumpApp(tester, token: 'stored-token', cart: [11, 12]);
 
-      await tester.tap(find.text('Bag'));
+      await tester.tap(find.text('Cart'));
       await tester.pump();
       expect(find.text('CHECKOUT (2)'), findsOneWidget);
       expect(find.text('Select all (2)'), findsOneWidget);
@@ -1418,11 +1424,11 @@ void main() {
       expect(find.widgetWithText(AppBar, 'Messages'), findsOneWidget, reason: 'seller inbox');
     });
 
-    testWidgets('the home top bar has a notifications bell instead of the bag', (tester) async {
+    testWidgets('the home top bar has a notifications bell instead of the cart', (tester) async {
       await pumpApp(tester, token: 'stored-token');
 
       final bar = find.byType(HomeTopBar);
-      expect(find.descendant(of: bar, matching: find.byTooltip('Bag')), findsNothing);
+      expect(find.descendant(of: bar, matching: find.byTooltip('Cart')), findsNothing);
       final bell = find.descendant(of: bar, matching: find.byTooltip('Notifications, 2 unread'));
       expect(bell, findsOneWidget);
       expect(find.descendant(of: bell, matching: find.text('2')), findsOneWidget, reason: 'unread badge');
@@ -1634,12 +1640,12 @@ void main() {
     });
   });
 
-  testWidgets('home and bag fit a small 320px phone without overflow', (tester) async {
+  testWidgets('home and cart fit a small 320px phone without overflow', (tester) async {
     await pumpApp(tester, token: 'stored-token', cart: [11, 12], width: 320);
     expect(tester.takeException(), isNull);
     expect(find.text('Flash Sales'), findsOneWidget);
 
-    await tester.tap(find.text('Bag'));
+    await tester.tap(find.text('Cart'));
     await tester.pump();
     expect(tester.takeException(), isNull);
     expect(find.text('CHECKOUT (2)'), findsOneWidget);
@@ -1868,5 +1874,28 @@ void main() {
     await tester.tap(find.bySemanticsLabel('Show image 2 of 3'));
     await tester.pumpAndSettle();
     expect(showing(2), isTrue);
+  });
+
+  testWidgets('product detail opens the full-screen photo zoom viewer and toggles zoom', (tester) async {
+    await pumpApp(tester);
+
+    await tester.tap(find.text('Watering Can 1').first);
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('Zoom photo'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Zoom photo'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pinch or double-tap to zoom'), findsOneWidget);
+    expect(find.textContaining('100%'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Toggle zoom'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('250%'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Close zoom'));
+    await tester.pumpAndSettle();
+    expect(find.text('Pinch or double-tap to zoom'), findsNothing);
   });
 }

@@ -47,7 +47,7 @@ abstract final class ShopActions {
     try {
       await AppScope.read(context).addToBag(product);
       if (context.mounted) {
-        showMessage(context, 'Added to your bag.', actionLabel: 'VIEW BAG', onAction: () => showTab(context, 2));
+        showMessage(context, 'Added to your cart.', actionLabel: 'VIEW CART', onAction: () => showTab(context, 2));
         CartFlight.fly(context, from: start, imageUrl: product.imageUrl);
       }
     } on ApiException catch (error) {

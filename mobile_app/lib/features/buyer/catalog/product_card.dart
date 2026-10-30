@@ -150,7 +150,7 @@ class ProductCard extends StatelessWidget {
                   const SizedBox(width: 6),
                   Builder(
                     builder: (button) => _SquareIconButton(
-                      tooltip: product.hasOptions ? 'Choose options' : 'Add to bag',
+                      tooltip: product.hasOptions ? 'Choose options' : 'Add to cart',
                       onPressed: () => ShopActions.quickAdd(context, product, from: button),
                       background: ZayloColors.ink,
                       size: 34,

@@ -67,7 +67,7 @@ class MobileShoppingController extends Controller
 
         return response()->json($this->cartPayload($this->loadedCart($request)) + [
             'added_item_id' => $item->id,
-            'message' => 'Added to your bag.',
+            'message' => 'Added to your cart.',
         ], 201);
     }
 
@@ -85,7 +85,7 @@ class MobileShoppingController extends Controller
         $this->ownCartItem($request, $cartItem);
         $cartItem->delete();
 
-        return response()->json($this->cartPayload($this->loadedCart($request)) + ['message' => 'Removed from your bag.']);
+        return response()->json($this->cartPayload($this->loadedCart($request)) + ['message' => 'Removed from your cart.']);
     }
 
     public function removeCartItems(Request $request): JsonResponse
@@ -98,7 +98,7 @@ class MobileShoppingController extends Controller
         $cart->items()->whereIn('id', $validated['cart_item_ids'])->delete();
 
         return response()->json($this->cartPayload($this->loadedCart($request)) + [
-            'message' => 'Selected products removed from your bag.',
+            'message' => 'Selected products removed from your cart.',
         ]);
     }
 
@@ -186,7 +186,7 @@ class MobileShoppingController extends Controller
     {
         $items = $this->loadedCart($request)->items->whereIn('id', $ids)->values();
         if ($items->count() !== count($ids)) {
-            throw ValidationException::withMessages(['cart_item_ids' => 'Your bag changed. Review your selection and try again.']);
+            throw ValidationException::withMessages(['cart_item_ids' => 'Your cart changed. Review your selection and try again.']);
         }
 
         return $items;

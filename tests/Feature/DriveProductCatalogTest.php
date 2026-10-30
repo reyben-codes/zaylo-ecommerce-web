@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Models\Seller;
 use App\Models\User;
 use Database\Seeders\DriveProductSeeder;
 use Database\Seeders\GardeningProductSeeder;
@@ -13,6 +14,17 @@ use Tests\TestCase;
 class DriveProductCatalogTest extends TestCase
 {
     use RefreshDatabase;
+
+    private function seedSeller(): void
+    {
+        $user = User::factory()->create(['role' => 'seller', 'status' => 'active']);
+        Seller::create([
+            'user_id' => $user->id,
+            'name' => 'Zaylo Store',
+            'slug' => 'zaylo-store',
+            'status' => 'approved',
+        ]);
+    }
 
     public function test_drive_catalog_imports_each_product_once_with_its_photos(): void
     {
@@ -43,7 +55,7 @@ class DriveProductCatalogTest extends TestCase
 
     public function test_multiple_product_photos_are_shown_as_carousels(): void
     {
-        User::factory()->create(['role' => 'seller', 'status' => 'active']);
+        $this->seedSeller();
         $this->seed(DriveProductSeeder::class);
         $shoe = Product::where('name', 'Nike Dunk Low Retro Panda')->firstOrFail();
 
@@ -54,6 +66,7 @@ class DriveProductCatalogTest extends TestCase
 
         $this->get(route('products.show', $shoe))
             ->assertOk()
+            ->assertSee('data-gallery-zoom', false)
             ->assertSee('data-gallery-prev', false)
             ->assertSee('data-gallery-next', false)
             ->assertSee('View image 3 of 3');
