@@ -5,14 +5,18 @@ import 'package:zaylo_mobile/state/app_state.dart';
 /// The floating Zay chatbot's state (see ChatHeadOverlay).
 class ChatHeadState extends ChangeNotifier {
   bool _dismissed = false;
+  bool _summoned = false;
   int _hiders = 0;
   int? _conversationId;
   String? _partnerName;
 
-  /// Dragged onto the dismiss target; opening Messages or Help bot brings it back.
+  /// Dragged onto the dismiss target; tapping Chatbot in the sidebar menu brings it back.
   bool get dismissed => _dismissed;
 
-  /// Screens where the floating bot steps aside (open chats, the rider app).
+  /// Explicitly summoned from the sidebar menu.
+  bool get summoned => _summoned;
+
+  /// Screens where the floating bot steps aside (Messages, open chats, the rider app).
   bool get hidden => _hiders > 0;
 
   int? get conversationId => _conversationId;
@@ -20,12 +24,13 @@ class ChatHeadState extends ChangeNotifier {
 
   void dismiss() {
     _dismissed = true;
+    _summoned = false;
     notifyListeners();
   }
 
   void restore() {
-    if (!_dismissed) return;
     _dismissed = false;
+    _summoned = true;
     notifyListeners();
   }
 
@@ -37,6 +42,7 @@ class ChatHeadState extends ChangeNotifier {
 
   void reset() {
     _dismissed = false;
+    _summoned = false;
     _conversationId = null;
     _partnerName = null;
     notifyListeners();

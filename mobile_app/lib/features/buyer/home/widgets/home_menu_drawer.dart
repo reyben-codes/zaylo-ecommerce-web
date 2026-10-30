@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:zaylo_mobile/components/theme_toggle.dart';
+import 'package:zaylo_mobile/state/chat_head_state.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 
 class HomeMenuDrawer extends StatelessWidget {
@@ -75,6 +76,15 @@ class HomeMenuDrawer extends StatelessWidget {
               ],
               const Divider(),
               const ThemeToggleTile(),
+              ListTile(
+                leading: Icon(Icons.smart_toy_outlined, color: ZayloColors.ink),
+                title: const Text('Chatbot'),
+                onTap: () {
+                  final chatHead = HideChatHead.maybeOf(context);
+                  Navigator.pop(context);
+                  chatHead?.restore();
+                },
+              ),
             ],
           ),
         ),

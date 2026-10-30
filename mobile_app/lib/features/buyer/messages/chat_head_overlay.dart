@@ -114,7 +114,7 @@ class _ChatHeadOverlayState extends State<ChatHeadOverlay> with TickerProviderSt
   void _tickTeaser() {
     if (!mounted) return;
     final app = _app;
-    final visible = app.signedIn && !app.chatHead.dismissed && !app.chatHead.hidden;
+    final visible = (app.signedIn || app.chatHead.summoned) && !app.chatHead.dismissed && !app.chatHead.hidden;
     if (!visible) return;
     _teaserTicks++;
     if (_teaserTicks == 1 && !_panelOpen && !_teaserSeen) {
@@ -222,7 +222,7 @@ class _ChatHeadOverlayState extends State<ChatHeadOverlay> with TickerProviderSt
         ?..hideCurrentSnackBar()
         ..showSnackBar(const SnackBar(
           behavior: SnackBarBehavior.floating,
-          content: Text('Chat bubble hidden. Open Messages from your account to bring it back.'),
+          content: Text('Chat bubble hidden. Tap Chatbot in the menu to bring it back.'),
         ));
       return;
     }
@@ -249,7 +249,7 @@ class _ChatHeadOverlayState extends State<ChatHeadOverlay> with TickerProviderSt
       listenable: app.chatHead,
       builder: (context, _) {
         final head = app.chatHead;
-        final visible = app.signedIn && !head.dismissed && !head.hidden;
+        final visible = (app.signedIn || head.summoned) && !head.dismissed && !head.hidden;
         if (!visible && _panelOpen) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted && _panelOpen) _closePanel();

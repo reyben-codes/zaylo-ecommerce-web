@@ -1279,7 +1279,7 @@ void main() {
     Finder panel() => find.byKey(const ValueKey('faq-bot-panel'));
     Finder teaser() => find.byKey(const ValueKey('faq-bot-teaser'));
 
-    testWidgets('floats over the shop and Messages with Zay and opens the floating chatbot panel', (tester) async {
+    testWidgets('floats over the shop with Zay, opens the floating chatbot panel, and hides on Messages', (tester) async {
       final semantics = tester.ensureSemantics();
       await pumpApp(tester, token: 'stored-token');
       expect(bubble(), findsOneWidget);
@@ -1289,13 +1289,6 @@ void main() {
       expect(find.bySemanticsLabel(RegExp('^Ask Zay, open ZAYLO help')), findsOneWidget,
           reason: 'screen readers hear it too');
       semantics.dispose();
-
-      // Opening Messages shows the seller inbox with the floating Zay chatbot still available.
-      await tester.tap(find.descendant(of: find.byType(HomeTopBar), matching: find.byTooltip('Messages, 3 unread')));
-      await tester.pumpAndSettle();
-      expect(find.byType(SellerInboxScreen), findsOneWidget);
-      expect(find.text('Happy Heels'), findsOneWidget);
-      expect(bubble(), findsOneWidget, reason: 'Zay floats on Messages too');
 
       // Tapping Zay opens the floating chatbot panel right on screen.
       await tester.tap(bubble());
@@ -1309,13 +1302,22 @@ void main() {
       // Closing the panel keeps the floating Zay button on screen.
       await tester.tap(find.byTooltip('Close help'));
       await tester.pumpAndSettle();
+      expect(bubble(), findsOneWidget);
+
+      // Opening Messages shows the seller inbox without the floating chatbot.
+      await tester.tap(find.descendant(of: find.byType(HomeTopBar), matching: find.byTooltip('Messages, 3 unread')));
+      await tester.pumpAndSettle();
+      expect(find.byType(SellerInboxScreen), findsOneWidget);
+      expect(find.text('Happy Heels'), findsOneWidget);
+      expect(bubble(), findsNothing, reason: 'Zay does not appear in the Messages section');
+
       await tester.pageBack();
       await tester.pumpAndSettle();
       expect(find.byType(SellerInboxScreen), findsNothing);
       expect(bubble(), findsOneWidget);
     });
 
-    testWidgets('dragging it onto the close target hides it until Messages is opened', (tester) async {
+    testWidgets('dragging it onto the close target hides it until Chatbot is tapped in the sidebar', (tester) async {
       await pumpApp(tester, token: 'stored-token');
       final start = tester.getCenter(bubble());
       // The close target sits at the bottom centre while dragging.
@@ -1331,11 +1333,23 @@ void main() {
       expect(bubble(), findsNothing);
       expect(find.textContaining('Chat bubble hidden'), findsOneWidget);
 
-      // Opening Messages brings it back, as on the website.
+      // Opening Messages does NOT make the floating chatbot reappear.
       await tester.tap(find.descendant(of: find.byType(HomeTopBar), matching: find.byTooltip('Messages, 3 unread')));
       await tester.pumpAndSettle();
-      expect(bubble(), findsOneWidget);
+      expect(bubble(), findsNothing);
       await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(bubble(), findsNothing);
+
+      // Opening the sidebar menu and tapping Chatbot (below the theme toggle) brings it back.
+      await tester.tap(find.byTooltip('Menu'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.getTopLeft(find.text('Dark mode')).dy,
+        lessThan(tester.getTopLeft(find.text('Chatbot')).dy),
+        reason: 'Chatbot button sits below the light/dark mode toggle in the sidebar',
+      );
+      await tester.tap(find.text('Chatbot'));
       await tester.pumpAndSettle();
       expect(bubble(), findsOneWidget);
     });
