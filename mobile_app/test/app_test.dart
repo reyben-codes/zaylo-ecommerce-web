@@ -608,16 +608,50 @@ void main() {
       return (prompt, opened);
     }
 
-    testWidgets('opening an outdated app suggests updating and opens the download', (tester) async {
+    testWidgets('opening an outdated app suggests updating with patch notes and opens the download', (tester) async {
       final (prompt, opened) = await pumpPrompt(tester, latest: '1.0.4');
       prompt.check();
       await tester.pumpAndSettle();
 
       expect(find.text('Update available'), findsOneWidget);
       expect(find.textContaining('ZAYLO 1.0.4 is out'), findsOneWidget);
+      expect(find.text("What's new in 1.0.4"), findsOneWidget);
       await tester.tap(find.text('UPDATE'));
       await tester.pumpAndSettle();
       expect(opened, [Uri.parse('https://example.test/zaylo.apk')]);
+    });
+
+    testWidgets('patch notes modal pops up once per version and can also be opened from the sidebar', (tester) async {
+      final key = GlobalKey<NavigatorState>();
+      final store = MemoryPatchNoteStore();
+      final prompt = AppUpdatePrompt(
+        navigatorKey: key,
+        patchNoteStore: store,
+        load: () async => const AppVersionInfo(latestVersion: '1.0.5'),
+      );
+      await tester.pumpWidget(MaterialApp(navigatorKey: key, home: const Scaffold(body: Text('Home'))));
+
+      prompt.checkPatchNotes();
+      await tester.pumpAndSettle();
+      expect(find.text('Patch notes'), findsOneWidget);
+      expect(find.text('See what updates were added to ZAYLO'), findsOneWidget);
+      expect(find.text('v1.0.5'), findsOneWidget);
+      expect(find.text('Chatbot, Product Zoom & Cart Update'), findsOneWidget);
+
+      await tester.tap(find.text('GOT IT'));
+      await tester.pumpAndSettle();
+      expect(find.text('See what updates were added to ZAYLO'), findsNothing);
+      expect(await store.readSeenVersion(), '1.0.5');
+
+      // Can also be opened anytime from the sidebar menu.
+      await pumpApp(tester);
+      await tester.tap(find.byTooltip('Menu'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Patch notes'));
+      await tester.pumpAndSettle();
+      expect(find.text('See what updates were added to ZAYLO'), findsOneWidget);
+      await tester.tap(find.text('GOT IT'));
+      await tester.pumpAndSettle();
     });
 
     testWidgets('"Later" hides the suggestion until the app is opened again, and an up-to-date app sees none',

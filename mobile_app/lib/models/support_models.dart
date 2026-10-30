@@ -331,11 +331,16 @@ class ComplaintCategory {
 /// The newest published app (MobileAppVersionController), which the app
 /// compares with its own version when it opens.
 class AppVersionInfo {
-  const AppVersionInfo({this.latestVersion, this.downloadUrl});
+  const AppVersionInfo({
+    this.latestVersion,
+    this.downloadUrl,
+    this.releaseNotes = const [],
+  });
 
   /// "1.0.4", or null when the server could not tell.
   final String? latestVersion;
   final String? downloadUrl;
+  final List<String> releaseNotes;
 
   /// Whether [latestVersion] is newer than [current] ("1.0.3"); false when either is unknown.
   bool isNewerThan(String current) {
@@ -356,6 +361,7 @@ class AppVersionInfo {
   factory AppVersionInfo.fromJson(Map<String, dynamic> json) => AppVersionInfo(
         latestVersion: json['latest_version'] as String?,
         downloadUrl: json['download_url'] as String?,
+        releaseNotes: List<String>.from(json['release_notes'] as List<dynamic>? ?? const []),
       );
 }
 

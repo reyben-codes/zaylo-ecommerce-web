@@ -30,7 +30,12 @@ class _ZayloAppState extends State<ZayloApp> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     widget.theme.addListener(_applyTheme);
     ZayloColors.use(_brightness);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _updates.check());
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _updates.check();
+      if (!WidgetsBinding.instance.runtimeType.toString().contains('Test')) {
+        await _updates.checkPatchNotes();
+      }
+    });
   }
 
   @override

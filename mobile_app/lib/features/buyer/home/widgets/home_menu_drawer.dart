@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:zaylo_mobile/components/app_update.dart';
 import 'package:zaylo_mobile/components/theme_toggle.dart';
 import 'package:zaylo_mobile/state/chat_head_state.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
@@ -83,6 +84,15 @@ class HomeMenuDrawer extends StatelessWidget {
                   final chatHead = HideChatHead.maybeOf(context);
                   Navigator.pop(context);
                   chatHead?.restore();
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.auto_awesome_outlined, color: ZayloColors.ink),
+                title: const Text('Patch notes'),
+                onTap: () {
+                  final rootContext = Navigator.of(context, rootNavigator: true).context;
+                  Navigator.pop(context);
+                  showPatchNotesDialog(rootContext);
                 },
               ),
             ],

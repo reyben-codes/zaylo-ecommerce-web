@@ -20,6 +20,12 @@ class MobileAppVersionController extends Controller
         return response()->json([
             'latest_version' => $this->latestVersion(),
             'download_url' => config('marketplace.android_app.download_url'),
+            'release_notes' => [
+                'Floating Zay chatbot with animated expressions and sidebar toggle.',
+                'Interactive pinch-to-zoom and full-screen photo zoom on products.',
+                'Unified Cart experience across navigation, product cards, and checkout.',
+                'Sidebar shortcut to summon the Zay chatbot and view patch notes.',
+            ],
         ]);
     }
 
