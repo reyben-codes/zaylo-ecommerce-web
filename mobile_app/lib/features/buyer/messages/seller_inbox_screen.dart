@@ -6,12 +6,11 @@ import 'package:zaylo_mobile/components/layout.dart';
 import 'package:zaylo_mobile/features/buyer/messages/seller_chat_screen.dart';
 import 'package:zaylo_mobile/models/buyer/seller_chat_models.dart';
 import 'package:zaylo_mobile/state/app_state.dart';
-import 'package:zaylo_mobile/state/chat_head_state.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 import 'package:zaylo_mobile/utils/formatters.dart';
 
-/// The buyer's conversations with sellers, most recent first. The floating chat
-/// head hides here, and opening Messages brings it back if it was dismissed.
+/// The buyer's conversations with sellers, most recent first. Opening Messages
+/// also brings back the floating Zay chatbot if it was dismissed.
 class SellerInboxScreen extends StatefulWidget {
   const SellerInboxScreen({super.key});
 
@@ -52,8 +51,7 @@ class _SellerInboxScreenState extends State<SellerInboxScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => HideChatHead(
-          child: Scaffold(
+  Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('Messages')),
         body: FutureBuilder<List<SellerConversation>>(
           future: _conversations,
@@ -110,5 +108,5 @@ class _SellerInboxScreenState extends State<SellerInboxScreen> {
             );
           },
         ),
-      ));
+      );
 }

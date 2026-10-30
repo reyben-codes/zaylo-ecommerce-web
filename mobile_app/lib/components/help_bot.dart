@@ -7,6 +7,7 @@ import 'package:zaylo_mobile/api/api_client.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
 import 'package:zaylo_mobile/components/zay_avatar.dart';
 import 'package:zaylo_mobile/models/support_models.dart';
+import 'package:zaylo_mobile/state/chat_head_state.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 
 /// Zay, the help bot, as on the website: answers common questions from the
@@ -23,6 +24,190 @@ class HelpBotScreen extends StatefulWidget {
 
   @override
   State<HelpBotScreen> createState() => _HelpBotScreenState();
+}
+
+class _HelpBotScreenState extends State<HelpBotScreen> {
+  ZayMood _mood = ZayMood.waving;
+  bool _typing = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final scope = context.getInheritedWidgetOfExactType<
+        InheritedNotifier<ChangeNotifier>>();
+    // If opened from Account while the floating bot was dismissed, restore it for later.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final head = HideChatHead.maybeOf(context);
+      head?.restore();
+    });
+    assert(scope == null || true);
+  }
+
+  @override
+  Widget build(BuildContext context) => HideChatHead(
+        child: Scaffold(
+          appBar: AppBar(
+            titleSpacing: 0,
+            title: Row(children: [
+              Container(
+                width: 42,
+                height: 42,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: ZayloColors.isDark ? ZayloColors.sand : const Color(0xFFEEE6DE),
+                  shape: BoxShape.circle,
+                ),
+                child: ZayAvatar(size: 36, mood: _mood, float: true),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Text('Zay · ZAYLO Help', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                  Row(children: [
+                    Container(
+                      width: 7,
+                      height: 7,
+                      margin: const EdgeInsets.only(right: 5),
+                      decoration: const BoxDecoration(color: Color(0xFF70805B), shape: BoxShape.circle),
+                    ),
+                    Flexible(
+                      child: Text(
+                        _typing ? 'Zay is typing…' : 'Online · usually answers instantly',
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 12, color: ZayloColors.muted),
+                      ),
+                    ),
+                  ]),
+                ]),
+              ),
+            ]),
+          ),
+          body: HelpBotConversation(
+            api: widget.api,
+            onContactSupport: widget.onContactSupport,
+            onStateChanged: (mood, typing) {
+              if (mounted && (_mood != mood || _typing != typing)) {
+                setState(() {
+                  _mood = mood;
+                  _typing = typing;
+                });
+              }
+            },
+          ),
+        ),
+      );
+}
+
+/// The floating conversation card (.faq-bot__panel on the website), with Zay's
+/// header, online dot, close button, messages and input bar.
+class HelpBotPanel extends StatefulWidget {
+  const HelpBotPanel({
+    super.key,
+    required this.api,
+    required this.onClose,
+    required this.onContactSupport,
+    this.active = true,
+    this.onMoodChanged,
+  });
+
+  final ApiClient api;
+  final VoidCallback onClose;
+  final VoidCallback onContactSupport;
+
+  /// When true, loads Zay's greeting on first open.
+  final bool active;
+  final ValueChanged<ZayMood>? onMoodChanged;
+
+  @override
+  State<HelpBotPanel> createState() => _HelpBotPanelState();
+}
+
+class _HelpBotPanelState extends State<HelpBotPanel> {
+  ZayMood _mood = ZayMood.waving;
+  bool _typing = false;
+
+  @override
+  Widget build(BuildContext context) => Material(
+        color: ZayloColors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(color: ZayloColors.line),
+        ),
+        elevation: 16,
+        shadowColor: const Color(0x40241A16),
+        clipBehavior: Clip.antiAlias,
+        child: Column(children: [
+          // Header (.faq-bot__header)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: ZayloColors.cream,
+              border: Border(bottom: BorderSide(color: ZayloColors.line)),
+            ),
+            child: Row(children: [
+              Container(
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: ZayloColors.isDark ? ZayloColors.sand : const Color(0xFFEEE6DE),
+                  shape: BoxShape.circle,
+                ),
+                child: ZayAvatar(size: 40, mood: _mood, float: widget.active),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(
+                    'Zay · ZAYLO Help',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: ZayloColors.ink),
+                  ),
+                  const SizedBox(height: 2),
+                  Row(children: [
+                    Container(
+                      width: 7,
+                      height: 7,
+                      margin: const EdgeInsets.only(right: 5),
+                      decoration: const BoxDecoration(color: Color(0xFF70805B), shape: BoxShape.circle),
+                    ),
+                    Flexible(
+                      child: Text(
+                        _typing ? 'Zay is typing…' : 'Online · usually answers instantly',
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 11.8, color: ZayloColors.muted),
+                      ),
+                    ),
+                  ]),
+                ]),
+              ),
+              IconButton(
+                onPressed: widget.onClose,
+                tooltip: 'Close help',
+                visualDensity: VisualDensity.compact,
+                icon: Icon(Icons.close_rounded, size: 20, color: ZayloColors.muted),
+              ),
+            ]),
+          ),
+          Expanded(
+            child: HelpBotConversation(
+              api: widget.api,
+              active: widget.active,
+              compact: true,
+              onContactSupport: widget.onContactSupport,
+              onStateChanged: (mood, typing) {
+                if (mounted && (_mood != mood || _typing != typing)) {
+                  setState(() {
+                    _mood = mood;
+                    _typing = typing;
+                  });
+                }
+                widget.onMoodChanged?.call(mood);
+              },
+            ),
+          ),
+        ]),
+      );
 }
 
 /// One bubble: the person's question, Zay's reply (with optional suggested
@@ -55,16 +240,28 @@ class _Message {
   final bool typing;
 }
 
-/// Hellos, thank-yous and goodbyes, answered in kind.
-class _SmallTalk {
-  const _SmallTalk(this.pattern, this.mood, this.reply);
+/// Zay's message list and composer, shared by [HelpBotScreen] and [HelpBotPanel].
+class HelpBotConversation extends StatefulWidget {
+  const HelpBotConversation({
+    super.key,
+    required this.api,
+    required this.onContactSupport,
+    this.active = true,
+    this.compact = false,
+    this.onStateChanged,
+  });
 
-  final RegExp pattern;
-  final ZayMood mood;
-  final String reply;
+  final ApiClient api;
+  final VoidCallback onContactSupport;
+  final bool active;
+  final bool compact;
+  final void Function(ZayMood mood, bool typing)? onStateChanged;
+
+  @override
+  State<HelpBotConversation> createState() => _HelpBotConversationState();
 }
 
-class _HelpBotScreenState extends State<HelpBotScreen> {
+class _HelpBotConversationState extends State<HelpBotConversation> {
   static final _random = math.Random();
   static const _openers = ['Good question!', 'Sure thing!', "Here's what I know:", 'Happy to help!', 'Got it!'];
   static const _jokes = [
@@ -88,8 +285,14 @@ class _HelpBotScreenState extends State<HelpBotScreen> {
     'Did you know? The Philippines is an archipelago composed of more than 7,640 islands! 🇵🇭🏝️',
     'Neat fact: The shopping cart was invented in 1937 by Sylvan Goldman to help supermarket customers carry more groceries! 🛒',
   ];
-  static final _supportWords = RegExp(r'\b(support|agent|human|person|contact|complaint|dispute|scam|stolen|damaged|broken|error|bug|fraud|lost parcel|refund|issue|problem|help desk)\b', caseSensitive: false);
-  static final _shoppingWords = RegExp(r'\b(sell|buy|store|shop|price|cost|how much|stock|inventory|cart|order|checkout|delivery|shipping|rider|courier|waybill|voucher|discount|promo|return|exchange|tracking)\b', caseSensitive: false);
+  static final _supportWords = RegExp(
+    r'\b(support|agent|human|person|contact|complaint|dispute|scam|stolen|damaged|broken|error|bug|fraud|lost parcel|refund|issue|problem|help desk)\b',
+    caseSensitive: false,
+  );
+  static final _shoppingWords = RegExp(
+    r'\b(sell|buy|store|shop|price|cost|how much|stock|inventory|cart|order|checkout|delivery|shipping|rider|courier|waybill|voucher|discount|promo|return|exchange|tracking)\b',
+    caseSensitive: false,
+  );
   static const _generalChatReplies = [
     "That's neat! 😊 I'm always happy to chat with you. What else is on your mind?",
     'Sounds interesting! You can chat with me, ask for a joke or a fun fact, or ask about anything on ZAYLO.',
@@ -101,7 +304,7 @@ class _HelpBotScreenState extends State<HelpBotScreen> {
   int _factIndex = 0;
   String? _lastTopic;
 
-  late Future<FaqData> _faq = widget.api.faq();
+  Future<FaqData>? _faq;
   final _messages = <_Message>[];
   final _input = TextEditingController();
   final _scroll = ScrollController();
@@ -111,6 +314,20 @@ class _HelpBotScreenState extends State<HelpBotScreen> {
   Timer? _moodTimer;
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.active) _faq = widget.api.faq();
+  }
+
+  @override
+  void didUpdateWidget(HelpBotConversation oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.active && _faq == null) {
+      setState(() => _faq = widget.api.faq());
+    }
+  }
+
+  @override
   void dispose() {
     _moodTimer?.cancel();
     _input.dispose();
@@ -118,13 +335,20 @@ class _HelpBotScreenState extends State<HelpBotScreen> {
     super.dispose();
   }
 
+  void _notifyParent() => widget.onStateChanged?.call(_mood, _typing);
+
   /// Zay's face for a while, then back to idle.
   void _feel(ZayMood mood, {Duration? forHowLong}) {
     _moodTimer?.cancel();
     setState(() => _mood = mood);
+    _notifyParent();
     if (forHowLong != null) {
-      _moodTimer = Timer(forHowLong, () {
-        if (mounted) setState(() => _mood = ZayMood.idle);
+      _moodTimer = Timer.periodic(forHowLong, (timer) {
+        timer.cancel();
+        if (mounted) {
+          setState(() => _mood = ZayMood.idle);
+          _notifyParent();
+        }
       });
     }
   }
@@ -132,11 +356,14 @@ class _HelpBotScreenState extends State<HelpBotScreen> {
   void _start(FaqData data) {
     if (_data != null) return;
     _data = data;
-    WidgetsBinding.instance.addPostFrameCallback((_) => _reply(
-          60,
-          _Message.bot(data.greeting, suggestions: data.items.take(5).toList()),
-          ZayMood.waving,
-        ));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _reply(
+        60,
+        _Message.bot(data.greeting, suggestions: data.items.take(5).toList()),
+        ZayMood.waving,
+      );
+    });
   }
 
   void _add(_Message message) {
@@ -475,76 +702,69 @@ class _HelpBotScreenState extends State<HelpBotScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(
-          titleSpacing: 0,
-          title: Row(children: [
-            ZayAvatar(size: 38, mood: _mood, float: true),
-            const SizedBox(width: 10),
+  Widget build(BuildContext context) {
+    final faq = _faq;
+    if (faq == null) return const SizedBox.shrink();
+    return FutureBuilder<FaqData>(
+      future: faq,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return LoadError(
+            error: snapshot.error,
+            title: "Zay couldn't load its answers",
+            onRetry: () => setState(() => _faq = widget.api.faq()),
+          );
+        }
+        final data = snapshot.data;
+        if (data == null) return const Loader();
+        _start(data);
+        final composer = Container(
+          padding: EdgeInsets.fromLTRB(12, 10, 12, widget.compact ? 10 : 12),
+          decoration: BoxDecoration(
+            color: ZayloColors.white,
+            border: Border(top: BorderSide(color: ZayloColors.line)),
+          ),
+          child: Row(children: [
             Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('Zay · ZAYLO Help', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-                Text(
-                  _typing ? 'Zay is typing…' : 'Online · usually answers instantly',
-                  style: TextStyle(fontSize: 12, color: ZayloColors.muted),
+              child: TextField(
+                controller: _input,
+                maxLength: 200,
+                textInputAction: TextInputAction.send,
+                onSubmitted: (_) => _send(),
+                decoration: InputDecoration(
+                  hintText: 'Ask Zay anything…',
+                  counterText: '',
+                  isDense: widget.compact,
+                  contentPadding: widget.compact ? const EdgeInsets.symmetric(horizontal: 12, vertical: 10) : null,
                 ),
-              ]),
+              ),
             ),
+            const SizedBox(width: 8),
+            IconButton.filled(onPressed: _typing ? null : _send, tooltip: 'Send', icon: const Icon(Icons.send)),
           ]),
-        ),
-        body: FutureBuilder<FaqData>(
-          future: _faq,
-          builder: (context, snapshot) {
-            if (snapshot.hasError) {
-              return LoadError(
-                error: snapshot.error,
-                title: "Zay couldn't load its answers",
-                onRetry: () => setState(() => _faq = widget.api.faq()),
-              );
-            }
-            final data = snapshot.data;
-            if (data == null) return const Loader();
-            _start(data);
-            return Column(children: [
-              Expanded(
-                child: ListView.separated(
-                  controller: _scroll,
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _messages.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 10),
-                  itemBuilder: (context, index) => _Bubble(
-                    key: ObjectKey(_messages[index]),
-                    message: _messages[index],
-                    // The newest reply wears Zay's current face.
-                    mood: index == _messages.length - 1 ? _mood : ZayMood.idle,
-                    onPick: (item) => _ask(item.question, item),
-                    onContactSupport: widget.onContactSupport,
-                  ),
-                ),
+        );
+        return Column(children: [
+          Expanded(
+            child: ListView.separated(
+              controller: _scroll,
+              padding: const EdgeInsets.all(14),
+              itemCount: _messages.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 12),
+              itemBuilder: (context, index) => _Bubble(
+                key: ObjectKey(_messages[index]),
+                message: _messages[index],
+                // The newest reply wears Zay's current face.
+                mood: index == _messages.length - 1 ? _mood : ZayMood.idle,
+                onPick: (item) => _ask(item.question, item),
+                onContactSupport: widget.onContactSupport,
               ),
-              SafeArea(
-                top: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-                  child: Row(children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _input,
-                        maxLength: 200,
-                        textInputAction: TextInputAction.send,
-                        onSubmitted: (_) => _send(),
-                        decoration: const InputDecoration(hintText: 'Ask Zay anything…', counterText: ''),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton.filled(onPressed: _typing ? null : _send, tooltip: 'Send', icon: const Icon(Icons.send)),
-                  ]),
-                ),
-              ),
-            ]);
-          },
-        ),
-      );
+            ),
+          ),
+          widget.compact ? composer : SafeArea(top: false, child: composer),
+        ]);
+      },
+    );
+  }
 }
 
 class _Bubble extends StatelessWidget {
@@ -564,10 +784,11 @@ class _Bubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final mine = !message.fromBot;
+    final botSurface = ZayloColors.isDark ? ZayloColors.sand : const Color(0xFFF5F0EA);
     final bubble = Container(
-      padding: message.typing ? const EdgeInsets.symmetric(horizontal: 14, vertical: 14) : const EdgeInsets.all(12),
+      padding: message.typing ? const EdgeInsets.symmetric(horizontal: 14, vertical: 14) : const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: mine ? ZayloColors.ink : ZayloColors.ink.withValues(alpha: .06),
+        color: mine ? ZayloColors.ink : botSurface,
         borderRadius: BorderRadius.only(
           topLeft: const Radius.circular(16),
           topRight: const Radius.circular(16),
@@ -581,14 +802,23 @@ class _Bubble extends StatelessWidget {
               if (message.opener != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 4),
-                  child: Text(message.opener!, style: TextStyle(fontWeight: FontWeight.w800, color: ZayloColors.ink)),
+                  child: Text(
+                    message.opener!,
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: ZayloColors.ink),
+                  ),
                 ),
-              Text(message.text, style: TextStyle(color: mine ? ZayloColors.white : ZayloColors.ink)),
+              Text(message.text, style: TextStyle(color: mine ? ZayloColors.white : ZayloColors.ink, height: 1.4)),
               if (message.suggestions.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Wrap(spacing: 6, runSpacing: 6, children: [
                   for (final item in message.suggestions)
-                    ActionChip(label: Text(item.question, style: const TextStyle(fontSize: 12)), onPressed: () => onPick(item)),
+                    ActionChip(
+                      label: Text(item.question, style: const TextStyle(fontSize: 12)),
+                      shape: const StadiumBorder(),
+                      backgroundColor: ZayloColors.white,
+                      side: BorderSide(color: ZayloColors.line),
+                      onPressed: () => onPick(item),
+                    ),
                 ]),
               ],
               if (message.offerSupport) ...[

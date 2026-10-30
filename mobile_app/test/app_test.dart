@@ -20,6 +20,7 @@ import 'package:zaylo_mobile/components/chat/delivery_chat.dart';
 import 'package:zaylo_mobile/components/chat/typing_dots.dart';
 import 'package:zaylo_mobile/components/complaints.dart';
 import 'package:zaylo_mobile/components/policies.dart';
+import 'package:zaylo_mobile/components/zay_avatar.dart';
 import 'package:zaylo_mobile/features/buyer/checkout/checkout_screen.dart';
 import 'package:zaylo_mobile/features/buyer/orders/order_detail_screen.dart';
 import 'package:zaylo_mobile/features/buyer/home/widgets/home_header.dart';
@@ -149,6 +150,18 @@ class FakeApi extends BuyerApi {
 
   @override
   Future<int> supportUnreadCount() async => 0;
+
+  @override
+  Future<FaqData> faq() async => FaqData.fromJson({
+        'greeting': "Hi! I'm Zay, your ZAYLO helper.",
+        'items': [
+          {
+            'q': 'How do I track my order?',
+            'a': 'Open Account > My orders to follow your parcel.',
+            'keywords': ['track', 'order'],
+          },
+        ],
+      });
 
   @override
   Future<CheckoutQuote> quote(List<int> cartItemIds, {String? voucherCode}) async => CheckoutQuote.fromJson({
@@ -1257,25 +1270,41 @@ void main() {
 
   group('floating chat bubble', () {
     Finder bubble() => find.byKey(const ValueKey('chat-head'));
+    Finder panel() => find.byKey(const ValueKey('faq-bot-panel'));
+    Finder teaser() => find.byKey(const ValueKey('faq-bot-teaser'));
 
-    testWidgets('floats over the shop with the unread count and opens Messages', (tester) async {
+    testWidgets('floats over the shop and Messages with Zay and opens the floating chatbot panel', (tester) async {
       final semantics = tester.ensureSemantics();
       await pumpApp(tester, token: 'stored-token');
       expect(bubble(), findsOneWidget);
-      expect(find.descendant(of: bubble(), matching: find.text('3')), findsOneWidget, reason: 'unread badge');
-      expect(find.bySemanticsLabel(RegExp('^Open messages, 3 unread')), findsOneWidget,
+      expect(find.descendant(of: bubble(), matching: find.byType(ZayAvatar)), findsOneWidget,
+          reason: 'shows the Zay model instead of a message chat bubble icon');
+      expect(find.descendant(of: bubble(), matching: find.byIcon(Icons.chat_bubble_rounded)), findsNothing);
+      expect(find.bySemanticsLabel(RegExp('^Ask Zay, open ZAYLO help')), findsOneWidget,
           reason: 'screen readers hear it too');
       semantics.dispose();
 
-      await tester.tap(bubble());
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
+      // Opening Messages shows the seller inbox with the floating Zay chatbot still available.
+      await tester.tap(find.descendant(of: find.byType(HomeTopBar), matching: find.byTooltip('Messages, 3 unread')));
+      await tester.pumpAndSettle();
       expect(find.byType(SellerInboxScreen), findsOneWidget);
       expect(find.text('Happy Heels'), findsOneWidget);
-      expect(bubble(), findsNothing, reason: 'it steps aside inside Messages');
+      expect(bubble(), findsOneWidget, reason: 'Zay floats on Messages too');
 
+      // Tapping Zay opens the floating chatbot panel right on screen.
+      await tester.tap(bubble());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(seconds: 2));
+      expect(panel(), findsOneWidget);
+      expect(find.text('Zay · ZAYLO Help'), findsOneWidget);
+      expect(find.text("Hi! I'm Zay, your ZAYLO helper."), findsOneWidget);
+
+      // Closing the panel keeps the floating Zay button on screen.
+      await tester.tap(find.byTooltip('Close help'));
+      await tester.pumpAndSettle();
       await tester.pageBack();
-      await tester.pumpAndSettle(); // let the page close; the bubble returns the frame after
+      await tester.pumpAndSettle();
       expect(find.byType(SellerInboxScreen), findsNothing);
       expect(bubble(), findsOneWidget);
     });
@@ -1286,7 +1315,7 @@ void main() {
       // The close target sits at the bottom centre while dragging.
       final size = tester.view.physicalSize / tester.view.devicePixelRatio;
       final gesture = await tester.startGesture(start);
-      await gesture.moveBy(const Offset(-40, 0));
+      await gesture.moveBy(const Offset(40, 0));
       await tester.pump();
       expect(find.byIcon(Icons.close_rounded), findsOneWidget);
       await gesture.moveTo(Offset(size.width / 2, size.height - 72));
@@ -1299,13 +1328,14 @@ void main() {
       // Opening Messages brings it back, as on the website.
       await tester.tap(find.descendant(of: find.byType(HomeTopBar), matching: find.byTooltip('Messages, 3 unread')));
       await tester.pumpAndSettle();
+      expect(bubble(), findsOneWidget);
       await tester.pageBack();
       await tester.pumpAndSettle();
       expect(bubble(), findsOneWidget);
     });
 
-    testWidgets('shows typing dots beside the head while a seller types, and opens that chat', (tester) async {
-      final api = FakeApi();
+    testWidgets('waves with a teaser bubble and steps aside inside an open seller chat', (tester) async {
+      final api = FakeApi()..sellerTyping = true;
       final tokens = MemoryTokenStore();
       await tokens.write('stored-token');
       final state = AppState(api: api, tokens: tokens);
@@ -1315,37 +1345,32 @@ void main() {
       await tester.pumpWidget(ZayloApp(state: state, theme: ThemeController(store: MemoryThemeModeStore())));
       await state.restore();
       await tester.pump();
-      final dots = find.byKey(const ValueKey('chat-head-typing'));
-      expect(dots, findsNothing);
+      expect(teaser(), findsNothing);
 
-      // The seller starts typing on the website: the next check shows the dots.
-      api.typingNow.add({'conversation_id': 5, 'name': 'Happy Heels'});
-      await tester.pump(const Duration(seconds: 3));
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(dots, findsOneWidget);
-      expect(find.descendant(of: dots, matching: find.byType(TypingDots)), findsOneWidget);
-      expect(tester.getCenter(dots).dx, lessThan(tester.getCenter(bubble()).dx),
-          reason: 'beside the head, toward the middle');
+      // After the teaser delay, Zay waves and offers a hand.
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pump(const Duration(milliseconds: 350));
+      expect(teaser(), findsOneWidget);
+      expect(find.text("Hi! I'm Zay. Need a hand?"), findsOneWidget);
 
-      // ...and they go when the seller stops.
-      api.typingNow.clear();
-      await tester.pump(const Duration(seconds: 3));
+      // Dismissing the teaser hides it.
+      await tester.tap(find.descendant(of: teaser(), matching: find.byTooltip('Dismiss')));
       await tester.pump();
-      expect(dots, findsNothing);
+      expect(teaser(), findsNothing);
 
-      // Tapping while someone types opens straight into that conversation, which shows its own typing bubble.
-      api.typingNow.add({'conversation_id': 5, 'name': 'Happy Heels'});
-      api.sellerTyping = true;
-      await tester.pump(const Duration(seconds: 3));
-      await tester.pump(const Duration(milliseconds: 300));
-      await tester.tap(bubble());
+      // Inside an active seller conversation, Zay steps aside so the composer has full room.
+      tester.state<NavigatorState>(find.byType(Navigator).first).push(
+            MaterialPageRoute(
+              builder: (_) => const SellerChatScreen(conversation: SellerConversation(id: 5, name: 'Happy Heels')),
+            ),
+          );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.byType(SellerChatScreen), findsOneWidget);
       expect(find.text('Yes, we have 3 left.'), findsOneWidget);
       expect(find.text('Happy Heels is typing…'), findsOneWidget);
       expect(find.descendant(of: find.byType(TypingIndicator), matching: find.byType(TypingDots)), findsOneWidget);
-      expect(bubble(), findsNothing, reason: 'the chat shows its own typing indicator');
+      expect(bubble(), findsNothing, reason: 'steps aside inside an active chat thread');
     });
 
     testWidgets('is not shown to guests', (tester) async {

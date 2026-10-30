@@ -3,45 +3,43 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import 'package:zaylo_mobile/api/api_exception.dart';
-import 'package:zaylo_mobile/components/chat/typing_dots.dart';
-import 'package:zaylo_mobile/features/buyer/messages/seller_chat_screen.dart';
-import 'package:zaylo_mobile/features/buyer/messages/seller_inbox_screen.dart';
-import 'package:zaylo_mobile/models/buyer/seller_chat_models.dart';
+import 'package:zaylo_mobile/components/help_bot.dart';
+import 'package:zaylo_mobile/components/zay_avatar.dart';
+import 'package:zaylo_mobile/features/buyer/account/support_screen.dart';
 import 'package:zaylo_mobile/state/app_state.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 
-/// A Messenger-style chat head floating over the buyer screens, like the
-/// website's chat bubble: it shows unread messages, can be dragged anywhere
-/// and glides to the nearest side, and is dismissed by dropping it on the ✕
-/// that appears at the bottom while dragging (opening Messages brings it back).
-/// After a chat it shows that person and reopens the conversation on tap.
+/// Zay, the floating help chatbot (matching partials/faq-bot.blade.php and
+/// public/css/faq-bot.css on the website): floats at the bottom corner with
+/// Zay's animated face, waves with a "Hi! I'm Zay. Need a hand?" teaser, opens
+/// a floating chat panel on tap, can be dragged to either side, and can be
+/// hidden by dropping it on the ✕ at the bottom.
 class ChatHeadOverlay extends StatefulWidget {
   const ChatHeadOverlay({
     super.key,
     required this.navigatorKey,
     required this.child,
     this.unreadPoll = const Duration(seconds: 15),
-    this.typingPoll = const Duration(seconds: 3),
+    this.teaserDelay = const Duration(seconds: 4),
   });
 
   /// The app's navigator; the overlay sits above it, outside its routes.
   final GlobalKey<NavigatorState> navigatorKey;
   final Widget child;
 
-  /// How often the unread badge checks for new messages while the app is open.
+  /// How often the top-bar Messages badge checks for new seller messages.
   final Duration unreadPoll;
 
-  /// How often the head checks whether someone is typing to the buyer (the website's bubble checks as often).
-  final Duration typingPoll;
+  /// How long after sign-in before Zay waves and shows the teaser bubble.
+  final Duration teaserDelay;
 
   @override
   State<ChatHeadOverlay> createState() => _ChatHeadOverlayState();
 }
 
 class _ChatHeadOverlayState extends State<ChatHeadOverlay> with TickerProviderStateMixin, WidgetsBindingObserver {
-  static const _size = 58.0;
-  static const _edge = 10.0;
+  static const _size = 62.0;
+  static const _edge = 16.0;
 
   /// Clear of the floating bottom navigation bar.
   static const _bottomClearance = 104.0;
@@ -49,44 +47,56 @@ class _ChatHeadOverlayState extends State<ChatHeadOverlay> with TickerProviderSt
   Offset? _position;
   bool _dragging = false;
   bool _overTarget = false;
-  int _lastUnread = 0;
+  bool _panelOpen = false;
+  bool _panelActivated = false;
+  bool _teaserVisible = false;
+  bool _teaserSeen = false;
+  int _teaserTicks = 0;
+  ZayMood _mood = ZayMood.waving;
+
   Timer? _poll;
+  Timer? _teaserPoll;
 
-  /// People typing to the buyer right now; the head shows typing dots beside it.
-  List<ChatTyping> _typing = const [];
-  Timer? _typingPoll;
-  bool _checkingTyping = false;
-
-  /// Glides the head to the nearest side after a drag.
+  /// Glides Zay to the nearest side after a drag.
   late final AnimationController _snap;
   late final Animation<double> _snapCurve;
   Tween<Offset>? _snapTween;
 
-  /// A little bounce when a new message arrives.
-  late final AnimationController _bounce;
+  /// Smooth 280ms expansion and collapse for the floating chat panel.
+  late final AnimationController _panelController;
+  late final Animation<double> _panelAnimation;
 
   AppState get _app => AppScope.read(context);
 
   @override
   void initState() {
     super.initState();
-    // Created up front, not lazily: dispose() must never be the first to touch them.
     _snap = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
     _snapCurve = CurvedAnimation(parent: _snap, curve: Curves.easeOutCubic);
     _snap.addListener(() => setState(() => _position = _snapTween?.evaluate(_snapCurve)));
-    _bounce = AnimationController(vsync: this, duration: const Duration(milliseconds: 520));
+
+    _panelController = AnimationController(vsync: this, duration: const Duration(milliseconds: 280));
+    _panelAnimation = CurvedAnimation(
+      parent: _panelController,
+      curve: Curves.easeOut,
+      reverseCurve: Curves.easeIn,
+    );
+    _panelController.addStatusListener((_) {
+      if (mounted) setState(() {});
+    });
+
     WidgetsBinding.instance.addObserver(this);
     _poll = Timer.periodic(widget.unreadPoll, (_) => _app.refreshChatUnread());
-    _typingPoll = Timer.periodic(widget.typingPoll, (_) => _checkTyping());
+    _teaserPoll = Timer.periodic(widget.teaserDelay, (_) => _tickTeaser());
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _poll?.cancel();
-    _typingPoll?.cancel();
+    _teaserPoll?.cancel();
     _snap.dispose();
-    _bounce.dispose();
+    _panelController.dispose();
     super.dispose();
   }
 
@@ -95,72 +105,95 @@ class _ChatHeadOverlayState extends State<ChatHeadOverlay> with TickerProviderSt
     if (state == AppLifecycleState.resumed) {
       _app.refreshChatUnread();
       _poll ??= Timer.periodic(widget.unreadPoll, (_) => _app.refreshChatUnread());
-      _typingPoll ??= Timer.periodic(widget.typingPoll, (_) => _checkTyping());
     } else if (state == AppLifecycleState.paused) {
       _poll?.cancel();
       _poll = null;
-      _typingPoll?.cancel();
-      _typingPoll = null;
     }
   }
 
-  /// Asks only while the head is on screen; an open chat shows its own typing indicator.
-  Future<void> _checkTyping() async {
+  void _tickTeaser() {
+    if (!mounted) return;
     final app = _app;
-    final head = app.chatHead;
-    if (!app.signedIn || head.dismissed || head.hidden) {
-      if (_typing.isNotEmpty) setState(() => _typing = const []);
-      return;
-    }
-    if (_checkingTyping) return;
-    _checkingTyping = true;
-    try {
-      final typing = await app.api.chatTyping();
-      final changed = typing.map((t) => t.conversationId).join(',') != _typing.map((t) => t.conversationId).join(',');
-      if (mounted && changed) setState(() => _typing = typing);
-    } on ApiException {
-      // Offline: the next check tries again.
-    } finally {
-      _checkingTyping = false;
+    final visible = app.signedIn && !app.chatHead.dismissed && !app.chatHead.hidden;
+    if (!visible) return;
+    _teaserTicks++;
+    if (_teaserTicks == 1 && !_panelOpen && !_teaserSeen) {
+      setState(() {
+        _teaserVisible = true;
+        _mood = ZayMood.waving;
+      });
+    } else if (_teaserTicks == 2 && !_panelOpen) {
+      setState(() => _mood = ZayMood.idle);
+    } else if (_teaserTicks >= 3) {
+      _hideTeaser();
+      _teaserPoll?.cancel();
+      _teaserPoll = null;
     }
   }
 
-  String? get _typingLabel => switch (_typing.length) {
-        0 => null,
-        1 => '${_typing.first.name} is typing',
-        final count => '$count people are typing',
-      };
+  void _hideTeaser() {
+    _teaserSeen = true;
+    if (mounted && (_teaserVisible || _mood == ZayMood.waving)) {
+      setState(() {
+        _teaserVisible = false;
+        if (!_panelOpen) _mood = ZayMood.idle;
+      });
+    }
+  }
 
-  bool get _reduceMotion => MediaQuery.disableAnimationsOf(context);
+  bool get _reduceMotion => MediaQuery.maybeDisableAnimationsOf(context) ?? false;
 
   Rect _bounds(Size screen, EdgeInsets padding) => Rect.fromLTRB(
         _edge,
         padding.top + _edge,
-        screen.width - _size - _edge,
+        math.max(_edge, screen.width - _size - _edge),
         math.max(padding.top + _edge, screen.height - padding.bottom - _size - _bottomClearance),
       );
 
   Offset _targetCenter(Size screen, EdgeInsets padding) => Offset(screen.width / 2, screen.height - padding.bottom - 72);
 
-  Future<void> _open() async {
+  void _togglePanel() {
+    if (_panelOpen) {
+      _closePanel();
+    } else {
+      _openPanel();
+    }
+  }
+
+  void _openPanel() {
+    _hideTeaser();
+    setState(() {
+      _panelOpen = true;
+      _panelActivated = true;
+    });
+    if (_reduceMotion) {
+      _panelController.value = 1;
+    } else {
+      _panelController.forward();
+    }
+  }
+
+  void _closePanel() {
+    if (!_panelOpen) return;
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() => _panelOpen = false);
+    if (_reduceMotion) {
+      _panelController.value = 0;
+    } else {
+      _panelController.reverse();
+    }
+  }
+
+  void _openSupport() {
+    _closePanel();
     final navigator = widget.navigatorKey.currentState;
     if (navigator == null) return;
-    final head = _app.chatHead;
-    // Someone typing right now takes priority: open straight into that chat.
-    final typing = _typing.isNotEmpty ? _typing.first : null;
-    final conversation = typing?.conversationId ?? head.conversationId;
-    final title = typing?.name ?? head.partnerName;
-    setState(() => _typing = const []);
-    await navigator.push(MaterialPageRoute(
-      builder: (_) => conversation != null
-          ? SellerChatScreen(conversation: SellerConversation(id: conversation, name: title ?? 'Seller'))
-          : const SellerInboxScreen(),
-    ));
-    if (mounted) _app.refreshChatUnread();
+    navigator.push(MaterialPageRoute(builder: (_) => const SupportScreen()));
   }
 
   void _dragStart(DragStartDetails details) {
     _snap.stop();
+    if (_panelOpen) _closePanel();
     setState(() => _dragging = true);
   }
 
@@ -178,9 +211,11 @@ class _ChatHeadOverlayState extends State<ChatHeadOverlay> with TickerProviderSt
       setState(() {
         _dragging = false;
         _overTarget = false;
-        _position = null; // back to its default spot when it returns
-        _typing = const [];
+        _position = null;
+        _panelOpen = false;
+        _teaserVisible = false;
       });
+      _panelController.value = 0;
       _app.chatHead.dismiss();
       final messenger = ScaffoldMessenger.maybeOf(widget.navigatorKey.currentContext ?? context);
       messenger
@@ -191,9 +226,8 @@ class _ChatHeadOverlayState extends State<ChatHeadOverlay> with TickerProviderSt
         ));
       return;
     }
-    // Glide to the nearest side, like Messenger.
     final bounds = _bounds(screen, padding);
-    final current = _position ?? bounds.bottomRight;
+    final current = _position ?? Offset(bounds.left, bounds.bottom);
     final goal = Offset(
       current.dx + _size / 2 < screen.width / 2 ? bounds.left : bounds.right,
       current.dy.clamp(bounds.top, bounds.bottom),
@@ -210,224 +244,255 @@ class _ChatHeadOverlayState extends State<ChatHeadOverlay> with TickerProviderSt
   @override
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
-    // A new unread message makes the head bounce (started after this frame is built).
-    if (app.chatUnread > _lastUnread && !_reduceMotion) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _bounce.forward(from: 0);
-      });
-    }
-    _lastUnread = app.chatUnread;
 
     return ListenableBuilder(
       listenable: app.chatHead,
       builder: (context, _) {
         final head = app.chatHead;
         final visible = app.signedIn && !head.dismissed && !head.hidden;
+        if (!visible && _panelOpen) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _panelOpen) _closePanel();
+          });
+        }
+
         return LayoutBuilder(builder: (context, constraints) {
           final screen = constraints.biggest;
           final padding = MediaQuery.paddingOf(context);
+          final viewInsets = MediaQuery.viewInsetsOf(context);
           final bounds = _bounds(screen, padding);
-          final position = _position ?? Offset(bounds.right, bounds.top + (bounds.height) * 0.55);
+          // Default to the bottom-left like .faq-bot__toggle on the website.
+          final position = _position ?? Offset(bounds.left, bounds.bottom);
           final target = _targetCenter(screen, padding);
-          // The typing dots sit on the side of the head that faces the middle of the screen.
-          final dotsOnLeft = position.dx + _size / 2 > screen.width / 2;
-          final headTop = position.dy + 4;
+          final onLeft = position.dx + _size / 2 <= screen.width / 2;
 
-          // Keys keep the head's gesture alive while the close target appears and disappears mid-drag.
-          return Stack(children: [
-            widget.child,
-            if (visible && _dragging)
-              Positioned(
-                key: const ValueKey('chat-head-dismiss-target'),
-                left: target.dx - 32,
-                top: target.dy - 32,
-                child: IgnorePointer(child: _DismissTarget(active: _overTarget)),
-              ),
-            if (visible && _typing.isNotEmpty && !_dragging)
-              Positioned(
-                key: const ValueKey('chat-head-typing'),
-                left: dotsOnLeft ? position.dx - _TypingBubble.width - 4 : position.dx + _size + 14,
-                top: headTop + _size / 2 - _TypingBubble.height / 2,
-                child: IgnorePointer(child: _TypingBubble(tailOnRight: dotsOnLeft)),
-              ),
-            if (visible)
-              Positioned(
-                key: const ValueKey('chat-head-position'),
-                left: position.dx,
-                top: position.dy,
-                child: GestureDetector(
-                  key: const ValueKey('chat-head'),
-                  onTap: _open,
-                  onPanStart: _dragStart,
-                  onPanUpdate: (details) {
-                    _position ??= position;
-                    _dragUpdate(details, screen, padding);
-                  },
-                  onPanEnd: (_) => _dragEnd(screen, padding),
-                  child: AnimatedBuilder(
-                    animation: _bounce,
-                    builder: (context, child) =>
-                        Transform.scale(scale: 1 + 0.16 * math.sin(math.pi * _bounce.value), child: child),
-                    child: _ChatHead(
-                      unread: app.chatUnread,
-                      partnerName: head.partnerName,
-                      typingLabel: _typingLabel,
+          final panelWidth = math.min(370.0, math.max(260.0, screen.width - 32));
+          final panelLeft = (onLeft
+                  ? position.dx.clamp(16.0, math.max(16.0, screen.width - panelWidth - 16))
+                  : (position.dx + _size - panelWidth).clamp(16.0, math.max(16.0, screen.width - panelWidth - 16)))
+              .toDouble();
+          final bottomAnchor = math.max(
+            screen.height - position.dy + 12,
+            viewInsets.bottom + padding.bottom + 12,
+          );
+          final availableHeight = screen.height - padding.top - bottomAnchor - 16;
+          final panelHeight = math.min(480.0, math.max(240.0, availableHeight));
+          final showPanel = visible && (_panelOpen || !_panelController.isDismissed);
+
+          return Overlay.wrap(
+            child: Stack(children: [
+              widget.child,
+              if (visible && _dragging)
+                Positioned(
+                  key: const ValueKey('chat-head-dismiss-target'),
+                  left: target.dx - 32,
+                  top: target.dy - 32,
+                  child: IgnorePointer(child: _DismissTarget(active: _overTarget)),
+                ),
+              if (visible && _teaserVisible && !_panelOpen && !_dragging)
+                Positioned(
+                  key: const ValueKey('faq-bot-teaser'),
+                  left: onLeft ? position.dx : null,
+                  right: onLeft ? null : screen.width - (position.dx + _size),
+                  bottom: screen.height - position.dy + 10,
+                  child: _TeaserBubble(
+                    onLeft: onLeft,
+                    onOpen: _openPanel,
+                    onDismiss: _hideTeaser,
+                  ),
+                ),
+              if (_panelActivated)
+                Positioned(
+                  key: const ValueKey('faq-bot-panel'),
+                  left: panelLeft,
+                  bottom: bottomAnchor,
+                  width: panelWidth,
+                  height: panelHeight,
+                  child: Offstage(
+                    offstage: !showPanel,
+                    child: ExcludeSemantics(
+                      excluding: !_panelOpen,
+                      child: ExcludeFocus(
+                        excluding: !_panelOpen,
+                        child: IgnorePointer(
+                          ignoring: !_panelOpen,
+                          child: AnimatedBuilder(
+                            animation: _panelAnimation,
+                            builder: (context, child) {
+                              final t = _panelAnimation.value;
+                              return Opacity(
+                                opacity: t.clamp(0.0, 1.0),
+                                child: Transform.translate(
+                                  offset: Offset(0, 14 * (1 - t)),
+                                  child: Transform.scale(
+                                    scale: 0.96 + 0.04 * t,
+                                    alignment: onLeft ? Alignment.bottomLeft : Alignment.bottomRight,
+                                    child: child,
+                                  ),
+                                ),
+                              );
+                            },
+                            child: HelpBotPanel(
+                              api: app.api,
+                              active: _panelActivated,
+                              onClose: _closePanel,
+                              onContactSupport: _openSupport,
+                              onMoodChanged: (mood) {
+                                if (mounted && _mood != mood) setState(() => _mood = mood);
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              if (visible)
+                Positioned(
+                  key: const ValueKey('chat-head-position'),
+                  left: position.dx,
+                  top: position.dy,
+                  child: GestureDetector(
+                    key: const ValueKey('chat-head'),
+                    onTap: _togglePanel,
+                    onPanStart: _dragStart,
+                    onPanUpdate: (details) {
+                      _position ??= position;
+                      _dragUpdate(details, screen, padding);
+                    },
+                    onPanEnd: (_) => _dragEnd(screen, padding),
+                    child: _ZayToggleButton(
+                      mood: _mood,
+                      panelOpen: _panelOpen,
                       dragging: _dragging,
                       size: _size,
                     ),
                   ),
                 ),
-              ),
-          ]);
+            ]),
+          );
         });
       },
     );
   }
 }
 
-class _ChatHead extends StatelessWidget {
-  const _ChatHead({
-    required this.unread,
-    required this.partnerName,
+/// The circular floating button (.faq-bot__toggle on the website) holding Zay.
+class _ZayToggleButton extends StatelessWidget {
+  const _ZayToggleButton({
+    required this.mood,
+    required this.panelOpen,
     required this.dragging,
     required this.size,
-    this.typingLabel,
   });
 
-  final int unread;
-  final String? partnerName;
+  final ZayMood mood;
+  final bool panelOpen;
   final bool dragging;
   final double size;
 
-  /// "Ana is typing", while someone types to the buyer.
-  final String? typingLabel;
-
   @override
-  Widget build(BuildContext context) {
-    final partner = partnerName;
-    final label = partner == null ? 'Open messages' : 'Open chat with $partner';
-    final withUnread = unread > 0 ? '$label, $unread unread' : label;
-    return Semantics(
-      button: true,
-      liveRegion: typingLabel != null,
-      label: typingLabel == null ? withUnread : '$withUnread. $typingLabel',
-      hint: 'Drag to move. Drop on the close button at the bottom to hide.',
-      child: Material(
-        type: MaterialType.transparency,
-        child: SizedBox(
-          width: size + 8,
-          height: size + 8,
-          child: Stack(clipBehavior: Clip.none, children: [
-            Positioned(
-              left: 4,
-              top: 4,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                width: size,
-                height: size,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: partner == null ? ZayloColors.ink : ZayloColors.sand,
-                  border: Border.all(color: ZayloColors.white, width: 2.5),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0x40000000),
-                      blurRadius: dragging ? 18 : 10,
-                      offset: Offset(0, dragging ? 8 : 4),
-                    ),
-                  ],
-                ),
-                alignment: Alignment.center,
-                child: partner == null
-                    ? Icon(Icons.chat_bubble_rounded, color: ZayloColors.white, size: 26)
-                    : Text(_initials(partner),
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: ZayloColors.ink)),
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        toggled: panelOpen,
+        label: panelOpen ? 'Close ZAYLO help' : 'Ask Zay, open ZAYLO help',
+        hint: 'Drag to move. Drop on the close button at the bottom to hide.',
+        child: Material(
+          type: MaterialType.transparency,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+            width: size,
+            height: size,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: ZayloColors.isDark ? ZayloColors.sand : const Color(0xFFF5F0EA),
+              border: Border.all(
+                color: ZayloColors.isDark ? ZayloColors.paper : const Color(0xFFFFFDFB),
+                width: 3,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0x38241A16),
+                  blurRadius: dragging ? 28 : 22,
+                  offset: Offset(0, dragging ? 10 : 6),
+                ),
+              ],
             ),
-            // The person's face carries a small chat mark, as on the website.
-            if (partner != null)
-              Positioned(
-                right: 0,
-                bottom: 0,
-                child: Container(
-                  width: 22,
-                  height: 22,
-                  decoration: BoxDecoration(
-                    color: ZayloColors.ink,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: ZayloColors.white, width: 2),
-                  ),
-                  child: Icon(Icons.chat_bubble_rounded, color: ZayloColors.white, size: 11),
-                ),
-              ),
-            if (unread > 0)
-              Positioned(
-                right: 0,
-                top: 0,
-                child: Container(
-                  constraints: const BoxConstraints(minWidth: 22),
-                  height: 22,
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE53935),
-                    borderRadius: BorderRadius.circular(11),
-                    border: Border.all(color: ZayloColors.white, width: 2),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(unread > 99 ? '99+' : '$unread',
-                      style: TextStyle(color: ZayloColors.white, fontSize: 11, fontWeight: FontWeight.w800, height: 1)),
-                ),
-              ),
-          ]),
-        ),
-      ),
-    );
-  }
-
-  static String _initials(String name) {
-    final parts = name.trim().split(RegExp(r'\s+')).where((part) => part.isNotEmpty).toList();
-    if (parts.isEmpty) return '?';
-    return (parts.first[0] + (parts.length > 1 ? parts.last[0] : '')).toUpperCase();
-  }
-}
-
-/// A little speech bubble of typing dots beside the head, like Messenger's chat heads.
-class _TypingBubble extends StatelessWidget {
-  const _TypingBubble({required this.tailOnRight});
-
-  static const width = 62.0;
-  static const height = 34.0;
-
-  /// The pointed corner faces the head.
-  final bool tailOnRight;
-
-  @override
-  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
-        tween: Tween(begin: MediaQuery.disableAnimationsOf(context) ? 1 : 0.8, end: 1),
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOutBack,
-        builder: (context, scale, child) => Transform.scale(scale: scale, child: child),
-        child: Container(
-          width: width,
-          height: height,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: ZayloColors.white,
-            border: Border.all(color: ZayloColors.line),
-            borderRadius: BorderRadius.only(
-              topLeft: const Radius.circular(17),
-              topRight: const Radius.circular(17),
-              bottomLeft: Radius.circular(tailOnRight ? 17 : 4),
-              bottomRight: Radius.circular(tailOnRight ? 4 : 17),
+            child: ZayAvatar(
+              size: 46,
+              mood: mood,
+              float: !panelOpen && !dragging,
             ),
-            boxShadow: const [BoxShadow(color: Color(0x33241A16), blurRadius: 14, offset: Offset(0, 4))],
           ),
-          child: TypingDots(color: ZayloColors.taupe),
         ),
       );
 }
 
-/// The ✕ that appears at the bottom while dragging; it grows when the head is over it.
+/// The speech bubble above Zay ("Hi! I'm Zay. Need a hand?"), matching .faq-bot__teaser.
+class _TeaserBubble extends StatelessWidget {
+  const _TeaserBubble({
+    required this.onLeft,
+    required this.onOpen,
+    required this.onDismiss,
+  });
+
+  final bool onLeft;
+  final VoidCallback onOpen;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
+        tween: Tween(begin: MediaQuery.maybeDisableAnimationsOf(context) ?? false ? 1 : 0, end: 1),
+        duration: const Duration(milliseconds: 320),
+        curve: Curves.easeOut,
+        builder: (context, value, child) => Opacity(
+          opacity: value,
+          child: Transform.translate(offset: Offset(0, 6 * (1 - value)), child: child),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
+            decoration: BoxDecoration(
+              color: ZayloColors.white,
+              border: Border.all(color: ZayloColors.line),
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(14),
+                topRight: const Radius.circular(14),
+                bottomLeft: Radius.circular(onLeft ? 4 : 14),
+                bottomRight: Radius.circular(onLeft ? 14 : 4),
+              ),
+              boxShadow: const [BoxShadow(color: Color(0x26241A16), blurRadius: 24, offset: Offset(0, 8))],
+            ),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              GestureDetector(
+                onTap: onOpen,
+                child: Text(
+                  "Hi! I'm Zay. Need a hand?",
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: ZayloColors.ink),
+                ),
+              ),
+              const SizedBox(width: 6),
+              SizedBox(
+                width: 24,
+                height: 24,
+                child: IconButton(
+                  padding: EdgeInsets.zero,
+                  iconSize: 16,
+                  tooltip: 'Dismiss',
+                  onPressed: onDismiss,
+                  icon: Icon(Icons.close_rounded, color: ZayloColors.muted),
+                ),
+              ),
+            ]),
+          ),
+        ),
+      );
+}
+
+/// The ✕ that appears at the bottom while dragging; it grows when Zay is over it.
 class _DismissTarget extends StatelessWidget {
   const _DismissTarget({required this.active});
 
