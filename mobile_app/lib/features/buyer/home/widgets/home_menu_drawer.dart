@@ -10,6 +10,7 @@ class HomeMenuDrawer extends StatelessWidget {
     required this.signedIn,
     required this.onCatalog,
     required this.onOrders,
+    required this.onMessages,
     required this.onSignIn,
     required this.onRegister,
     required this.onRiderLogin,
@@ -18,6 +19,7 @@ class HomeMenuDrawer extends StatelessWidget {
   final bool signedIn;
   final void Function(String? category, String? title) onCatalog;
   final VoidCallback onOrders;
+  final VoidCallback onMessages;
   final VoidCallback onSignIn;
   final VoidCallback onRegister;
   final VoidCallback onRiderLogin;
@@ -63,6 +65,7 @@ class HomeMenuDrawer extends StatelessWidget {
                   onTap: () => onCatalog('beauty_health', 'Beauty & Health')),
               const Divider(),
               ListTile(leading: const Icon(Icons.local_shipping_outlined), title: const Text('My orders'), onTap: onOrders),
+              ListTile(leading: const Icon(Icons.chat_bubble_outline), title: const Text('Messages'), onTap: onMessages),
               if (!signedIn) ...[
                 ListTile(leading: const Icon(Icons.person_outline), title: const Text('Log in'), onTap: onSignIn),
                 ListTile(

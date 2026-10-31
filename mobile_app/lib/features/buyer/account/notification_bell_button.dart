@@ -49,6 +49,7 @@ class _NotificationBellButtonState extends State<NotificationBellButton> {
 
   @override
   Widget build(BuildContext context) => IconButton(
+        visualDensity: VisualDensity.compact,
         tooltip: _unread > 0 ? 'Notifications, $_unread unread' : 'Notifications',
         onPressed: _open,
         icon: Badge(

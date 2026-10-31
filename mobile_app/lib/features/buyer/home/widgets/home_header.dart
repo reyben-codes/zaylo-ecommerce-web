@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'package:zaylo_mobile/auth/buyer/login_screen.dart';
 import 'package:zaylo_mobile/components/layout.dart';
 import 'package:zaylo_mobile/components/theme_toggle.dart';
 import 'package:zaylo_mobile/features/buyer/account/notification_bell_button.dart';
@@ -354,20 +355,24 @@ class _HeroDots extends StatelessWidget {
       ]);
 }
 
-/// The chat icon in the Home top bar, with a badge for unread seller messages. Signed-in buyers only.
+/// The chat icon in the Home top bar, with a badge for unread seller messages. Guests are asked to sign in first.
 class _MessagesButton extends StatelessWidget {
   const _MessagesButton();
 
   @override
   Widget build(BuildContext context) {
     final state = AppScope.of(context);
-    if (!state.signedIn) return const SizedBox.shrink();
-    final unread = state.chatUnread;
+    final unread = state.signedIn ? state.chatUnread : 0;
     return IconButton(
+      visualDensity: VisualDensity.compact,
       tooltip: unread > 0 ? 'Messages, $unread unread' : 'Messages',
       onPressed: () => Navigator.of(context)
-          .push(MaterialPageRoute(builder: (_) => const SellerInboxScreen()))
-          .then((_) => state.refreshChatUnread()),
+          .push(MaterialPageRoute(
+            builder: (_) => state.signedIn ? const SellerInboxScreen() : const LoginScreen(),
+          ))
+          .then((_) {
+        if (state.signedIn) state.refreshChatUnread();
+      }),
       icon: Badge(
         isLabelVisible: unread > 0,
         label: Text(unread > 99 ? '99+' : '$unread'),

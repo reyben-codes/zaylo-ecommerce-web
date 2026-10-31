@@ -1512,11 +1512,15 @@ void main() {
       expect(home().pixels, 0);
     });
 
-    testWidgets('guests see no chat head or messages icon', (tester) async {
+    testWidgets('guests see no chat head and tapping the messages icon asks to sign in', (tester) async {
       await pumpApp(tester);
 
       expect(find.bySemanticsLabel(RegExp(r'^Open messages')), findsNothing);
-      expect(find.descendant(of: find.byType(HomeTopBar), matching: find.byTooltip('Messages')), findsNothing);
+      final messagesButton = find.descendant(of: find.byType(HomeTopBar), matching: find.byTooltip('Messages'));
+      expect(messagesButton, findsOneWidget);
+      await tester.tap(messagesButton);
+      await tester.pumpAndSettle();
+      expect(find.byType(LoginScreen), findsOneWidget);
     });
 
     testWidgets('checkout asks for an approved ID before placing an order', (tester) async {

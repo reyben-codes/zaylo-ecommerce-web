@@ -13,6 +13,7 @@ import 'package:zaylo_mobile/features/buyer/catalog/search_field.dart';
 import 'package:zaylo_mobile/features/buyer/home/widgets/home_header.dart';
 import 'package:zaylo_mobile/features/buyer/home/widgets/home_menu_drawer.dart';
 import 'package:zaylo_mobile/features/buyer/home/widgets/home_sections.dart';
+import 'package:zaylo_mobile/features/buyer/messages/seller_inbox_screen.dart';
 import 'package:zaylo_mobile/features/buyer/orders/orders_screen.dart';
 import 'package:zaylo_mobile/models/buyer/catalog_models.dart';
 import 'package:zaylo_mobile/navigation/floating_nav_bar.dart';
@@ -83,6 +84,10 @@ class _StorefrontScreenState extends State<StorefrontScreen> {
         onOrders: () {
           Navigator.pop(context);
           state.signedIn ? _push(const OrdersScreen()) : _push(const LoginScreen());
+        },
+        onMessages: () {
+          Navigator.pop(context);
+          state.signedIn ? _push(const SellerInboxScreen()) : _push(const LoginScreen());
         },
         onSignIn: () {
           Navigator.pop(context);
