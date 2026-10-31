@@ -13,7 +13,7 @@ Returns because you changed your mind are not covered, unless the seller agrees 
 ## 2. How to file a complaint
 - Open the order in My Orders and choose Report a problem, or start from Help and support.
 - Pick the reason, describe what happened and attach up to 4 photos or files (5 MB each), such as the parcel, the label and the item.
-- File as soon as you notice the problem, ideally within 7 days of delivery. Complaints filed much later are harder to verify.
+- For damaged, defective, or incorrect items (wrong item, variation, or color), file your return request within 24 hours of delivery. After 24 hours from delivery, physical returns and replacements for damaged or incorrect products can no longer be accepted. Other issues (such as non-delivery or payment errors) should be reported before the 3-day automatic order confirmation.
 - Each order can have one complaint case. If you have more to add, reply in the same case.
 - Cancelled orders cannot have complaints, because nothing was charged or delivered.
 

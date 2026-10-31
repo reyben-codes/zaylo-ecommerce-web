@@ -82,6 +82,127 @@ class BuyerCourierAndReturnTest extends TestCase
         $showResponse->assertSee('Courier Handover Barcode');
     }
 
+    public function test_damaged_or_wrong_item_can_be_returned_within_24_hours_of_delivery(): void
+    {
+        $sellerUser = User::factory()->create(['role' => 'seller', 'status' => 'active']);
+        $shop = $sellerUser->sellers()->create(['name' => 'Shop 24h', 'slug' => 'shop-24h', 'status' => 'approved']);
+        $buyer = User::factory()->create(['role' => 'buyer', 'status' => 'active', 'email_verified_at' => now()]);
+
+        $order = Order::create([
+            'buyer_id' => $buyer->id,
+            'reference' => 'ZAY-24H-VALID',
+            'total_minor' => 85000,
+            'payment_method' => 'cod',
+            'shipping_address' => ['recipient' => 'Maria Santos', 'phone' => '09171234567', 'city' => 'Quezon City'],
+        ]);
+        SellerOrder::create([
+            'order_id' => $order->id,
+            'seller_id' => $shop->id,
+            'subtotal_minor' => 85000,
+            'shipping_fee_minor' => 0,
+            'commission_minor' => 8500,
+            'status' => 'delivered',
+            'delivered_at' => now()->subHours(5),
+        ]);
+
+        $this->assertTrue($order->isWithinReturnWindow());
+        $this->assertFalse($order->isReturnWindowExpired());
+
+        $this->actingAs($buyer)->post(route('buyer.disputes.store', $order), [
+            'category' => 'damaged',
+            'details' => 'The product arrived with cracked glass and missing power cables.',
+            'return_type' => 'return_refund',
+            'return_method' => 'pickup',
+            'return_courier' => 'zaylo_express',
+            'pickup_date' => today()->addDay()->toDateString(),
+            'pickup_slot' => 'morning',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('disputes', [
+            'order_id' => $order->id,
+            'category' => 'damaged',
+            'return_type' => 'return_refund',
+        ]);
+    }
+
+    public function test_damaged_or_wrong_item_cannot_be_returned_after_24_hours_of_delivery(): void
+    {
+        $sellerUser = User::factory()->create(['role' => 'seller', 'status' => 'active']);
+        $shop = $sellerUser->sellers()->create(['name' => 'Shop 24h Exp', 'slug' => 'shop-24h-exp', 'status' => 'approved']);
+        $buyer = User::factory()->create(['role' => 'buyer', 'status' => 'active', 'email_verified_at' => now()]);
+
+        $order = Order::create([
+            'buyer_id' => $buyer->id,
+            'reference' => 'ZAY-24H-EXPIRED',
+            'total_minor' => 85000,
+            'payment_method' => 'cod',
+            'shipping_address' => ['recipient' => 'Maria Santos', 'phone' => '09171234567', 'city' => 'Quezon City'],
+        ]);
+        SellerOrder::create([
+            'order_id' => $order->id,
+            'seller_id' => $shop->id,
+            'subtotal_minor' => 85000,
+            'shipping_fee_minor' => 0,
+            'commission_minor' => 8500,
+            'status' => 'delivered',
+            'delivered_at' => now()->subHours(25),
+        ]);
+
+        $this->assertFalse($order->isWithinReturnWindow());
+        $this->assertTrue($order->isReturnWindowExpired());
+
+        $response = $this->actingAs($buyer)->post(route('buyer.disputes.store', $order), [
+            'category' => 'damaged',
+            'details' => 'The product arrived with cracked glass and missing power cables.',
+            'return_type' => 'return_refund',
+            'return_method' => 'pickup',
+            'return_courier' => 'zaylo_express',
+            'pickup_date' => today()->addDay()->toDateString(),
+            'pickup_slot' => 'morning',
+        ]);
+
+        $response->assertSessionHasErrors('category');
+        $this->assertDatabaseMissing('disputes', ['order_id' => $order->id]);
+    }
+
+    public function test_mobile_api_rejects_return_after_24_hours_of_delivery(): void
+    {
+        $sellerUser = User::factory()->create(['role' => 'seller', 'status' => 'active']);
+        $shop = $sellerUser->sellers()->create(['name' => 'Shop Mobile 24h', 'slug' => 'shop-mobile-24h', 'status' => 'approved']);
+        $buyer = User::factory()->create(['role' => 'buyer', 'status' => 'active', 'email_verified_at' => now()]);
+        $token = $buyer->createToken('test');
+
+        $order = Order::create([
+            'buyer_id' => $buyer->id,
+            'reference' => 'ZAY-MOB-24H',
+            'total_minor' => 85000,
+            'payment_method' => 'cod',
+            'shipping_address' => ['recipient' => 'Maria Santos', 'phone' => '09171234567', 'city' => 'Quezon City'],
+        ]);
+        SellerOrder::create([
+            'order_id' => $order->id,
+            'seller_id' => $shop->id,
+            'subtotal_minor' => 85000,
+            'shipping_fee_minor' => 0,
+            'commission_minor' => 8500,
+            'status' => 'delivered',
+            'delivered_at' => now()->subHours(26),
+        ]);
+
+        $response = $this->withToken($token)->postJson("/api/mobile/orders/{$order->id}/complaint", [
+            'category' => 'wrong_item',
+            'details' => 'Received the wrong item delivered to my doorstep yesterday.',
+            'return_type' => 'return_refund',
+            'return_method' => 'pickup',
+            'pickup_date' => today()->addDay()->toDateString(),
+            'pickup_slot' => 'morning',
+        ]);
+
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors('category');
+        $this->assertDatabaseMissing('disputes', ['order_id' => $order->id]);
+    }
+
     public function test_logistics_partner_scans_return_parcel_and_advances_status(): void
     {
         $owner = User::factory()->create(['role' => 'logistics', 'status' => 'active', 'email_verified_at' => now()]);

@@ -63,6 +63,18 @@ class MobileComplaintController extends Controller
             'pickup_date.after_or_equal' => 'Choose today or a later day for the pickup.',
             'pickup_date.before_or_equal' => 'Choose a pickup day within the next two weeks.',
         ]);
+
+        // Returns for damages or wrong products must be filed within 24 hours of delivery
+        $isReturnRequest = in_array($data['category'], ['damaged', 'wrong_item'], true)
+            || ! empty($data['return_method'])
+            || in_array($data['return_type'] ?? null, ['return_refund', 'exchange'], true);
+
+        if ($isReturnRequest && $order->isReturnWindowExpired()) {
+            throw ValidationException::withMessages([
+                'category' => 'Return requests for damaged or incorrect items must be filed within 24 hours of delivery. The 24-hour return window for this order has expired.',
+            ]);
+        }
+
         $returnDetails = array_filter([
             'return_type' => $data['return_type'] ?? null,
             'return_method' => $data['return_method'] ?? null,

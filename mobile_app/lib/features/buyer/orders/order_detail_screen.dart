@@ -266,6 +266,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                       const SizedBox(height: 9),
                       _ComplaintCard(
                         complaint: order.complaint,
+                        canReturn: order.canReturn,
                         onOpen: order.complaint == null
                             ? () => _reportProblem(order)
                             : () => _openComplaint(order.complaint!.id),
@@ -373,9 +374,10 @@ class _ItemRow extends StatelessWidget {
 
 /// Report a problem with the order, or follow the complaint already filed.
 class _ComplaintCard extends StatelessWidget {
-  const _ComplaintCard({required this.complaint, required this.onOpen});
+  const _ComplaintCard({required this.complaint, this.canReturn = false, required this.onOpen});
 
   final OrderComplaint? complaint;
+  final bool canReturn;
   final VoidCallback onOpen;
 
   @override
@@ -384,12 +386,23 @@ class _ComplaintCard extends StatelessWidget {
     return SectionCard(
       padding: EdgeInsets.zero,
       child: ListTile(
-        leading: Icon(Icons.report_gmailerrorred_outlined, color: ZayloColors.ink),
-        title: Text(filed == null ? 'Report a problem' : 'Your complaint',
-            style: TextStyle(fontWeight: FontWeight.w700, color: ZayloColors.ink)),
+        leading: Icon(
+          filed != null
+              ? Icons.assignment_outlined
+              : (canReturn ? Icons.assignment_return_outlined : Icons.report_gmailerrorred_outlined),
+          color: ZayloColors.ink,
+        ),
+        title: Text(
+          filed == null
+              ? (canReturn ? 'Return / Refund (24h window active)' : 'Report a problem')
+              : 'Your complaint',
+          style: TextStyle(fontWeight: FontWeight.w700, color: ZayloColors.ink),
+        ),
         subtitle: Text(
           filed == null
-              ? 'Missing, damaged or wrong items, delivery or refund issues'
+              ? (canReturn
+                  ? 'Return damaged, defective, or incorrect items within 24 hours of delivery'
+                  : 'Report missing parcel, delivery error, or billing issue')
               : 'Follow the case and reply to the ZAYLO team',
           style: const TextStyle(fontSize: 12),
         ),
@@ -501,6 +514,51 @@ class _ReceiptCard extends StatelessWidget {
                       '${dateTimeLabel(order.autoConfirmAt!.toLocal())}. Not received? Report a problem before then.',
               style: const TextStyle(fontSize: 12),
             ),
+            if (order.canReturn && order.returnDeadline != null) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEFCE8),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFFEF08A)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.history_toggle_off, size: 16, color: Color(0xFF854D0E)),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        '24-Hour Return Window: Damaged or incorrect items can be returned until ${dateTimeLabel(order.returnDeadline!.toLocal())}.',
+                        style: const TextStyle(fontSize: 11.5, color: Color(0xFF854D0E), fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ] else if (order.returnDeadline != null && !order.canReturn) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline, size: 16, color: Color(0xFF64748B)),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'The 24-hour return window for damaged or wrong products closed on ${dateTimeLabel(order.returnDeadline!.toLocal())}.',
+                        style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,

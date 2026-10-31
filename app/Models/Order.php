@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Schema;
 
 class Order extends Model
@@ -122,5 +123,64 @@ class Order extends Model
     public static function usesLegacySchema(): bool
     {
         return Schema::hasColumn('orders', 'user_id');
+    }
+
+    /** When the order reached the buyer's hands. */
+    public function deliveredAt(): ?Carbon
+    {
+        if (static::usesLegacySchema()) {
+            $at = $this->delivered_at ?? $this->shipment?->delivered_at;
+            if ($at) {
+                return $at instanceof \Carbon\CarbonInterface ? Carbon::instance($at) : Carbon::parse($at);
+            }
+            if (in_array($this->status, ['delivered', 'completed'], true)) {
+                return $this->updated_at ? Carbon::instance($this->updated_at) : null;
+            }
+
+            return null;
+        }
+
+        $date = $this->sellerOrders()->whereNotNull('delivered_at')->max('delivered_at');
+        if ($date) {
+            return Carbon::parse($date);
+        }
+        if ($this->sellerOrders()->whereIn('status', ['delivered', 'completed'])->exists()) {
+            return $this->updated_at ? Carbon::instance($this->updated_at) : null;
+        }
+
+        return null;
+    }
+
+    /**
+     * Buyers can return damaged or wrong products within 24 hours of delivery.
+     * After this deadline, physical returns and damaged/wrong claims are closed.
+     */
+    public function returnDeadline(): ?Carbon
+    {
+        $delivered = $this->deliveredAt();
+
+        return $delivered ? $delivered->copy()->addHours(24) : null;
+    }
+
+    /** Whether the 24-hour return window for damaged or wrong products is currently active. */
+    public function isWithinReturnWindow(): bool
+    {
+        $delivered = $this->deliveredAt();
+        if (! $delivered) {
+            return false;
+        }
+
+        return now()->lte($delivered->copy()->addHours(24));
+    }
+
+    /** Whether the 24-hour return window has ended. */
+    public function isReturnWindowExpired(): bool
+    {
+        $delivered = $this->deliveredAt();
+        if (! $delivered) {
+            return false;
+        }
+
+        return now()->gt($delivered->copy()->addHours(24));
     }
 }

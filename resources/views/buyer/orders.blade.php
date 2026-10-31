@@ -63,12 +63,27 @@
             <p class="order-status-message">{{ $statusMessages[$order->status] ?? 'Your order status has been updated.' }}</p>
 
             @if($order->status === 'delivered')
-                @php $autoConfirmAt = \App\Services\OrderReceipts::autoConfirmAt($order); @endphp
+                @php
+                    $autoConfirmAt = \App\Services\OrderReceipts::autoConfirmAt($order);
+                    $returnDeadline = $order->returnDeadline();
+                    $isReturnActive = $order->isWithinReturnWindow();
+                @endphp
                 <section class="order-receipt" aria-label="Confirm you received this order">
                     <div>
                         <p><strong>Did you receive your order?</strong> Confirm it so the seller gets paid.</p>
                         @if($autoConfirmAt)
                             <p>If you don't, it is confirmed automatically on {{ $autoConfirmAt->timezone('Asia/Manila')->format('M j, Y · g:i A') }}. Not received? File a complaint before then.</p>
+                        @endif
+                        @if($isReturnActive && $returnDeadline)
+                            <p style="margin-top:6px; font-size:0.83rem; color:#b45309; display:flex; align-items:center; gap:6px;">
+                                <i class="fas fa-clock-rotate-left" aria-hidden="true"></i>
+                                <span><strong>24-Hour Return Window:</strong> Damaged or incorrect items can be returned until <strong>{{ $returnDeadline->timezone('Asia/Manila')->format('M j, Y · g:i A') }}</strong>.</span>
+                            </p>
+                        @elseif($order->isReturnWindowExpired() && $returnDeadline)
+                            <p style="margin-top:6px; font-size:0.82rem; color:#64748b; display:flex; align-items:center; gap:6px;">
+                                <i class="fas fa-circle-exclamation" aria-hidden="true"></i>
+                                <span>24-hour return window for damaged/wrong products ended on {{ $returnDeadline->timezone('Asia/Manila')->format('M j, Y · g:i A') }}.</span>
+                            </p>
                         @endif
                     </div>
                     <div class="order-receipt__actions">
@@ -198,9 +213,15 @@
                             @endif
                         </a>
                     @elseif(in_array($order->status, ['delivered', 'completed'], true))
-                        <a class="text-button" href="{{ route('buyer.disputes.create', $order) }}" style="color:#b45309; font-weight:600;">
-                            <i class="fas fa-rotate-left" aria-hidden="true"></i> Return / Refund
-                        </a>
+                        @if($order->isWithinReturnWindow())
+                            <a class="text-button" href="{{ route('buyer.disputes.create', $order) }}" style="color:#b45309; font-weight:600;" title="Damaged or incorrect products can be returned within 24 hours of delivery">
+                                <i class="fas fa-rotate-left" aria-hidden="true"></i> Return / Refund <span style="font-size:0.75rem; font-weight:normal; opacity:0.85;">(24h window active)</span>
+                            </a>
+                        @else
+                            <a class="text-button" href="{{ route('buyer.disputes.create', $order) }}">
+                                <i class="fas fa-flag" aria-hidden="true"></i> Report a problem
+                            </a>
+                        @endif
                     @elseif($order->status !== 'cancelled' && ! in_array($order->status, ['placed', 'confirmed'], true))
                         <a class="text-button" href="{{ route('buyer.disputes.create', $order) }}"><i class="fas fa-flag" aria-hidden="true"></i> Report a problem</a>
                     @endif

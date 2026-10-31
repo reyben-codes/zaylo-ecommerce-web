@@ -11,6 +11,7 @@ import 'package:zaylo_mobile/models/buyer/order_models.dart';
 import 'package:zaylo_mobile/models/support_models.dart';
 import 'package:zaylo_mobile/state/app_state.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
+import 'package:zaylo_mobile/utils/formatters.dart';
 
 /// Files a complaint about an order, as on the website: what went wrong, a
 /// description, and up to four photos or PDFs. A delivered order can also be
@@ -44,7 +45,8 @@ class _ComplaintFormScreenState extends State<ComplaintFormScreen> {
   DateTime _pickupDate = DateUtils.dateOnly(DateTime.now()).add(const Duration(days: 1));
   String _pickupSlot = 'morning';
 
-  bool get _canReturn => const {'delivered', 'completed'}.contains(widget.order.status);
+  bool get _canReturn => widget.order.canReturn || (const {'delivered', 'completed'}.contains(widget.order.status) && widget.order.returnDeadline == null);
+  bool get _isReturnExpired => widget.order.returnDeadline != null && !widget.order.canReturn;
 
   Future<void> _choosePickupDate() async {
     final today = DateUtils.dateOnly(DateTime.now());
@@ -84,6 +86,10 @@ class _ComplaintFormScreenState extends State<ComplaintFormScreen> {
   Future<void> _submit() async {
     setState(() => _serverErrors = const {});
     if (!(_formKey.currentState?.validate() ?? false)) return;
+    if (_isReturnExpired && const {'damaged', 'wrong_item'}.contains(_category)) {
+      showMessage(context, 'Return requests for damaged or incorrect items must be filed within 24 hours of delivery. The return window has expired.');
+      return;
+    }
     setState(() => _saving = true);
     try {
       final returning = _canReturn && _returning;
@@ -130,6 +136,52 @@ class _ComplaintFormScreenState extends State<ComplaintFormScreen> {
             return Form(
               key: _formKey,
               child: ListView(padding: const EdgeInsets.all(ZayloSpace.page), children: [
+                if (_canReturn && widget.order.returnDeadline != null)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 14),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEFCE8),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFFEF08A)),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.history_toggle_off, size: 20, color: Color(0xFF854D0E)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '24-Hour Return Window Active: Damaged, defective, or incorrect items can be returned until ${dateTimeLabel(widget.order.returnDeadline!.toLocal())}.',
+                            style: const TextStyle(fontSize: 12.5, color: Color(0xFF854D0E), fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else if (_isReturnExpired && widget.order.returnDeadline != null)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 14),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.info_outline, size: 20, color: Color(0xFF64748B)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'The 24-hour return window for damaged or wrong products closed on ${dateTimeLabel(widget.order.returnDeadline!.toLocal())}. Non-delivery or payment issues can still be reported below.',
+                            style: const TextStyle(fontSize: 12.5, color: Color(0xFF64748B)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 Text('Order ${widget.order.orderNumber}', style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 4),
                 const Text('The ZAYLO team reviews the case with the seller and the rider, and replies in the case thread.',
@@ -142,7 +194,20 @@ class _ComplaintFormScreenState extends State<ComplaintFormScreen> {
                   decoration: zayloInputDecoration('Choose one', errorText: _serverErrors['category']),
                   items: [
                     for (final category in snapshot.requireData)
-                      DropdownMenuItem(value: category.id, child: Text(category.label)),
+                      DropdownMenuItem(
+                        value: category.id,
+                        enabled: !(_isReturnExpired && const {'damaged', 'wrong_item'}.contains(category.id)),
+                        child: Text(
+                          _isReturnExpired && const {'damaged', 'wrong_item'}.contains(category.id)
+                              ? '${category.label} (24h closed)'
+                              : category.label,
+                          style: TextStyle(
+                            color: _isReturnExpired && const {'damaged', 'wrong_item'}.contains(category.id)
+                                ? ZayloColors.muted
+                                : null,
+                          ),
+                        ),
+                      ),
                   ],
                   validator: (value) => value == null ? 'Choose what went wrong.' : null,
                   onChanged: _saving ? null : (value) => setState(() => _category = value),

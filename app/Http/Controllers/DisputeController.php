@@ -38,7 +38,14 @@ class DisputeController extends Controller
             return redirect()->route('disputes.show', $existing);
         }
 
-        return view('disputes.create', ['order' => $order->load('items'), 'categories' => Dispute::CATEGORIES, 'layout' => 'layouts.app']);
+        return view('disputes.create', [
+            'order' => $order->load('items'),
+            'categories' => Dispute::CATEGORIES,
+            'isWithinReturnWindow' => $order->isWithinReturnWindow(),
+            'isReturnWindowExpired' => $order->isReturnWindowExpired(),
+            'returnDeadline' => $order->returnDeadline(),
+            'layout' => 'layouts.app',
+        ]);
     }
 
     public function store(Request $request, Order $order)
@@ -49,6 +56,18 @@ class DisputeController extends Controller
             throw ValidationException::withMessages(['details' => 'You already filed a complaint about this order. Reply in that case instead.']);
         }
         $data = $request->validate(Dispute::filingRules(), Dispute::filingMessages());
+
+        // Returns for damages or wrong products must be filed within 24 hours of delivery
+        $isReturnRequest = in_array($data['category'], ['damaged', 'wrong_item'], true)
+            || ! empty($data['return_method'])
+            || in_array($data['return_type'] ?? null, ['return_refund', 'exchange'], true);
+
+        if ($isReturnRequest && $order->isReturnWindowExpired()) {
+            throw ValidationException::withMessages([
+                'category' => 'Return requests for damaged or incorrect items must be filed within 24 hours of delivery. The 24-hour return window for this order has expired.',
+            ]);
+        }
+
         $returnDetails = array_filter([
             'return_type' => $data['return_type'] ?? null,
             'return_method' => $data['return_method'] ?? null,

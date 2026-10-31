@@ -188,6 +188,11 @@ class MobilePayload
                 'delivery_photo_url' => $shipment?->delivery_proof_path ? route('mobile.orders.delivery-photo', $order) : null,
                 'rider_chat' => self::riderChat($order),
                 'complaint' => self::complaint($order),
+                'delivered_at' => $order->deliveredAt()?->toIso8601String(),
+                'return_deadline' => $order->returnDeadline()?->toIso8601String(),
+                'is_within_return_window' => $order->isWithinReturnWindow(),
+                'is_return_window_expired' => $order->isReturnWindowExpired(),
+                'can_return' => in_array($order->status, ['delivered', 'completed'], true) && $order->isWithinReturnWindow() && $order->relationLoaded('disputes') && $order->disputes->isEmpty(),
                 'can_complain' => $order->relationLoaded('disputes') && $order->status !== 'cancelled' && $order->disputes->isEmpty(),
                 'history' => ($order->relationLoaded('statusHistory') ? $order->statusHistory : collect())->map(fn ($entry) => [
                     'status' => $entry->status,

@@ -84,6 +84,8 @@ class Order {
     this.riderChat,
     this.complaint,
     this.canComplain = false,
+    this.canReturn = false,
+    this.returnDeadline,
   });
 
   final int id;
@@ -125,6 +127,10 @@ class Order {
   /// The complaint filed about this order, or whether one can be filed.
   final OrderComplaint? complaint;
   final bool canComplain;
+
+  /// Whether the 24-hour return window for damaged or wrong items is active.
+  final bool canReturn;
+  final DateTime? returnDeadline;
 
   String get paymentLabel => switch (paymentMethod) {
         'gcash' => 'GCash',
@@ -170,6 +176,8 @@ class Order {
             ? OrderComplaint.fromJson(json['complaint'] as Map<String, dynamic>)
             : null,
         canComplain: json['can_complain'] as bool? ?? false,
+        canReturn: json['can_return'] as bool? ?? false,
+        returnDeadline: parseDate(json['return_deadline']),
       );
 }
 

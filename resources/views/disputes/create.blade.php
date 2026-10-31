@@ -17,14 +17,27 @@
         </section>
 
         <section class="seller-panel">
+            @if($order->isWithinReturnWindow() && $order->returnDeadline())
+                <div style="background:#fefce8; border:1px solid #fef08a; border-radius:8px; padding:12px 16px; margin-bottom:18px; font-size:0.88rem; color:#854d0e;">
+                    <i class="fas fa-clock-rotate-left" aria-hidden="true" style="margin-right:6px;"></i>
+                    <strong>24-Hour Return Window Active:</strong> Damaged, defective, or incorrect items can be returned until <strong>{{ $order->returnDeadline()->timezone('Asia/Manila')->format('M j, Y · g:i A') }}</strong>.
+                </div>
+            @elseif($order->isReturnWindowExpired() && $order->returnDeadline())
+                <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:12px 16px; margin-bottom:18px; font-size:0.88rem; color:#475569;">
+                    <i class="fas fa-circle-info" aria-hidden="true" style="margin-right:6px; color:#0284c7;"></i>
+                    <strong>24-Hour Return Window Closed:</strong> The 24-hour return window for damaged or incorrect items ended on {{ $order->returnDeadline()->timezone('Asia/Manila')->format('M j, Y · g:i A') }}. Non-delivery or payment issues can still be reported below.
+                </div>
+            @endif
+
             <form method="POST" action="{{ route('buyer.disputes.store', $order) }}" enctype="multipart/form-data" class="admin-form case-form">
                 @csrf
                 <fieldset class="case-choices">
                     <legend class="seller-field__label">What went wrong?</legend>
                     @foreach($categories as $key => $label)
-                        <label class="case-choice">
-                            <input type="radio" name="category" value="{{ $key }}" @checked(old('category') === $key) required>
-                            <span>{{ $label }}</span>
+                        @php $isExpired = $order->isReturnWindowExpired() && in_array($key, ['damaged', 'wrong_item'], true); @endphp
+                        <label class="case-choice" @if($isExpired) style="opacity:0.55; cursor:not-allowed;" title="The 24-hour return window for damaged or wrong items has expired." @endif>
+                            <input type="radio" name="category" value="{{ $key }}" @checked(old('category') === $key) @disabled($isExpired) required>
+                            <span>{{ $label }} @if($isExpired) <small style="color:#b91c1c; font-weight:600;">(24h window closed)</small> @endif</span>
                         </label>
                     @endforeach
                     @error('category')<p class="seller-field__error" role="alert">{{ $message }}</p>@enderror
@@ -44,6 +57,7 @@
                     @error('evidence.*')<p class="seller-field__error" role="alert">{{ $message }}</p>@enderror
                 </div>
 
+                @if(! $order->isReturnWindowExpired())
                 <fieldset class="case-choices">
                     <legend class="seller-field__label">Preferred Solution</legend>
                     <label class="case-choice">
@@ -131,6 +145,7 @@
                         <p style="margin:0;">You have <strong>7 days</strong> to drop off the package at your chosen branch. Present your return QR/barcode to the hub agent to scan and receive a drop-off receipt.</p>
                     </div>
                 </div>
+                @endif
 
                 <div class="case-order">
                     <strong>Items in this order</strong>
@@ -141,7 +156,10 @@
                     </ul>
                 </div>
 
-                <button type="submit" class="seller-button"><i class="fas fa-flag" aria-hidden="true"></i> Submit return / refund request</button>
+                <button type="submit" class="seller-button">
+                    <i class="fas {{ $order->isReturnWindowExpired() ? 'fa-paper-plane' : 'fa-flag' }}" aria-hidden="true"></i>
+                    {{ $order->isReturnWindowExpired() ? 'Submit problem report' : 'Submit return / refund request' }}
+                </button>
             </form>
         </section>
     </div>
