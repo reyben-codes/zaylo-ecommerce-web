@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'package:zaylo_mobile/components/feedback.dart';
 import 'package:zaylo_mobile/components/help_bot.dart';
 import 'package:zaylo_mobile/components/zay_avatar.dart';
 import 'package:zaylo_mobile/features/buyer/account/support_screen.dart';
@@ -217,13 +218,10 @@ class _ChatHeadOverlayState extends State<ChatHeadOverlay> with TickerProviderSt
       });
       _panelController.value = 0;
       _app.chatHead.dismiss();
-      final messenger = ScaffoldMessenger.maybeOf(widget.navigatorKey.currentContext ?? context);
-      messenger
-        ?..hideCurrentSnackBar()
-        ..showSnackBar(const SnackBar(
-          behavior: SnackBarBehavior.floating,
-          content: Text('Chat bubble hidden. Tap Chatbot in the menu to bring it back.'),
-        ));
+      showMessage(
+        widget.navigatorKey.currentContext ?? context,
+        'Chat bubble hidden. Tap Chatbot in the menu to bring it back.',
+      );
       return;
     }
     final bounds = _bounds(screen, padding);

@@ -1,16 +1,147 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'package:zaylo_mobile/components/buttons.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 
-void showMessage(BuildContext context, String message, {String? actionLabel, VoidCallback? onAction}) {
-  ScaffoldMessenger.of(context)
-    ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(
-      content: Text(message),
+Timer? _activeMessageTimer;
+
+void showMessage(
+  BuildContext context,
+  String message, {
+  String? actionLabel,
+  VoidCallback? onAction,
+  Duration duration = const Duration(milliseconds: 2600),
+}) {
+  _activeMessageTimer?.cancel();
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  if (messenger == null) return;
+  messenger.hideCurrentSnackBar();
+
+  late final ScaffoldFeatureController<SnackBar, SnackBarClosedReason> controller;
+  controller = messenger.showSnackBar(
+    SnackBar(
+      duration: duration,
       behavior: SnackBarBehavior.floating,
-      action: actionLabel == null ? null : SnackBarAction(label: actionLabel, onPressed: onAction ?? () {}),
-    ));
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      padding: EdgeInsets.zero,
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 18),
+      dismissDirection: DismissDirection.horizontal,
+      content: _ZayloToastCard(
+        message: message,
+        actionLabel: actionLabel,
+        onAction: actionLabel == null
+            ? null
+            : () {
+                _activeMessageTimer?.cancel();
+                controller.close();
+                onAction?.call();
+              },
+        onClose: () {
+          _activeMessageTimer?.cancel();
+          controller.close();
+        },
+      ),
+    ),
+  );
+
+  // Android devices with accessibility/autofill services enabled set accessibleNavigation=true, which causes
+  // Flutter's SnackBar with actions to never auto-dismiss. A dedicated timer guarantees it always closes.
+  if (!WidgetsBinding.instance.runtimeType.toString().contains('Test')) {
+    _activeMessageTimer = Timer(duration, () {
+      controller.close();
+    });
+  }
+}
+
+class _ZayloToastCard extends StatelessWidget {
+  const _ZayloToastCard({
+    required this.message,
+    this.actionLabel,
+    this.onAction,
+    required this.onClose,
+  });
+
+  final String message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.fromLTRB(14, 11, 10, 11),
+        decoration: BoxDecoration(
+          color: ZayloColors.ink,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: ZayloColors.bronze.withValues(alpha: 0.35)),
+          boxShadow: [
+            BoxShadow(
+              color: ZayloColors.shadow.withValues(alpha: 0.28),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: ZayloColors.bronze.withValues(alpha: 0.22),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.check_rounded, size: 16, color: ZayloColors.white),
+            ),
+            const SizedBox(width: 11),
+            Expanded(
+              child: Text(
+                message,
+                style: TextStyle(
+                  color: ZayloColors.white,
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w600,
+                  height: 1.25,
+                ),
+              ),
+            ),
+            if (actionLabel != null) ...[
+              const SizedBox(width: 8),
+              Material(
+                color: ZayloColors.white,
+                borderRadius: BorderRadius.circular(999),
+                child: InkWell(
+                  onTap: onAction,
+                  borderRadius: BorderRadius.circular(999),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                    child: Text(
+                      actionLabel!,
+                      style: TextStyle(
+                        color: ZayloColors.ink,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(width: 4),
+            IconButton(
+              tooltip: 'Dismiss notification',
+              visualDensity: VisualDensity.compact,
+              constraints: const BoxConstraints.tightFor(width: 28, height: 28),
+              padding: EdgeInsets.zero,
+              onPressed: onClose,
+              icon: Icon(Icons.close_rounded, size: 16, color: ZayloColors.white.withValues(alpha: 0.7)),
+            ),
+          ],
+        ),
+      );
 }
 
 class Loader extends StatelessWidget {

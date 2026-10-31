@@ -19,6 +19,7 @@ import 'package:zaylo_mobile/components/app_update.dart';
 import 'package:zaylo_mobile/components/chat/delivery_chat.dart';
 import 'package:zaylo_mobile/components/chat/typing_dots.dart';
 import 'package:zaylo_mobile/components/complaints.dart';
+import 'package:zaylo_mobile/components/feedback.dart';
 import 'package:zaylo_mobile/components/policies.dart';
 import 'package:zaylo_mobile/components/zay_avatar.dart';
 import 'package:zaylo_mobile/features/buyer/checkout/checkout_screen.dart';
@@ -1949,5 +1950,37 @@ void main() {
     await tester.tap(find.byTooltip('Close zoom'));
     await tester.pumpAndSettle();
     expect(find.text('Pinch or double-tap to zoom'), findsNothing);
+  });
+
+  testWidgets('add to cart toast shows VIEW CART and auto-dismisses without tapping it', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      theme: zayloTheme(),
+      home: Scaffold(
+        body: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => showMessage(
+              context,
+              'Added to your cart.',
+              actionLabel: 'VIEW CART',
+              onAction: () {},
+            ),
+            child: const Text('Add'),
+          ),
+        ),
+      ),
+    ));
+
+    await tester.tap(find.text('Add'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Added to your cart.'), findsOneWidget);
+    expect(find.text('VIEW CART'), findsOneWidget);
+    expect(find.byTooltip('Dismiss notification'), findsOneWidget);
+
+    // Auto-dismisses after the 2.6s duration without clicking VIEW CART.
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+    expect(find.text('Added to your cart.'), findsNothing);
   });
 }
