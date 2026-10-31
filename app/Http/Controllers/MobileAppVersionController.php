@@ -12,8 +12,8 @@ use Illuminate\Support\Facades\Http;
  */
 class MobileAppVersionController extends Controller
 {
-    /** How long a looked-up version is reused; GitHub allows 60 unauthenticated lookups an hour. */
-    private const CACHE_MINUTES = 10;
+    /** How long a looked-up version is reused. */
+    private const CACHE_MINUTES = 2;
 
     public function show(): JsonResponse
     {
@@ -29,29 +29,65 @@ class MobileAppVersionController extends Controller
         ]);
     }
 
-    /** "1.0.4" from the latest release tag, or null when it cannot be found. */
+    /** "1.0.14" from the latest release tag, or null when it cannot be found. */
     private function latestVersion(): ?string
     {
         if ($pinned = config('marketplace.android_app.latest_version')) {
             return ltrim((string) $pinned, 'v');
         }
 
-        $version = Cache::remember('android-app:latest-version', now()->addMinutes(self::CACHE_MINUTES), function () {
-            try {
-                $tag = Http::timeout(5)->acceptJson()->get(config('marketplace.android_app.releases_api'))->throw()->json('tag_name');
-            } catch (\Throwable $exception) {
-                report($exception);
+        if ($cached = Cache::get('android-app:latest-version')) {
+            return $cached;
+        }
 
-                return null;
-            }
-
-            return is_string($tag) && preg_match('/^v?(\d+\.\d+\.\d+)$/', $tag, $match) ? $match[1] : null;
-        });
-        // Keep answering with the last known version while GitHub is unreachable.
+        $version = $this->fetchFromGitHubApi() ?? $this->fetchFromGitHubRedirect();
         if ($version) {
+            Cache::put('android-app:latest-version', $version, now()->addMinutes(self::CACHE_MINUTES));
             Cache::forever('android-app:last-version', $version);
         }
 
         return $version ?? Cache::get('android-app:last-version');
+    }
+
+    private function fetchFromGitHubApi(): ?string
+    {
+        try {
+            $tag = Http::timeout(5)
+                ->withUserAgent('Zaylo-Marketplace')
+                ->acceptJson()
+                ->get(config('marketplace.android_app.releases_api'))
+                ->throw()
+                ->json('tag_name');
+
+            return is_string($tag) && preg_match('/^v?(\d+\.\d+\.\d+)$/', $tag, $match) ? $match[1] : null;
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return null;
+        }
+    }
+
+    /**
+     * Fallback when api.github.com is rate-limited on a shared server IP:
+     * github.com/.../releases/latest redirects (302) to .../releases/tag/vX.Y.Z.
+     */
+    private function fetchFromGitHubRedirect(): ?string
+    {
+        try {
+            $downloadUrl = (string) config('marketplace.android_app.download_url');
+            $latestPage = preg_replace('#/download/[^/]+$#', '', $downloadUrl);
+            if (! $latestPage) {
+                return null;
+            }
+            $location = Http::timeout(5)
+                ->withUserAgent('Zaylo-Marketplace')
+                ->withoutRedirecting()
+                ->get($latestPage)
+                ->header('Location');
+
+            return is_string($location) && preg_match('#/tag/v?(\d+\.\d+\.\d+)$#', $location, $match) ? $match[1] : null;
+        } catch (\Throwable) {
+            return null;
+        }
     }
 }

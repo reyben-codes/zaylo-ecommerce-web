@@ -22,6 +22,13 @@ class PatchNoteEntry {
   final String title;
   final List<String> highlights;
   final bool isLatest;
+
+  PatchNoteEntry copyWith({String? version}) => PatchNoteEntry(
+        version: version ?? this.version,
+        title: title,
+        highlights: highlights,
+        isLatest: isLatest,
+      );
 }
 
 /// Built-in release history shown in the Patch Notes modal pop-up.
@@ -93,63 +100,70 @@ class MemoryPatchNoteStore implements PatchNoteStore {
 Future<void> showPatchNotesDialog(
   BuildContext context, {
   List<PatchNoteEntry> entries = zayloPatchNotes,
-}) =>
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: ZayloColors.paper,
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: ZayloColors.line),
+  String? currentVersion,
+}) {
+  final effectiveVersion = (currentVersion ?? appVersion).trim();
+  final resolvedEntries = [
+    for (var i = 0; i < entries.length; i++)
+      if (i == 0 && effectiveVersion.isNotEmpty) entries[i].copyWith(version: effectiveVersion) else entries[i],
+  ];
+  return showDialog<void>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      backgroundColor: ZayloColors.paper,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: ZayloColors.line),
+      ),
+      icon: Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: ZayloColors.sand,
+          shape: BoxShape.circle,
+          border: Border.all(color: ZayloColors.line),
         ),
-        icon: Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: ZayloColors.sand,
-            shape: BoxShape.circle,
-            border: Border.all(color: ZayloColors.line),
+        child: Icon(Icons.auto_awesome_rounded, color: ZayloColors.ink, size: 22),
+      ),
+      title: Column(
+        children: [
+          Text(
+            'Patch notes',
+            style: TextStyle(fontWeight: FontWeight.w800, color: ZayloColors.ink),
           ),
-          child: Icon(Icons.auto_awesome_rounded, color: ZayloColors.ink, size: 22),
-        ),
-        title: Column(
-          children: [
-            Text(
-              'Patch notes',
-              style: TextStyle(fontWeight: FontWeight.w800, color: ZayloColors.ink),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'See what updates were added to ZAYLO',
-              style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: ZayloColors.muted),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-        content: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 380, maxHeight: 380),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (var i = 0; i < entries.length; i++) ...[
-                  if (i > 0) const SizedBox(height: 12),
-                  _PatchNoteCard(entry: entries[i]),
-                ],
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('GOT IT'),
+          const SizedBox(height: 4),
+          Text(
+            'See what updates were added to ZAYLO',
+            style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: ZayloColors.muted),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
-    );
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 380, maxHeight: 380),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (var i = 0; i < resolvedEntries.length; i++) ...[
+                if (i > 0) const SizedBox(height: 12),
+                _PatchNoteCard(entry: resolvedEntries[i]),
+              ],
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        FilledButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          child: const Text('GOT IT'),
+        ),
+      ],
+    ),
+  );
+}
 
 class _PatchNoteCard extends StatelessWidget {
   const _PatchNoteCard({required this.entry});
@@ -259,14 +273,14 @@ class AppUpdatePrompt {
   Future<void> checkPatchNotes() async {
     if (_checkedPatchNotes) return;
     _checkedPatchNotes = true;
-    final latestPatch = zayloPatchNotes.first.version;
+    final latestPatch = currentVersion.isNotEmpty ? currentVersion : zayloPatchNotes.first.version;
     final seen = await _patchNoteStore.readSeenVersion();
     if (seen == latestPatch) return;
     final context = navigatorKey.currentState?.overlay?.context;
     if (context == null || !context.mounted) return;
     await _patchNoteStore.writeSeenVersion(latestPatch);
     if (!context.mounted) return;
-    await showPatchNotesDialog(context);
+    await showPatchNotesDialog(context, currentVersion: latestPatch);
   }
 
   Future<void> check() async {

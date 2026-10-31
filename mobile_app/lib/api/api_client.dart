@@ -41,8 +41,53 @@ class ApiClient {
 
   Future<void> logout() => send('POST', '/mobile/logout');
 
-  /// The newest published app and where to download it.
-  Future<AppVersionInfo> appVersion() async => AppVersionInfo.fromJson(await send('GET', '/mobile/app-version'));
+  static const _githubReleasesApi = 'https://api.github.com/repos/reyben-codes/zaylo-ecommerce-web/releases/latest';
+  static const _defaultApkUrl =
+      'https://github.com/reyben-codes/zaylo-ecommerce-web/releases/latest/download/zaylo.apk';
+
+  /// The newest published app and where to download it. Falls back to GitHub Releases directly from the phone's IP
+  /// if the web host's shared IP was rate-limited by GitHub.
+  Future<AppVersionInfo> appVersion() async {
+    AppVersionInfo? serverInfo;
+    try {
+      serverInfo = AppVersionInfo.fromJson(await send('GET', '/mobile/app-version'));
+      if (serverInfo.latestVersion != null && serverInfo.latestVersion!.isNotEmpty) {
+        return serverInfo;
+      }
+    } catch (_) {
+      // Fall back to direct GitHub lookup below.
+    }
+    final directVersion = await _fetchVersionFromGitHub();
+    if (directVersion != null) {
+      return AppVersionInfo(
+        latestVersion: directVersion,
+        downloadUrl: serverInfo?.downloadUrl ?? _defaultApkUrl,
+        releaseNotes: serverInfo?.releaseNotes ?? const [],
+      );
+    }
+    return serverInfo ?? const AppVersionInfo();
+  }
+
+  Future<String?> _fetchVersionFromGitHub() async {
+    final client = HttpClient()..connectionTimeout = const Duration(seconds: 6);
+    try {
+      final request = await client.getUrl(Uri.parse(_githubReleasesApi));
+      request.headers.set(HttpHeaders.acceptHeader, 'application/vnd.github+json');
+      request.headers.set(HttpHeaders.userAgentHeader, 'Zaylo-Mobile-App');
+      final response = await request.close().timeout(const Duration(seconds: 6));
+      if (response.statusCode != 200) return null;
+      final text = await response.transform(utf8.decoder).join();
+      final decoded = jsonDecode(text);
+      if (decoded is! Map<String, dynamic>) return null;
+      final tag = (decoded['tag_name'] as String?)?.trim() ?? '';
+      final match = RegExp(r'^v?(\d+\.\d+\.\d+)$').firstMatch(tag);
+      return match?.group(1);
+    } catch (_) {
+      return null;
+    } finally {
+      client.close(force: true);
+    }
+  }
 
   Future<String> forgotPassword(String email) async =>
       (await send('POST', '/mobile/forgot-password', body: {'email': email}))['message'] as String;
