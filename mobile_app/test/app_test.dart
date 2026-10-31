@@ -1952,7 +1952,7 @@ void main() {
     expect(find.text('Pinch or double-tap to zoom'), findsNothing);
   });
 
-  testWidgets('add to cart toast shows VIEW CART and auto-dismisses without tapping it', (tester) async {
+  testWidgets('add to cart toast shows VIEW CART, decreasing progress bar, and auto-dismisses', (tester) async {
     await tester.pumpWidget(MaterialApp(
       theme: zayloTheme(),
       home: Scaffold(
@@ -1972,11 +1972,21 @@ void main() {
 
     await tester.tap(find.text('Add'));
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
+
+    final progressFinder = find.byKey(const ValueKey('toast-progress-bar'));
+    expect(progressFinder, findsOneWidget);
+    final initialProgress = tester.widget<LinearProgressIndicator>(progressFinder).value!;
+    expect(initialProgress, closeTo(1.0, 0.05));
+
+    await tester.pump(const Duration(milliseconds: 650));
 
     expect(find.text('Added to your cart.'), findsOneWidget);
     expect(find.text('VIEW CART'), findsOneWidget);
     expect(find.byTooltip('Dismiss notification'), findsOneWidget);
+
+    final midProgress = tester.widget<LinearProgressIndicator>(progressFinder).value!;
+    expect(midProgress, lessThan(initialProgress));
+    expect(midProgress, greaterThan(0.0));
 
     // Auto-dismisses after the 2.6s duration without clicking VIEW CART.
     await tester.pump(const Duration(seconds: 3));

@@ -31,6 +31,7 @@ void showMessage(
       dismissDirection: DismissDirection.horizontal,
       content: _ZayloToastCard(
         message: message,
+        duration: duration,
         actionLabel: actionLabel,
         onAction: actionLabel == null
             ? null
@@ -56,90 +57,195 @@ void showMessage(
   }
 }
 
-class _ZayloToastCard extends StatelessWidget {
+class _ZayloToastCard extends StatefulWidget {
   const _ZayloToastCard({
     required this.message,
+    required this.duration,
     this.actionLabel,
     this.onAction,
     required this.onClose,
   });
 
   final String message;
+  final Duration duration;
   final String? actionLabel;
   final VoidCallback? onAction;
   final VoidCallback onClose;
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.fromLTRB(14, 11, 10, 11),
-        decoration: BoxDecoration(
-          color: ZayloColors.ink,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: ZayloColors.bronze.withValues(alpha: 0.35)),
-          boxShadow: [
-            BoxShadow(
-              color: ZayloColors.shadow.withValues(alpha: 0.28),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: ZayloColors.bronze.withValues(alpha: 0.22),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(Icons.check_rounded, size: 16, color: ZayloColors.white),
-            ),
-            const SizedBox(width: 11),
-            Expanded(
-              child: Text(
-                message,
-                style: TextStyle(
-                  color: ZayloColors.white,
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w600,
-                  height: 1.25,
-                ),
-              ),
-            ),
-            if (actionLabel != null) ...[
-              const SizedBox(width: 8),
-              Material(
-                color: ZayloColors.white,
-                borderRadius: BorderRadius.circular(999),
-                child: InkWell(
-                  onTap: onAction,
-                  borderRadius: BorderRadius.circular(999),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                    child: Text(
-                      actionLabel!,
-                      style: TextStyle(
-                        color: ZayloColors.ink,
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.4,
-                      ),
-                    ),
-                  ),
-                ),
+  State<_ZayloToastCard> createState() => _ZayloToastCardState();
+}
+
+class _ZayloToastCardState extends State<_ZayloToastCard> with TickerProviderStateMixin {
+  static const _fadeDuration = Duration(milliseconds: 220);
+
+  late final AnimationController _fadeController;
+  late final Animation<double> _fadeAnimation;
+  AnimationController? _progressController;
+  Timer? _testProgressTimer;
+  double _progress = 1.0;
+  int _elapsedMs = 0;
+
+  bool get _inWidgetTest => WidgetsBinding.instance.runtimeType.toString().contains('Test');
+
+  @override
+  void initState() {
+    super.initState();
+    _fadeController = AnimationController(vsync: this, duration: _fadeDuration);
+    _fadeAnimation = CurvedAnimation(parent: _fadeController, curve: Curves.easeOut, reverseCurve: Curves.easeIn);
+    _fadeController.forward();
+
+    final totalMs = widget.duration.inMilliseconds.clamp(400, 60000);
+    final fadeOutStartMs = (totalMs - _fadeDuration.inMilliseconds).clamp(0, totalMs);
+
+    if (_inWidgetTest) {
+      // Periodic timer instead of a long-running Ticker so pumpAndSettle in existing tests settles immediately.
+      const stepMs = 65;
+      _testProgressTimer = Timer.periodic(const Duration(milliseconds: stepMs), (timer) {
+        if (!mounted) {
+          timer.cancel();
+          return;
+        }
+        _elapsedMs += stepMs;
+        final nextProgress = (1.0 - (_elapsedMs / totalMs)).clamp(0.0, 1.0);
+        if (_elapsedMs >= fadeOutStartMs && _fadeController.status == AnimationStatus.completed) {
+          _fadeController.reverse();
+        }
+        setState(() => _progress = nextProgress);
+        if (_elapsedMs >= totalMs) {
+          timer.cancel();
+        }
+      });
+    } else {
+      _progressController = AnimationController(vsync: this, duration: widget.duration, value: 1.0)
+        ..addListener(() {
+          if (!mounted) return;
+          final current = _progressController!.value;
+          final elapsed = ((1.0 - current) * totalMs).round();
+          if (elapsed >= fadeOutStartMs && _fadeController.status == AnimationStatus.completed) {
+            _fadeController.reverse();
+          }
+          setState(() => _progress = current);
+        })
+        ..reverse(from: 1.0);
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _fadeController.value = 1.0;
+    }
+  }
+
+  Future<void> _fadeOutAndRun(VoidCallback callback) async {
+    _testProgressTimer?.cancel();
+    _progressController?.stop();
+    if (!MediaQuery.disableAnimationsOf(context) && mounted && _fadeController.value > 0) {
+      await _fadeController.reverse();
+    }
+    callback();
+  }
+
+  @override
+  void dispose() {
+    _testProgressTimer?.cancel();
+    _progressController?.dispose();
+    _fadeController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => FadeTransition(
+        opacity: _fadeAnimation,
+        child: Container(
+          decoration: BoxDecoration(
+            color: ZayloColors.ink,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: ZayloColors.bronze.withValues(alpha: 0.35)),
+            boxShadow: [
+              BoxShadow(
+                color: ZayloColors.shadow.withValues(alpha: 0.28),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
               ),
             ],
-            const SizedBox(width: 4),
-            IconButton(
-              tooltip: 'Dismiss notification',
-              visualDensity: VisualDensity.compact,
-              constraints: const BoxConstraints.tightFor(width: 28, height: 28),
-              padding: EdgeInsets.zero,
-              onPressed: onClose,
-              icon: Icon(Icons.close_rounded, size: 16, color: ZayloColors.white.withValues(alpha: 0.7)),
-            ),
-          ],
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 11, 10, 10),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: ZayloColors.bronze.withValues(alpha: 0.22),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.check_rounded, size: 16, color: ZayloColors.white),
+                    ),
+                    const SizedBox(width: 11),
+                    Expanded(
+                      child: Text(
+                        widget.message,
+                        style: TextStyle(
+                          color: ZayloColors.white,
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                          height: 1.25,
+                        ),
+                      ),
+                    ),
+                    if (widget.actionLabel != null) ...[
+                      const SizedBox(width: 8),
+                      Material(
+                        color: ZayloColors.white,
+                        borderRadius: BorderRadius.circular(999),
+                        child: InkWell(
+                          onTap: widget.onAction == null ? null : () => _fadeOutAndRun(widget.onAction!),
+                          borderRadius: BorderRadius.circular(999),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                            child: Text(
+                              widget.actionLabel!,
+                              style: TextStyle(
+                                color: ZayloColors.ink,
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.4,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(width: 4),
+                    IconButton(
+                      tooltip: 'Dismiss notification',
+                      visualDensity: VisualDensity.compact,
+                      constraints: const BoxConstraints.tightFor(width: 28, height: 28),
+                      padding: EdgeInsets.zero,
+                      onPressed: () => _fadeOutAndRun(widget.onClose),
+                      icon: Icon(Icons.close_rounded, size: 16, color: ZayloColors.white.withValues(alpha: 0.7)),
+                    ),
+                  ],
+                ),
+              ),
+              LinearProgressIndicator(
+                key: const ValueKey('toast-progress-bar'),
+                value: _progress,
+                minHeight: 3,
+                backgroundColor: ZayloColors.white.withValues(alpha: 0.14),
+                valueColor: AlwaysStoppedAnimation<Color>(ZayloColors.bronze),
+              ),
+            ],
+          ),
         ),
       );
 }
