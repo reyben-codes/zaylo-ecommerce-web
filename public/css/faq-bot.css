@@ -175,7 +175,7 @@
     display: flex;
     flex-direction: column;
     width: min(370px, calc(100vw - 32px));
-    height: min(540px, calc(100vh - 140px));
+    height: min(540px, calc(100vh - 210px));
     overflow: hidden;
     border: 1px solid var(--c-ece4db);
     border-radius: 18px;
@@ -196,6 +196,23 @@
 
 .faq-bot__panel[hidden] {
     display: none;
+}
+
+/* Riding on the chat bubble: glides there with it, the same way, when it isn't being dragged. */
+.faq-bot__toggle.is-gliding {
+    transition: left 320ms cubic-bezier(.22, 1, .36, 1), top 320ms cubic-bezier(.22, 1, .36, 1), transform 200ms ease-out, box-shadow 200ms ease-out;
+}
+
+.faq-bot__panel.is-gliding {
+    transition: left 320ms cubic-bezier(.22, 1, .36, 1), top 320ms cubic-bezier(.22, 1, .36, 1), opacity 280ms ease-out, transform 280ms ease-out;
+}
+
+.faq-bot__teaser.is-gliding {
+    transition: left 320ms cubic-bezier(.22, 1, .36, 1), top 320ms cubic-bezier(.22, 1, .36, 1);
+}
+
+.faq-bot__teaser[data-side="right"] {
+    border-radius: 14px 14px 4px 14px;
 }
 
 .faq-bot__header {
@@ -408,14 +425,17 @@
     }
 
     .faq-bot__panel {
-        height: min(500px, calc(100vh - 120px));
+        height: min(500px, calc(100vh - 190px));
     }
 }
 
 /* Calm version: Zay still blinks and changes face, but nothing floats, waves or bounces. */
 @media (prefers-reduced-motion: reduce) {
     .faq-bot__panel,
+    .faq-bot__panel.is-gliding,
     .faq-bot__toggle,
+    .faq-bot__toggle.is-gliding,
+    .faq-bot__teaser.is-gliding,
     .zay__look,
     .zay__body,
     .zay__mouth {

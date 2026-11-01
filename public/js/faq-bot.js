@@ -531,6 +531,56 @@
         });
     };
 
+    // ------------------------------------------------------- Riding on the chat bubble
+
+    // Where there is a chat bubble (chat-widget.js), Zay sits just above it and follows it around, or just below it
+    // near the top of the screen. If the bubble is dismissed, Zay takes its place. Without one, faq-bot.css applies.
+    const chatBubble = document.querySelector('[data-chat-bubble]');
+    const STACK_GAP = 12;
+    const SCREEN_EDGE = 8;
+    let bubbleSpot = null;
+
+    const clamp = (value, max) => Math.max(SCREEN_EDGE, Math.min(max - SCREEN_EDGE, value));
+
+    // Keeps a panel or teaser beside Zay, on the side with room, inside the screen.
+    const placeBesideZay = (element) => {
+        if (!chatBubble || element.hidden) return;
+        const zay = { left: parseFloat(toggle.style.left), top: parseFloat(toggle.style.top), size: toggle.offsetWidth };
+        const { offsetWidth: width, offsetHeight: height } = element;
+        const view = { width: document.documentElement.clientWidth, height: window.innerHeight };
+        const onRight = zay.left + zay.size / 2 > view.width / 2;
+        const above = zay.top - STACK_GAP - height;
+        const below = zay.top + zay.size + STACK_GAP;
+        const opensUp = above >= SCREEN_EDGE || below + height > view.height - SCREEN_EDGE;
+        element.dataset.side = onRight ? 'right' : 'left';
+        Object.assign(element.style, {
+            left: `${clamp(onRight ? zay.left + zay.size - width : zay.left, view.width - width)}px`,
+            top: `${clamp(opensUp ? above : below, view.height - height)}px`,
+            bottom: 'auto',
+            transformOrigin: `${opensUp ? 'bottom' : 'top'} ${onRight ? 'right' : 'left'}`,
+        });
+    };
+
+    const followBubble = (glide = false) => {
+        if (!chatBubble) return;
+        const size = toggle.offsetWidth;
+        const view = { width: document.documentElement.clientWidth, height: window.innerHeight };
+        // Measured by its center: the bubble is scaled down while the chat is open.
+        const box = chatBubble.getBoundingClientRect();
+        const shown = box.width > 0;
+        if (shown) bubbleSpot = { x: box.left + box.width / 2, y: box.top + box.height / 2, size: chatBubble.offsetWidth };
+        const spot = bubbleSpot ?? { x: view.width - SCREEN_EDGE * 3 - size / 2, y: view.height - SCREEN_EDGE * 3 - size / 2, size };
+        let top = spot.y - size / 2;
+        if (shown) {
+            top = spot.y - spot.size / 2 - STACK_GAP - size;
+            if (top < SCREEN_EDGE) top = spot.y + spot.size / 2 + STACK_GAP;
+        }
+        Object.assign(toggle.style, { left: `${clamp(spot.x - size / 2, view.width - size)}px`, top: `${clamp(top, view.height - size)}px`, bottom: 'auto' });
+        [toggle, panel, teaser].forEach((element) => element?.classList.toggle('is-gliding', glide));
+        placeBesideZay(panel);
+        if (teaser) placeBesideZay(teaser);
+    };
+
     // ---------------------------------------------------------- Opening and closing
 
     const load = async () => {
@@ -561,6 +611,7 @@
         window.clearTimeout(closeTimer);
         hideTeaser();
         panel.hidden = false;
+        placeBesideZay(panel);
         toggle.setAttribute('aria-expanded', 'true');
         // Next frame, so the opening transition runs from the closed state.
         window.requestAnimationFrame(() => panel.classList.add('is-open'));
@@ -568,16 +619,21 @@
         await load();
     };
 
-    const close = () => {
+    const close = (returnFocus = true) => {
         panel.classList.remove('is-open');
         toggle.setAttribute('aria-expanded', 'false');
         closeTimer = window.setTimeout(() => { panel.hidden = true; }, reducedMotion.matches ? 0 : 300);
-        toggle.focus();
+        if (returnFocus) toggle.focus();
     };
 
     toggle.addEventListener('click', () => (toggle.getAttribute('aria-expanded') === 'true' ? close() : open()));
-    root.querySelector('[data-faq-close]').addEventListener('click', close);
+    root.querySelector('[data-faq-close]').addEventListener('click', () => close());
     panel.addEventListener('keydown', (event) => { if (event.key === 'Escape') close(); });
+    document.addEventListener('zaylo:chat-bubble-moved', (event) => followBubble(event.detail.glide));
+    // The open chat covers Zay's corner, so Zay steps aside; the chat takes the focus.
+    document.addEventListener('zaylo:chat-opened', () => { if (toggle.getAttribute('aria-expanded') === 'true') close(false); });
+    window.addEventListener('resize', () => followBubble());
+    followBubble();
     form.addEventListener('submit', (event) => {
         event.preventDefault();
         const question = input.value.trim();
@@ -594,6 +650,7 @@
         window.setTimeout(() => {
             if (toggle.getAttribute('aria-expanded') === 'true') return;
             teaser.hidden = false;
+            placeBesideZay(teaser);
             setMood('waving', 1800);
             window.setTimeout(() => { if (!teaser.hidden) hideTeaser(); }, 9000);
         }, 6000);

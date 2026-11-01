@@ -24,12 +24,15 @@
     if (typeof state !== 'object' || Array.isArray(state)) state = {};
     const save = () => { try { sessionStorage.setItem(key, JSON.stringify(state)); } catch { /* Keep working without storage. */ } };
     const bounds = () => ({ width: document.documentElement.clientWidth, height: window.innerHeight });
-    const place = (x, y) => {
+    // Zay (faq-bot.js) rides along above the bubble and needs to know whenever it moves.
+    const bubbleMoved = (glide = false) => document.dispatchEvent(new CustomEvent('zaylo:chat-bubble-moved', { detail: { glide } }));
+    const place = (x, y, glide = false) => {
         const { width, height } = bounds();
         const size = bubble.offsetWidth || 60;
         state.x = Math.max(8, Math.min(width - size - 8, x));
         state.y = Math.max(8, Math.min(height - size - 8, y));
         Object.assign(bubble.style, { left: `${state.x}px`, top: `${state.y}px`, right: 'auto', bottom: 'auto' });
+        bubbleMoved(glide);
     };
     const announce = text => {
         clearTimeout(noticeTimer);
@@ -39,7 +42,7 @@
     const glideTo = (x, y) => {
         const start = bubble.getBoundingClientRect();
         stopReturn();
-        place(x, y);
+        place(x, y, true);
         if (reducedMotion.matches || !bubble.animate) return;
         returnAnimation = bubble.animate([
             { left: `${start.left}px`, top: `${start.top}px` },
@@ -162,7 +165,7 @@
     // When the panel moves to a corner the bubble goes with it, so minimizing returns it to where the chat was.
     const moveBubbleTo = corner => {
         const size = bubble.offsetWidth || 60, view = bounds();
-        place(corner[1] === 'l' ? EDGE : view.width - size - EDGE, corner[0] === 't' ? EDGE : view.height - size - EDGE);
+        place(corner[1] === 'l' ? EDGE : view.width - size - EDGE, corner[0] === 't' ? EDGE : view.height - size - EDGE, true);
         save();
     };
     const stopPanelGlide = () => {
@@ -287,6 +290,8 @@
         if (state.dismissed) { const { width, height } = bounds(); place(width - 76, height - 76); }
         state.dismissed = false; save();
         bubble.hidden = false; notice.hidden = true;
+        bubbleMoved(true);
+        document.dispatchEvent(new CustomEvent('zaylo:chat-opened'));
         if (!frame.hasAttribute('src') || url) {
             let remembered = null;
             try { remembered = state.chatPath ? new URL(state.chatPath, location.href) : null; } catch { remembered = null; }
@@ -310,6 +315,7 @@
     const dismiss = () => {
         stopReturn();
         minimize(false); tuckBubble(false); bubble.hidden = true;
+        bubbleMoved(true);
         state.dismissed = true; save();
         announce('Chat bubble hidden. Open Messages to bring it back.');
         // Dismissal only hides the UI; the existing conversation and draft stay intact.
@@ -469,5 +475,6 @@
     showPartner();
     root.hidden = false; bubble.hidden = Boolean(state.dismissed);
     if (Number.isFinite(state.x) && Number.isFinite(state.y)) place(state.x, state.y);
+    bubbleMoved();
     startTyping();
 })();
