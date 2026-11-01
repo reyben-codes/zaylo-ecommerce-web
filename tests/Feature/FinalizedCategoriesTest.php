@@ -115,6 +115,14 @@ class FinalizedCategoriesTest extends TestCase
         }
     }
 
+    public function test_categories_sit_in_a_header_dropdown(): void
+    {
+        $this->get(route('products.index'))->assertOk()
+            ->assertSee('data-category-menu-toggle', false)
+            ->assertSeeInOrder(['Home and Garden', 'Storage Bins', 'Bedding &amp; Bath', 'Bathroom Storage Racks'], false)
+            ->assertSee('href="'.route('products.index', ['category' => 'hammocks']).'"', false);
+    }
+
     private function product(string $name, string $category, array $extras = []): Product
     {
         $seller = Seller::first() ?? Seller::create([
