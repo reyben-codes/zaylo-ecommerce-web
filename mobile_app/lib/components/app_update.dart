@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -13,26 +15,46 @@ const appVersion = String.fromEnvironment('APP_VERSION');
 class PatchNoteEntry {
   const PatchNoteEntry({
     required this.version,
-    required this.title,
     required this.highlights,
+    this.title,
     this.isLatest = false,
   });
 
   final String version;
-  final String title;
+  final String? title;
   final List<String> highlights;
   final bool isLatest;
-
-  PatchNoteEntry copyWith({String? version}) => PatchNoteEntry(
-        version: version ?? this.version,
-        title: title,
-        highlights: highlights,
-        isLatest: isLatest,
-      );
 }
 
-/// Built-in release history shown in the Patch Notes modal pop-up.
-const zayloPatchNotes = <PatchNoteEntry>[
+/// The notes the release workflow builds in: base64 JSON, newest version first
+/// (--dart-define=PATCH_NOTES, see .github/scripts/patch-notes.mjs).
+const _releasePatchNotes = String.fromEnvironment('PATCH_NOTES');
+
+/// Reads the built-in notes; anything unreadable gives an empty list.
+List<PatchNoteEntry> parsePatchNotes(String encoded) {
+  try {
+    final versions = jsonDecode(utf8.decode(base64.decode(encoded))) as List<dynamic>;
+    return [
+      for (var i = 0; i < versions.length; i++)
+        PatchNoteEntry(
+          version: (versions[i] as Map<String, dynamic>)['version'] as String,
+          highlights: List<String>.from((versions[i] as Map<String, dynamic>)['highlights'] as List<dynamic>),
+          isLatest: i == 0,
+        ),
+    ];
+  } on Object {
+    return const [];
+  }
+}
+
+/// What the Patch Notes modal pop-up shows: this version and those before it.
+final List<PatchNoteEntry> zayloPatchNotes = () {
+  final released = parsePatchNotes(_releasePatchNotes);
+  return released.isNotEmpty ? released : _localBuildPatchNotes;
+}();
+
+/// For local builds, which have no release to read notes from.
+const _localBuildPatchNotes = <PatchNoteEntry>[
   PatchNoteEntry(
     version: '1.0.5',
     title: 'Chatbot, Product Zoom & Cart Update',
@@ -99,14 +121,9 @@ class MemoryPatchNoteStore implements PatchNoteStore {
 /// Opens the modal pop-up showing what updates were added in recent releases.
 Future<void> showPatchNotesDialog(
   BuildContext context, {
-  List<PatchNoteEntry> entries = zayloPatchNotes,
-  String? currentVersion,
+  List<PatchNoteEntry>? entries,
 }) {
-  final effectiveVersion = (currentVersion ?? appVersion).trim();
-  final resolvedEntries = [
-    for (var i = 0; i < entries.length; i++)
-      if (i == 0 && effectiveVersion.isNotEmpty) entries[i].copyWith(version: effectiveVersion) else entries[i],
-  ];
+  final resolvedEntries = entries ?? zayloPatchNotes;
   return showDialog<void>(
     context: context,
     builder: (dialogContext) => AlertDialog(
@@ -212,11 +229,13 @@ class _PatchNoteCard extends StatelessWidget {
                 ],
               ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              entry.title,
-              style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: ZayloColors.ink),
-            ),
+            if (entry.title != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                entry.title!,
+                style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: ZayloColors.ink),
+              ),
+            ],
             const SizedBox(height: 8),
             for (final item in entry.highlights)
               Padding(
@@ -280,7 +299,7 @@ class AppUpdatePrompt {
     if (context == null || !context.mounted) return;
     await _patchNoteStore.writeSeenVersion(latestPatch);
     if (!context.mounted) return;
-    await showPatchNotesDialog(context, currentVersion: latestPatch);
+    await showPatchNotesDialog(context);
   }
 
   Future<void> check() async {
@@ -301,7 +320,7 @@ class AppUpdatePrompt {
     if (_asked || url == null || !info.isNewerThan(currentVersion) || context == null || !context.mounted) return;
 
     _asked = true;
-    final notes = info.releaseNotes.isNotEmpty ? info.releaseNotes : zayloPatchNotes.first.highlights;
+    final notes = info.releaseNotes;
     final update = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(

@@ -9,6 +9,8 @@
 #   git push origin v1.1.0
 #
 # The app version comes from the tag (v1.0.1 -> 1.0.1), so pubspec.yaml does not need editing.
+# Patch notes come from the commits that changed the app since the last version; a "Patch-note:" line in a commit
+# message rewords its note, and "Patch-note: none" leaves it out (.github/scripts/patch-notes.mjs).
 # The APK is signed with the team's debug key (the DEBUG_KEYSTORE_BASE64 secret). Phones can only update an app
 # signed with the same key, and Google sign-in only works for keys registered as Android OAuth clients (checked below).
 name: Release APK
@@ -60,6 +62,11 @@ jobs:
           fi
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "Releasing $TAG"
+
+      - name: Write the patch notes
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: node ../.github/scripts/patch-notes.mjs "$TAG" "$RUNNER_TEMP/patch-notes"
 
       - uses: actions/setup-java@v5
         with:
@@ -113,8 +120,9 @@ jobs:
           VERSION="${TAG#v}"
           # Android only installs an update with a higher build number; the first manual release was 1.
           BUILD_NUMBER=$(( GITHUB_RUN_NUMBER + 1 ))
-          # APP_VERSION lets the app compare itself with the newest release and suggest updating.
-          flutter build apk --release --build-name="$VERSION" --build-number="$BUILD_NUMBER" --dart-define=APP_VERSION="$VERSION"
+          # APP_VERSION lets the app compare itself with the newest release and suggest updating; PATCH_NOTES fills
+          # its Patch notes pop-up.
+          flutter build apk --release --build-name="$VERSION" --build-number="$BUILD_NUMBER" --dart-define=APP_VERSION="$VERSION" --dart-define=PATCH_NOTES="$(cat "$RUNNER_TEMP/patch-notes/patch-notes.b64")"
           mv build/app/outputs/flutter-apk/app-release.apk zaylo.apk
 
       # Checks the finished APK itself, so a release can never again go out signed with another key.
@@ -135,5 +143,5 @@ jobs:
           target_commitish: ${{ github.sha }}
           name: ZAYLO ${{ steps.version.outputs.tag }}
           files: mobile_app/zaylo.apk
-          generate_release_notes: true
+          body_path: ${{ runner.temp }}/patch-notes/release-notes.md
           make_latest: true

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' show Tristate;
 
@@ -622,7 +623,11 @@ void main() {
       final prompt = AppUpdatePrompt(
         navigatorKey: key,
         currentVersion: current,
-        load: () async => AppVersionInfo(latestVersion: latest, downloadUrl: 'https://example.test/zaylo.apk'),
+        load: () async => AppVersionInfo(
+          latestVersion: latest,
+          downloadUrl: 'https://example.test/zaylo.apk',
+          releaseNotes: const ['Sold-out products are now grayed out.'],
+        ),
         open: (url) async => opened.add(url),
       );
       await tester.pumpWidget(MaterialApp(navigatorKey: key, home: const Scaffold(body: Text('Home'))));
@@ -637,9 +642,54 @@ void main() {
       expect(find.text('Update available'), findsOneWidget);
       expect(find.textContaining('ZAYLO 1.0.4 is out'), findsOneWidget);
       expect(find.text("What's new in 1.0.4"), findsOneWidget);
+      expect(find.text('Sold-out products are now grayed out.'), findsOneWidget);
       await tester.tap(find.text('UPDATE'));
       await tester.pumpAndSettle();
       expect(opened, [Uri.parse('https://example.test/zaylo.apk')]);
+    });
+
+    testWidgets('patch notes show each version with its own changes', (tester) async {
+      final encoded = base64.encode(utf8.encode(jsonEncode([
+        {'version': '1.0.25', 'highlights': ["Zay's answers for ₱ prices, with commas"]},
+        {'version': '1.0.24', 'highlights': ['Sold-out products are grayed out']},
+      ])));
+      final entries = parsePatchNotes(encoded);
+      expect(entries.map((entry) => entry.isLatest), [true, false]);
+      expect(parsePatchNotes(''), isEmpty, reason: 'local builds have none');
+      expect(parsePatchNotes('not notes'), isEmpty);
+
+      await tester.pumpWidget(MaterialApp(home: Builder(
+        builder: (context) => TextButton(
+          onPressed: () => showPatchNotesDialog(context, entries: entries),
+          child: const Text('Open'),
+        ),
+      )));
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('v1.0.25'), findsOneWidget);
+      expect(find.text("Zay's answers for ₱ prices, with commas"), findsOneWidget);
+      expect(find.text('v1.0.24'), findsOneWidget);
+      expect(find.text('Sold-out products are grayed out'), findsOneWidget);
+      expect(find.text('Chatbot, Product Zoom & Cart Update'), findsNothing);
+    });
+
+    testWidgets('an update with no notes from the server invents none', (tester) async {
+      final key = GlobalKey<NavigatorState>();
+      final prompt = AppUpdatePrompt(
+        navigatorKey: key,
+        currentVersion: '1.0.3',
+        patchNoteStore: MemoryPatchNoteStore(),
+        load: () async => const AppVersionInfo(latestVersion: '1.0.4', downloadUrl: 'https://example.test/zaylo.apk'),
+      );
+      await tester.pumpWidget(MaterialApp(navigatorKey: key, home: const Scaffold(body: Text('Home'))));
+      prompt.check();
+      await tester.pumpAndSettle();
+
+      expect(find.text('Update available'), findsOneWidget);
+      expect(find.text("What's new in 1.0.4"), findsNothing);
+      await tester.tap(find.text('LATER'));
+      await tester.pumpAndSettle();
     });
 
     testWidgets('patch notes modal pops up once per version and can also be opened from the sidebar', (tester) async {

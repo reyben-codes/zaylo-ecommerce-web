@@ -15,56 +15,80 @@ class MobileAppVersionController extends Controller
     /** How long a looked-up version is reused. */
     private const CACHE_MINUTES = 2;
 
+    /** For a release without notes of its own, such as those from before notes were written. */
+    private const NOTES_UNKNOWN = ['Improvements and fixes.'];
+
     public function show(): JsonResponse
     {
+        $release = $this->latestRelease();
+
         return response()->json([
-            'latest_version' => $this->latestVersion(),
+            'latest_version' => $release['version'],
             'download_url' => config('marketplace.android_app.download_url'),
-            'release_notes' => [
-                'Floating Zay chatbot with animated expressions and sidebar toggle.',
-                'Interactive pinch-to-zoom and full-screen photo zoom on products.',
-                'Unified Cart experience across navigation, product cards, and checkout.',
-                'Sidebar shortcut to summon the Zay chatbot and view patch notes.',
-            ],
+            'release_notes' => $release['notes'] ?: self::NOTES_UNKNOWN,
         ]);
     }
 
-    /** "1.0.14" from the latest release tag, or null when it cannot be found. */
-    private function latestVersion(): ?string
+    /**
+     * The latest release: "1.0.14" from its tag (null when it cannot be found) and its notes.
+     *
+     * @return array{version: ?string, notes: list<string>}
+     */
+    private function latestRelease(): array
     {
         if ($pinned = config('marketplace.android_app.latest_version')) {
-            return ltrim((string) $pinned, 'v');
+            return ['version' => ltrim((string) $pinned, 'v'), 'notes' => []];
         }
 
-        if ($cached = Cache::get('android-app:latest-version')) {
+        if ($cached = Cache::get('android-app:latest-release')) {
             return $cached;
         }
 
-        $version = $this->fetchFromGitHubApi() ?? $this->fetchFromGitHubRedirect();
-        if ($version) {
-            Cache::put('android-app:latest-version', $version, now()->addMinutes(self::CACHE_MINUTES));
-            Cache::forever('android-app:last-version', $version);
+        $last = Cache::get('android-app:last-release');
+        $release = $this->fetchFromGitHubApi();
+        if (! $release && ($version = $this->fetchFromGitHubRedirect())) {
+            // The redirect only tells the version, so notes are only kept if they belong to it.
+            $release = ['version' => $version, 'notes' => $last['version'] === $version ? $last['notes'] : []];
+        }
+        if ($release) {
+            Cache::put('android-app:latest-release', $release, now()->addMinutes(self::CACHE_MINUTES));
+            Cache::forever('android-app:last-release', $release);
         }
 
-        return $version ?? Cache::get('android-app:last-version');
+        return $release ?? $last ?? ['version' => null, 'notes' => []];
     }
 
-    private function fetchFromGitHubApi(): ?string
+    /** @return array{version: string, notes: list<string>}|null */
+    private function fetchFromGitHubApi(): ?array
     {
         try {
-            $tag = Http::timeout(5)
+            $latest = Http::timeout(5)
                 ->withUserAgent('Zaylo-Marketplace')
                 ->acceptJson()
                 ->get(config('marketplace.android_app.releases_api'))
-                ->throw()
-                ->json('tag_name');
+                ->throw();
+            $tag = $latest->json('tag_name');
 
-            return is_string($tag) && preg_match('/^v?(\d+\.\d+\.\d+)$/', $tag, $match) ? $match[1] : null;
+            return is_string($tag) && preg_match('/^v?(\d+\.\d+\.\d+)$/', $tag, $match)
+                ? ['version' => $match[1], 'notes' => $this->notesFrom((string) $latest->json('body'))]
+                : null;
         } catch (\Throwable $exception) {
             report($exception);
 
             return null;
         }
+    }
+
+    /**
+     * The "- " lines of a release's description (.github/scripts/patch-notes.mjs).
+     *
+     * @return list<string>
+     */
+    private function notesFrom(string $body): array
+    {
+        preg_match_all('/^- (.+)$/m', str_replace("\r", '', $body), $matches);
+
+        return array_map('trim', $matches[1]);
     }
 
     /**
