@@ -890,8 +890,8 @@ th { color: var(--c-6b5f54); font-size: .72rem; text-transform: uppercase; lette
 }
 
 @media (min-width: 1281px) {
-    /* Logo on the left across both rows, then search, icons and account on top. The store links share the
-       search bar's column so they centre under it, whatever the icons and account buttons on the right measure. */
+    /* Logo on the left across both rows, then search, icons and account on top. The store links span every
+       column so they stay centred on the page, whatever the icons and account buttons on the right measure. */
     .navbar {
         grid-template-columns: auto minmax(0, 1fr) auto auto;
         grid-template-rows: auto auto;
@@ -907,7 +907,7 @@ th { color: var(--c-6b5f54); font-size: .72rem; text-transform: uppercase; lette
     }
 
     .navbar .nav-menu {
-        grid-column: 2;
+        grid-column: 1 / -1;
         grid-row: 2;
         justify-self: center;
     }
