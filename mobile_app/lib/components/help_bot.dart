@@ -740,7 +740,12 @@ class _HelpBotConversationState extends State<HelpBotConversation> {
               ),
             ),
             const SizedBox(width: 8),
-            IconButton.filled(onPressed: _typing ? null : _send, tooltip: 'Send', icon: const Icon(Icons.send)),
+            IconButton.filled(
+              onPressed: _typing ? null : _send,
+              tooltip: 'Send',
+              style: IconButton.styleFrom(backgroundColor: ZayloColors.ink, foregroundColor: ZayloColors.white),
+              icon: const Icon(Icons.send),
+            ),
           ]),
         );
         return Column(children: [
