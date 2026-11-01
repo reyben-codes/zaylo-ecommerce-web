@@ -588,7 +588,7 @@ th { color: var(--c-6b5f54); font-size: .72rem; text-transform: uppercase; lette
 /* HEADER / NAVIGATION */
 .navbar {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto minmax(max-content, 1fr);
+    grid-template-columns: auto auto minmax(0, 1fr);
     align-items: center;
     column-gap: 24px;
     background: var(--c-ffffff);
@@ -903,6 +903,12 @@ th { color: var(--c-6b5f54); font-size: .72rem; text-transform: uppercase; lette
     .navbar .search-wrapper input {
         width: 100%;
         min-width: 0;
+    }
+
+    /* Results line up with the search bar, whichever width it grows to. */
+    .navbar .live-search {
+        left: 0;
+        width: auto;
     }
 
     .navbar .icon-group,
