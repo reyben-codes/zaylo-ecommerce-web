@@ -11,6 +11,7 @@
     // Show the chosen option's photo, reusing the gallery thumbnail when there is one.
     const showPhoto = (src) => {
         if (!src || !gallery) return;
+        gallery.dispatchEvent(new CustomEvent('zaylo:gallery-hold'));
         const thumbnail = [...gallery.querySelectorAll('[data-gallery-thumbnail]')].find((button) => button.dataset.imageSrc === src);
         if (thumbnail) {
             thumbnail.click();

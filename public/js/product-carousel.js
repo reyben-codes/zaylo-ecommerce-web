@@ -297,7 +297,7 @@
         if (!mainImage || !frame) return;
 
         let current = 0;
-        let hovered = false;
+        let held = false;
         let timer;
         let fadeTimeout;
         let generation = 0;
@@ -415,16 +415,10 @@
             timer = undefined;
         }
 
-        function reset() {
-            stop();
-            cancelTransition();
-            setImage(0);
-        }
-
         function start() {
-            if (timer || !hovered || frame.classList.contains('is-zooming') || document.hidden || reducedMotion.matches || gallery.querySelector(':focus-visible')) return;
+            if (timer || held || document.hidden || reducedMotion.matches || gallery.querySelector(':focus-visible')) return;
             timer = window.setInterval(() => {
-                if (!changing && !frame.classList.contains('is-zooming')) showImage(current + 1);
+                if (!changing && !frame.classList.contains('is-zooming') && !document.querySelector('.product-zoom-lightbox:not([hidden])')) showImage(current + 1);
             }, slideDelay);
         }
 
@@ -434,15 +428,11 @@
             start();
         }
 
-        gallery.addEventListener('pointerenter', (event) => {
-            if (event.pointerType !== 'mouse') return;
-            hovered = true;
-            start();
-        });
-        gallery.addEventListener('pointerleave', (event) => {
-            if (event.pointerType !== 'mouse') return;
-            hovered = false;
-            reset();
+        // Choosing a color or size keeps its photo on screen instead of sliding away from it.
+        gallery.addEventListener('zaylo:gallery-hold', () => {
+            held = true;
+            stop();
+            cancelTransition();
         });
         thumbnails.forEach((thumbnail, index) => thumbnail.addEventListener('click', () => navigate(index)));
         gallery.querySelector('[data-gallery-prev]').addEventListener('click', () => navigate(current - 1));
@@ -454,13 +444,14 @@
 
         controllers.push({
             sync() {
-                if (hovered && gallery.matches(':hover') && !document.hidden && !reducedMotion.matches) start();
+                if (!document.hidden && !reducedMotion.matches) start();
                 else {
-                    if (!gallery.matches(':hover')) hovered = false;
-                    reset();
+                    stop();
+                    cancelTransition();
                 }
             },
         });
+        start();
     });
 
     document.addEventListener('click', (event) => {
