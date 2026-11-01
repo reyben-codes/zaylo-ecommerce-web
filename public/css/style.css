@@ -39,7 +39,7 @@ body {
     border: 1px solid var(--c-d9d0c7);
     border-left: 3px solid var(--c-9a755e);
     border-radius: 4px;
-    background: rgba(255, 253, 250, .98);
+    background: var(--c-ffffff);
     color: var(--c-1a1714);
     box-shadow: 0 16px 40px rgba(42, 32, 25, .16), 0 3px 10px rgba(42, 32, 25, .08);
     pointer-events: auto;
@@ -334,7 +334,7 @@ nav[aria-label="Pagination Navigation"] svg { width: 18px; height: 18px; }
 .detail-image img[data-gallery-main] { transform-origin: var(--zoom-x) var(--zoom-y); transform: scale(1); transition: opacity .18s ease, transform .28s cubic-bezier(.22, 1, .36, 1); }
 .detail-image.is-zooming img[data-gallery-main] { transform: scale(2.15); }
 .detail-image img[data-gallery-main].is-changing { opacity: 0; }
-.detail-gallery-arrow, .detail-gallery-zoom { position: absolute; z-index: 2; display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid var(--c-d8d0c8); border-radius: 50%; background: rgba(255, 255, 255, .92); color: var(--c-1a1714); cursor: pointer; transition: background-color .15s ease, transform .15s ease; }
+.detail-gallery-arrow, .detail-gallery-zoom { position: absolute; z-index: 2; display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid var(--c-d8d0c8); border-radius: 50%; background: var(--c-ffffff); color: var(--c-1a1714); cursor: pointer; transition: background-color .15s ease, transform .15s ease; }
 .detail-gallery-arrow { top: 50%; transform: translateY(-50%); width: 44px; height: 44px; }
 .detail-gallery-zoom { right: 12px; bottom: 12px; }
 .detail-gallery-arrow:hover, .detail-gallery-zoom:hover { background: var(--c-ffffff); }
@@ -367,10 +367,10 @@ nav[aria-label="Pagination Navigation"] svg { width: 18px; height: 18px; }
 .detail-thumbnail.is-active { border-color: var(--c-9a755e); box-shadow: 0 0 0 3px var(--c-9a755e); }
 .detail-thumbnail:focus-visible { outline: 2px solid var(--c-9a755e); outline-offset: 2px; }
 .detail-thumbnail img { width: 100%; height: 100%; display: block; object-fit: contain; }
-.product-photo-count { position: absolute; z-index: 2; right: 10px; bottom: 10px; padding: 4px 9px; border-radius: 999px; background: rgba(26, 23, 20, .78); color: var(--c-ffffff); font-size: .68rem; line-height: 1.2; pointer-events: none; }
+.product-photo-count { position: absolute; z-index: 2; right: 10px; bottom: 10px; padding: 4px 9px; border-radius: 999px; background: rgba(26, 23, 20, .78); color: #fff; font-size: .68rem; line-height: 1.2; pointer-events: none; }
 /* Sold-out products: grayed photo with a centered label (cards and the product page). */
 img.is-sold-out, .detail-image.is-sold-out img[data-gallery-main], .detail-thumbnail.is-sold-out img { filter: grayscale(1); opacity: .55; }
-.product-sold-out-label { position: absolute; z-index: 3; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 7px 14px; border-radius: 999px; background: rgba(26, 23, 20, .84); color: var(--c-ffffff); font-size: .7rem; font-weight: 700; letter-spacing: .14em; line-height: 1.2; text-transform: uppercase; white-space: nowrap; pointer-events: none; }
+.product-sold-out-label { position: absolute; z-index: 3; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 7px 14px; border-radius: 999px; background: rgba(26, 23, 20, .84); color: #fff; font-size: .7rem; font-weight: 700; letter-spacing: .14em; line-height: 1.2; text-transform: uppercase; white-space: nowrap; pointer-events: none; }
 .detail-image .product-sold-out-label { padding: 10px 20px; font-size: .85rem; }
 .detail-thumbnail { position: relative; }
 .product-sold-out-label--small { padding: 4px 8px; font-size: .56rem; letter-spacing: .1em; }
@@ -1352,6 +1352,10 @@ th { color: var(--c-6b5f54); font-size: .72rem; text-transform: uppercase; lette
     font-size: 0.68rem;
     letter-spacing: 0.04em;
 }
+
+/* The footer turns pale in dark mode, so its muted text stays dark enough to read. */
+:root[data-theme="dark"] .footer-bottom,
+:root[data-theme="dark"] .footer-bottom a { color: #5f574f; }
 
 /* RESPONSIVE */
 @media (max-width: 1280px) {

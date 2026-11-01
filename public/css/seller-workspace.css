@@ -646,7 +646,7 @@ a.seller-stat.is-active {
     border: 1px solid var(--c-d9d0c7);
     border-left: 3px solid var(--c-9a755e);
     border-radius: 4px;
-    background: rgba(255, 253, 250, .98);
+    background: var(--c-ffffff);
     color: var(--c-1a1714);
     box-shadow: 0 16px 40px rgba(42, 32, 25, .16), 0 3px 10px rgba(42, 32, 25, .08);
     pointer-events: auto;

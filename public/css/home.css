@@ -48,9 +48,9 @@
     display: grid;
     width: 42px;
     height: 42px;
-    border: 1px solid rgba(26, 23, 20, .18);
+    border: 1px solid var(--c-d8d0c8);
     border-radius: 50%;
-    background: rgba(255, 255, 255, .88);
+    background: var(--c-ffffff);
     color: var(--c-1a1714);
     cursor: pointer;
     place-items: center;
@@ -251,6 +251,21 @@
 @media (max-width: 340px) {
     .home-hero .hero-headline {
         font-size: 2rem;
+    }
+}
+
+/* Dark mode: the hero's text and controls turn light, so the photo fades into the dark page instead of a pale one. */
+:root[data-theme="dark"] .home-hero::after {
+    background: linear-gradient(90deg, rgba(20, 17, 15, .94), rgba(20, 17, 15, .8) 32%, rgba(20, 17, 15, .2) 72%);
+}
+
+:root[data-theme="dark"] .home-hero .hero-carousel-dot::before {
+    background: rgba(255, 255, 255, .5);
+}
+
+@media (max-width: 640px) {
+    :root[data-theme="dark"] .home-hero::after {
+        background: linear-gradient(90deg, rgba(20, 17, 15, .92), rgba(20, 17, 15, .72) 65%, rgba(20, 17, 15, .35));
     }
 }
 

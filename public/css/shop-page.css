@@ -99,9 +99,9 @@
     gap: 2px 12px;
     align-items: center;
     padding: 14px 16px;
-    border: 1px solid rgba(229, 223, 216, .9);
+    border: 1px solid var(--c-e5dfd8);
     border-radius: 16px;
-    background: rgba(255, 255, 255, .92);
+    background: var(--c-ffffff);
     box-shadow: 0 1px 2px rgba(26, 23, 20, .04), 0 8px 24px rgba(26, 23, 20, .06);
     transition: transform .2s ease-out, box-shadow .2s ease-out;
 }
