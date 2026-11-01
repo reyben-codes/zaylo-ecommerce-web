@@ -30,6 +30,32 @@ class MobileAppFeaturesTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_sold_out_products_stay_listed_last_in_the_catalog_but_cannot_be_bought(): void
+    {
+        $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);
+        $soldOut = Product::create(['seller_id' => $seller->id, 'name' => 'Sold Basket', 'category' => 'storage_bins', 'price' => 100, 'stock' => 0, 'is_active' => true]);
+        Product::create(['seller_id' => $seller->id, 'name' => 'Older Basket', 'category' => 'storage_bins', 'price' => 200, 'stock' => 4, 'is_active' => true, 'created_at' => now()->subDay()]);
+
+        // Last even though it is the newest, and last when sorted by lowest price though it is the cheapest.
+        foreach (['/api/mobile/products', '/api/mobile/products?sort=price_low'] as $url) {
+            $this->getJson($url)->assertOk()
+                ->assertJsonPath('products.data.0.name', 'Older Basket')
+                ->assertJsonPath('products.data.1.name', 'Sold Basket')
+                ->assertJsonPath('products.data.1.stock', 0);
+        }
+
+        // Its page still opens, reporting no stock.
+        $this->getJson('/api/mobile/products/'.$soldOut->slug)->assertOk()->assertJsonPath('product.stock', 0);
+
+        // The home page's sections only show what can be bought.
+        $this->getJson('/api/mobile/home')->assertOk()->assertJsonMissing(['name' => 'Sold Basket']);
+
+        // An older app that still shows its add button is refused.
+        $buyer = User::factory()->create(['role' => 'buyer', 'status' => 'active']);
+        $this->withToken($buyer->createToken('test'))->postJson('/api/mobile/cart/'.$soldOut->slug, ['quantity' => 1])->assertUnprocessable();
+        $this->assertDatabaseCount('cart_items', 0);
+    }
+
     public function test_storefront_sends_announcements_ratings_reviews_and_policies(): void
     {
         $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);

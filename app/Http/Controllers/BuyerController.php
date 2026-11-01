@@ -157,11 +157,7 @@ class BuyerController extends Controller
         }
 
         if ($validated['availability'] === 'all') {
-            $inStockSql = 'EXISTS (SELECT 1 FROM product_variants pv WHERE pv.product_id = products.id AND pv.is_active = 1 AND pv.stock > 0)';
-            if (Product::usesLegacySchema()) {
-                $inStockSql .= ' OR (NOT EXISTS (SELECT 1 FROM product_variants pv2 WHERE pv2.product_id = products.id AND pv2.is_active = 1) AND products.stock > 0)';
-            }
-            $query->orderByRaw("CASE WHEN {$inStockSql} THEN 0 ELSE 1 END");
+            ProductCatalog::soldOutLast($query);
         }
         if (in_array($validated['sort'] ?? '', ['price_low', 'price_high'], true)) {
             $direction = $validated['sort'] === 'price_high' ? 'DESC' : 'ASC';

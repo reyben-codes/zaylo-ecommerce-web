@@ -80,6 +80,9 @@ class Product {
   /// How many can be bought across its active options; null from older servers.
   final int? stock;
 
+  /// Nothing can be bought right now, across all its options.
+  bool get isSoldOut => stock != null && stock! <= 0;
+
   /// Detail-only fields; empty or null on list payloads.
   final String? sellerName;
   final List<String> images;

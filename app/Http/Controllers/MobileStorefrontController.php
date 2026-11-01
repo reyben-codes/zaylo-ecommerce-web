@@ -62,7 +62,7 @@ class MobileStorefrontController extends Controller
         ]);
     }
 
-    /** The website's catalog filters, for products in stock. */
+    /** The website's catalog filters. As there, sold-out products stay listed, after the available ones. */
     public function products(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -79,7 +79,8 @@ class MobileStorefrontController extends Controller
         }
         $search = ProductCatalog::normalizeSearch($validated['search'] ?? null);
 
-        $query = $this->availableProducts();
+        $query = $this->listedProducts();
+        ProductCatalog::soldOutLast($query);
         ProductCatalog::category($query, $validated['category'] ?? null);
         ProductCatalog::gender($query, $validated['gender'] ?? null);
         ProductCatalog::search($query, $search);
@@ -100,7 +101,7 @@ class MobileStorefrontController extends Controller
 
     public function show(Request $request, Product $product): JsonResponse
     {
-        abort_unless($this->availableProducts()->whereKey($product->id)->exists(), 404);
+        abort_unless($this->listedProducts()->whereKey($product->id)->exists(), 404);
 
         $product->load([...$this->relations(), 'variants' => fn ($query) => $query->where('is_active', true)])
             ->loadCount('reviews')->loadAvg('reviews', 'rating');
@@ -168,12 +169,18 @@ class MobileStorefrontController extends Controller
         ]]);
     }
 
-    /** Approved, switched-on, in-stock products with what the cards need (ratings included). */
-    private function availableProducts(): Builder
+    /** Approved, switched-on products, sold out or not, with what the cards need (ratings included). */
+    private function listedProducts(): Builder
     {
-        $query = Product::withReviewSummary()->visibleToBuyers()->with($this->relations())
+        return Product::withReviewSummary()->visibleToBuyers()->with($this->relations())
             ->withCount(['variants as active_variants_count' => fn ($builder) => $builder->where('is_active', true)])
             ->withSum(['variants as catalog_variant_stock' => fn ($builder) => $builder->where('is_active', true)], 'stock');
+    }
+
+    /** The in-stock ones, for the home page's sections (the website's home page shows only these too). */
+    private function availableProducts(): Builder
+    {
+        $query = $this->listedProducts();
 
         return Product::usesLegacySchema()
             ? $query->where('stock', '>', 0)

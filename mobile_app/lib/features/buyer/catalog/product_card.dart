@@ -72,7 +72,7 @@ class ProductCard extends StatelessWidget {
           AspectRatio(
             aspectRatio: 1,
             child: Stack(fit: StackFit.expand, children: [
-              NetworkImageBox(url: product.imageUrl),
+              product.isSoldOut ? SoldOutFilter(child: NetworkImageBox(url: product.imageUrl)) : NetworkImageBox(url: product.imageUrl),
               // The photo fades into the card, so the name and price sit on one surface.
               Positioned(
                 left: 0,
@@ -105,6 +105,7 @@ class ProductCard extends StatelessWidget {
                   ),
                 ),
               ),
+              if (product.isSoldOut) const Center(child: SoldOutLabel()),
               if (badge != null) Positioned(left: 10, bottom: 10, child: _Pill(child: Text(badge))),
               if (product.rating != null)
                 Positioned(
@@ -147,16 +148,18 @@ class ProductCard extends StatelessWidget {
                 const Spacer(),
                 Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
                   Expanded(child: PriceLine(product: product, size: 15)),
-                  const SizedBox(width: 6),
-                  Builder(
-                    builder: (button) => _SquareIconButton(
-                      tooltip: product.hasOptions ? 'Choose options' : 'Add to cart',
-                      onPressed: () => ShopActions.quickAdd(context, product, from: button),
-                      background: ZayloColors.ink,
-                      size: 34,
-                      icon: CartIcon(size: 18, color: ZayloColors.white),
+                  if (!product.isSoldOut) ...[
+                    const SizedBox(width: 6),
+                    Builder(
+                      builder: (button) => _SquareIconButton(
+                        tooltip: product.hasOptions ? 'Choose options' : 'Add to cart',
+                        onPressed: () => ShopActions.quickAdd(context, product, from: button),
+                        background: ZayloColors.ink,
+                        size: 34,
+                        icon: CartIcon(size: 18, color: ZayloColors.white),
+                      ),
                     ),
-                  ),
+                  ],
                 ]),
               ]),
             ),
@@ -165,6 +168,48 @@ class ProductCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Grays out the photo of a sold-out product, as on the website (img.is-sold-out).
+class SoldOutFilter extends StatelessWidget {
+  const SoldOutFilter({super.key, required this.child});
+
+  final Widget child;
+
+  static const _grayscale = ColorFilter.matrix([
+    .2126, .7152, .0722, 0, 0, //
+    .2126, .7152, .0722, 0, 0, //
+    .2126, .7152, .0722, 0, 0, //
+    0, 0, 0, 1, 0, //
+  ]);
+
+  @override
+  Widget build(BuildContext context) => Opacity(
+        opacity: .55,
+        child: ColorFiltered(colorFilter: _grayscale, child: child),
+      );
+}
+
+/// The "SOLD OUT" pill over a grayed photo, as on the website (.product-sold-out-label).
+class SoldOutLabel extends StatelessWidget {
+  const SoldOutLabel({super.key, this.large = false});
+
+  /// The bigger pill on the product page.
+  final bool large;
+
+  @override
+  Widget build(BuildContext context) => IgnorePointer(
+        child: DecoratedBox(
+          decoration: BoxDecoration(color: const Color(0xD61A1714), borderRadius: BorderRadius.circular(999)),
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: large ? 20 : 14, vertical: large ? 10 : 7),
+            child: Text(
+              'SOLD OUT',
+              style: TextStyle(color: Colors.white, fontSize: large ? 13.5 : 11, fontWeight: FontWeight.w700, letterSpacing: 1.6),
+            ),
+          ),
+        ),
+      );
 }
 
 /// A small rounded-square button, like the save and bag buttons on the card.

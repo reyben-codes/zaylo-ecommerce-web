@@ -19,6 +19,16 @@ class ProductCatalog
         return trim(preg_replace('/\s+/u', ' ', $search ?? ''));
     }
 
+    /** Lists sold-out products after available ones. Call before sort(), which only orders within each group. */
+    public static function soldOutLast(Builder $query): void
+    {
+        $inStockSql = 'EXISTS (SELECT 1 FROM product_variants pv WHERE pv.product_id = products.id AND pv.is_active = 1 AND pv.stock > 0)';
+        if (Product::usesLegacySchema()) {
+            $inStockSql .= ' OR (NOT EXISTS (SELECT 1 FROM product_variants pv2 WHERE pv2.product_id = products.id AND pv2.is_active = 1) AND products.stock > 0)';
+        }
+        $query->orderByRaw("CASE WHEN {$inStockSql} THEN 0 ELSE 1 END");
+    }
+
     /** Matches the main or an additional category; a main category covers its subcategories. */
     public static function category(Builder $query, ?string $category): void
     {

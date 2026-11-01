@@ -30,6 +30,7 @@ import 'package:zaylo_mobile/features/buyer/messages/seller_chat_screen.dart';
 import 'package:zaylo_mobile/features/buyer/messages/seller_inbox_screen.dart';
 import 'package:zaylo_mobile/features/rider/history/rider_history_tab.dart';
 import 'package:zaylo_mobile/models/auth_models.dart';
+import 'package:zaylo_mobile/features/buyer/catalog/product_card.dart';
 import 'package:zaylo_mobile/models/buyer/account_models.dart';
 import 'package:zaylo_mobile/models/buyer/cart_models.dart';
 import 'package:zaylo_mobile/models/buyer/catalog_models.dart';
@@ -80,6 +81,22 @@ Map<String, dynamic> cartJson(List<int> ids) => {
       'count': ids.length,
       'subtotal': 499.0 * ids.length,
     };
+
+/// Every product it serves has sold out.
+class SoldOutApi extends FakeApi {
+  @override
+  Future<StorefrontHome> home() async => StorefrontHome.fromJson({
+        'categories': [],
+        'hero_images': [],
+        'new_arrivals': [productJson(1, stock: 0)],
+      });
+
+  @override
+  Future<Product> product(String slug) async => Product.fromJson({
+        ...productJson(1, stock: 0),
+        'images': ['http://fake.test/1.jpg'],
+      });
+}
 
 class FakeApi extends BuyerApi {
   FakeApi({this.cartIds = const [], this.announcements = const [], this.announcementPopups = const [], this.identityVerified = true})
@@ -1953,6 +1970,35 @@ void main() {
     await tester.tap(find.bySemanticsLabel('Show image 2 of 3'));
     await tester.pumpAndSettle();
     expect(showing(2), isTrue);
+  });
+
+  testWidgets('a sold-out product is grayed out and cannot be added, on its card and its page', (tester) async {
+    await pumpApp(tester, api: SoldOutApi());
+
+    expect(find.byType(SoldOutFilter), findsOneWidget);
+    expect(find.text('SOLD OUT'), findsOneWidget);
+    expect(find.text('Sold out'), findsOneWidget);
+    expect(find.byTooltip('Add to cart'), findsNothing);
+
+    await tester.tap(find.text('Watering Can 1').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Currently sold out'), findsOneWidget);
+    expect(find.text('Quantity'), findsNothing);
+    expect(find.text('ADD TO CART'), findsNothing);
+    expect(find.text('BUY NOW'), findsNothing);
+  });
+
+  testWidgets('a product in stock is not grayed out and can be added', (tester) async {
+    await pumpApp(tester);
+
+    expect(find.byType(SoldOutFilter), findsNothing);
+    expect(find.text('SOLD OUT'), findsNothing);
+    expect(find.byTooltip('Add to cart'), findsWidgets);
+
+    await tester.tap(find.text('Watering Can 1').first);
+    await tester.pumpAndSettle();
+    expect(find.text('ADD TO CART'), findsOneWidget);
   });
 
   testWidgets('product detail opens the full-screen photo zoom viewer and toggles zoom', (tester) async {

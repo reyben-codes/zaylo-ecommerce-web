@@ -155,7 +155,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 ),
               ],
             ),
-            bottomNavigationBar: snapshot.hasError
+            bottomNavigationBar: snapshot.hasError || product.isSoldOut
                 ? null
                 : _ActionBar(
                     addButtonKey: _addButton,
@@ -187,10 +187,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               child: InteractiveViewer(
                                 minScale: 1,
                                 maxScale: 4,
-                                child: NetworkImageBox(url: images[index]),
+                                child: product.isSoldOut
+                                    ? SoldOutFilter(child: NetworkImageBox(url: images[index]))
+                                    : NetworkImageBox(url: images[index]),
                               ),
                             ),
                           ),
+                          if (product.isSoldOut) const Positioned.fill(child: Center(child: SoldOutLabel(large: true))),
                           Positioned(
                             right: 12,
                             bottom: 12,
@@ -311,24 +314,29 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               ]),
                             ],
                             const SizedBox(height: 22),
-                            Row(children: [
-                              Text('Quantity',
-                                  style: TextStyle(fontWeight: FontWeight.w700, color: ZayloColors.ink)),
-                              const Spacer(),
-                              QuantityStepper(
-                                value: _quantity,
-                                max: _maxQuantity(product),
-                                onChanged: (value) => setState(() => _quantity = value),
+                            if (product.isSoldOut)
+                              Text('Currently sold out',
+                                  style: TextStyle(fontWeight: FontWeight.w700, color: ZayloColors.danger))
+                            else ...[
+                              Row(children: [
+                                Text('Quantity',
+                                    style: TextStyle(fontWeight: FontWeight.w700, color: ZayloColors.ink)),
+                                const Spacer(),
+                                QuantityStepper(
+                                  value: _quantity,
+                                  max: _maxQuantity(product),
+                                  onChanged: (value) => setState(() => _quantity = value),
+                                ),
+                              ]),
+                              const SizedBox(height: 6),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: Text(
+                                  '${_variant?.stock ?? product.stock ?? 0} available',
+                                  style: TextStyle(fontSize: 12, color: ZayloColors.muted),
+                                ),
                               ),
-                            ]),
-                            const SizedBox(height: 6),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: Text(
-                                '${_variant?.stock ?? product.stock ?? 0} available',
-                                style: TextStyle(fontSize: 12, color: ZayloColors.muted),
-                              ),
-                            ),
+                            ],
                           ],
                           const SizedBox(height: 22),
                           Divider(color: ZayloColors.line),
