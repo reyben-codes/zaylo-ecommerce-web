@@ -7,9 +7,11 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\LazyCollection;
 
 /**
- * A notice from the admin shown at the top of the pages of the chosen audience.
+ * A notice from the admin for the chosen audience, shown in the announcement section at the top of their pages, as a
+ * pop-up, by email, or any mix of these.
  */
 class Announcement extends Model
 {
@@ -34,9 +36,19 @@ class Announcement extends Model
         'all' => 'fa-globe', 'buyer' => 'fa-bag-shopping', 'seller' => 'fa-store', 'logistics' => 'fa-warehouse', 'rider' => 'fa-motorcycle',
     ];
 
-    protected $fillable = ['title', 'body', 'audience', 'is_published', 'starts_at', 'ends_at', 'created_by'];
+    /** The ways to show an announcement: field => label, explanation and icon on the admin form. */
+    public const CHANNELS = [
+        'show_in_section' => ['Announcement section', 'A bar at the top of their pages, until they dismiss it or it ends.', 'fa-bars-staggered'],
+        'show_as_modal' => ['Pop-up', 'Opens over their screen once, on the website and in the app.', 'fa-window-restore'],
+        'send_email' => ['Email', 'Sent once to active, verified accounts. Visitors who are not signed in get none.', 'fa-envelope'],
+    ];
 
-    protected $casts = ['is_published' => 'boolean', 'starts_at' => 'datetime', 'ends_at' => 'datetime'];
+    protected $fillable = ['title', 'body', 'audience', 'show_in_section', 'show_as_modal', 'send_email', 'is_published', 'starts_at', 'ends_at', 'created_by'];
+
+    protected $casts = [
+        'show_in_section' => 'boolean', 'show_as_modal' => 'boolean', 'send_email' => 'boolean',
+        'is_published' => 'boolean', 'starts_at' => 'datetime', 'ends_at' => 'datetime', 'emailed_at' => 'datetime',
+    ];
 
     public function author(): BelongsTo
     {
@@ -50,15 +62,39 @@ class Announcement extends Model
             ->where(fn (Builder $q) => $q->whereNull('ends_at')->orWhere('ends_at', '>', now()));
     }
 
-    /** Live announcements for a role (guests see the ones for everyone). */
+    /** Live announcements in a role's announcement section (guests see the ones for everyone). */
     public static function for(?string $role): Collection
     {
-        if (! Schema::hasTable('announcements')) {
+        return static::shownVia('show_in_section', $role);
+    }
+
+    /** Live announcements that pop up for a role (guests see the ones for everyone). */
+    public static function popupsFor(?string $role): Collection
+    {
+        return static::shownVia('show_as_modal', $role);
+    }
+
+    private static function shownVia(string $channel, ?string $role): Collection
+    {
+        if (! Schema::hasColumn('announcements', $channel)) {
             return new Collection();
         }
         $role = $role === 'courier' ? 'rider' : $role;
 
-        return static::live()->whereIn('audience', array_values(array_filter(['all', $role])))->latest()->limit(3)->get();
+        return static::live()->where($channel, true)->whereIn('audience', array_values(array_filter(['all', $role])))->latest()->limit(3)->get();
+    }
+
+    /** The active, verified accounts in this announcement's audience, for email. */
+    public function emailRecipients(): LazyCollection
+    {
+        $roles = $this->audience === 'all' ? ['buyer', 'seller', 'logistics', 'rider', 'courier']
+            : ($this->audience === 'rider' ? ['rider', 'courier'] : [$this->audience]);
+
+        return User::where('status', 'active')->whereNotNull('email_verified_at')
+            ->where(fn (Builder $query) => Schema::hasColumn('users', 'role')
+                ? $query->whereIn('role', $roles)
+                : $query->whereHas('roles', fn (Builder $role) => $role->whereIn('name', $roles)))
+            ->lazyById()->filter(fn (User $user) => $user->isActive());
     }
 
     public function getStateAttribute(): string

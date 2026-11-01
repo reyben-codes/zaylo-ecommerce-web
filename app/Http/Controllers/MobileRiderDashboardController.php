@@ -61,6 +61,7 @@ class MobileRiderDashboardController extends Controller
         return response()->json([
             'rider' => $this->riderPayload($rider),
             'announcements' => MobilePayload::announcements(Announcement::for('rider')),
+            'announcement_popups' => MobilePayload::announcements(Announcement::popupsFor('rider')),
             // The partner assigns parcels here; the app shows this only while sellers deliver their own orders.
             'delivery_mode_message' => null,
             'stats' => [

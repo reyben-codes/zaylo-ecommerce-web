@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:zaylo_mobile/api/rider_api.dart';
 import 'package:zaylo_mobile/components/announcement_banner.dart';
+import 'package:zaylo_mobile/components/announcement_popups.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
 import 'package:zaylo_mobile/features/rider/dashboard/rider_delivery_list_screen.dart';
 import 'package:zaylo_mobile/features/rider/dashboard/rider_earnings_screen.dart';
@@ -74,6 +75,7 @@ class RiderDashboardTabState extends State<RiderDashboardTab> with RiderDelivery
         padding: EdgeInsets.fromLTRB(20, 8, 20, 32 + MediaQuery.paddingOf(context).bottom),
         children: [
           RiderGreetingCard(rider: data.rider),
+          AnnouncementPopups(announcements: data.announcementPopups),
           if (data.announcements.isNotEmpty) ...[
             const SizedBox(height: 12),
             AnnouncementBanner(announcements: data.announcements),

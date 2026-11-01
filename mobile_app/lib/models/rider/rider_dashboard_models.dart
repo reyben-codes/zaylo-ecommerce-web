@@ -481,6 +481,7 @@ class RiderDashboard {
     this.recent = const [],
     this.deliveryModeMessage,
     this.announcements = const [],
+    this.announcementPopups = const [],
     this.reasons = const RiderReasons(),
   });
 
@@ -499,6 +500,9 @@ class RiderDashboard {
 
   /// Live notices from the ZAYLO admin for riders.
   final List<Announcement> announcements;
+
+  /// Notices the admin also wants to pop up.
+  final List<Announcement> announcementPopups;
 
   /// Reasons for declining an assignment or reporting a failed attempt.
   final RiderReasons reasons;
@@ -520,6 +524,7 @@ class RiderDashboard {
         recent: _deliveries(json['recent']),
         deliveryModeMessage: json['delivery_mode_message'] as String?,
         announcements: Announcement.listFrom(json['announcements']),
+        announcementPopups: Announcement.listFrom(json['announcement_popups']),
         reasons: RiderReasons.fromJson(json['reasons'] as Map<String, dynamic>?),
       );
 }

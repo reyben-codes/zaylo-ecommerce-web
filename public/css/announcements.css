@@ -51,3 +51,102 @@
     background: var(--c-ebe0d3);
     outline: none;
 }
+
+/* The announcement pop-up (public/js/announcements.js). */
+.announcement-modal {
+    width: min(440px, calc(100vw - 32px));
+    max-height: calc(100dvh - 32px);
+    margin: auto;
+    padding: 28px;
+    overflow-y: auto;
+    border: 1px solid var(--c-ece4db);
+    border-radius: 16px;
+    background: var(--c-ffffff);
+    box-shadow: 0 24px 60px rgba(26, 23, 20, .22);
+    color: var(--c-1a1714);
+    font-family: 'Inter', sans-serif;
+    text-align: center;
+    animation: announcement-modal-in 280ms ease-out;
+}
+
+.announcement-modal::backdrop {
+    background: rgba(26, 23, 20, .5);
+    animation: announcement-backdrop-in 280ms ease-out;
+}
+
+.announcement-modal.is-closing {
+    animation: announcement-modal-out 200ms ease-out forwards;
+}
+
+.announcement-modal.is-closing::backdrop {
+    animation: announcement-backdrop-out 200ms ease-out forwards;
+}
+
+.announcement-modal__icon {
+    display: inline-grid;
+    width: 52px;
+    height: 52px;
+    margin-bottom: 14px;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--c-f5efe8);
+    color: var(--c-9a755e);
+    font-size: 1.15rem;
+}
+
+.announcement-modal h2 {
+    margin: 0 0 10px;
+    font-family: 'Playfair Display', serif;
+    font-size: 1.45rem;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.announcement-modal p {
+    margin: 0 0 22px;
+    color: var(--c-6b5f54);
+    font-size: .92rem;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+    white-space: pre-line;
+}
+
+.announcement-modal button {
+    min-width: 140px;
+    min-height: 44px;
+    padding: 10px 22px;
+    border: 0;
+    border-radius: 10px;
+    background: var(--c-1a1714);
+    color: var(--c-ffffff);
+    font: 600 .85rem 'Inter', sans-serif;
+    cursor: pointer;
+}
+
+.announcement-modal button:focus-visible {
+    outline: 2px solid var(--c-9a755e);
+    outline-offset: 3px;
+}
+
+@keyframes announcement-modal-in {
+    from { opacity: 0; transform: translateY(14px) scale(.97); }
+}
+
+@keyframes announcement-modal-out {
+    to { opacity: 0; transform: translateY(10px) scale(.97); }
+}
+
+@keyframes announcement-backdrop-in {
+    from { opacity: 0; }
+}
+
+@keyframes announcement-backdrop-out {
+    to { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .announcement-modal,
+    .announcement-modal::backdrop {
+        animation: none;
+    }
+}

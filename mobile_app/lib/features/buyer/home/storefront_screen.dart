@@ -6,6 +6,7 @@ import 'package:zaylo_mobile/auth/buyer/login_screen.dart';
 import 'package:zaylo_mobile/auth/buyer/registration_screen.dart';
 import 'package:zaylo_mobile/auth/rider/rider_login_screen.dart';
 import 'package:zaylo_mobile/components/announcement_banner.dart';
+import 'package:zaylo_mobile/components/announcement_popups.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
 import 'package:zaylo_mobile/features/buyer/catalog/product_card.dart';
 import 'package:zaylo_mobile/features/buyer/catalog/product_catalog_screen.dart';
@@ -129,6 +130,7 @@ class _StorefrontScreenState extends State<StorefrontScreen> {
                           controller: widget.scrollController,
                           physics: const AlwaysScrollableScrollPhysics(),
                           slivers: [
+                            SliverToBoxAdapter(child: AnnouncementPopups(announcements: data.announcementPopups)),
                             const SliverToBoxAdapter(child: SizedBox(height: HomeTopBar.height)),
                             SliverToBoxAdapter(
                               child: Padding(

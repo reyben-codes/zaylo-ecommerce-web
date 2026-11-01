@@ -47,6 +47,7 @@ class MobileStorefrontController extends Controller
 
         return response()->json($dashboard + [
             'announcements' => MobilePayload::announcements(Announcement::for($request->user('mobile')?->role)),
+            'announcement_popups' => MobilePayload::announcements(Announcement::popupsFor($request->user('mobile')?->role)),
             'categories' => collect(config('marketplace.browse_categories'))->map(
                 fn (array $details, string $slug) => ['id' => $slug] + $details
             )->values(),

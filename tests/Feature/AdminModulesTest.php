@@ -224,8 +224,8 @@ class AdminModulesTest extends TestCase
     {
         $buyer = User::factory()->create(['role' => 'buyer', 'status' => 'active']);
         $this->actingAs($this->admin);
-        $this->post(route('admin.announcements.store'), ['title' => 'Holiday deliveries', 'body' => 'Orders after Dec 20 ship in January.', 'audience' => 'buyer', 'is_published' => 1])->assertSessionHasNoErrors();
-        $this->post(route('admin.announcements.store'), ['title' => 'Seller fee update', 'body' => 'Commission stays at 10%.', 'audience' => 'seller', 'is_published' => 1])->assertSessionHasNoErrors();
+        $this->post(route('admin.announcements.store'), ['title' => 'Holiday deliveries', 'body' => 'Orders after Dec 20 ship in January.', 'audience' => 'buyer', 'show_in_section' => 1, 'is_published' => 1])->assertSessionHasNoErrors();
+        $this->post(route('admin.announcements.store'), ['title' => 'Seller fee update', 'body' => 'Commission stays at 10%.', 'audience' => 'seller', 'show_in_section' => 1, 'is_published' => 1])->assertSessionHasNoErrors();
 
         // My Orders only runs on the deployed database layout, so the check uses another storefront page.
         $this->actingAs($buyer)->get(route('support'))->assertSee('Holiday deliveries')->assertDontSee('Seller fee update');

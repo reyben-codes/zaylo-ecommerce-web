@@ -149,6 +149,7 @@ class StorefrontHome {
     this.flashSales = const [],
     this.suggested = const [],
     this.announcements = const [],
+    this.announcementPopups = const [],
   });
 
   final List<Category> categories;
@@ -161,6 +162,9 @@ class StorefrontHome {
 
   /// Live notices from the ZAYLO admin for buyers (or everyone, for guests).
   final List<Announcement> announcements;
+
+  /// Notices the admin also wants to pop up.
+  final List<Announcement> announcementPopups;
 
   static List<Product> _products(Object? list) => (list as List<dynamic>? ?? const [])
       .map((item) => Product.fromJson(item as Map<String, dynamic>))
@@ -175,6 +179,7 @@ class StorefrontHome {
         flashSales: _products(json['flash_sales']),
         suggested: _products(json['suggested']),
         announcements: Announcement.listFrom(json['announcements']),
+        announcementPopups: Announcement.listFrom(json['announcement_popups']),
       );
 }
 

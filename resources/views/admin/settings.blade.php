@@ -6,6 +6,10 @@
     <link rel="stylesheet" href="{{ asset('css/admin-modules.css') }}?v={{ filemtime(public_path('css/admin-modules.css')) }}">
 @endpush
 
+@push('scripts')
+    <script src="{{ asset('js/announcement-form.js') }}?v={{ filemtime(public_path('js/announcement-form.js')) }}" defer></script>
+@endpush
+
 @section('content')
     <section class="seller-page-heading">
         <div>
@@ -17,7 +21,7 @@
 
     <div class="seller-panel-grid">
         <section class="seller-panel">
-            <header class="seller-panel__header"><div><h2>Announcements</h2><p>Live announcements appear at the top of every page for their audience.</p></div></header>
+            <header class="seller-panel__header"><div><h2>Announcements</h2><p>Choose who each announcement is for and how it reaches them.</p></div></header>
             <ul class="announcement-list">
                 @forelse($announcements as $announcement)
                     <li class="announcement-item">
@@ -31,6 +35,8 @@
                             @if($announcement->starts_at) · from {{ $announcement->starts_at->timezone('Asia/Manila')->format('M j, g:i A') }}@endif
                             @if($announcement->ends_at) · until {{ $announcement->ends_at->timezone('Asia/Manila')->format('M j, g:i A') }}@endif
                             · by {{ $announcement->author?->name }}
+                            · {{ collect(\App\Models\Announcement::CHANNELS)->filter(fn ($details, $channel) => $announcement->{$channel})->map(fn ($details) => $details[0])->implode(', ') }}
+                            @if($announcement->emailed_at) · emailed {{ $announcement->emailed_at->timezone('Asia/Manila')->format('M j, g:i A') }}@endif
                         </span>
                         <div class="review-actions">
                             <form method="POST" action="{{ route('admin.announcements.update', $announcement) }}">
@@ -83,10 +89,35 @@
                     </div>
                     @error('audience')<p class="seller-field__error" role="alert">{{ $message }}</p>@enderror
                 </fieldset>
+                <fieldset class="seller-field announcement-audiences">
+                    <legend class="seller-field__label">How should it be shown?</legend>
+                    <div class="announcement-audiences__options">
+                        <label class="announcement-audience-option announcement-audience-option--public">
+                            <input type="checkbox" data-announcement-channels-all>
+                            <span class="announcement-audience-option__icon" aria-hidden="true"><i class="fas fa-layer-group"></i></span>
+                            <span class="announcement-audience-option__text">
+                                <strong>All of these</strong>
+                                <small>The announcement section, a pop-up and an email.</small>
+                            </span>
+                        </label>
+                        @foreach(\App\Models\Announcement::CHANNELS as $channel => [$label, $hint, $icon])
+                            <label class="announcement-audience-option">
+                                <input type="checkbox" name="{{ $channel }}" value="1" data-announcement-channel @checked(session()->hasOldInput() ? old($channel) : $channel === 'show_in_section')>
+                                <span class="announcement-audience-option__icon" aria-hidden="true"><i class="fas {{ $icon }}"></i></span>
+                                <span class="announcement-audience-option__text">
+                                    <strong>{{ $label }}</strong>
+                                    <small>{{ $hint }}</small>
+                                </span>
+                            </label>
+                        @endforeach
+                    </div>
+                    @error('channels')<p class="seller-field__error" role="alert">{{ $message }}</p>@enderror
+                </fieldset>
                 <div class="admin-form__row">
                     <div class="seller-field">
                         <label class="seller-field__label" for="announcement-starts">Starts (optional)</label>
                         <input type="datetime-local" id="announcement-starts" name="starts_at" value="{{ old('starts_at') }}">
+                        @error('starts_at')<p class="seller-field__error" role="alert">{{ $message }}</p>@enderror
                     </div>
                     <div class="seller-field">
                         <label class="seller-field__label" for="announcement-ends">Ends (optional)</label>

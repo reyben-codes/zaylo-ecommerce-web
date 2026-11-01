@@ -3,6 +3,7 @@ import 'dart:ui' show Tristate;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/api/buyer_api.dart';
@@ -81,13 +82,14 @@ Map<String, dynamic> cartJson(List<int> ids) => {
     };
 
 class FakeApi extends BuyerApi {
-  FakeApi({this.cartIds = const [], this.announcements = const [], this.identityVerified = true})
+  FakeApi({this.cartIds = const [], this.announcements = const [], this.announcementPopups = const [], this.identityVerified = true})
       : super(baseUrl: 'http://fake.test/api');
 
   final List<int> cartIds;
 
   /// Admin notices on the home screen, in the API's shape.
   final List<Map<String, dynamic>> announcements;
+  final List<Map<String, dynamic>> announcementPopups;
 
   /// Whether the buyer's ID is approved, which checkout requires.
   final bool identityVerified;
@@ -102,6 +104,7 @@ class FakeApi extends BuyerApi {
         if (token != null) 'flash_sales': [productJson(3, name: 'Gloves', price: 399, original: 599)],
         if (token != null) 'suggested': [productJson(4)],
         'announcements': announcements,
+        'announcement_popups': announcementPopups,
       });
 
   @override
@@ -1571,6 +1574,29 @@ void main() {
       expect(find.text('Holiday delivery  Expect delays on Dec 24.', findRichText: true), findsNothing);
       expect(find.byType(AnnouncementBanner, skipOffstage: false), findsOneWidget, reason: 'collapsed in place');
       expect(find.text('New Arrivals'), findsOneWidget, reason: 'still on the home screen');
+    });
+
+    testWidgets('admin pop-ups open once, one at a time', (tester) async {
+      FlutterSecureStorage.setMockInitialValues({});
+      final api = FakeApi(announcementPopups: [
+        {'key': 'popup-1', 'title': 'Maintenance tonight', 'body': 'The app is down at 2 AM.'},
+        {'key': 'popup-2', 'title': 'New rider rates', 'body': 'See your earnings page.'},
+      ]);
+      await pumpApp(tester, api: api);
+
+      expect(find.byType(AlertDialog), findsOneWidget);
+      final first = find.text('Maintenance tonight').evaluate().isNotEmpty ? 'Maintenance tonight' : 'New rider rates';
+      expect(find.text(first), findsOneWidget);
+      await tester.tap(find.text('Got it'));
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsOneWidget, reason: 'the second one follows');
+      expect(find.text(first), findsNothing);
+      await tester.tap(find.text('Got it'));
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsNothing);
+
+      await pumpApp(tester, api: api);
+      expect(find.byType(AlertDialog), findsNothing, reason: 'already seen on this device');
     });
 
     test('new payloads parse in the API shapes', () {
