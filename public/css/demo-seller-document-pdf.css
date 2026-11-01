@@ -1,0 +1,54 @@
+body {
+    color: #1a1714;
+    font-family: DejaVu Sans, sans-serif;
+    font-size: 12px;
+}
+
+h1 {
+    margin: 28px 0 8px;
+    font-size: 24px;
+}
+
+.mock-banner {
+    margin: 0;
+    padding: 10px;
+    background: #a52b23;
+    color: #fff;
+    font-weight: bold;
+    text-align: center;
+}
+
+.mock-note {
+    margin: 0 0 24px;
+    color: #6b5f54;
+}
+
+.mock-details {
+    width: 100%;
+    margin-bottom: 32px;
+    border-collapse: collapse;
+}
+
+.mock-details th,
+.mock-details td {
+    padding: 10px;
+    border: 1px solid #d8d0c8;
+    text-align: left;
+}
+
+.mock-details th {
+    width: 34%;
+    background: #f5f0ea;
+}
+
+.mock-watermark {
+    position: fixed;
+    top: 340px;
+    left: 20px;
+    color: #a52b23;
+    font-size: 58px;
+    font-weight: bold;
+    white-space: nowrap;
+    opacity: .14;
+    transform: rotate(-35deg);
+}
