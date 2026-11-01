@@ -599,6 +599,17 @@
     filter: invert(1);
 }
 
+/* Sign-in pages: their borders and placeholders are too close to the dark form background. */
+:root[data-theme="dark"] .auth-container {
+    --color-border: var(--c-d8d0c8);
+    --border: var(--c-d8d0c8);
+    --c-e5e5e5: var(--c-d8d0c8);
+}
+
+:root[data-theme="dark"] .auth-container input::placeholder {
+    color: var(--c-9b9188);
+}
+
 /* ---- Theme toggle control ---- */
 .theme-toggle {
     display: inline-flex;

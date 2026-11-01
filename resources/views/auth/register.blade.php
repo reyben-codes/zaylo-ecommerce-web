@@ -122,6 +122,7 @@
                 <img
                     src="{{ asset('images/ZAYLO_LOGO_LIGHT.png') }}"
                     alt="ZAYLO home"
+                    data-theme-fixed
                 >
             </a>
 
