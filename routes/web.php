@@ -315,6 +315,8 @@ Route::middleware(['auth', 'active', 'verified', 'nocache'])->group(function () 
     Route::get('/returns/{dispute}/photos/{kind}', [ReturnPhotoController::class, 'show'])->whereIn('kind', ['pickup', 'hub'])->middleware('throttle:120,1')->name('return-photo');
     // Answers for the help bot on every portal.
     Route::get('/help/faq', [FaqController::class, 'web'])->middleware('throttle:60,1')->name('faq');
+    // Questions the bot could not match go to the AI models, within limits shared with the app.
+    Route::post('/help/ask', [FaqController::class, 'ask'])->middleware(['throttle:10,1,zay-ask', 'throttle:20,1440,zay-ask-day'])->name('faq.ask');
 });
 
 // Pending and rejected logistics partners can still reach their application, so this group skips the active check.

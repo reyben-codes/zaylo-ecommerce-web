@@ -118,6 +118,13 @@ class ApiClient {
   /// The help bot's questions and answers (the same as on the website).
   Future<FaqData> faq() async => FaqData.fromJson(await send('GET', '/mobile/faq', query: {'role': faqRole}));
 
+  /// The AI models' reply to a question the bot could not match, or null when
+  /// they cannot answer. Needs a signed-in account; guests get null without a request.
+  Future<String?> askZay(String question, List<Map<String, String>> history) async {
+    if (token == null) return null;
+    return (await send('POST', '/mobile/help/ask', body: {'question': question, 'history': history}))['reply'] as String?;
+  }
+
   /// The whole support thread, oldest first. Opening it marks replies as read.
   Future<List<SupportMessage>> supportMessages() async =>
       ((await send('GET', '$accountPrefix/support'))['messages'] as List<dynamic>)

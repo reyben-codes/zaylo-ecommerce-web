@@ -1,10 +1,11 @@
 {{--
     The help bot on every portal: Zay answers common questions for the signed-in account (FaqController,
-    config/faq.php) and hands over to Help & support when nothing fits. Behaviour in public/js/faq-bot.js.
+    config/faq.php), asks the AI models about anything else (ZayAssistant) and hands over to Help & support when they
+    cannot answer. Behaviour in public/js/faq-bot.js.
 --}}
 @if(auth()->user()?->isActive() && auth()->user()->hasVerifiedEmail())
     <link rel="stylesheet" href="{{ asset('css/faq-bot.css') }}?v={{ filemtime(public_path('css/faq-bot.css')) }}">
-    <div class="faq-bot" data-faq-bot data-faq-url="{{ route('faq') }}">
+    <div class="faq-bot" data-faq-bot data-faq-url="{{ route('faq') }}" data-faq-ask-url="{{ route('faq.ask') }}" data-faq-csrf="{{ csrf_token() }}">
         <p class="faq-bot__teaser" data-faq-teaser hidden>
             <span>Hi! I'm Zay. Need a hand?</span>
             <button type="button" data-faq-teaser-close aria-label="Dismiss">

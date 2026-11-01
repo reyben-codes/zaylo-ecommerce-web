@@ -12,8 +12,9 @@ import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 
 /// Zay, the help bot, as on the website: answers common questions from the
 /// server's list (GET /mobile/faq) after a short "typing" pause, chats back to
-/// hellos and thank-yous, changes its face with the conversation, and offers
-/// Help & support when nothing fits.
+/// hellos and thank-yous, asks the AI models about anything else
+/// (POST /mobile/help/ask), changes its face with the conversation, and offers
+/// Help & support when they cannot answer.
 class HelpBotScreen extends StatefulWidget {
   const HelpBotScreen({super.key, required this.api, required this.onContactSupport});
 
@@ -289,17 +290,13 @@ class _HelpBotConversationState extends State<HelpBotConversation> {
     r'\b(support|agent|human|person|contact|complaint|dispute|scam|stolen|damaged|broken|error|bug|fraud|lost parcel|refund|issue|problem|help desk)\b',
     caseSensitive: false,
   );
-  static final _shoppingWords = RegExp(
-    r'\b(sell|buy|store|shop|price|cost|how much|stock|inventory|cart|order|checkout|delivery|shipping|rider|courier|waybill|voucher|discount|promo|return|exchange|tracking)\b',
-    caseSensitive: false,
-  );
-  static const _generalChatReplies = [
-    "That's neat! 😊 I'm always happy to chat with you. What else is on your mind?",
-    'Sounds interesting! You can chat with me, ask for a joke or a fun fact, or ask about anything on ZAYLO.',
-    'I love chatting with you! Tell me more, or let me know if you need help with shopping or orders!',
-    'I hear you! A good conversation is always the highlight of my day. What else are you up to?',
-  ];
+  // Longer messages are real questions, even when they contain a word like "more" or "funny".
+  static const _smallTalkMaxWords = 6;
+  static const _historyMessages = 6;
+  static const _historyMessageLength = 1000;
+  static const _askTimeout = Duration(seconds: 20);
 
+  final _history = <Map<String, String>>[];
   int _jokeIndex = 0;
   int _factIndex = 0;
   String? _lastTopic;
@@ -389,8 +386,35 @@ class _HelpBotConversationState extends State<HelpBotConversation> {
       _typing = false;
     });
     _feel(mood, forHowLong: const Duration(milliseconds: 2400));
+    // The greeting comes before any question, so the conversation starts with the person.
+    if (_history.isNotEmpty) _remember('assistant', message.text);
     _add(message);
     if (followUp != null) _add(followUp);
+  }
+
+  void _remember(String role, String text) => _history.add({
+        'role': role,
+        'content': text.length > _historyMessageLength ? text.substring(0, _historyMessageLength) : text,
+      });
+
+  /// Zay "types" while the AI models think. Null when they cannot answer or the request fails.
+  Future<String?> _askAi(String question, List<Map<String, String>> earlier) async {
+    setState(() => _typing = true);
+    _feel(ZayMood.thinking);
+    _add(const _Message.typing());
+    String? reply;
+    try {
+      reply = await widget.api.askZay(question, earlier).timeout(_askTimeout);
+    } catch (_) {
+      // The FAQ and Help & support take over.
+    }
+    if (mounted) {
+      setState(() {
+        _messages.removeWhere((item) => item.typing);
+        _typing = false;
+      });
+    }
+    return reply;
   }
 
   String _nextJoke() {
@@ -408,16 +432,17 @@ class _HelpBotConversationState extends State<HelpBotConversation> {
   }
 
   (String, ZayMood)? _getConversationalReply(String text) {
-    final t = text.trim();
+    final t = text.replaceAll(RegExp(r"[^a-z0-9'\-\s]"), ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (t.split(' ').length > _smallTalkMaxWords) return null;
 
     // Contextual follow-up
-    if (RegExp(r'\b(another|another one|one more|more|tell me another)\b').hasMatch(t)) {
+    if (RegExp(r'^(another|another one|one more|more|tell me another)$').hasMatch(t)) {
       if (_lastTopic == 'fact') {
         return (_nextFact(), ZayMood.thinking);
       }
       return (_nextJoke(), ZayMood.happy);
     }
-    if (RegExp(r'\b(why|why so|how come)\b').hasMatch(t)) {
+    if (RegExp(r'^(why|why so|how come)$').hasMatch(t)) {
       return ("That's one of the great mysteries of life! Or maybe just how the ZAYLO team coded me. 😄", ZayMood.happy);
     }
 
@@ -432,7 +457,7 @@ class _HelpBotConversationState extends State<HelpBotConversation> {
     }
 
     // Greetings
-    if (RegExp(r'\b(hi|hello|hey|hiya|howdy|yo|kumusta|musta|good (morning|afternoon|evening)|morning|evening|greetings)\b').hasMatch(t)) {
+    if (RegExp(r'^(hi|hello|hey|hiya|howdy|yo|kumusta|musta|good (morning|afternoon|evening)|morning|evening|greetings)( zay| there| po)?$').hasMatch(t)) {
       _lastTopic = 'greeting';
       const replies = [
         'Hi there! 👋 What can I help you with today?',
@@ -601,7 +626,7 @@ class _HelpBotConversationState extends State<HelpBotConversation> {
     if (RegExp(r'\b(sorry|my bad|oops|apologies)\b').hasMatch(t)) {
       return ('No worries at all! Never any need to apologize here. We\'re all good! 😊', ZayMood.happy);
     }
-    if (RegExp(r'\b(really|are you sure|seriously)\b').hasMatch(t)) {
+    if (RegExp(r'^(really|are you sure|seriously)$').hasMatch(t)) {
       return ("100%! Honest bot's honor! 🤖✨", ZayMood.happy);
     }
 
@@ -627,10 +652,12 @@ class _HelpBotConversationState extends State<HelpBotConversation> {
     return null;
   }
 
-  void _ask(String question, [FaqItem? chosen]) {
+  Future<void> _ask(String question, [FaqItem? chosen]) async {
     final data = _data;
     if (data == null || _typing || question.trim().isEmpty) return;
     _add(_Message.user(question.trim()));
+    final earlier = _history.length > _historyMessages ? _history.sublist(_history.length - _historyMessages) : List.of(_history);
+    _remember('user', question.trim());
     if (chosen != null) {
       _reply(chosen.answer.length, _Message.bot(chosen.answer), ZayMood.happy);
       return;
@@ -660,7 +687,17 @@ class _HelpBotConversationState extends State<HelpBotConversation> {
       return;
     }
 
-    // Moderate FAQ match if not matching conversation
+    // Everything else goes to the AI models, which also know the FAQ answers
+    final aiReply = await _askAi(question.trim(), earlier);
+    if (!mounted) return;
+    if (aiReply != null && aiReply.isNotEmpty) {
+      _remember('assistant', aiReply);
+      _feel(ZayMood.happy, forHowLong: const Duration(milliseconds: 2400));
+      _add(_Message.bot(aiReply));
+      return;
+    }
+
+    // The AI models could not answer: the moderate FAQ match, if there is one
     if (ranked.isNotEmpty && ranked.first.$2 >= 3) {
       final best = ranked.first.$1;
       final related = ranked.skip(1).take(2).where((entry) => entry.$2 >= 3).map((entry) => entry.$1).toList();
@@ -673,25 +710,15 @@ class _HelpBotConversationState extends State<HelpBotConversation> {
       return;
     }
 
-    // If asking about shopping, support, or having partial suggestions, guide to help
-    if (isSupport || _shoppingWords.hasMatch(typed) || ranked.isNotEmpty) {
-      _reply(
-        80,
-        _Message.bot(
-          ranked.isEmpty
-              ? "Hmm, I don't know that one yet. 🤔 The ZAYLO team can help with anything I can't."
-              : "Hmm, I'm not sure I got that. 🤔 Did you mean one of these? The ZAYLO team can help too.",
-          suggestions: ranked.take(3).map((entry) => entry.$1).toList(),
-          offerSupport: true,
-        ),
-        ZayMood.confused,
-      );
-      return;
-    }
-
-    // Open conversational fallback for casual chit-chat
-    final generalReply = _generalChatReplies[_random.nextInt(_generalChatReplies.length)];
-    _reply(50, _Message.bot(generalReply), ZayMood.happy);
+    // Nothing to go on: partial suggestions, and the team
+    _feel(ZayMood.confused, forHowLong: const Duration(milliseconds: 2400));
+    _add(_Message.bot(
+      ranked.isEmpty
+          ? "Hmm, I don't know that one yet. 🤔 The ZAYLO team can help with anything I can't."
+          : "Hmm, I'm not sure I got that. 🤔 Did you mean one of these? The ZAYLO team can help too.",
+      suggestions: ranked.take(3).map((entry) => entry.$1).toList(),
+      offerSupport: true,
+    ));
   }
 
   void _send() {

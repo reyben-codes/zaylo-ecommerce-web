@@ -72,6 +72,8 @@ Route::prefix('mobile')->name('mobile.')->middleware('throttle:60,1')->group(fun
 
     Route::middleware('auth:mobile')->group(function () use ($complaintRoutes) {
         Route::get('/me', [MobileAuthenticationController::class, 'me'])->name('me');
+        // Questions the help bot could not match go to the AI models, within limits shared with the website.
+        Route::post('/help/ask', [FaqController::class, 'ask'])->middleware(['throttle:10,1,zay-ask', 'throttle:20,1440,zay-ask-day'])->name('help.ask');
         // Profile photo, for buyers and riders alike.
         Route::post('/account/photo', [MobileProfilePhotoController::class, 'update'])->middleware('throttle:10,1,mobile-photo')->name('account.photo.update');
         Route::delete('/account/photo', [MobileProfilePhotoController::class, 'destroy'])->name('account.photo.destroy');

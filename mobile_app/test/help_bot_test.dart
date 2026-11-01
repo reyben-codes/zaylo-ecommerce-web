@@ -19,7 +19,59 @@ class _FaqApi extends RiderApi {
       });
 }
 
+class _AiApi extends _FaqApi {
+  _AiApi(this.reply);
+
+  final String? reply;
+  final asked = <String>[];
+  List<Map<String, String>> lastHistory = const [];
+
+  @override
+  Future<String?> askZay(String question, List<Map<String, String>> history) async {
+    asked.add(question);
+    lastHistory = history;
+    return reply;
+  }
+}
+
 void main() {
+  testWidgets('questions Zay cannot match get the AI reply, with the conversation so far', (tester) async {
+    final api = _AiApi('You can sell soap on ZAYLO.');
+    await tester.pumpWidget(MaterialApp(home: HelpBotScreen(api: api, onContactSupport: () {})));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 2));
+
+    // Small talk stays on the phone; a sentence containing "more" is a real question, not a request for a joke.
+    await tester.enterText(find.byType(TextField), 'thanks!');
+    await tester.testTextInput.receiveAction(TextInputAction.send);
+    await tester.pump(const Duration(seconds: 2));
+    expect(api.asked, isEmpty);
+
+    await tester.enterText(find.byType(TextField), 'tell me more about selling soap');
+    await tester.testTextInput.receiveAction(TextInputAction.send);
+    await tester.pump(const Duration(seconds: 2));
+    expect(api.asked, ['tell me more about selling soap']);
+    expect(api.lastHistory.map((message) => message['role']), ['user', 'assistant']);
+    expect(find.text('You can sell soap on ZAYLO.'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 10));
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('when the AI cannot answer, Zay offers support', (tester) async {
+    await tester.pumpWidget(MaterialApp(home: HelpBotScreen(api: _AiApi(null), onContactSupport: () {})));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 2));
+
+    await tester.enterText(find.byType(TextField), 'can I pay in bitcoin next week');
+    await tester.testTextInput.receiveAction(TextInputAction.send);
+    await tester.pump(const Duration(seconds: 2));
+    expect(find.text('Message ZAYLO support'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 10));
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('Zay greets, types, answers, chats back and hands over to support', (tester) async {
     var supportOpened = false;
     await tester.pumpWidget(MaterialApp(

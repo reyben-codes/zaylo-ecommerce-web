@@ -1,8 +1,8 @@
 (() => {
     // Zay, the help bot (partials/faq-bot). Zay blinks now and then, follows the pointer with its eyes, "types"
-    // before answering and changes its face with the conversation. Answers come from the account's questions
-    // (FaqController), matched by keywords and words; small talk gets a friendly reply, and nothing fitting → a link
-    // to Help & support.
+    // before answering and changes its face with the conversation. Close matches to the account's questions
+    // (FaqController) and short small talk are answered here; anything else goes to the AI models (ZayAssistant), and
+    // if they cannot answer → the nearest question or a link to Help & support.
     const root = document.querySelector('[data-faq-bot]');
     if (!root) return;
 
@@ -39,13 +39,12 @@
         "Neat fact: The shopping cart was invented in 1937 by Sylvan Goldman to help supermarket customers carry more groceries! 🛒"
     ];
     const SUPPORT_WORDS = /\b(support|agent|human|person|contact|complaint|dispute|scam|stolen|damaged|broken|error|bug|fraud|lost parcel|refund|issue|problem|help desk)\b/i;
-    const SHOPPING_WORDS = /\b(sell|buy|store|shop|price|cost|how much|stock|inventory|cart|order|checkout|delivery|shipping|rider|courier|waybill|voucher|discount|promo|return|exchange|tracking)\b/i;
-    const GENERAL_CHAT_REPLIES = [
-        "That's neat! 😊 I'm always happy to chat with you. What else is on your mind?",
-        "Sounds interesting! You can chat with me, ask for a joke or a fun fact, or ask about anything on ZAYLO.",
-        "I love chatting with you! Tell me more, or let me know if you need help with shopping or orders!",
-        "I hear you! A good conversation is always the highlight of my day. What else are you up to?"
-    ];
+    // Longer messages are real questions, even when they contain a word like "more" or "funny".
+    const SMALL_TALK_MAX_WORDS = 6;
+    const HISTORY_MESSAGES = 6;
+    const HISTORY_MESSAGE_LENGTH = 1000;
+    const ASK_TIMEOUT_MS = 20000;
+    const history = [];
 
     let jokeIndex = Math.floor(Math.random() * JOKES.length);
     let factIndex = Math.floor(Math.random() * FACTS.length);
@@ -67,7 +66,7 @@
 
     const CONVERSATION_RULES = [
         {
-            pattern: /\b(hi|hello|hey|hiya|howdy|yo|kumusta|musta|good (morning|afternoon|evening)|morning|evening|greetings)\b/,
+            pattern: /^(hi|hello|hey|hiya|howdy|yo|kumusta|musta|good (morning|afternoon|evening)|morning|evening|greetings)( zay| there| po)?$/,
             mood: 'waving',
             reply: () => {
                 lastTopic = 'greeting';
@@ -273,7 +272,7 @@
             reply: () => 'No worries at all! Never any need to apologize here. We\'re all good! 😊'
         },
         {
-            pattern: /\b(really|are you sure|seriously)\b/,
+            pattern: /^(really|are you sure|seriously)$/,
             mood: 'happy',
             reply: () => '100%! Honest bot\'s honor! 🤖✨'
         },
@@ -301,12 +300,12 @@
             reply: () => 'ZAYLO is a Philippine online shopping marketplace where buyers discover great products, sellers grow their shops, and riders deliver straight to your doorstep! 🛍️🇵🇭'
         },
         {
-            pattern: /\b(another|another one|one more|more|tell me another)\b/,
+            pattern: /^(another|another one|one more|more|tell me another)$/,
             mood: 'happy',
             reply: () => (lastTopic === 'fact' ? nextFact() : nextJoke())
         },
         {
-            pattern: /\b(why|why so|how come)\b$/,
+            pattern: /^(why|why so|how come)$/,
             mood: 'happy',
             reply: () => 'That\'s one of the great mysteries of life! Or maybe just how the ZAYLO team coded me. 😄'
         }
@@ -314,6 +313,7 @@
 
     const getConversationalReply = (text) => {
         const normalized = normalize(text);
+        if (normalized.split(' ').length > SMALL_TALK_MAX_WORDS) return null;
         const match = CONVERSATION_RULES.find(({ pattern }) => pattern.test(normalized));
         if (match) {
             return { mood: match.mood, reply: typeof match.reply === 'function' ? match.reply() : match.reply };
@@ -445,8 +445,8 @@
         parent.append(group);
     };
 
-    /** Zay "types" for a moment (longer for longer replies) before [build] runs. */
-    const typeThen = async (length, build) => {
+    /** Zay "types" for a moment (longer for longer replies), and until [work] finishes, before [build] gets its result. */
+    const typeThen = async (length, build, work = null) => {
         busy = true;
         setMood('thinking');
         if (status) status.textContent = 'Zay is typing…';
@@ -455,14 +455,34 @@
             bubble.setAttribute('aria-label', 'Zay is typing');
             bubble.append(node('span'), node('span'), node('span'));
         });
-        await later(450 + Math.min(length * 9, 1100));
+        const [, result] = await Promise.all([later(450 + Math.min(length * 9, 1100)), work]);
         typing.remove();
         if (status) status.textContent = 'Online · usually answers instantly';
         busy = false;
-        build();
+        build(result);
+    };
+
+    const remember = (role, content) => history.push({ role, content: content.slice(0, HISTORY_MESSAGE_LENGTH) });
+
+    /** The AI models' reply to a question, or null when they cannot answer or the request fails. */
+    const askAi = async (question, earlier) => {
+        try {
+            const response = await fetch(root.dataset.faqAskUrl, {
+                method: 'POST',
+                headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': root.dataset.faqCsrf },
+                credentials: 'same-origin',
+                body: JSON.stringify({ question, history: earlier }),
+                signal: AbortSignal.timeout(ASK_TIMEOUT_MS),
+            });
+            if (!response.ok) return null;
+            return (await response.json()).reply || null;
+        } catch (error) {
+            return null;
+        }
     };
 
     const answer = (entry, opener = '') => typeThen(entry.a.length, () => {
+        remember('assistant', entry.a);
         setMood('happy', 2200);
         botMessage((bubble) => {
             if (opener) bubble.append(node('strong', 'faq-bot__opener', opener));
@@ -474,6 +494,8 @@
     const ask = async (question, chosen = null) => {
         if (busy) return;
         userMessage(question);
+        const earlier = history.slice(-HISTORY_MESSAGES);
+        remember('user', question);
         if (chosen) {
             await answer(chosen);
             return;
@@ -496,13 +518,24 @@
         const talk = getConversationalReply(question);
         if (talk) {
             await typeThen(Math.min(talk.reply.length * 6, 600), () => {
+                remember('assistant', talk.reply);
                 setMood(talk.mood, 2400);
                 botMessage((bubble) => bubble.append(node('p', '', talk.reply)));
             });
             return;
         }
 
-        // Moderate FAQ match if not matching conversation
+        // Everything else goes to the AI models, which also know the FAQ answers
+        let aiReply = null;
+        await typeThen(50, (reply) => { aiReply = reply; }, askAi(question, earlier));
+        if (aiReply) {
+            remember('assistant', aiReply);
+            setMood('happy', 2400);
+            botMessage((bubble) => bubble.append(node('p', '', aiReply)));
+            return;
+        }
+
+        // The AI models could not answer: the moderate FAQ match, if there is one
         if (ranked.length && ranked[0].points >= 3) {
             await answer(ranked[0].entry, Math.random() < 0.6 ? pick(OPENERS) : '');
             const related = ranked.slice(1, 3).filter(({ points }) => points >= 3).map(({ entry }) => entry);
@@ -510,24 +543,13 @@
             return;
         }
 
-        // If asking about shopping, support, or having partial suggestions, guide to help
-        if (isSupportQuery || SHOPPING_WORDS.test(normalized) || ranked.length > 0) {
-            await typeThen(80, () => {
-                setMood('confused', 2600);
-                botMessage((bubble) => {
-                    bubble.append(node('p', '', ranked.length ? 'Hmm, I\'m not sure I got that. 🤔 Did you mean one of these?' : 'Hmm, I don\'t know that one yet. 🤔'));
-                    if (ranked.length) chips(bubble, ranked.slice(0, 3).map(({ entry }) => entry));
-                    bubble.append(node('p', '', 'The ZAYLO team can help with anything I can\'t:'));
-                    link(bubble, data.support, 'fa-life-ring');
-                });
-            });
-            return;
-        }
-
-        // Open conversational fallback for casual chit-chat
-        await typeThen(50, () => {
-            setMood('happy', 2400);
-            botMessage((bubble) => bubble.append(node('p', '', pick(GENERAL_CHAT_REPLIES))));
+        // Nothing to go on: partial suggestions, and the team
+        setMood('confused', 2600);
+        botMessage((bubble) => {
+            bubble.append(node('p', '', ranked.length ? 'Hmm, I\'m not sure I got that. 🤔 Did you mean one of these?' : 'Hmm, I don\'t know that one yet. 🤔'));
+            if (ranked.length) chips(bubble, ranked.slice(0, 3).map(({ entry }) => entry));
+            bubble.append(node('p', '', 'The ZAYLO team can help with anything I can\'t:'));
+            link(bubble, data.support, 'fa-life-ring');
         });
     };
 
