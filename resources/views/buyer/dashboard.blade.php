@@ -59,7 +59,7 @@
                 <span class="line1">Driven by passion.</span>
                 <span class="line2">Defined by your origin</span>
             </div>
-            <p class="hero-desc">Shop tech, home essentials, fashion, beauty, groceries, and more from trusted marketplace sellers.</p>
+            <p class="hero-desc">Shop kitchen appliances, furniture, gardening tools, bedding, and more from trusted marketplace sellers.</p>
             <div class="hero-actions">
                 <a href="{{ route('products.index') }}" class="btn-primary">Shop the marketplace</a>
                 <a href="{{ route('products.index', ['sort' => 'newest']) }}" class="link-lookbook">See what's new →</a>

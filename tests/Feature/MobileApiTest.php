@@ -82,8 +82,8 @@ class MobileApiTest extends TestCase
     public function test_the_storefront_bag_and_checkout_rules(): void
     {
         $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);
-        $product = Product::create(['seller_id' => $seller->id, 'name' => 'Rattan Basket', 'category' => 'home_living', 'price' => 450, 'stock' => 4, 'is_active' => true]);
-        Product::create(['seller_id' => $seller->id, 'name' => 'Hidden Lamp', 'category' => 'home_living', 'price' => 99, 'stock' => 4, 'is_active' => false]);
+        $product = Product::create(['seller_id' => $seller->id, 'name' => 'Rattan Basket', 'category' => 'storage_bins', 'price' => 450, 'stock' => 4, 'is_active' => true]);
+        Product::create(['seller_id' => $seller->id, 'name' => 'Hidden Lamp', 'category' => 'storage_bins', 'price' => 99, 'stock' => 4, 'is_active' => false]);
 
         $this->getJson('/api/mobile/home')->assertOk()->assertJsonPath('new_arrivals.0.slug', $product->slug)->assertJsonMissing(['name' => 'Hidden Lamp']);
         $this->getJson('/api/mobile/products?search=Rattan')->assertOk()->assertJsonPath('products.data.0.name', 'Rattan Basket');
@@ -347,7 +347,7 @@ class MobileApiTest extends TestCase
     {
         $buyer = User::factory()->create(['role' => 'buyer', 'status' => 'active', 'name' => 'Ana Buyer']);
         $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);
-        $product = Product::create(['seller_id' => $seller->id, 'name' => 'Rattan Basket', 'category' => 'home_living', 'price' => 450, 'stock' => 4, 'is_active' => true]);
+        $product = Product::create(['seller_id' => $seller->id, 'name' => 'Rattan Basket', 'category' => 'storage_bins', 'price' => 450, 'stock' => 4, 'is_active' => true]);
         $token = $buyer->createToken('test');
         $asApp = function () use ($token) {
             $this->app['auth']->forgetGuards();

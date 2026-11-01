@@ -27,7 +27,7 @@ class BuyerNotificationsTest extends TestCase
         $otherBuyer = User::factory()->create(['role' => 'buyer', 'status' => 'active']);
         $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);
         $product = Product::create([
-            'seller_id' => $seller->id, 'name' => 'Fresh arrival', 'category' => 'electronics',
+            'seller_id' => $seller->id, 'name' => 'Fresh arrival', 'category' => 'blenders',
             'price' => 500, 'stock' => 5, 'is_active' => true,
         ]);
         $voucher = Voucher::create([
@@ -77,7 +77,7 @@ class BuyerNotificationsTest extends TestCase
         $buyer = User::factory()->create(['role' => 'buyer', 'status' => 'active']);
         $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);
         Product::create([
-            'seller_id' => $seller->id, 'name' => 'Hidden product', 'category' => 'electronics',
+            'seller_id' => $seller->id, 'name' => 'Hidden product', 'category' => 'blenders',
             'price' => 500, 'stock' => 5, 'is_active' => false,
         ]);
         Voucher::create([

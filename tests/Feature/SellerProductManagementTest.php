@@ -40,7 +40,7 @@ class SellerProductManagementTest extends TestCase
         $this->actingAs($seller)->put(route('seller.products.update', $product), [
             'name' => 'Updated Leather Heel',
             'sku' => 'HH-HEEL-001',
-            'category' => 'shoes',
+            'category' => 'shoe_racks',
             'gender' => 'women',
             'description' => 'A refreshed description shown to buyers.',
             'price' => 2199.50,
@@ -76,7 +76,7 @@ class SellerProductManagementTest extends TestCase
         return Product::create(array_merge([
             'seller_id' => $seller->id,
             'name' => 'Classic Heel',
-            'category' => 'shoes',
+            'category' => 'shoe_racks',
             'gender' => 'women',
             'description' => 'Original product description.',
             'price' => 1899,

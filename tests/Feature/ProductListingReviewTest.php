@@ -116,7 +116,7 @@ class ProductListingReviewTest extends TestCase
     {
         return $overrides + [
             'name' => 'Linen Shirt',
-            'category' => 'fashion',
+            'category' => 'bedsheets',
             'description' => 'A breathable shirt for warm days.',
             'price' => 650,
             'stock' => 10,

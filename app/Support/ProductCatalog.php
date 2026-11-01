@@ -19,15 +19,13 @@ class ProductCatalog
         return trim(preg_replace('/\s+/u', ' ', $search ?? ''));
     }
 
-    /** Matches the main or an additional category; "fashion" covers every fashion category. */
+    /** Matches the main or an additional category; a main category covers its subcategories. */
     public static function category(Builder $query, ?string $category): void
     {
         if (! $category) {
             return;
         }
-        $query->inCategories($category === 'fashion'
-            ? config('marketplace.fashion_categories')
-            : [$category]);
+        $query->inCategories([$category]);
     }
 
     /** Unisex items are for everyone, so they also appear under Men and Women. */
@@ -49,9 +47,13 @@ class ProductCatalog
         }
         foreach (array_unique(explode(' ', $search)) as $word) {
             $pattern = '%'.self::escapeLike($word).'%';
-            $query->where(function ($match) use ($pattern) {
+            $named = self::categoriesNamed($word);
+            $query->where(function ($match) use ($pattern, $named) {
                 $match->whereRaw("LOWER(products.name) LIKE ? ESCAPE '!'", [$pattern])
                     ->orWhereRaw("LOWER(products.description) LIKE ? ESCAPE '!'", [$pattern]);
+                if ($named !== []) {
+                    $match->orWhere(fn ($category) => $category->inCategories($named));
+                }
                 if (Product::usesLegacySchema()) {
                     $match->orWhereRaw("LOWER(products.sku) LIKE ? ESCAPE '!'", [$pattern])
                         ->orWhereRaw("LOWER(products.category) LIKE ? ESCAPE '!'", [$pattern]);
@@ -62,6 +64,15 @@ class ProductCatalog
                 $match->orWhereHas('variants', fn ($variant) => $variant->where('is_active', true)->whereRaw("LOWER(sku) LIKE ? ESCAPE '!'", [$pattern]));
             });
         }
+    }
+
+    /** Category keys whose label contains the word, so searching "kitchen" finds everything under Kitchen Appliances. */
+    public static function categoriesNamed(string $word): array
+    {
+        return array_keys(array_filter(
+            config('marketplace.categories'),
+            fn (string $label) => mb_stripos($label, $word) !== false,
+        ));
     }
 
     public static function priceRange(Builder $query, mixed $min, mixed $max): void

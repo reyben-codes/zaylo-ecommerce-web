@@ -85,7 +85,7 @@
                 <span class="line2">Defined by your origin</span>
             </div>
             <p class="hero-desc">
-                Discover the latest tech, home essentials, fashion, beauty, groceries, and more from sellers across the marketplace.
+                Discover kitchen appliances, furniture, gardening tools, bedding, and more from sellers across the marketplace.
             </p>
             <div class="hero-actions">
                 <a href="{{ route('products.index') }}" class="btn-primary">Shop the marketplace</a>
@@ -151,8 +151,8 @@
             <p>Everyday essentials, exciting finds, and trusted sellers—all together in one marketplace.</p>
         </div>
         <div class="footer-links">
-            <div><h2>Shop</h2><a href="{{ route('products.index') }}">All products</a><a href="{{ route('products.index', ['category' => 'electronics']) }}">Electronics</a><a href="{{ route('products.index', ['category' => 'home_living']) }}">Home & Living</a></div>
-            <div><h2>Discover</h2><a href="{{ route('products.index', ['sort' => 'newest']) }}">New arrivals</a><a href="{{ route('products.index', ['category' => 'fashion']) }}">Fashion</a><a href="{{ route('products.index', ['category' => 'beauty_health']) }}">Beauty & Health</a></div>
+            <div><h2>Shop</h2><a href="{{ route('products.index') }}">All products</a><a href="{{ route('products.index', ['category' => 'kitchen_appliances']) }}">Kitchen Appliances</a><a href="{{ route('products.index', ['category' => 'home_garden']) }}">Home and Garden</a></div>
+            <div><h2>Discover</h2><a href="{{ route('products.index', ['sort' => 'newest']) }}">New arrivals</a><a href="{{ route('products.index', ['category' => 'furniture_decor']) }}">Furniture & Decor</a><a href="{{ route('products.index', ['category' => 'bedding_bath']) }}">Bedding & Bath</a></div>
             <div><h2>Account</h2><a href="{{ route('login') }}">Log in</a><a href="{{ route('register') }}">Create new account</a></div>
             <div><h2>Partners</h2><a href="{{ route('register', ['role' => 'seller']) }}">Sell on ZAYLO</a><a href="{{ route('register', ['role' => 'courier']) }}">Become a courier</a></div>
         </div>

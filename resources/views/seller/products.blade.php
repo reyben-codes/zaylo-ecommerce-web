@@ -43,9 +43,7 @@
                 <label for="product-category">Category</label>
                 <select id="product-category" name="category">
                     <option value="">All categories</option>
-                    @foreach($categories as $value => $label)
-                        <option value="{{ $value }}" @selected($filters['category'] === $value)>{{ $label }}</option>
-                    @endforeach
+                    @include('partials.category-options', ['selected' => $filters['category']])
                 </select>
             </div>
             <div class="products-filter__actions">

@@ -47,7 +47,7 @@ class MobileBuyerFeaturesTest extends TestCase
     private function product(string $name = 'Garden Hose', float $price = 500, array $attributes = []): Product
     {
         return Product::create([
-            'seller_id' => $this->seller->id, 'name' => $name, 'category' => 'home_living',
+            'seller_id' => $this->seller->id, 'name' => $name, 'category' => 'storage_bins',
             'price' => $price, 'stock' => 5, 'is_active' => true,
         ] + $attributes);
     }

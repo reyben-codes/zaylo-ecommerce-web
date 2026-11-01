@@ -85,6 +85,6 @@ class NewProductOptionsTest extends TestCase
 
     private function payload(): array
     {
-        return ['name' => 'Everyday Tee', 'category' => 'clothing', 'price' => 550, 'stock' => 9, 'is_active' => 1];
+        return ['name' => 'Everyday Tee', 'category' => 'bedsheets', 'price' => 550, 'stock' => 9, 'is_active' => 1];
     }
 }

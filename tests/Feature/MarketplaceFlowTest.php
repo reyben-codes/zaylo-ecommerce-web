@@ -31,17 +31,17 @@ class MarketplaceFlowTest extends TestCase
     {
         $electronics = $this->product(overrides: [
             'name' => 'Wireless Earbuds',
-            'category' => 'electronics',
+            'category' => 'blenders',
             'gender' => null,
         ]);
         $fashion = $this->product(overrides: ['name' => 'Everyday Jacket']);
 
-        $this->get(route('products.index', ['category' => 'electronics']))
+        $this->get(route('products.index', ['category' => 'blenders']))
             ->assertOk()
             ->assertSee($electronics->name)
             ->assertDontSee($fashion->name);
 
-        $this->get(route('products.index', ['category' => 'fashion']))
+        $this->get(route('products.index', ['category' => 'bedding_bath']))
             ->assertOk()
             ->assertSee($fashion->name)
             ->assertDontSee($electronics->name);
@@ -53,8 +53,8 @@ class MarketplaceFlowTest extends TestCase
 
         $this->actingAs($seller)->post(route('seller.products.store'), [
             'name' => 'Digital Rice Cooker',
-            'category' => 'electronics',
-            'additional_categories' => ['kitchen_dining', 'electronics'],
+            'category' => 'blenders',
+            'additional_categories' => ['rice_cookers', 'blenders'],
             'price' => 1899,
             'stock' => 5,
             'low_stock_threshold' => 2,
@@ -65,29 +65,29 @@ class MarketplaceFlowTest extends TestCase
         $shirt = $this->product(overrides: ['name' => 'Everyday Shirt']);
 
         // The main category is not stored again as an extra one.
-        $this->assertSame(['electronics', 'kitchen_dining'], $cooker->category_keys);
+        $this->assertSame(['blenders', 'rice_cookers'], $cooker->category_keys);
         auth()->logout();
-        foreach (['electronics', 'kitchen_dining'] as $category) {
+        foreach (['blenders', 'rice_cookers'] as $category) {
             $this->get(route('products.index', ['category' => $category]))
                 ->assertOk()->assertSee('Digital Rice Cooker')->assertDontSee('Everyday Shirt');
         }
-        $this->get(route('products.index', ['category' => 'home_living']))->assertDontSee('Digital Rice Cooker');
+        $this->get(route('products.index', ['category' => 'storage_bins']))->assertDontSee('Digital Rice Cooker');
         $this->get(route('products.index', ['search' => 'kitchen']))->assertSee('Digital Rice Cooker');
         // Every category shows as a tag linking to it: on the product page, shop cards and the home page.
-        $tags = ['<a class="category-tag" href="'.route('products.index', ['category' => 'electronics']).'">Electronics</a>',
-            '<a class="category-tag" href="'.route('products.index', ['category' => 'kitchen_dining']).'">Kitchen &amp; Dining</a>'];
+        $tags = ['<a class="category-tag" href="'.route('products.index', ['category' => 'blenders']).'">Blenders</a>',
+            '<a class="category-tag" href="'.route('products.index', ['category' => 'rice_cookers']).'">Rice Cookers</a>'];
         $this->get(route('products.show', $cooker))->assertSeeInOrder($tags, false);
-        $this->get(route('products.index', ['category' => 'kitchen_dining']))->assertSeeInOrder($tags, false);
+        $this->get(route('products.index', ['category' => 'rice_cookers']))->assertSeeInOrder($tags, false);
         $this->get(route('home'))->assertSeeInOrder($tags, false);
         $this->actingAs($seller)->get(route('seller.products'))
-            ->assertSee('<a class="category-tag" href="'.route('seller.products', ['category' => 'kitchen_dining']).'">Kitchen &amp; Dining</a>', false);
+            ->assertSee('<a class="category-tag" href="'.route('seller.products', ['category' => 'rice_cookers']).'">Rice Cookers</a>', false);
         auth()->logout();
 
         // Unticking every extra category removes them.
         $this->actingAs($seller)->put(route('seller.products.update', $cooker), [
-            'name' => 'Digital Rice Cooker', 'category' => 'electronics', 'low_stock_threshold' => 2, 'is_active' => 1,
+            'name' => 'Digital Rice Cooker', 'category' => 'blenders', 'low_stock_threshold' => 2, 'is_active' => 1,
         ])->assertSessionHasNoErrors();
-        $this->assertSame(['electronics'], $cooker->fresh()->category_keys);
+        $this->assertSame(['blenders'], $cooker->fresh()->category_keys);
         $this->assertNotNull($shirt);
     }
 
@@ -106,41 +106,41 @@ class MarketplaceFlowTest extends TestCase
         $this->assertSame(0, Product::count());
 
         // With no registered shop category, the first ticked one is the main category.
-        $this->post(route('seller.products.store'), $payload + ['categories' => ['kitchen_dining', 'home_living']])->assertSessionHasNoErrors();
+        $this->post(route('seller.products.store'), $payload + ['categories' => ['rice_cookers', 'storage_bins']])->assertSessionHasNoErrors();
         $kettle = Product::where('name', 'Steel Kettle')->firstOrFail();
-        $this->assertSame(['kitchen_dining', 'home_living'], $kettle->category_keys);
+        $this->assertSame(['rice_cookers', 'storage_bins'], $kettle->category_keys);
         $this->get(route('seller.products.edit', $kettle))->assertOk()
-            ->assertSee('name="categories[]" value="home_living" checked', false)
-            ->assertDontSee('name="categories[]" value="electronics" checked', false);
+            ->assertSee('name="categories[]" value="storage_bins" checked', false)
+            ->assertDontSee('name="categories[]" value="blenders" checked', false);
 
         // Editing keeps the main category while it stays ticked, and moves it when it is unticked.
-        $this->put(route('seller.products.update', $kettle), $payload + ['categories' => ['electronics', 'home_living', 'kitchen_dining']])->assertSessionHasNoErrors();
-        $this->assertSame(['kitchen_dining', 'electronics', 'home_living'], $kettle->fresh()->category_keys);
-        $this->put(route('seller.products.update', $kettle), $payload + ['categories' => ['electronics', 'home_living']])->assertSessionHasNoErrors();
-        $this->assertSame(['electronics', 'home_living'], $kettle->fresh()->category_keys);
+        $this->put(route('seller.products.update', $kettle), $payload + ['categories' => ['blenders', 'storage_bins', 'rice_cookers']])->assertSessionHasNoErrors();
+        $this->assertSame(['rice_cookers', 'blenders', 'storage_bins'], $kettle->fresh()->category_keys);
+        $this->put(route('seller.products.update', $kettle), $payload + ['categories' => ['blenders', 'storage_bins']])->assertSessionHasNoErrors();
+        $this->assertSame(['blenders', 'storage_bins'], $kettle->fresh()->category_keys);
     }
 
     public function test_the_main_category_follows_the_sellers_registered_shop_category(): void
     {
         $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);
-        \App\Models\SellerApplication::create(['user_id' => $seller->id, 'shop_name' => 'Home Shop', 'shop_category' => 'home_living', 'seller_type' => 'individual',
+        \App\Models\SellerApplication::create(['user_id' => $seller->id, 'shop_name' => 'Home Shop', 'shop_category' => 'home_garden', 'seller_type' => 'individual',
             'tin' => '123-456-789-000', 'region_code' => '130000000', 'region_name' => 'NCR', 'city_code' => '137404000', 'city_name' => 'Quezon City',
             'barangay_code' => '137404001', 'barangay_name' => 'Alicia', 'street_address' => '2F', 'postal_code' => '1121']);
 
         $this->actingAs($seller)->post(route('seller.products.store'), [
-            'name' => 'Rice Cooker', 'price' => 1500, 'stock' => 3, 'is_active' => 1, 'categories' => ['electronics', 'home_living'],
+            'name' => 'Rice Cooker', 'price' => 1500, 'stock' => 3, 'is_active' => 1, 'categories' => ['blenders', 'storage_bins'],
         ])->assertSessionHasNoErrors();
 
-        $this->assertSame(['home_living', 'electronics'], Product::where('name', 'Rice Cooker')->firstOrFail()->category_keys);
+        $this->assertSame(['storage_bins', 'blenders'], Product::where('name', 'Rice Cooker')->firstOrFail()->category_keys);
     }
 
-    public function test_sellers_can_list_products_outside_fashion(): void
+    public function test_sellers_can_list_products_in_any_category(): void
     {
         $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);
 
         $this->actingAs($seller)->post(route('seller.products.store'), [
             'name' => 'Smart Home Speaker',
-            'category' => 'electronics',
+            'category' => 'blenders',
             'description' => 'A compact speaker for a connected home.',
             'price' => 1499,
             'stock' => 12,
@@ -148,11 +148,7 @@ class MarketplaceFlowTest extends TestCase
             'is_active' => 1,
         ])->assertSessionHasNoErrors();
 
-        $this->assertDatabaseHas('products', [
-            'seller_id' => $seller->id,
-            'name' => 'Smart Home Speaker',
-            'category' => 'electronics',
-        ]);
+        $this->assertSame(['blenders'], Product::where('seller_id', $seller->id)->where('name', 'Smart Home Speaker')->firstOrFail()->category_keys);
     }
 
     public function test_homepage_displays_new_arrivals_from_the_active_catalog(): void
@@ -209,7 +205,7 @@ class MarketplaceFlowTest extends TestCase
         $product = $this->product($owner);
 
         $this->actingAs($other)->put(route('seller.products.update', $product), [
-            'name' => 'Changed', 'category' => 'clothing', 'gender' => 'unisex',
+            'name' => 'Changed', 'category' => 'bedsheets', 'gender' => 'unisex',
             'price' => 100, 'stock' => 1, 'low_stock_threshold' => 1,
         ])->assertForbidden();
     }
@@ -272,7 +268,7 @@ class MarketplaceFlowTest extends TestCase
         $seller ??= User::factory()->create(['role' => 'seller', 'status' => 'active']);
 
         return Product::create(array_merge([
-            'seller_id' => $seller->id, 'name' => 'Test Linen Shirt', 'category' => 'clothing',
+            'seller_id' => $seller->id, 'name' => 'Test Linen Shirt', 'category' => 'bedsheets',
             'gender' => 'unisex', 'description' => 'A product used to verify the marketplace flow.',
             'price' => 500, 'stock' => 10, 'is_active' => true,
         ], $overrides));

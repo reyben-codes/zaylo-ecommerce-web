@@ -2,11 +2,11 @@
 <ul class="category-tags" aria-label="Categories">
     @foreach($product->category_tags as $key => $label)
         <li>
-            @isset($href)
+            @if(isset($href) && array_key_exists($key, config('marketplace.categories')))
                 <a class="category-tag" href="{{ $href($key) }}">{{ $label }}</a>
             @else
                 <span class="category-tag">{{ $label }}</span>
-            @endisset
+            @endif
         </li>
     @endforeach
 </ul>

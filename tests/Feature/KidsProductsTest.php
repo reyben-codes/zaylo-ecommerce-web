@@ -80,16 +80,17 @@ class KidsProductsTest extends TestCase
             ->assertSee('<option value="girls"', false)->assertSee('Kids (boys or girls)')
             ->assertSee('data-kids-size-presets=', false);
 
-        $this->post(route('seller.products.store'), ['name' => 'Dino Sneakers', 'categories' => ['shoes'], 'gender' => 'boys', 'price' => 900, 'stock' => 4, 'is_active' => 1])
+        $this->post(route('seller.products.store'), ['name' => 'Dino Sneakers', 'categories' => ['bedsheets'], 'gender' => 'boys', 'price' => 900, 'stock' => 4, 'is_active' => 1])
             ->assertSessionHasNoErrors();
-        $sneakers = Product::where('name', 'Dino Sneakers')->firstOrFail();
-        $this->assertSame('boys', $sneakers->gender);
+        $this->assertSame('boys', Product::where('name', 'Dino Sneakers')->firstOrFail()->gender);
+        // Standard sizes still apply to listings kept in a size-based category from before the finalized list.
+        $sneakers = $this->product('Dino Boots', 'boys', 'shoes');
         $this->assertSame(config('marketplace.kids_size_presets.shoes'), $sneakers->sizePresets());
         $this->get(route('seller.products.edit', $sneakers))->assertOk()->assertSee('data-fill-sizes="'.e(json_encode(config('marketplace.kids_size_presets.shoes'))).'"', false);
 
         $adult = $this->product('Court Sneakers', 'men', 'shoes');
         $this->assertSame(config('marketplace.size_presets.shoes'), $adult->sizePresets());
-        $this->post(route('seller.products.store'), ['name' => 'Bad', 'categories' => ['shoes'], 'gender' => 'pets', 'price' => 1, 'stock' => 1])->assertSessionHasErrors('gender');
+        $this->post(route('seller.products.store'), ['name' => 'Bad', 'categories' => ['bedsheets'], 'gender' => 'pets', 'price' => 1, 'stock' => 1])->assertSessionHasErrors('gender');
     }
 
     private function product(string $name, string $gender, string $category = 'clothing'): Product

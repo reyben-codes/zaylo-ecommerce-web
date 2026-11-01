@@ -103,7 +103,7 @@ class ProductPhotosTest extends TestCase
     private function payload(): array
     {
         return [
-            'name' => 'Canvas Backpack', 'category' => 'bags', 'description' => 'A roomy everyday backpack.',
+            'name' => 'Canvas Backpack', 'category' => 'storage_boxes', 'description' => 'A roomy everyday backpack.',
             'price' => 1299, 'stock' => 8, 'low_stock_threshold' => 2, 'is_active' => 1,
         ];
     }

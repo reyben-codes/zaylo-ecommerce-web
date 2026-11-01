@@ -93,15 +93,18 @@
                     <fieldset class="seller-field seller-field--full product-form__categories" data-categories aria-describedby="productCategoriesHelp"
                               @if($categoryError) aria-invalid="true" @endif>
                         <legend>Categories</legend>
-                        <p class="seller-field__help" id="productCategoriesHelp">Tick every category buyers should find this in, e.g. a rice cooker under Electronics and Kitchen &amp; Dining. Choose at least one.</p>
-                        <div class="product-form__category-options">
-                            @foreach($categories as $key => $label)
-                                <label class="product-form__category-option">
-                                    <input type="checkbox" name="categories[]" value="{{ $key }}" @checked(in_array($key, $chosenCategories, true))>
-                                    <span>{{ $label }}</span>
-                                </label>
-                            @endforeach
-                        </div>
+                        <p class="seller-field__help" id="productCategoriesHelp">Tick every category buyers should find this in, e.g. a shoe cabinet under Shoe Cabinets and Shoe Racks. Choose at least one.</p>
+                        @foreach(config('marketplace.category_tree') as $main)
+                            <p class="product-form__category-group">{{ $main['label'] }}</p>
+                            <div class="product-form__category-options">
+                                @foreach($main['subcategories'] as $key => $label)
+                                    <label class="product-form__category-option">
+                                        <input type="checkbox" name="categories[]" value="{{ $key }}" @checked(in_array($key, $chosenCategories, true))>
+                                        <span>{{ $label }}</span>
+                                    </label>
+                                @endforeach
+                            </div>
+                        @endforeach
                         <p class="seller-field__error" data-categories-error @if(! $categoryError) hidden @endif>{{ $categoryError }}</p>
                     </fieldset>
                     <div class="seller-field">

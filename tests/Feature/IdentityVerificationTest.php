@@ -100,6 +100,6 @@ class IdentityVerificationTest extends TestCase
     {
         $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);
 
-        return Product::create(['seller_id' => $seller->id, 'name' => 'ID Test Lamp', 'category' => 'home_living', 'price' => 500, 'stock' => 5, 'is_active' => true]);
+        return Product::create(['seller_id' => $seller->id, 'name' => 'ID Test Lamp', 'category' => 'storage_bins', 'price' => 500, 'stock' => 5, 'is_active' => true]);
     }
 }

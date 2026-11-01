@@ -54,7 +54,7 @@ class ProductColorOptionsTest extends TestCase
         $this->assertTrue($white->fresh()->is_active);
         $this->assertSame(1, $black->variants()->count());
 
-        $other = Product::create(['seller_id' => User::factory()->create(['role' => 'seller', 'status' => 'active'])->id, 'name' => 'Other', 'category' => 'home_living', 'price' => 10, 'stock' => 1, 'is_active' => true]);
+        $other = Product::create(['seller_id' => User::factory()->create(['role' => 'seller', 'status' => 'active'])->id, 'name' => 'Other', 'category' => 'storage_bins', 'price' => 10, 'stock' => 1, 'is_active' => true]);
         $this->assertSame(1, Artisan::call('products:combine-colors', ['--product' => [$black->id, $other->id], '--color' => ['Black', 'Red']]));
         $this->assertSame(2, Artisan::call('products:combine-colors', ['--product' => [$black->id, $white->id], '--color' => ['Black', 'black']]));
         $this->assertTrue($white->fresh()->is_active);
@@ -82,7 +82,7 @@ class ProductColorOptionsTest extends TestCase
     {
         $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);
         $make = function (string $name, int $stock, string $photo) use ($seller) {
-            $product = Product::create(['seller_id' => $seller->id, 'name' => $name, 'category' => 'home_living', 'price' => 1999, 'stock' => $stock, 'is_active' => true]);
+            $product = Product::create(['seller_id' => $seller->id, 'name' => $name, 'category' => 'storage_bins', 'price' => 1999, 'stock' => $stock, 'is_active' => true]);
             ProductImage::create(['product_id' => $product->id, 'path' => $photo, 'sort_order' => 0]);
 
             return $product;

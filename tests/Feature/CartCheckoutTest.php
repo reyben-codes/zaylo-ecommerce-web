@@ -116,7 +116,7 @@ class CartCheckoutTest extends TestCase
     {
         return Product::create([
             'seller_id' => $seller->id, 'name' => 'Product '.$price.' '.Str::random(4),
-            'category' => 'electronics', 'price' => $price, 'stock' => 5, 'is_active' => true,
+            'category' => 'blenders', 'price' => $price, 'stock' => 5, 'is_active' => true,
         ]);
     }
 }

@@ -198,7 +198,7 @@ class SellerApplicationTest extends TestCase
     private function applicationFields(array $overrides = []): array
     {
         return array_replace([
-            'shop_name' => 'Maria Clara Handicrafts', 'shop_category' => 'home_living', 'seller_type' => 'sole_proprietorship', 'tin' => '123-456-789-000',
+            'shop_name' => 'Maria Clara Handicrafts', 'shop_category' => 'home_garden', 'seller_type' => 'sole_proprietorship', 'tin' => '123-456-789-000',
             'region_code' => '130000000', 'province_code' => '', 'city_code' => '137404000', 'barangay_code' => '137404001',
             'street_address' => 'Blk 12 Lot 8, Sampaguita St.', 'postal_code' => '1121',
             'government_id' => UploadedFile::fake()->create('govt_id_front.jpg', 1200, 'image/jpeg'),

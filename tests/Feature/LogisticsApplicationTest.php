@@ -101,7 +101,7 @@ class LogisticsApplicationTest extends TestCase
 
         // One TIN is one business, so a seller's TIN cannot be reused either.
         $seller = User::factory()->create(['role' => 'seller']);
-        SellerApplication::create(['user_id' => $seller->id, 'shop_name' => 'RV Gadget Hub', 'shop_category' => 'electronics', 'seller_type' => 'corporation',
+        SellerApplication::create(['user_id' => $seller->id, 'shop_name' => 'RV Gadget Hub', 'shop_category' => 'kitchen_appliances', 'seller_type' => 'corporation',
             'tin' => '456-789-012-000', 'region_code' => '130000000', 'region_name' => 'NCR', 'city_code' => '137404000', 'city_name' => 'Quezon City',
             'barangay_code' => '137404001', 'barangay_name' => 'Alicia', 'street_address' => '2F', 'postal_code' => '1121']);
         $other(['tin' => '456-789-012-000'])->assertSessionHasErrors(['tin' => 'This TIN is already registered.']);

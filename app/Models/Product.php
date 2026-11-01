@@ -308,9 +308,12 @@ class Product extends Model
         $this->unsetRelation('additionalCategories');
     }
 
-    /** Products whose main or additional category is one of the given keys. */
+    /** Products whose main or additional category is one of the given keys; a main category covers its subcategories. */
     public function scopeInCategories($query, array $categories)
     {
+        $groups = config('marketplace.category_groups');
+        $categories = collect($categories)->flatMap(fn ($key) => $groups[$key] ?? [$key])->all();
+
         return $query->where(function ($match) use ($categories) {
             static::usesLegacySchema()
                 ? $match->whereIn('products.category', $categories)

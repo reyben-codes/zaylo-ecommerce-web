@@ -122,7 +122,7 @@ class AdminAccountDocumentsTest extends TestCase
     private function application(User $seller, array $documents): void
     {
         SellerApplication::create($documents + [
-            'user_id' => $seller->id, 'shop_name' => 'Shop '.$seller->id, 'shop_category' => 'fashion',
+            'user_id' => $seller->id, 'shop_name' => 'Shop '.$seller->id, 'shop_category' => 'bedding_bath',
             'tin' => '123-456-789-'.str_pad((string) $seller->id, 3, '0', STR_PAD_LEFT), 'region_code' => '130000000', 'region_name' => 'NCR',
             'city_code' => '137400000', 'city_name' => 'Pasig', 'barangay_code' => '137401001', 'barangay_name' => 'Kapitolyo',
             'street_address' => '1 Main St', 'postal_code' => '1603', 'status' => 'pending',

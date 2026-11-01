@@ -14,8 +14,8 @@ class SoldOutDisplayTest extends TestCase
     public function test_sold_out_products_show_a_grayed_photo_and_label(): void
     {
         $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);
-        $soldOut = Product::create(['seller_id' => $seller->id, 'name' => 'Empty Shelf Lamp', 'category' => 'home_living', 'price' => 500, 'stock' => 0, 'is_active' => true, 'image_url' => '/images/lamp.jpg']);
-        $inStock = Product::create(['seller_id' => $seller->id, 'name' => 'Full Shelf Lamp', 'category' => 'home_living', 'price' => 500, 'stock' => 4, 'is_active' => true, 'image_url' => '/images/full.jpg']);
+        $soldOut = Product::create(['seller_id' => $seller->id, 'name' => 'Empty Shelf Lamp', 'category' => 'storage_bins', 'price' => 500, 'stock' => 0, 'is_active' => true, 'image_url' => '/images/lamp.jpg']);
+        $inStock = Product::create(['seller_id' => $seller->id, 'name' => 'Full Shelf Lamp', 'category' => 'storage_bins', 'price' => 500, 'stock' => 4, 'is_active' => true, 'image_url' => '/images/full.jpg']);
 
         $this->assertTrue($soldOut->fresh()->is_sold_out);
         $this->assertFalse($inStock->fresh()->is_sold_out);

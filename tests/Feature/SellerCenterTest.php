@@ -126,7 +126,7 @@ class SellerCenterTest extends TestCase
         $this->get(route('seller.products.edit', $foreign))->assertForbidden();
 
         $this->post(route('seller.products.store'), [
-            'name' => 'Suede Loafer', 'sku' => 'MS-LOAF-01', 'category' => 'shoes', 'description' => 'Soft suede.',
+            'name' => 'Suede Loafer', 'sku' => 'MS-LOAF-01', 'category' => 'shoe_racks', 'description' => 'Soft suede.',
             'price' => 1500, 'stock' => 7, 'low_stock_threshold' => 2, 'is_active' => 1,
         ])->assertSessionHasNoErrors();
         $created = Product::where('name', 'Suede Loafer')->firstOrFail();
@@ -136,7 +136,7 @@ class SellerCenterTest extends TestCase
         // Products with several variations keep their per-variation stock when details are saved without a stock field.
         $created->variants()->create(['sku' => 'MS-LOAF-02', 'name' => 'Size 9', 'price_minor' => 150000, 'stock' => 3, 'low_stock_threshold' => 1]);
         $this->put(route('seller.products.update', $created), [
-            'name' => 'Suede Loafer', 'sku' => 'MS-LOAF-01', 'category' => 'shoes', 'description' => 'Soft Italian suede.',
+            'name' => 'Suede Loafer', 'sku' => 'MS-LOAF-01', 'category' => 'shoe_racks', 'description' => 'Soft Italian suede.',
             'price' => 1500, 'low_stock_threshold' => 2, 'is_active' => 1,
         ])->assertRedirect()->assertSessionHasNoErrors();
         $this->assertSame('Soft Italian suede.', $created->fresh()->description);

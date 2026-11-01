@@ -1,66 +1,96 @@
 <?php
 
+// The finalized catalog. A product is listed under any of the subcategories; a main category shows all of its own.
+// "Storage Boxes" appears twice in the catalog, so the outdoor one has its own key.
+$categoryTree = [
+    'home_garden' => [
+        'label' => 'Home and Garden',
+        'image' => 'https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?w=160&h=160&fit=crop&auto=format',
+        'subcategories' => [
+            'storage_bins' => 'Storage Bins', 'cleaning_baskets' => 'Cleaning Baskets', 'shoe_racks' => 'Shoe Racks',
+            'indoor_plant_pots' => 'Indoor Plant Pots', 'laundry_baskets' => 'Laundry Baskets', 'trash_bins' => 'Trash Bins',
+            'clothes_hangers' => 'Clothes Hangers', 'doormats' => 'Doormats', 'storage_boxes' => 'Storage Boxes',
+            'plant_stands' => 'Plant Stands',
+        ],
+    ],
+    'kitchen_appliances' => [
+        'label' => 'Kitchen Appliances',
+        'image' => 'https://images.unsplash.com/photo-1556911220-bff31c812dba?w=160&h=160&fit=crop&auto=format',
+        'subcategories' => [
+            'rice_cookers' => 'Rice Cookers', 'blenders' => 'Blenders', 'electric_kettles' => 'Electric Kettles',
+            'air_fryers' => 'Air Fryers', 'coffee_maker' => 'Coffee Maker', 'toasters' => 'Toasters',
+            'electric_ovens' => 'Electric Ovens', 'food_processors' => 'Food Processors',
+            'sandwich_makers' => 'Sandwich Makers', 'hand_mixers' => 'Hand Mixers',
+        ],
+    ],
+    'furniture_decor' => [
+        'label' => 'Furniture & Decor',
+        'image' => 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=160&h=160&fit=crop&auto=format',
+        'subcategories' => [
+            'office_chairs' => 'Office Chairs', 'coffee_tables' => 'Coffee Tables', 'bookshelves' => 'Bookshelves',
+            'wall_clocks' => 'Wall Clocks', 'table_lamps' => 'Table Lamps', 'bedside_tables' => 'Bedside Tables',
+            'tv_stands' => 'TV Stands', 'shoe_cabinets' => 'Shoe Cabinets', 'floor_lamps' => 'Floor Lamps',
+            'decorative_mirrors' => 'Decorative Mirrors',
+        ],
+    ],
+    'gardening_tools' => [
+        'label' => 'Gardening Tools',
+        'image' => 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=160&h=160&fit=crop&auto=format',
+        'subcategories' => [
+            'garden_shovels' => 'Garden Shovels', 'pruning_shears' => 'Pruning Shears', 'garden_rakes' => 'Garden Rakes',
+            'watering_cans' => 'Watering Cans', 'hand_trowels' => 'Hand Trowels', 'garden_hoes' => 'Garden Hoes',
+            'garden_gloves' => 'Garden Gloves', 'plant_sprayers' => 'Plant Sprayers', 'garden_scissors' => 'Garden Scissors',
+            'pots' => 'Pots',
+        ],
+    ],
+    'outdoor_living' => [
+        'label' => 'Outdoor Living',
+        'image' => 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=160&h=160&fit=crop&auto=format',
+        'subcategories' => [
+            'outdoor_chairs' => 'Outdoor Chairs', 'folding_tables' => 'Folding Tables', 'picnic_mats' => 'Picnic Mats',
+            'outdoor_umbrellas' => 'Outdoor Umbrellas', 'portable_grills' => 'Portable Grills', 'camping_tents' => 'Camping Tents',
+            'camping_chairs' => 'Camping Chairs', 'cooler_boxes' => 'Cooler Boxes', 'hammocks' => 'Hammocks',
+            'outdoor_storage_boxes' => 'Storage Boxes',
+        ],
+    ],
+    'home_improvement_tools' => [
+        'label' => 'Home Improvement Tools',
+        'image' => 'https://images.unsplash.com/photo-1530124566582-a618bc2615dc?w=160&h=160&fit=crop&auto=format',
+        'subcategories' => [
+            'screwdriver_sets' => 'Screwdriver Sets', 'hammers' => 'Hammers', 'pliers' => 'Pliers',
+            'measuring_tapes' => 'Measuring Tapes', 'drill_machines' => 'Drill Machines', 'wrench_sets' => 'Wrench Sets',
+            'utility_knives' => 'Utility Knives', 'level_tools' => 'Level Tools', 'tool_boxes' => 'Tool Boxes',
+            'sanding_tools' => 'Sanding Tools',
+        ],
+    ],
+    'bedding_bath' => [
+        'label' => 'Bedding & Bath',
+        'image' => 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=160&h=160&fit=crop&auto=format',
+        'subcategories' => [
+            'bedsheets' => 'Bedsheets', 'pillows' => 'Pillows', 'blankets' => 'Blankets', 'bath_towels' => 'Bath Towels',
+            'shower_curtains' => 'Shower Curtains', 'comforters' => 'Comforters', 'pillowcases' => 'Pillowcases',
+            'mattress_protectors' => 'Mattress Protectors', 'bath_mats' => 'Bath Mats',
+            'bathroom_storage_racks' => 'Bathroom Storage Racks',
+        ],
+    ],
+];
+
 return [
     // Products and options show as "Low stock" at or below this many units. Fixed for every seller.
     'low_stock_threshold' => 10,
 
-    'categories' => [
-        'fashion' => 'Fashion',
-        'electronics' => 'Electronics',
-        'home_living' => 'Home & Living',
-        'kitchen_dining' => 'Kitchen & Dining',
-        'beauty_health' => 'Beauty & Health',
-        'groceries' => 'Groceries',
-        'sports_outdoors' => 'Sports & Outdoors',
-        'toys_hobbies' => 'Toys & Hobbies',
-        'automotive' => 'Automotive',
+    'category_tree' => $categoryTree,
 
-        // Existing fashion inventory remains supported.
-        'clothing' => 'Clothing',
-        'bags' => 'Bags',
-        'shoes' => 'Shoes',
-        'watches' => 'Watches',
-        'accessories' => 'Accessories',
-    ],
+    // Every key shoppers can filter by: main categories followed by all subcategories.
+    'categories' => array_merge(
+        array_map(fn (array $main) => $main['label'], $categoryTree),
+        ...array_values(array_map(fn (array $main) => $main['subcategories'], $categoryTree)),
+    ),
 
-    'browse_categories' => [
-        'fashion' => [
-            'label' => 'Fashion',
-            'image' => 'https://images.unsplash.com/photo-1445205170230-053b83016050?w=160&h=160&fit=crop&auto=format',
-        ],
-        'electronics' => [
-            'label' => 'Electronics',
-            'image' => 'https://images.unsplash.com/photo-1498049794561-7780e7231661?w=160&h=160&fit=crop&auto=format',
-        ],
-        'home_living' => [
-            'label' => 'Home & Living',
-            'image' => 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=160&h=160&fit=crop&auto=format',
-        ],
-        'beauty_health' => [
-            'label' => 'Beauty & Health',
-            'image' => 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=160&h=160&fit=crop&auto=format',
-        ],
-        'groceries' => [
-            'label' => 'Groceries',
-            'image' => 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=160&h=160&fit=crop&auto=format',
-        ],
-        'sports_outdoors' => [
-            'label' => 'Sports',
-            'image' => 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=160&h=160&fit=crop&auto=format',
-        ],
-        'toys_hobbies' => [
-            'label' => 'Toys & Hobbies',
-            'image' => 'https://images.unsplash.com/photo-1594787318286-3d835c1d207f?w=160&h=160&fit=crop&auto=format',
-        ],
-        'automotive' => [
-            'label' => 'Automotive',
-            'image' => 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=160&h=160&fit=crop&auto=format',
-        ],
-        'kitchen_dining' => [
-            'label' => 'Kitchen & Dining',
-            'image' => 'https://images.unsplash.com/photo-1556911220-bff31c812dba?w=160&h=160&fit=crop&auto=format',
-        ],
-    ],
+    'browse_categories' => array_map(
+        fn (array $main) => ['label' => $main['label'], 'image' => $main['image']],
+        $categoryTree,
+    ),
 
     // Words that flag a product for the admin's compliance review (items that cannot be sold on ZAYLO).
     'prohibited_keywords' => [
@@ -69,10 +99,8 @@ return [
         'alcohol', 'liquor', 'prescription', 'antibiotic', 'counterfeit', 'replica', 'fake', 'class a', 'pirated',
         'ivory', 'endangered', 'wildlife', 'adult toy', 'pornographic', 'gambling', 'lottery',
     ],
-    // Seller categories that cover more than one product category.
-    'category_groups' => [
-        'fashion' => ['fashion', 'clothing', 'bags', 'shoes', 'watches', 'accessories'],
-    ],
+    // Main categories and the subcategories they cover, for filtering and the seller's registered shop category.
+    'category_groups' => array_map(fn (array $main) => array_keys($main['subcategories']), $categoryTree),
     // Swatch colors for common color words in option names; options without a match show their photo or name only.
     'color_swatches' => [
         'black' => '#1f1d1b', 'white' => '#f7f5f2', 'gold' => '#c9a54b', 'silver' => '#c3c6c9', 'pink' => '#f0b6c6',
@@ -128,8 +156,6 @@ return [
         'clothing' => ['2T', '3T', '4T', '5', '6', '7', '8', '10', '12', '14'],
         'fashion' => ['2T', '3T', '4T', '5', '6', '7', '8', '10', '12', '14'],
     ],
-
-    'fashion_categories' => ['fashion', 'clothing', 'bags', 'shoes', 'watches', 'accessories'],
 
     // Days a buyer has to confirm a delivered order before it completes on its own (App\Services\OrderReceipts).
     'receipt_grace_days' => (int) env('RECEIPT_GRACE_DAYS', 3),

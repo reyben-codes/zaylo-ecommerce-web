@@ -229,7 +229,7 @@ class SavedAddressTest extends TestCase
     {
         $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);
         $product = Product::create([
-            'seller_id' => $seller->id, 'name' => 'Test product', 'category' => 'electronics',
+            'seller_id' => $seller->id, 'name' => 'Test product', 'category' => 'blenders',
             'price' => 100, 'stock' => 5, 'is_active' => true,
         ]);
         $this->post(route('buyer.cart.add', $product), ['quantity' => 1])->assertSessionHasNoErrors();

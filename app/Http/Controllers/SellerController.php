@@ -425,7 +425,6 @@ class SellerController extends Controller
             'products' => $products,
             'summary' => $summary,
             'filters' => $filters,
-            'categories' => config('marketplace.categories'),
             'stockStates' => $this->stockStatesFor($products),
             'legacy' => Product::usesLegacySchema(),
         ]);
@@ -444,7 +443,6 @@ class SellerController extends Controller
         return view('seller.products', [
             'products' => $products,
             'filters' => $filters,
-            'categories' => config('marketplace.categories'),
             'stockStates' => $this->stockStatesFor($products),
             'storeName' => $this->storeName(),
             'total' => $filters['view'] === 'archived' ? (clone $mine)->archived()->count() : (clone $mine)->notArchived()->count(),
@@ -456,7 +454,6 @@ class SellerController extends Controller
     {
         return view('seller.product-form', [
             'product' => null,
-            'categories' => config('marketplace.categories'),
             'legacy' => Product::usesLegacySchema(),
         ]);
     }
@@ -468,7 +465,6 @@ class SellerController extends Controller
 
         return view('seller.product-form', [
             'product' => $product,
-            'categories' => config('marketplace.categories'),
             'legacy' => Product::usesLegacySchema(),
             'stockState' => $this->stockState($product),
         ]);

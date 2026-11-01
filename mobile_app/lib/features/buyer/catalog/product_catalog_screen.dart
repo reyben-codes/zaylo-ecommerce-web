@@ -23,15 +23,111 @@ const _sortOptions = {
 
 const _catalogCategories = {
   null: 'All',
-  'fashion': 'Fashion',
-  'electronics': 'Electronics',
-  'home_living': 'Home & Living',
-  'beauty_health': 'Beauty & Health',
-  'groceries': 'Groceries',
-  'sports_outdoors': 'Sports',
-  'toys_hobbies': 'Toys & Hobbies',
-  'automotive': 'Automotive',
+  'home_garden': 'Home and Garden',
+  'kitchen_appliances': 'Kitchen Appliances',
+  'furniture_decor': 'Furniture & Decor',
+  'gardening_tools': 'Gardening Tools',
+  'outdoor_living': 'Outdoor Living',
+  'home_improvement_tools': 'Home Improvement Tools',
+  'bedding_bath': 'Bedding & Bath',
 };
+
+// Mirrors category_tree in the website's config/marketplace.php.
+const _catalogSubcategories = {
+  'home_garden': {
+    'storage_bins': 'Storage Bins',
+    'cleaning_baskets': 'Cleaning Baskets',
+    'shoe_racks': 'Shoe Racks',
+    'indoor_plant_pots': 'Indoor Plant Pots',
+    'laundry_baskets': 'Laundry Baskets',
+    'trash_bins': 'Trash Bins',
+    'clothes_hangers': 'Clothes Hangers',
+    'doormats': 'Doormats',
+    'storage_boxes': 'Storage Boxes',
+    'plant_stands': 'Plant Stands',
+  },
+  'kitchen_appliances': {
+    'rice_cookers': 'Rice Cookers',
+    'blenders': 'Blenders',
+    'electric_kettles': 'Electric Kettles',
+    'air_fryers': 'Air Fryers',
+    'coffee_maker': 'Coffee Maker',
+    'toasters': 'Toasters',
+    'electric_ovens': 'Electric Ovens',
+    'food_processors': 'Food Processors',
+    'sandwich_makers': 'Sandwich Makers',
+    'hand_mixers': 'Hand Mixers',
+  },
+  'furniture_decor': {
+    'office_chairs': 'Office Chairs',
+    'coffee_tables': 'Coffee Tables',
+    'bookshelves': 'Bookshelves',
+    'wall_clocks': 'Wall Clocks',
+    'table_lamps': 'Table Lamps',
+    'bedside_tables': 'Bedside Tables',
+    'tv_stands': 'TV Stands',
+    'shoe_cabinets': 'Shoe Cabinets',
+    'floor_lamps': 'Floor Lamps',
+    'decorative_mirrors': 'Decorative Mirrors',
+  },
+  'gardening_tools': {
+    'garden_shovels': 'Garden Shovels',
+    'pruning_shears': 'Pruning Shears',
+    'garden_rakes': 'Garden Rakes',
+    'watering_cans': 'Watering Cans',
+    'hand_trowels': 'Hand Trowels',
+    'garden_hoes': 'Garden Hoes',
+    'garden_gloves': 'Garden Gloves',
+    'plant_sprayers': 'Plant Sprayers',
+    'garden_scissors': 'Garden Scissors',
+    'pots': 'Pots',
+  },
+  'outdoor_living': {
+    'outdoor_chairs': 'Outdoor Chairs',
+    'folding_tables': 'Folding Tables',
+    'picnic_mats': 'Picnic Mats',
+    'outdoor_umbrellas': 'Outdoor Umbrellas',
+    'portable_grills': 'Portable Grills',
+    'camping_tents': 'Camping Tents',
+    'camping_chairs': 'Camping Chairs',
+    'cooler_boxes': 'Cooler Boxes',
+    'hammocks': 'Hammocks',
+    'outdoor_storage_boxes': 'Storage Boxes',
+  },
+  'home_improvement_tools': {
+    'screwdriver_sets': 'Screwdriver Sets',
+    'hammers': 'Hammers',
+    'pliers': 'Pliers',
+    'measuring_tapes': 'Measuring Tapes',
+    'drill_machines': 'Drill Machines',
+    'wrench_sets': 'Wrench Sets',
+    'utility_knives': 'Utility Knives',
+    'level_tools': 'Level Tools',
+    'tool_boxes': 'Tool Boxes',
+    'sanding_tools': 'Sanding Tools',
+  },
+  'bedding_bath': {
+    'bedsheets': 'Bedsheets',
+    'pillows': 'Pillows',
+    'blankets': 'Blankets',
+    'bath_towels': 'Bath Towels',
+    'shower_curtains': 'Shower Curtains',
+    'comforters': 'Comforters',
+    'pillowcases': 'Pillowcases',
+    'mattress_protectors': 'Mattress Protectors',
+    'bath_mats': 'Bath Mats',
+    'bathroom_storage_racks': 'Bathroom Storage Racks',
+  },
+};
+
+/// The main category a key belongs to: itself when it is a main category, null for All.
+String? _mainCategoryOf(String? key) {
+  if (_catalogSubcategories.containsKey(key)) return key;
+  for (final entry in _catalogSubcategories.entries) {
+    if (entry.value.containsKey(key)) return entry.key;
+  }
+  return null;
+}
 
 class ProductCatalogScreen extends StatefulWidget {
   const ProductCatalogScreen(
@@ -190,6 +286,38 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
     }
   }
 
+  Widget _categoryChips(Map<String?, String> categories, {required String? selected}) => SizedBox(
+        height: 40,
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: ZayloSpace.page),
+          children: [
+            for (final entry in categories.entries)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
+                  label: Text(entry.value),
+                  selected: selected == entry.key,
+                  showCheckmark: false,
+                  selectedColor: ZayloColors.ink,
+                  backgroundColor: ZayloColors.white,
+                  side: BorderSide(color: ZayloColors.line),
+                  labelStyle: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: selected == entry.key ? ZayloColors.white : ZayloColors.ink,
+                  ),
+                  onSelected: (_) {
+                    if (_category == entry.key) return;
+                    _category = entry.key;
+                    _reload();
+                  },
+                ),
+              ),
+          ],
+        ),
+      );
+
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(
@@ -206,37 +334,11 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
               onSearch: _reload,
             ),
           ),
-          SizedBox(
-            height: 40,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: ZayloSpace.page),
-              children: [
-                for (final entry in _catalogCategories.entries)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
-                      label: Text(entry.value),
-                      selected: _category == entry.key,
-                      showCheckmark: false,
-                      selectedColor: ZayloColors.ink,
-                      backgroundColor: ZayloColors.white,
-                      side: BorderSide(color: ZayloColors.line),
-                      labelStyle: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: _category == entry.key ? ZayloColors.white : ZayloColors.ink,
-                      ),
-                      onSelected: (_) {
-                        if (_category == entry.key) return;
-                        _category = entry.key;
-                        _reload();
-                      },
-                    ),
-                  ),
-              ],
-            ),
-          ),
+          _categoryChips(_catalogCategories, selected: _mainCategoryOf(_category)),
+          if (_catalogSubcategories[_mainCategoryOf(_category)] case final subcategories?) ...[
+            const SizedBox(height: 6),
+            _categoryChips(subcategories, selected: _category),
+          ],
           Padding(
             padding: const EdgeInsets.fromLTRB(ZayloSpace.page, 6, 8, 2),
             child: Row(children: [

@@ -46,9 +46,9 @@ class WorkspaceNotificationsTest extends TestCase
     public function test_sellers_see_stock_listing_and_policy_alerts_with_a_banner_until_read(): void
     {
         $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);
-        $soldOut = Product::create(['seller_id' => $seller->id, 'name' => 'Canvas tote', 'category' => 'bags', 'price' => 300, 'stock' => 0, 'is_active' => true]);
-        Product::create(['seller_id' => $seller->id, 'name' => 'Leather belt', 'category' => 'bags', 'price' => 300, 'stock' => 1, 'is_active' => true]);
-        $rejected = Product::create(['seller_id' => $seller->id, 'name' => 'Replica watch', 'category' => 'bags', 'price' => 300, 'stock' => 9, 'is_active' => true]);
+        $soldOut = Product::create(['seller_id' => $seller->id, 'name' => 'Canvas tote', 'category' => 'storage_boxes', 'price' => 300, 'stock' => 0, 'is_active' => true]);
+        Product::create(['seller_id' => $seller->id, 'name' => 'Leather belt', 'category' => 'storage_boxes', 'price' => 300, 'stock' => 1, 'is_active' => true]);
+        $rejected = Product::create(['seller_id' => $seller->id, 'name' => 'Replica watch', 'category' => 'storage_boxes', 'price' => 300, 'stock' => 9, 'is_active' => true]);
         $rejected->forceFill(['review_status' => Product::REVIEW_REJECTED, 'review_note' => 'Replicas are not allowed.', 'reviewed_at' => now()])->save();
         ComplianceWarning::create(['seller_id' => $seller->id, 'product_id' => $rejected->id, 'issued_by' => User::factory()->create(['role' => 'admin', 'status' => 'active'])->id, 'reason' => 'prohibited', 'details' => 'Remove replica items.', 'action' => 'warning']);
         $this->actingAs($seller);

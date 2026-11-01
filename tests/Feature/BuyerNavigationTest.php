@@ -19,7 +19,7 @@ class BuyerNavigationTest extends TestCase
         $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);
         $product = Product::create([
             'seller_id' => $seller->id, 'name' => 'Navigation test product',
-            'category' => 'electronics', 'description' => 'Test product',
+            'category' => 'blenders', 'description' => 'Test product',
             'price' => 500, 'stock' => 20, 'is_active' => true,
         ]);
         // Another buyer's saved items must never contribute to these badges.

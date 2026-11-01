@@ -62,7 +62,7 @@ class CartUpdateAllTest extends TestCase
         $buyer = User::factory()->create(['role' => 'buyer', 'status' => 'active']);
         $items = [];
         foreach ($products as $name => $stock) {
-            $product = Product::create(['seller_id' => $seller->id, 'name' => $name, 'category' => 'home_living', 'price' => 300, 'stock' => $stock, 'is_active' => true]);
+            $product = Product::create(['seller_id' => $seller->id, 'name' => $name, 'category' => 'storage_bins', 'price' => 300, 'stock' => $stock, 'is_active' => true]);
             $this->actingAs($buyer)->post(route('buyer.cart.add', $product), ['quantity' => 1])->assertSessionHasNoErrors();
             $items[] = CartItem::whereHas('cart', fn ($cart) => $cart->where('user_id', $buyer->id))->latest('id')->firstOrFail();
         }

@@ -33,8 +33,8 @@ class MobileAppFeaturesTest extends TestCase
     public function test_storefront_sends_announcements_ratings_reviews_and_policies(): void
     {
         $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);
-        $product = Product::create(['seller_id' => $seller->id, 'name' => 'Rattan Basket', 'category' => 'home_living', 'price' => 450, 'stock' => 4, 'is_active' => true]);
-        $pending = Product::create(['seller_id' => $seller->id, 'name' => 'Unchecked Lamp', 'category' => 'home_living', 'price' => 99, 'stock' => 4, 'is_active' => true]);
+        $product = Product::create(['seller_id' => $seller->id, 'name' => 'Rattan Basket', 'category' => 'storage_bins', 'price' => 450, 'stock' => 4, 'is_active' => true]);
+        $pending = Product::create(['seller_id' => $seller->id, 'name' => 'Unchecked Lamp', 'category' => 'storage_bins', 'price' => 99, 'stock' => 4, 'is_active' => true]);
         $pending->submitForReview();
         Announcement::create(['title' => 'Holiday sale', 'body' => 'Free shipping all week.', 'audience' => 'all', 'is_published' => true,
             'created_by' => User::factory()->create(['role' => 'admin', 'status' => 'active'])->id]);
@@ -87,7 +87,7 @@ class MobileAppFeaturesTest extends TestCase
     {
         $buyer = User::factory()->create(['role' => 'buyer', 'status' => 'active']);
         $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);
-        $product = Product::create(['seller_id' => $seller->id, 'name' => 'Rattan Basket', 'category' => 'home_living', 'price' => 450, 'stock' => 4, 'is_active' => true]);
+        $product = Product::create(['seller_id' => $seller->id, 'name' => 'Rattan Basket', 'category' => 'storage_bins', 'price' => 450, 'stock' => 4, 'is_active' => true]);
         $token = $buyer->createToken('test');
 
         $this->withToken($token)->getJson('/api/mobile/messages')->assertOk()->assertJsonCount(0, 'conversations');
@@ -210,7 +210,7 @@ class MobileAppFeaturesTest extends TestCase
         [$provider, $rider] = $this->riderOfPartner();
         $order = $this->parcel('ZX-0501', $provider, $rider)->sellerOrder->order;
         $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);
-        $product = Product::create(['seller_id' => $seller->id, 'name' => 'Rattan Basket', 'category' => 'home_living', 'price' => 450, 'stock' => 4, 'is_active' => true]);
+        $product = Product::create(['seller_id' => $seller->id, 'name' => 'Rattan Basket', 'category' => 'storage_bins', 'price' => 450, 'stock' => 4, 'is_active' => true]);
         $item = $order->sellerOrders()->first()->items()->create([
             'product_id' => $product->id, 'product_variant_id' => $product->defaultVariant?->id, 'product_name' => 'Rattan Basket', 'variant_name' => 'Default', 'unit_price_minor' => 45000, 'quantity' => 1,
         ]);

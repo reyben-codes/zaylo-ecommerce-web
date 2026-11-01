@@ -15,7 +15,7 @@ class GardeningProductSeeder extends Seeder
         $products = [
             [
                 'name' => '1.2L Long Spout Watering Can',
-                'category' => 'home_living',
+                'category' => 'watering_cans',
                 'gender' => null,
                 'price' => 499,
                 'original_price' => 649,
@@ -38,7 +38,7 @@ class GardeningProductSeeder extends Seeder
             ],
             [
                 'name' => 'Bully Tools 14-Gauge Round Point Shovel',
-                'category' => 'sports_outdoors',
+                'category' => 'garden_shovels',
                 'gender' => null,
                 'price' => 1599,
                 'original_price' => 1899,
@@ -57,7 +57,7 @@ class GardeningProductSeeder extends Seeder
             ],
             [
                 'name' => 'COOLJOB Gardening Gloves - 6 Pairs',
-                'category' => 'sports_outdoors',
+                'category' => 'garden_gloves',
                 'gender' => 'women',
                 'price' => 899,
                 'original_price' => 1099,
@@ -81,7 +81,7 @@ class GardeningProductSeeder extends Seeder
             ],
             [
                 'name' => 'Westward 6-Inch Steel Blade Garden Hoe',
-                'category' => 'sports_outdoors',
+                'category' => 'garden_hoes',
                 'gender' => null,
                 'price' => 1299,
                 'original_price' => null,

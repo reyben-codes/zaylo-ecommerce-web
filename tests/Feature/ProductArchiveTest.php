@@ -49,7 +49,7 @@ class ProductArchiveTest extends TestCase
         $this->get(route('seller.products.edit', $tote))->assertOk()->assertSee('Restore to shop')->assertSee('Delete permanently');
 
         // Saving the edit form cannot make it visible while archived.
-        $this->put(route('seller.products.update', $tote), ['name' => 'Canvas Tote', 'categories' => ['bags'], 'is_active' => 1])->assertSessionHasNoErrors();
+        $this->put(route('seller.products.update', $tote), ['name' => 'Canvas Tote', 'categories' => ['storage_boxes'], 'is_active' => 1])->assertSessionHasNoErrors();
         $this->assertFalse($tote->fresh()->is_active);
 
         $this->patch(route('seller.products.restore', $tote))->assertRedirect(route('seller.products.edit', $tote));
@@ -121,6 +121,6 @@ class ProductArchiveTest extends TestCase
     {
         $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);
 
-        return [$seller, Product::create(['seller_id' => $seller->id, 'name' => $name, 'category' => 'bags', 'price' => 500, 'stock' => 5, 'is_active' => true])];
+        return [$seller, Product::create(['seller_id' => $seller->id, 'name' => $name, 'category' => 'storage_boxes', 'price' => 500, 'stock' => 5, 'is_active' => true])];
     }
 }

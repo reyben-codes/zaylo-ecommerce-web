@@ -6,7 +6,7 @@
     </div>
     <div class="catalog-filter-fields catalog-primary-fields">
         <label>Category<select name="category"><option value="">All categories</option>
-            @foreach(config('marketplace.categories') as $key => $label)<option value="{{ $key }}" @selected(($filters['category'] ?? '') === $key)>{{ $label }}</option>@endforeach
+            @include('partials.category-options', ['selected' => $filters['category'] ?? null])
         </select></label>
         <label>Sort by<select name="sort">
             @foreach(['relevance' => 'Best match', 'newest' => 'Newest arrivals', 'price_low' => 'Price: low to high', 'price_high' => 'Price: high to low'] as $key => $label)<option value="{{ $key }}" @selected($filters['sort'] === $key)>{{ $label }}</option>@endforeach

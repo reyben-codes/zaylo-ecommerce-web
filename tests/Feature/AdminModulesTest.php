@@ -110,14 +110,14 @@ class AdminModulesTest extends TestCase
     public function test_compliance_flags_products_and_the_admin_can_warn_hide_and_suspend(): void
     {
         $seller = User::factory()->create(['role' => 'seller', 'status' => 'active', 'name' => 'Gadget Hub']);
-        $this->application($seller, 'electronics');
-        $offCategory = Product::create(['seller_id' => $seller->id, 'name' => 'Canvas tote', 'category' => 'bags', 'price' => 300, 'stock' => 5, 'is_active' => true]);
-        $prohibited = Product::create(['seller_id' => $seller->id, 'name' => 'Replica smart watch', 'category' => 'electronics', 'price' => 900, 'stock' => 5, 'is_active' => true]);
-        $fine = Product::create(['seller_id' => $seller->id, 'name' => 'USB-C charger', 'category' => 'electronics', 'price' => 500, 'stock' => 5, 'is_active' => true]);
+        $this->application($seller, 'kitchen_appliances');
+        $offCategory = Product::create(['seller_id' => $seller->id, 'name' => 'Canvas tote', 'category' => 'storage_boxes', 'price' => 300, 'stock' => 5, 'is_active' => true]);
+        $prohibited = Product::create(['seller_id' => $seller->id, 'name' => 'Replica smart watch', 'category' => 'blenders', 'price' => 900, 'stock' => 5, 'is_active' => true]);
+        $fine = Product::create(['seller_id' => $seller->id, 'name' => 'USB-C charger', 'category' => 'blenders', 'price' => 500, 'stock' => 5, 'is_active' => true]);
         $this->actingAs($this->admin);
 
         $page = $this->get(route('admin.compliance'))->assertOk()->assertSee('Canvas tote')->assertSee('Replica smart watch')->assertDontSee('USB-C charger');
-        $page->assertSee('seller registered for Electronics')->assertSee('&quot;replica&quot;', false);
+        $page->assertSee('seller registered for Kitchen Appliances')->assertSee('&quot;replica&quot;', false);
 
         $this->post(route('admin.compliance.warn', $prohibited), ['reason' => 'prohibited', 'details' => 'Replicas of branded watches cannot be sold.', 'action' => 'product_hidden'])->assertSessionHasNoErrors();
         $this->assertFalse((bool) $prohibited->fresh()->is_active);

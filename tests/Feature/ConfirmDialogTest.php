@@ -17,7 +17,7 @@ class ConfirmDialogTest extends TestCase
     public function test_every_layout_loads_the_shared_modal(): void
     {
         $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);
-        $product = Product::create(['seller_id' => $seller->id, 'name' => 'Canvas Tote', 'category' => 'bags', 'price' => 650, 'stock' => 4, 'is_active' => true]);
+        $product = Product::create(['seller_id' => $seller->id, 'name' => 'Canvas Tote', 'category' => 'storage_boxes', 'price' => 650, 'stock' => 4, 'is_active' => true]);
 
         // Seller layout: archiving a product asks first.
         $this->actingAs($seller)->get(route('seller.products.edit', $product))->assertOk()

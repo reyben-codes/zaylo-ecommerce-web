@@ -273,7 +273,7 @@ class _HeroCopy extends StatelessWidget {
               child: Opacity(
                 opacity: .85,
                 child: Text(
-                  'Discover the latest tech, home essentials, fashion, beauty, groceries, and more from sellers across the marketplace.',
+                  'Discover kitchen appliances, furniture, gardening tools, bedding, and more from sellers across the marketplace.',
                   style: TextStyle(fontSize: 12.8, height: 1.6, color: ZayloColors.ink),
                 ),
               ),

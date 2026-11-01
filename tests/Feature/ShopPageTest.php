@@ -33,11 +33,11 @@ class ShopPageTest extends TestCase
 
     public function test_anyone_can_open_a_shop_page_with_only_that_shops_visible_products(): void
     {
-        $this->product('Linen Sheet', 1200, ['home_living']);
-        $archived = $this->product('Old Pillowcase', 300, ['home_living']);
+        $this->product('Linen Sheet', 1200, ['storage_bins']);
+        $archived = $this->product('Old Pillowcase', 300, ['storage_bins']);
         $archived->update(['archived_at' => now(), 'is_active' => false]);
         $other = User::factory()->create(['role' => 'seller', 'status' => 'active']);
-        Product::create(['seller_id' => $other->id, 'name' => 'Someone Else Mug', 'category' => 'home_living', 'price' => 99, 'stock' => 3, 'is_active' => true]);
+        Product::create(['seller_id' => $other->id, 'name' => 'Someone Else Mug', 'category' => 'storage_bins', 'price' => 99, 'stock' => 3, 'is_active' => true]);
 
         $this->get(route('shops.show', $this->shopId))->assertOk()
             ->assertSee('Linen House')->assertSee('Handmade linen from Ilocos.')
@@ -50,8 +50,8 @@ class ShopPageTest extends TestCase
 
     public function test_shop_product_cards_show_how_many_are_in_stock(): void
     {
-        $this->product('Linen Sheet', 1200, ['home_living']);
-        $soldOut = $this->product('Linen Napkin', 150, ['home_living']);
+        $this->product('Linen Sheet', 1200, ['storage_bins']);
+        $soldOut = $this->product('Linen Napkin', 150, ['storage_bins']);
         $soldOut->update(['stock' => 0]);
         $admin = User::factory()->create(['role' => 'admin', 'status' => 'active']);
 
@@ -95,24 +95,24 @@ class ShopPageTest extends TestCase
 
     public function test_shoppers_search_filter_and_sort_within_a_shop(): void
     {
-        $this->product('Linen Sheet', 1200, ['home_living']);
-        $this->product('Linen Shirt', 900, ['clothing']);
-        $this->product('Cotton Tote', 400, ['bags', 'home_living']);
+        $this->product('Linen Sheet', 1200, ['storage_bins']);
+        $this->product('Linen Shirt', 900, ['bedsheets']);
+        $this->product('Cotton Tote', 400, ['storage_boxes', 'storage_bins']);
         $url = route('shops.show', $this->shopId);
 
         $this->get($url.'?q=linen')->assertSee('Linen Sheet')->assertSee('Linen Shirt')->assertDontSee('Cotton Tote');
-        $this->get($url.'?category=home_living')->assertSee('Linen Sheet')->assertSee('Cotton Tote')->assertDontSee('Linen Shirt');
+        $this->get($url.'?category=storage_bins')->assertSee('Linen Sheet')->assertSee('Cotton Tote')->assertDontSee('Linen Shirt');
         $this->get($url.'?sort=price_low')->assertSeeInOrder(['Cotton Tote', 'Linen Shirt', 'Linen Sheet']);
         $this->get($url.'?sort=price_high')->assertSeeInOrder(['Linen Sheet', 'Linen Shirt', 'Cotton Tote']);
         $this->get($url.'?sort=popular')->assertOk();
-        $this->get($url)->assertSee('<option value="bags"', false);
+        $this->get($url)->assertSee('<option value="storage_boxes"', false);
         $this->get($url.'?q=nothing-like-this')->assertSee('No products match');
         $this->get($url.'?sort=random')->assertSessionHasErrors('sort');
     }
 
     public function test_rating_reviews_and_items_sold_come_from_delivered_orders(): void
     {
-        $sheet = $this->product('Linen Sheet', 1200, ['home_living']);
+        $sheet = $this->product('Linen Sheet', 1200, ['storage_bins']);
         $buyer = User::factory()->create(['role' => 'buyer', 'status' => 'active', 'name' => 'Ana Reyes']);
         $order = Order::create(['buyer_id' => $buyer->id, 'reference' => 'ZAY-SHOP', 'total_minor' => 240000, 'payment_method' => 'cod', 'shipping_address' => ['city' => 'Cebu']]);
         $sellerOrder = SellerOrder::create(['order_id' => $order->id, 'seller_id' => $this->shopId, 'subtotal_minor' => 240000, 'shipping_fee_minor' => 0, 'commission_minor' => 0, 'status' => 'delivered']);
@@ -130,7 +130,7 @@ class ShopPageTest extends TestCase
 
     public function test_buyers_chat_from_the_shop_and_products_link_to_their_shop(): void
     {
-        $sheet = $this->product('Linen Sheet', 1200, ['home_living']);
+        $sheet = $this->product('Linen Sheet', 1200, ['storage_bins']);
         $buyer = User::factory()->create(['role' => 'buyer', 'status' => 'active']);
 
         $this->actingAs($buyer)->get(route('products.show', $sheet))->assertOk()

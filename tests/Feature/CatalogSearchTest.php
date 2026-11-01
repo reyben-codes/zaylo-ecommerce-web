@@ -14,7 +14,7 @@ class CatalogSearchTest extends TestCase
     private function product(array $attributes = []): Product
     {
         $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);
-        return Product::create(array_merge(['seller_id' => $seller->id, 'name' => 'Classic shoe', 'category' => 'shoes', 'price' => 1000, 'stock' => 10, 'is_active' => true], $attributes));
+        return Product::create(array_merge(['seller_id' => $seller->id, 'name' => 'Classic shoe', 'category' => 'shoe_racks', 'price' => 1000, 'stock' => 10, 'is_active' => true], $attributes));
     }
 
     public function test_search_matches_multiple_words_across_fields_and_prioritizes_exact_names(): void
@@ -133,7 +133,7 @@ class CatalogSearchTest extends TestCase
     public function test_chips_remove_only_one_filter_and_pagination_preserves_the_others(): void
     {
         foreach (range(1, 16) as $i) $this->product(['name' => 'Blue shoe '.$i, 'gender' => 'women']);
-        $filters = ['search' => 'blue', 'gender' => 'women', 'category' => 'fashion', 'min_price' => 0, 'sort' => 'price_low'];
+        $filters = ['search' => 'blue', 'gender' => 'women', 'category' => 'home_garden', 'min_price' => 0, 'sort' => 'price_low'];
         $response = $this->get(route('products.index', $filters))->assertOk();
         $pagination = $response->viewData('products');
         parse_str(parse_url($pagination->nextPageUrl(), PHP_URL_QUERY), $query);

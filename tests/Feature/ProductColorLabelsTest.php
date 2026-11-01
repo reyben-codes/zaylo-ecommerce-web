@@ -21,7 +21,7 @@ class ProductColorLabelsTest extends TestCase
             ->assertSee('name="options[0][color]"', false)->assertSee('data-option-chip="Navy"', false);
 
         $this->post(route('seller.products.store'), [
-            'name' => 'Canvas Tote', 'category' => 'bags', 'price' => 650, 'stock' => 8, 'low_stock_threshold' => 2, 'is_active' => 1,
+            'name' => 'Canvas Tote', 'category' => 'storage_boxes', 'price' => 650, 'stock' => 8, 'low_stock_threshold' => 2, 'is_active' => 1,
             'colors' => ' Black, olive green,, black , Navy ',
         ])->assertRedirect()->assertSessionHasNoErrors();
 

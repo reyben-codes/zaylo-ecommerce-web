@@ -42,9 +42,7 @@ class SellerApplication extends Model
 
     public static function categories(): array
     {
-        return array_intersect_key(config('marketplace.categories'), array_flip([
-            'fashion', 'electronics', 'home_living', 'beauty_health', 'groceries', 'sports_outdoors', 'toys_hobbies', 'automotive',
-        ]));
+        return array_map(fn (array $main) => $main['label'], config('marketplace.category_tree'));
     }
 
     public function user(): BelongsTo

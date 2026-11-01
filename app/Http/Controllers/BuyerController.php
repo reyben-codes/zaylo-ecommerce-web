@@ -100,9 +100,7 @@ class BuyerController extends Controller
         if ($validated['availability'] === 'out_of_stock') $query->whereNot($available);
 
         if (! empty($validated['category'])) {
-            $query->inCategories($validated['category'] === 'fashion'
-                ? config('marketplace.fashion_categories')
-                : [$validated['category']]);
+            $query->inCategories([$validated['category']]);
         }
         if (! empty($validated['gender'])) {
             // Unisex items also appear under Men and Women; Kids (boys or girls) items under Boys and Girls.
@@ -119,12 +117,16 @@ class BuyerController extends Controller
             foreach (array_unique(explode(' ', $validated['search'])) as $word) {
                 $pattern = '%'.$escapeLike($word).'%';
                 $forGroup = self::genderForWord($word);
-                $query->where(function ($match) use ($pattern, $forGroup) {
+                $named = ProductCatalog::categoriesNamed($word);
+                $query->where(function ($match) use ($pattern, $forGroup, $named) {
                     if ($forGroup) {
                         $match->whereIn('products.gender', config('marketplace.gender_matches')[$forGroup]);
                     }
                     $match->orWhereRaw("LOWER(products.name) LIKE ? ESCAPE '!'", [$pattern])
                         ->orWhereRaw("LOWER(products.description) LIKE ? ESCAPE '!'", [$pattern]);
+                    if ($named !== []) {
+                        $match->orWhere(fn ($category) => $category->inCategories($named));
+                    }
                     if (Product::usesLegacySchema()) {
                         $match->orWhereRaw("LOWER(products.sku) LIKE ? ESCAPE '!'", [$pattern])
                             ->orWhereRaw("LOWER(products.category) LIKE ? ESCAPE '!'", [$pattern]);
