@@ -890,11 +890,12 @@ th { color: var(--c-6b5f54); font-size: .72rem; text-transform: uppercase; lette
 }
 
 @media (min-width: 1281px) {
-    /* Logo on the left across both rows; search and icons on top, the store links under the search bar. */
+    /* Logo on the left across both rows, then search, icons and account on top. The store links share the
+       search bar's column so they centre under it, whatever the icons and account buttons on the right measure. */
     .navbar {
-        grid-template-columns: auto minmax(0, 1fr);
+        grid-template-columns: auto minmax(0, 1fr) auto auto;
         grid-template-rows: auto auto;
-        gap: 4px 32px;
+        gap: 4px 0;
         height: auto;
         padding: 10px 48px;
     }
@@ -902,23 +903,36 @@ th { color: var(--c-6b5f54); font-size: .72rem; text-transform: uppercase; lette
     .navbar .logo {
         grid-column: 1;
         grid-row: 1 / span 2;
+        margin-right: 32px;
     }
 
     .navbar .nav-menu {
         grid-column: 2;
         grid-row: 2;
-        padding-left: 17px;
+        justify-self: center;
     }
 
     .navbar .nav-actions {
-        grid-column: 2;
+        display: contents;
+    }
+
+    .navbar .nav-actions > * {
         grid-row: 1;
-        width: 100%;
-        justify-self: stretch;
+        align-self: center;
+    }
+
+    .navbar .nav-actions > .icon-group {
+        grid-column: 3;
+        margin-left: 22px;
+    }
+
+    .navbar .nav-actions > :not(.search-wrapper, .icon-group) {
+        grid-column: 4;
+        margin-left: 22px;
     }
 
     .navbar .search-wrapper {
-        flex: 1 1 auto;
+        grid-column: 2;
         min-width: 180px;
     }
 
