@@ -46,20 +46,9 @@
             <span aria-hidden="true"></span>
         </button>
 
-        <div class="nav-menu" id="primary-navigation" data-nav-menu>
-            <div class="nav-menu-inner">
-                @hasSection('nav-links')
-                    @yield('nav-links')
-                @else
-                    @include('partials.store-nav')
-                @endif
-            </div>
-        </div>
-
-        <a href="{{ route('home') }}" class="logo">
+        <a href="{{ route(auth()->user()?->role === 'buyer' ? 'buyer.dashboard' : 'home') }}" class="logo">
             <img src="{{ asset('images/ZAYLO_LOGO_DARK.png') }}" alt="ZAYLO" style="height:72px;width:auto;display:block;">
         </a>
-
         <div class="nav-actions">
             <form class="search-wrapper" method="GET" action="{{ route('products.index') }}" role="search" data-live-search>
                 <span class="search-icon">⌕</span>
@@ -92,6 +81,15 @@
                         <a href="{{ route('register') }}" class="nav-auth-button nav-auth-button--primary">Create new account</a>
                     </div>
                 @endauth
+            </div>
+        </div>
+        <div class="nav-menu" id="primary-navigation" data-nav-menu>
+            <div class="nav-menu-inner">
+                @hasSection('nav-links')
+                    @yield('nav-links')
+                @else
+                    @include('partials.store-nav')
+                @endif
             </div>
         </div>
     </header>

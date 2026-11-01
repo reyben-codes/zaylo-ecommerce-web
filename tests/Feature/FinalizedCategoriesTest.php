@@ -123,6 +123,13 @@ class FinalizedCategoriesTest extends TestCase
             ->assertSee('href="'.route('products.index', ['category' => 'hammocks']).'"', false);
     }
 
+    public function test_the_logo_replaces_the_home_link_and_store_links_follow_the_search_bar(): void
+    {
+        $this->get(route('products.index'))->assertOk()
+            ->assertDontSee('>Home</a>', false)
+            ->assertSeeInOrder(['class="logo"', 'data-live-search', 'id="primary-navigation"', 'Shop All', 'Categories', 'Kids'], false);
+    }
+
     private function product(string $name, string $category, array $extras = []): Product
     {
         $seller = Seller::first() ?? Seller::create([

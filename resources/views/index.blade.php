@@ -31,12 +31,7 @@
             <span aria-hidden="true"></span>
             <span aria-hidden="true"></span>
         </button>
-        <div class="nav-menu" id="primary-navigation" data-nav-menu>
-            <div class="nav-menu-inner">
-                @include('partials.store-nav')
-            </div>
-        </div>
-        <a href="{{ route('home') }}" class="logo">
+        <a href="{{ route(auth()->user()?->role === 'buyer' ? 'buyer.dashboard' : 'home') }}" class="logo">
             <img class="home-brand-logo" src="{{ asset('images/ZAYLO_LOGO_DARK.png') }}" alt="ZAYLO">
         </a>
         <div class="nav-actions">
@@ -63,6 +58,11 @@
                     <a href="{{ route('register') }}" class="nav-auth-button nav-auth-button--primary">Create new account</a>
                 </div>
             @endauth
+        </div>
+        <div class="nav-menu" id="primary-navigation" data-nav-menu>
+            <div class="nav-menu-inner">
+                @include('partials.store-nav')
+            </div>
         </div>
     </header>
 

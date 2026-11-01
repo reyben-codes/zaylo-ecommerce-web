@@ -40,7 +40,8 @@ class BuyerNavigationTest extends TestCase
                 $links[] = [$link->textContent, $link->getAttribute('href')];
             }
             $this->assertNotEmpty($links);
-            $this->assertSame(route('buyer.dashboard'), $links[0][1]);
+            $this->assertSame(route('buyer.dashboard'), $xpath->query('//header//a[@class="logo"]')->item(0)->getAttribute('href'));
+            $this->assertNotContains('Home', array_column($links, 0));
             $baseline ??= $links;
             $this->assertSame($baseline, $links);
         }

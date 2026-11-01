@@ -1,5 +1,4 @@
 <nav class="nav-links" aria-label="Store navigation">
-    <a href="{{ route(auth()->user()?->role === 'buyer' ? 'buyer.dashboard' : 'home') }}" class="{{ request()->routeIs('home', 'buyer.dashboard') ? 'active-link' : '' }}">Home</a>
     <a href="{{ route('products.index') }}" class="{{ request()->routeIs('products.index') && ! request('category') && ! request('gender') ? 'active-link' : '' }}">Shop All</a>
     <div class="category-menu" data-category-menu>
         <button type="button" class="category-menu__toggle {{ request('category') ? 'active-link' : '' }}" aria-expanded="false" aria-controls="category-menu-panel" data-category-menu-toggle>
