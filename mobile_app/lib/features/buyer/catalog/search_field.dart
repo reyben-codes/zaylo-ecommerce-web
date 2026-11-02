@@ -12,6 +12,7 @@ class SearchField extends StatelessWidget {
     this.onChanged,
     this.onTap,
     this.autofocus = false,
+    this.hint = 'Search products and shops',
   });
 
   final TextEditingController? controller;
@@ -19,6 +20,7 @@ class SearchField extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final VoidCallback? onTap;
   final bool autofocus;
+  final String hint;
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +34,7 @@ class SearchField extends StatelessWidget {
       onChanged: onChanged,
       onSubmitted: (_) => onSearch?.call(),
       decoration: InputDecoration(
-        hintText: 'Search products',
+        hintText: hint,
         prefixIcon: const Icon(Icons.search_rounded),
         suffixIcon: field == null || onTap != null
             ? null

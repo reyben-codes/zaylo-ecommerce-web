@@ -64,6 +64,39 @@
                 <div class="seller-panel__body">@include('partials.profile-photo', ['user' => $user])</div>
             </section>
 
+            <section class="seller-panel" aria-labelledby="cover-heading">
+                <header class="seller-panel__header">
+                    <div>
+                        <h2 id="cover-heading">Shop cover photo</h2>
+                        <p>The wide photo across the top of your shop page. A landscape photo works best; it is cropped around its center.</p>
+                    </div>
+                </header>
+                <div class="seller-panel__body">
+                    @if($user->shop_cover_url)
+                        <img src="{{ $user->shop_cover_url }}" alt="Your current shop cover" class="seller-cover-preview">
+                    @endif
+                    <form method="POST" action="{{ route('seller.account.cover.update') }}" enctype="multipart/form-data" class="seller-form">
+                        @csrf
+                        <div class="seller-field">
+                            <label for="shop-cover">Choose a photo</label>
+                            <input id="shop-cover" type="file" name="cover" accept="image/jpeg,image/png,image/webp" required aria-describedby="shop-cover-help" @error('cover') aria-invalid="true" @enderror>
+                            <p class="seller-field__help" id="shop-cover-help">JPG, PNG or WebP, up to 5 MB and at least 600 × 200 pixels.</p>
+                            @error('cover')<p class="seller-field__error">{{ $message }}</p>@enderror
+                        </div>
+                        <div class="seller-form__actions">
+                            <button type="submit" class="seller-button"><i class="fas fa-upload" aria-hidden="true"></i> Upload cover</button>
+                        </div>
+                    </form>
+                    @if($user->shop_cover_url)
+                        <form method="POST" action="{{ route('seller.account.cover.destroy') }}" class="seller-cover-remove">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="seller-link">Remove cover photo</button>
+                        </form>
+                    @endif
+                </div>
+            </section>
+
             <section class="seller-panel" aria-labelledby="profile-heading">
                 <header class="seller-panel__header">
                     <div>

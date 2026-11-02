@@ -52,6 +52,16 @@ class MobileChatController extends Controller
         return response()->json(['conversation' => $this->summary($chat, $request)]);
     }
 
+    /** Opens (or creates) the conversation with a shop's seller, as an inbox row. */
+    public function startAboutShop(Request $request, int $shop, ChatStarter $chats): JsonResponse
+    {
+        $userId = (int) $request->user()->id;
+        $chat = $chats->forShop($request->user(), $shop)
+            ->loadCount(['messages as unread_count' => fn ($query) => $query->where('sender_id', '!=', $userId)->whereNull('read_at')]);
+
+        return response()->json(['conversation' => $this->summary($chat, $request)]);
+    }
+
     public function startForShop(Request $request, int $shop, ChatStarter $chats): JsonResponse
     {
         return response()->json(['conversation' => $this->details($chats->forShop($request->user(), $shop), $request)]);

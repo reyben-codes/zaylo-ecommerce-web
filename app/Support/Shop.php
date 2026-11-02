@@ -22,6 +22,12 @@ use Illuminate\Support\Facades\Schema;
  */
 class Shop
 {
+    /** How the Products tab can be ordered. */
+    public const SORTS = ['newest' => 'Newest', 'popular' => 'Best selling', 'price_low' => 'Price: low to high', 'price_high' => 'Price: high to low'];
+
+    /** How the Reviews tab can rank the shop's products. */
+    public const RANKINGS = ['highest_rated' => 'Highest rating', 'lowest_rated' => 'Lowest rating', 'best_selling' => 'Best selling', 'least_selling' => 'Least selling'];
+
     public function __construct(
         public readonly int $id,
         public readonly User $owner,
@@ -54,6 +60,36 @@ class Shop
         return new self($shop->id, $owner, $shop->name, $shop->description, $location ?: self::applicationLocation($owner), $shop->created_at);
     }
 
+    /**
+     * Open shops whose name contains the words, names starting with them first.
+     *
+     * @return Collection<int, self>
+     */
+    public static function search(string $term, int $limit = 6): Collection
+    {
+        $term = mb_strtolower(trim((string) preg_replace('/\s+/', ' ', $term)));
+        if ($term === '') {
+            return collect();
+        }
+        $escaped = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $term);
+
+        if (Product::usesLegacySchema()) {
+            $table = Schema::hasTable('seller_profiles') ? 'seller_profiles' : 'sellers';
+            $column = $table === 'seller_profiles' ? 'store_name' : 'name';
+            $matches = DB::table($table)->selectRaw("{$table}.user_id as shop_id");
+        } else {
+            $table = 'sellers';
+            $column = 'name';
+            $matches = DB::table($table)->where('status', 'approved')->selectRaw('sellers.id as shop_id');
+        }
+
+        // Extra candidates cover shops that are closed or suspended now.
+        return $matches->whereRaw("LOWER({$table}.{$column}) LIKE ? ESCAPE '!'", ["%{$escaped}%"])
+            ->orderByRaw("CASE WHEN LOWER({$table}.{$column}) LIKE ? ESCAPE '!' THEN 0 ELSE 1 END", ["{$escaped}%"])
+            ->orderBy("{$table}.{$column}")->limit($limit * 3)->pluck('shop_id')
+            ->map(fn ($id) => self::find((int) $id))->filter()->take($limit)->values();
+    }
+
     /** The shop id a seller account owns (for its dashboard), without creating a shop. */
     public static function idForSeller(User $seller): ?int
     {
@@ -79,6 +115,39 @@ class Shop
     public function products(): Builder
     {
         return Product::where('products.seller_id', $this->id)->visibleToBuyers()->notArchived();
+    }
+
+    /**
+     * The shop's products with what cards need, filtered and ordered by one of SORTS or RANKINGS. Products without
+     * reviews come last in both rating orders; units_sold counts the same way as soldCount().
+     */
+    public function listing(?string $search, ?string $category, string $sort): Builder
+    {
+        $query = $this->products()->withReviewSummary()->with(Product::usesLegacySchema() ? ['images', 'additionalCategories'] : ['images', 'additionalCategories', 'defaultVariant', 'category'])
+            ->withCount(['variants as active_variants_count' => fn ($variant) => $variant->where('is_active', true)])
+            ->withSum(['variants as catalog_variant_stock' => fn ($variant) => $variant->where('is_active', true)], 'stock')
+            ->withSum(['orderItems as units_sold' => fn ($item) => Order::usesLegacySchema()
+                ? $item->whereIn('order_id', DB::table('orders')->whereIn('status', ['delivered', 'completed'])->select('id'))
+                : $item->whereIn('seller_order_id', DB::table('seller_orders')->whereIn('status', ['delivered', 'completed'])->select('id'))], 'quantity');
+
+        if ($search) {
+            $pattern = '%'.addcslashes(mb_strtolower($search), '%_\\').'%';
+            $query->where(fn ($match) => $match->whereRaw('LOWER(products.name) LIKE ?', [$pattern])->orWhereRaw('LOWER(products.description) LIKE ?', [$pattern]));
+        }
+        if ($category) {
+            $query->inCategories([$category]);
+        }
+        $unrated = 'NOT EXISTS (SELECT 1 FROM product_reviews WHERE product_reviews.product_id = products.id)';
+        match ($sort) {
+            'price_low', 'price_high' => $query->orderByRaw(Product::sellingPriceSql().($sort === 'price_high' ? ' DESC' : ' ASC'), [now(), now()]),
+            'popular', 'best_selling' => $query->orderByDesc('units_sold')->latest('products.created_at'),
+            'least_selling' => $query->orderBy('units_sold')->latest('products.created_at'),
+            'highest_rated' => $query->orderByRaw($unrated)->orderByDesc('reviews_avg_rating')->orderByDesc('reviews_count'),
+            'lowest_rated' => $query->orderByRaw($unrated)->orderBy('reviews_avg_rating')->orderByDesc('reviews_count'),
+            default => $query->latest('products.created_at'),
+        };
+
+        return $query->orderByDesc('products.id');
     }
 
     public function followerCount(): int
@@ -149,14 +218,18 @@ class Shop
             ])->values();
     }
 
-    /** Categories the shop's visible products are listed under, for the shop's filter. */
-    public function categories(): array
+    /**
+     * Categories the shop's visible products are listed under, with how many each one has.
+     *
+     * @return array<string, array{label: string, count: int}>
+     */
+    public function categoryCounts(): array
     {
-        $keys = $this->products()->with(Product::usesLegacySchema() ? ['additionalCategories'] : ['category', 'additionalCategories'])
-            ->get()->flatMap(fn (Product $product) => $product->category_keys)->unique();
-        $labels = config('marketplace.categories');
+        $counts = $this->products()->with(Product::usesLegacySchema() ? ['additionalCategories'] : ['category', 'additionalCategories'])
+            ->get()->flatMap(fn (Product $product) => collect($product->category_keys)->unique())->countBy();
 
-        return collect($labels)->only($keys->all())->all();
+        return collect(config('marketplace.categories'))->only($counts->keys()->all())
+            ->map(fn (string $label, string $key) => ['label' => $label, 'count' => (int) $counts[$key]])->all();
     }
 
     private static function applicationLocation(User $owner): ?string

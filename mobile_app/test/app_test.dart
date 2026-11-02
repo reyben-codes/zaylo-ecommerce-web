@@ -29,6 +29,8 @@ import 'package:zaylo_mobile/features/buyer/orders/order_detail_screen.dart';
 import 'package:zaylo_mobile/features/buyer/home/widgets/home_header.dart';
 import 'package:zaylo_mobile/features/buyer/messages/seller_chat_screen.dart';
 import 'package:zaylo_mobile/features/buyer/messages/seller_inbox_screen.dart';
+import 'package:zaylo_mobile/features/buyer/shop/followed_shops_screen.dart';
+import 'package:zaylo_mobile/features/buyer/shop/shop_screen.dart';
 import 'package:zaylo_mobile/features/rider/history/rider_history_tab.dart';
 import 'package:zaylo_mobile/models/auth_models.dart';
 import 'package:zaylo_mobile/features/buyer/catalog/product_card.dart';
@@ -37,6 +39,7 @@ import 'package:zaylo_mobile/models/buyer/cart_models.dart';
 import 'package:zaylo_mobile/models/buyer/catalog_models.dart';
 import 'package:zaylo_mobile/models/buyer/order_models.dart';
 import 'package:zaylo_mobile/models/buyer/seller_chat_models.dart';
+import 'package:zaylo_mobile/models/buyer/shop_models.dart';
 import 'package:zaylo_mobile/models/location.dart';
 import 'package:zaylo_mobile/models/rider/rider_activity_models.dart';
 import 'package:zaylo_mobile/models/rider/rider_dashboard_models.dart';
@@ -239,6 +242,85 @@ class FakeApi extends BuyerApi {
   Future<Product> product(String slug) async => Product.fromJson({
         ...productJson(1),
         'images': ['http://fake.test/1.jpg', 'http://fake.test/2.jpg'],
+        'seller_name': 'Linen House',
+        'shop_id': 9,
+      });
+
+  static Map<String, dynamic> shopJson({bool following = false, int followers = 2}) => {
+        'id': 9,
+        'name': 'Linen House',
+        'avatar_url': null,
+        'cover_url': null,
+        'product_count': 2,
+        'followers': followers,
+        'rating': 4.5,
+        'review_count': 3,
+        'sold': 8,
+        'following': following,
+        'categories': [
+          {'id': 'storage_bins', 'label': 'Storage Bins', 'count': 2},
+        ],
+      };
+
+  bool followsShop = false;
+
+  /// What the shop's product list was last asked for.
+  String? lastShopSearch;
+  String? lastShopCategory;
+  String? lastShopSort;
+
+  @override
+  Future<List<Shop>> shops(String search) async =>
+      search.toLowerCase().contains('linen') ? [Shop.fromJson(shopJson(following: followsShop))] : [];
+
+  @override
+  Future<Shop> shop(int id) async => Shop.fromJson(shopJson(following: followsShop));
+
+  @override
+  Future<ProductPage> shopProducts(int shopId, {String? search, String? category, String? sort, int page = 1}) async {
+    lastShopSearch = search;
+    lastShopCategory = category;
+    lastShopSort = sort;
+    return ProductPage.fromJson({
+      'data': [
+        {...productJson(1), 'rating': 4.5, 'review_count': 3, 'units_sold': 8},
+        productJson(2),
+      ],
+      'current_page': 1,
+      'last_page': 1,
+      'total': 2,
+    });
+  }
+
+  @override
+  Future<List<Shop>> followedShops() async => followsShop ? [Shop.fromJson(shopJson(following: true))] : [];
+
+  @override
+  Future<({bool following, int followers})> toggleShopFollow(int shopId) async {
+    followsShop = !followsShop;
+    return (following: followsShop, followers: followsShop ? 3 : 2);
+  }
+
+  @override
+  Future<SellerConversation> startShopChat(int shopId) async =>
+      SellerConversation.fromJson({'id': 5, 'name': 'Linen House'});
+
+  @override
+  Future<ProductPage> products({
+    String? category,
+    String? search,
+    String? sort,
+    String? gender,
+    double? minPrice,
+    double? maxPrice,
+    bool onSale = false,
+    int page = 1,
+  }) async =>
+      ProductPage.fromJson({
+        'data': search == 'linen' ? [] : [productJson(1)],
+        'current_page': 1,
+        'last_page': 1,
+        'total': search == 'linen' ? 0 : 1,
       });
 
   /// ID tokens sent to POST /mobile/google; "rejected" answers like a seller's account.
@@ -2037,6 +2119,98 @@ void main() {
     expect(find.text('Quantity'), findsNothing);
     expect(find.text('ADD TO CART'), findsNothing);
     expect(find.text('BUY NOW'), findsNothing);
+  });
+
+  group('shops', () {
+    Future<FakeApi> openShop(WidgetTester tester) async {
+      final api = FakeApi();
+      await pumpApp(tester, api: api);
+      await tester.tap(find.text('Watering Can 1').first);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.textContaining('Sold by'));
+      await tester.tap(find.textContaining('Sold by'));
+      await tester.pumpAndSettle();
+      return api;
+    }
+
+    testWidgets('the shop name on a product opens the shop, with chat, follow and search', (tester) async {
+      final api = await openShop(tester);
+
+      expect(find.byType(ShopScreen), findsOneWidget);
+      expect(find.text('Linen House'), findsOneWidget);
+      expect(find.text('Chat with seller'), findsOneWidget);
+      expect(find.text('Follow'), findsOneWidget);
+      expect(find.textContaining('2 followers'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), 'can');
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle();
+      expect(api.lastShopSearch, 'can');
+    });
+
+    testWidgets('the Reviews tab ranks products both ways and the Categories tab filters', (tester) async {
+      final api = await openShop(tester);
+
+      await tester.tap(find.text('Reviews'));
+      await tester.pumpAndSettle();
+      expect(api.lastShopSort, 'highest_rated');
+      expect(find.text('8 sold'), findsOneWidget);
+      for (final (label, sort) in const [
+        ('Lowest rating', 'lowest_rated'),
+        ('Best selling', 'best_selling'),
+      ]) {
+        await tester.tap(find.text(label));
+        await tester.pumpAndSettle();
+        expect(api.lastShopSort, sort);
+      }
+      await tester.ensureVisible(find.text('Least selling'));
+      await tester.tap(find.text('Least selling'));
+      await tester.pumpAndSettle();
+      expect(api.lastShopSort, 'least_selling');
+
+      await tester.tap(find.text('Categories'));
+      await tester.pumpAndSettle();
+      expect(find.text('2 products'), findsOneWidget);
+      await tester.tap(find.text('Storage Bins'));
+      await tester.pumpAndSettle();
+      expect(api.lastShopCategory, 'storage_bins');
+      expect(find.byType(ProductCard), findsWidgets);
+    });
+
+    testWidgets('a followed shop appears under Shops Followed on the Saved tab', (tester) async {
+      final api = FakeApi();
+      await pumpApp(tester, api: api, token: 'session');
+      await tester.tap(find.text('Saved').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Shops Followed'));
+      await tester.pumpAndSettle();
+      expect(find.byType(FollowedShopsScreen), findsOneWidget);
+      expect(find.text('No shops followed yet'), findsOneWidget);
+
+      api.followsShop = true;
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Shops Followed'));
+      await tester.pumpAndSettle();
+      expect(find.text('Linen House'), findsOneWidget);
+
+      await tester.tap(find.text('Unfollow'));
+      await tester.pumpAndSettle();
+      expect(find.text('Linen House'), findsNothing);
+      expect(api.followsShop, isFalse);
+    });
+
+    testWidgets('searching finds shops even when no product matches', (tester) async {
+      await pumpApp(tester);
+      await tester.tap(find.byType(TextField).first);
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).first, 'linen');
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Linen House'), findsOneWidget);
+      expect(find.text('No matches'), findsNothing);
+    });
   });
 
   testWidgets('a product in stock is not grayed out and can be added', (tester) async {

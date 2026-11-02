@@ -9,6 +9,7 @@ import 'package:zaylo_mobile/models/buyer/cart_models.dart';
 import 'package:zaylo_mobile/models/buyer/catalog_models.dart';
 import 'package:zaylo_mobile/models/buyer/order_models.dart';
 import 'package:zaylo_mobile/models/buyer/seller_chat_models.dart';
+import 'package:zaylo_mobile/models/buyer/shop_models.dart';
 import 'package:zaylo_mobile/models/support_models.dart';
 import 'package:zaylo_mobile/utils/ids.dart';
 
@@ -51,6 +52,38 @@ class BuyerApi extends ApiClient {
 
   Future<ProductReviewPage> productReviews(String slug, {int page = 1}) async => ProductReviewPage.fromJson(
       await send('GET', '/mobile/products/${Uri.encodeComponent(slug)}/reviews', query: {'page': '$page'}));
+
+  // ------------------------------------------------------------------ Shops
+
+  static List<Shop> _shopList(Map<String, dynamic> data) =>
+      (data['shops'] as List<dynamic>).map((item) => Shop.fromJson(item as Map<String, dynamic>)).toList();
+
+  /// Open shops whose name matches.
+  Future<List<Shop>> shops(String search) async => _shopList(await send('GET', '/mobile/shops', query: {'search': search}));
+
+  Future<Shop> shop(int id) async => Shop.fromJson((await send('GET', '/mobile/shops/$id'))['shop'] as Map<String, dynamic>);
+
+  Future<ProductPage> shopProducts(int shopId, {String? search, String? category, String? sort, int page = 1}) async {
+    final data = await send('GET', '/mobile/shops/$shopId/products', query: {
+      if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+      if (category != null) 'category': category,
+      if (sort != null) 'sort': sort,
+      'page': '$page',
+    });
+    return ProductPage.fromJson(data['products'] as Map<String, dynamic>);
+  }
+
+  Future<List<Shop>> followedShops() async => _shopList(await send('GET', '/mobile/following'));
+
+  /// Follows or unfollows; the answer is the new state.
+  Future<({bool following, int followers})> toggleShopFollow(int shopId) async {
+    final data = await send('POST', '/mobile/shops/$shopId/follow');
+    return (following: data['following'] as bool, followers: (data['followers'] as num).toInt());
+  }
+
+  /// Opens (or creates) the conversation with a shop's seller.
+  Future<SellerConversation> startShopChat(int shopId) async => SellerConversation.fromJson(
+      (await send('POST', '/mobile/shops/$shopId/chat'))['conversation'] as Map<String, dynamic>);
 
   // ------------------------------------------------------------------- Auth
 

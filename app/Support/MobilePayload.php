@@ -108,10 +108,16 @@ class MobilePayload
             $data['rating'] = $product->reviews_count > 0 ? round((float) $product->reviews_avg_rating, 1) : null;
         }
 
+        // Present on a shop's listing (App\Support\Shop::listing).
+        if (array_key_exists('units_sold', $product->getAttributes())) {
+            $data['units_sold'] = (int) $product->units_sold;
+        }
+
         if ($detailed) {
             $data += [
                 'description' => $product->description,
                 'seller_name' => self::shopName($product->seller_id),
+                'shop_id' => $product->seller_id,
                 'images' => collect([$product->image_url])
                     ->concat($product->images->pluck('path'))
                     ->filter()->unique()->map(fn ($path) => self::imageUrl($path))->values(),
@@ -125,6 +131,27 @@ class MobilePayload
         }
 
         return array_filter($data, fn ($value) => $value !== null);
+    }
+
+    /** A shop's page header and its row in search results and the followed list. */
+    public static function shop(Shop $shop, ?User $viewer = null): array
+    {
+        $rating = $shop->rating();
+
+        return [
+            'id' => $shop->id,
+            'name' => $shop->name,
+            'description' => $shop->description,
+            'location' => $shop->location,
+            'avatar_url' => self::imageUrl($shop->owner->avatar_url),
+            'cover_url' => self::imageUrl($shop->owner->shop_cover_url),
+            'product_count' => $shop->products()->count(),
+            'followers' => $shop->followerCount(),
+            'rating' => $rating['average'],
+            'review_count' => $rating['count'],
+            'sold' => $shop->soldCount(),
+            'following' => $shop->isFollowedBy($viewer),
+        ];
     }
 
     public static function cartItem(CartItem $item): array

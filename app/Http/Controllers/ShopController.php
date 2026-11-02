@@ -11,58 +11,50 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 /**
- * Public shop pages: a seller's products with search, category and sort, followers, rating, recent reviews and a
- * way to chat. Buyers can follow shops and see the shops they follow.
+ * Public shop pages: a cover photo, followers, rating and a way to chat, then tabs for the seller's products (with
+ * search, category and sort), those products ranked by rating or sales, and the shop's categories. Buyers can follow shops and see the shops they follow.
  */
 class ShopController extends Controller
 {
-    private const SORTS = ['newest' => 'Newest', 'popular' => 'Best selling', 'price_low' => 'Price: low to high', 'price_high' => 'Price: high to low'];
-
     public function show(Request $request, int $shop)
     {
         $shop = Shop::find($shop) ?? abort(404);
         $filters = $request->validate([
+            'tab' => ['nullable', Rule::in(['products', 'reviews', 'categories'])],
             'q' => 'nullable|string|max:100',
             'category' => ['nullable', Rule::in(array_keys(config('marketplace.categories')))],
-            'sort' => ['nullable', Rule::in(array_keys(self::SORTS))],
-        ]) + ['q' => null, 'category' => null, 'sort' => null];
+            'sort' => ['nullable', Rule::in(array_keys(Shop::SORTS))],
+            'rank' => ['nullable', Rule::in(array_keys(Shop::RANKINGS))],
+        ]) + ['tab' => null, 'q' => null, 'category' => null, 'sort' => null, 'rank' => null];
         $filters['q'] = trim((string) $filters['q']) ?: null;
+        $filters['tab'] ??= 'products';
         $filters['sort'] ??= 'newest';
+        $filters['rank'] ??= 'highest_rated';
 
-        $query = $shop->products()->withReviewSummary()->with(['images', 'additionalCategories'])
-            ->withCount(['variants as active_variants_count' => fn ($variant) => $variant->where('is_active', true)])
-            ->withSum(['variants as catalog_variant_stock' => fn ($variant) => $variant->where('is_active', true)], 'stock');
-        if (! Product::usesLegacySchema()) {
-            $query->with(['defaultVariant', 'category']);
-        }
-        if ($filters['q']) {
-            $pattern = '%'.addcslashes(mb_strtolower($filters['q']), '%_\\').'%';
-            $query->where(fn ($match) => $match->whereRaw('LOWER(products.name) LIKE ?', [$pattern])->orWhereRaw('LOWER(products.description) LIKE ?', [$pattern]));
-        }
-        if ($filters['category']) {
-            $query->inCategories([$filters['category']]);
-        }
-        match ($filters['sort']) {
-            'price_low', 'price_high' => $query->orderByRaw(Product::sellingPriceSql().($filters['sort'] === 'price_high' ? ' DESC' : ' ASC'), [now(), now()]),
-            'popular' => $query->withSum('orderItems as units_sold', 'quantity')->orderByDesc('units_sold')->latest('products.created_at'),
-            default => $query->latest('products.created_at'),
+        $products = match ($filters['tab']) {
+            'products' => $shop->listing($filters['q'], $filters['category'], $filters['sort'])->paginate(12),
+            'reviews' => $shop->listing(null, null, $filters['rank'])->paginate(12),
+            default => null,
         };
-        $query->orderByDesc('products.id');
 
         return view('shops.show', [
             'shop' => $shop,
-            'products' => $query->paginate(12)->withQueryString(),
+            'tab' => $filters['tab'],
+            'products' => $products?->withQueryString()->fragment('shop-content'),
             'filters' => $filters,
-            'sorts' => self::SORTS,
-            'categories' => $shop->categories(),
+            'sorts' => Shop::SORTS,
+            'rankings' => Shop::RANKINGS,
+            'categories' => $shop->categoryCounts(),
             'productCount' => $shop->products()->count(),
             'followers' => $shop->followerCount(),
             'following' => $shop->isFollowedBy($request->user()),
             'rating' => $shop->rating(),
             'sold' => $shop->soldCount(),
-            'reviews' => ProductReview::with(['buyer', 'product'])
-                ->whereIn('product_id', Product::where('seller_id', $shop->id)->select('id'))
-                ->latest()->limit(6)->get(),
+            'reviews' => $filters['tab'] === 'reviews'
+                ? ProductReview::with(['buyer', 'product'])
+                    ->whereIn('product_id', Product::where('seller_id', $shop->id)->select('id'))
+                    ->latest()->limit(6)->get()
+                : collect(),
             'isOwner' => $request->user()?->is($shop->owner) ?? false,
         ]);
     }

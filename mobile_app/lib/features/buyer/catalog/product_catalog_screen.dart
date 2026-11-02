@@ -10,7 +10,9 @@ import 'package:zaylo_mobile/components/form_fields.dart';
 import 'package:zaylo_mobile/components/layout.dart';
 import 'package:zaylo_mobile/features/buyer/catalog/product_card.dart';
 import 'package:zaylo_mobile/features/buyer/catalog/search_field.dart';
+import 'package:zaylo_mobile/features/buyer/shop/shop_widgets.dart';
 import 'package:zaylo_mobile/models/buyer/catalog_models.dart';
+import 'package:zaylo_mobile/models/buyer/shop_models.dart';
 import 'package:zaylo_mobile/state/app_state.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 
@@ -154,6 +156,9 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
   CatalogFilters _filters = const CatalogFilters();
 
   final List<Product> _products = [];
+
+  /// Shops whose name matches the search, above the products.
+  List<Shop> _shops = const [];
   int _page = 0;
   int _total = 0;
   bool _hasMore = true;
@@ -206,8 +211,22 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
       _hasMore = true;
       _error = null;
       _loading = false;
+      _shops = const [];
     });
-    await _loadMore();
+    await Future.wait([_loadShops(), _loadMore()]);
+  }
+
+  /// Products are what the buyer mostly came for, so a failure here just leaves the shops out.
+  Future<void> _loadShops() async {
+    final generation = _generation;
+    final search = _lastSearch;
+    if (search.isEmpty) return;
+    try {
+      final shops = await _api.shops(search);
+      if (mounted && generation == _generation) setState(() => _shops = shops);
+    } on ApiException {
+      return;
+    }
   }
 
   Future<void> _loadMore() async {
@@ -369,7 +388,7 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
       );
 
   Widget _results() {
-    if (_products.isEmpty) {
+    if (_products.isEmpty && _shops.isEmpty) {
       if (_error != null) return LoadError(error: _error, onRetry: _reload, title: 'Could not load products');
       if (_loading || _hasMore) return const Loader();
       return EmptyState(
@@ -392,6 +411,16 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
         controller: _scroll,
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
+          if (_shops.isNotEmpty)
+            SliverToBoxAdapter(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(ZayloSpace.page, 8, ZayloSpace.page, 2),
+                  child: Eyebrow('Shops'),
+                ),
+                for (final shop in _shops) ShopRow(shop: shop),
+              ]),
+            ),
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(ZayloSpace.page, 6, ZayloSpace.page, 12),
             sliver: SliverGrid(

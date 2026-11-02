@@ -97,6 +97,14 @@ class User extends Authenticatable implements MustVerifyEmail
      * The profile photo to show, or null for the initials fallback. `avatar` holds either a photo the user
      * uploaded (a path on the public disk, see ProfilePhotos) or the https URL of their Google photo.
      */
+    /** The cover photo on this seller's shop page. */
+    public function getShopCoverUrlAttribute(): ?string
+    {
+        $cover = $this->attributes['shop_cover'] ?? null;
+
+        return blank($cover) ? null : Storage::disk('public')->url($cover);
+    }
+
     public function getAvatarUrlAttribute(): ?string
     {
         $avatar = $this->attributes['avatar'] ?? null;

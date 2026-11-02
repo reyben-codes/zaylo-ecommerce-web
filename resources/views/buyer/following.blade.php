@@ -13,7 +13,11 @@
         @php $shop = $row['shop']; @endphp
         <article class="followed-shop">
             <a href="{{ $shop->url() }}" class="followed-shop__identity">
-                <span class="shop-avatar shop-avatar--initials shop-avatar--small" aria-hidden="true">{{ $shop->initials() }}</span>
+                @if($shop->owner->avatar_url)
+                    <img src="{{ $shop->owner->avatar_url }}" alt="" class="shop-avatar shop-avatar--small">
+                @else
+                    <span class="shop-avatar shop-avatar--initials shop-avatar--small" aria-hidden="true">{{ $shop->initials() }}</span>
+                @endif
                 <span>
                     <strong>{{ $shop->name }}</strong>
                     <small>{{ number_format($row['products']) }} {{ Str::plural('product', $row['products']) }} · {{ number_format($row['followers']) }} {{ Str::plural('follower', $row['followers']) }}</small>

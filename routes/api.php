@@ -14,8 +14,10 @@ use App\Http\Controllers\MobileRiderAccountController;
 use App\Http\Controllers\MobileRiderAuthenticationController;
 use App\Http\Controllers\MobileRiderDashboardController;
 use App\Http\Controllers\MobileRiderSupportController;
+use App\Http\Controllers\MobileShopController;
 use App\Http\Controllers\MobileShoppingController;
 use App\Http\Controllers\MobileStorefrontController;
+use App\Http\Controllers\ShopController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -47,6 +49,9 @@ Route::prefix('mobile')->name('mobile.')->middleware('throttle:60,1')->group(fun
     Route::get('/products', [MobileStorefrontController::class, 'products'])->name('products');
     Route::get('/products/{product:slug}', [MobileStorefrontController::class, 'show'])->name('products.show');
     Route::get('/products/{product:slug}/reviews', [MobileStorefrontController::class, 'reviews'])->name('products.reviews');
+    Route::get('/shops', [MobileShopController::class, 'index'])->name('shops');
+    Route::get('/shops/{shop}', [MobileShopController::class, 'show'])->whereNumber('shop')->name('shops.show');
+    Route::get('/shops/{shop}/products', [MobileShopController::class, 'products'])->whereNumber('shop')->name('shops.products');
     Route::get('/policies', [MobileStorefrontController::class, 'policies'])->name('policies');
     Route::get('/policies/{slug}', [MobileStorefrontController::class, 'policy'])->name('policies.show');
     // The help bot's questions and answers (?role=buyer or rider).
@@ -114,6 +119,9 @@ Route::prefix('mobile')->name('mobile.')->middleware('throttle:60,1')->group(fun
 
         Route::middleware('mobile.buyer')->group(function () use ($complaintRoutes) {
             Route::get('/wishlist', [MobileShoppingController::class, 'wishlist'])->name('wishlist');
+            Route::get('/following', [MobileShopController::class, 'following'])->name('following');
+            Route::post('/shops/{shop}/follow', [ShopController::class, 'follow'])->whereNumber('shop')->name('shops.follow');
+            Route::post('/shops/{shop}/chat', [MobileChatController::class, 'startAboutShop'])->whereNumber('shop')->middleware('throttle:20,1,mobile-chat-start')->name('shops.chat');
             Route::post('/wishlist/{product:slug}', [MobileShoppingController::class, 'toggleWishlist'])->name('wishlist.toggle');
 
             Route::get('/cart', [MobileShoppingController::class, 'cart'])->name('cart');

@@ -12,6 +12,7 @@ import 'package:zaylo_mobile/features/buyer/catalog/product_card.dart';
 import 'package:zaylo_mobile/features/buyer/catalog/product_reviews_screen.dart';
 import 'package:zaylo_mobile/features/buyer/checkout/checkout_screen.dart';
 import 'package:zaylo_mobile/features/buyer/messages/seller_chat_screen.dart';
+import 'package:zaylo_mobile/features/buyer/shop/shop_screen.dart';
 import 'package:zaylo_mobile/features/buyer/widgets/shop_actions.dart';
 import 'package:zaylo_mobile/models/buyer/catalog_models.dart';
 import 'package:zaylo_mobile/state/app_state.dart';
@@ -274,8 +275,31 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               Icon(Icons.storefront_outlined, size: 17, color: ZayloColors.muted),
                               const SizedBox(width: 6),
                               Expanded(
-                                child: Text('Sold by ${product.sellerName}',
-                                    style: TextStyle(fontSize: 13, color: ZayloColors.muted)),
+                                child: product.shopId == null
+                                    ? Text('Sold by ${product.sellerName}',
+                                        style: TextStyle(fontSize: 13, color: ZayloColors.muted))
+                                    : InkWell(
+                                        onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                                            builder: (_) =>
+                                                ShopScreen(shopId: product.shopId!, name: product.sellerName))),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(vertical: 8),
+                                          child: Text.rich(TextSpan(
+                                            text: 'Sold by ',
+                                            style: TextStyle(fontSize: 13, color: ZayloColors.muted),
+                                            children: [
+                                              TextSpan(
+                                                text: product.sellerName,
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w700,
+                                                  color: ZayloColors.ink,
+                                                  decoration: TextDecoration.underline,
+                                                ),
+                                              ),
+                                            ],
+                                          )),
+                                        ),
+                                      ),
                               ),
                               TextButton.icon(
                                 onPressed: _openingChat ? null : () => _chatWithSeller(product),

@@ -123,9 +123,9 @@ class ShopPageTest extends TestCase
         ProductReview::create(['order_item_id' => $itemId, 'product_id' => $sheet->id, 'user_id' => $buyer->id, 'rating' => 4, 'comment' => 'Soft and well made.']);
 
         $this->get(route('shops.show', $this->shopId))->assertOk()
-            ->assertSee('4.0')->assertSee('Rating · 1 review')
-            ->assertSee('Soft and well made.')->assertSee('Ana')->assertDontSee('Ana Reyes')
-            ->assertSeeInOrder(['Items sold', '2']);
+            ->assertSee('4.0')->assertSee('Rating · 1 review')->assertSeeInOrder(['Items sold', '2']);
+        $this->get(route('shops.show', [$this->shopId, 'tab' => 'reviews']))->assertOk()
+            ->assertSee('Soft and well made.')->assertSee('Ana')->assertDontSee('Ana Reyes')->assertSee('2 sold');
     }
 
     public function test_buyers_chat_from_the_shop_and_products_link_to_their_shop(): void

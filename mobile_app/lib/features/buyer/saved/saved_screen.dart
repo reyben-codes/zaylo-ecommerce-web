@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
+import 'package:zaylo_mobile/components/buttons.dart';
 import 'package:zaylo_mobile/features/buyer/catalog/product_card.dart';
+import 'package:zaylo_mobile/features/buyer/shop/followed_shops_screen.dart';
 import 'package:zaylo_mobile/features/buyer/widgets/shop_actions.dart';
 import 'package:zaylo_mobile/features/buyer/widgets/signed_out_prompt.dart';
 import 'package:zaylo_mobile/features/buyer/widgets/tab_header.dart';
@@ -68,28 +70,45 @@ class _SavedScreenState extends State<SavedScreen> {
     final products = _products?.where(state.isSaved).toList();
     return Scaffold(
       appBar: TabHeader(eyebrow: 'Your favorites', title: 'Saved', count: products?.length),
-      body: products == null
-          ? (_error != null ? LoadError(error: _error, onRetry: _load, title: 'Could not load saved items') : const Loader())
-          : products.isEmpty
-              ? EmptyState(
-                  icon: Icons.favorite_border,
-                  title: 'Nothing saved yet',
-                  message: 'Tap the heart on any product to keep it here for later.',
-                  actionLabel: 'Browse products',
-                  onAction: () => ShopActions.showTab(context, 0),
-                )
-              : RefreshIndicator(
-                  color: ZayloColors.ink,
-                  onRefresh: _load,
-                  child: GridView.builder(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: EdgeInsets.fromLTRB(
-                        ZayloSpace.page, ZayloSpace.page, ZayloSpace.page, ZayloSpace.page + MediaQuery.paddingOf(context).bottom),
-                    gridDelegate: productGridDelegate,
-                    itemCount: products.length,
-                    itemBuilder: (context, index) => ProductCard(product: products[index]),
-                  ),
-                ),
+      body: Column(children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(ZayloSpace.page, 10, ZayloSpace.page, 0),
+          child: SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              style: secondaryButtonStyle,
+              onPressed: () =>
+                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FollowedShopsScreen())),
+              icon: const Icon(Icons.storefront_outlined, size: 18),
+              label: const Text('Shops Followed'),
+            ),
+          ),
+        ),
+        Expanded(
+          child: products == null
+              ? (_error != null ? LoadError(error: _error, onRetry: _load, title: 'Could not load saved items') : const Loader())
+              : products.isEmpty
+                  ? EmptyState(
+                      icon: Icons.favorite_border,
+                      title: 'Nothing saved yet',
+                      message: 'Tap the heart on any product to keep it here for later.',
+                      actionLabel: 'Browse products',
+                      onAction: () => ShopActions.showTab(context, 0),
+                    )
+                  : RefreshIndicator(
+                      color: ZayloColors.ink,
+                      onRefresh: _load,
+                      child: GridView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: EdgeInsets.fromLTRB(ZayloSpace.page, ZayloSpace.page, ZayloSpace.page,
+                            ZayloSpace.page + MediaQuery.paddingOf(context).bottom),
+                        gridDelegate: productGridDelegate,
+                        itemCount: products.length,
+                        itemBuilder: (context, index) => ProductCard(product: products[index]),
+                      ),
+                    ),
+        ),
+      ]),
     );
   }
 }

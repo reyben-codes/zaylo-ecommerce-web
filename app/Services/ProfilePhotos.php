@@ -23,7 +23,7 @@ class ProfilePhotos
     public const MAX_KB = 5120;
 
     /** Larger images would need too much memory to resize. */
-    private const MAX_PIXELS = 40_000_000;
+    public const MAX_PIXELS = 40_000_000;
 
     /** Validation rules for the uploaded `photo` and the optional crop the user framed. */
     public static function rules(): array
@@ -100,19 +100,30 @@ class ProfilePhotos
         imagefill($square, 0, 0, imagecolorallocate($square, 255, 255, 255));
         imagecopyresampled($square, $image, 0, 0, $left, $top, self::SIZE, self::SIZE, $side, $side);
 
-        // WebP needs GD built with libwebp; on a server without it, JPEG keeps uploads working.
-        $webp = function_exists('imagewebp') && (gd_info()['WebP Support'] ?? false);
-        ob_start();
-        $webp ? imagewebp($square, null, 82) : imagejpeg($square, null, 85);
-        $data = (string) ob_get_clean();
+        [$data, $extension] = self::encode($square);
 
-        $path = "avatars/{$user->id}/".Str::random(40).($webp ? '.webp' : '.jpg');
+        $path = "avatars/{$user->id}/".Str::random(40).'.'.$extension;
         // The disks do not throw, so a failed upload (say, to R2) must be caught here, not saved as a missing photo.
         if ($data === '' || ! Storage::disk('public')->put($path, $data)) {
             throw ValidationException::withMessages(['photo' => 'Your photo could not be saved right now. Please try again in a moment.']);
         }
 
         return $path;
+    }
+
+    /**
+     * The image's bytes and file extension. WebP needs GD built with libwebp; on a server without it, JPEG keeps
+     * uploads working.
+     *
+     * @return array{0: string, 1: string}
+     */
+    public static function encode(\GdImage $image): array
+    {
+        $webp = function_exists('imagewebp') && (gd_info()['WebP Support'] ?? false);
+        ob_start();
+        $webp ? imagewebp($image, null, 82) : imagejpeg($image, null, 85);
+
+        return [(string) ob_get_clean(), $webp ? 'webp' : 'jpg'];
     }
 
     /**
@@ -140,7 +151,7 @@ class ProfilePhotos
     }
 
     /** Phone cameras save JPEGs sideways with a rotation tag; apply it before cropping. */
-    private function upright(\GdImage $image, UploadedFile $file): \GdImage
+    public function upright(\GdImage $image, UploadedFile $file): \GdImage
     {
         if (! function_exists('exif_read_data') || $file->getMimeType() !== 'image/jpeg') {
             return $image;

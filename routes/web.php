@@ -32,6 +32,7 @@ use App\Http\Controllers\SellerApplicationController;
 use App\Http\Controllers\SellerController;
 use App\Http\Controllers\SellerReturnController;
 use App\Http\Controllers\ShopController;
+use App\Http\Controllers\ShopCoverController;
 use App\Http\Controllers\SortingCenterController;
 use App\Http\Controllers\SupportChatController;
 use App\Http\Controllers\WaybillController;
@@ -195,6 +196,8 @@ Route::middleware(['auth', 'active', 'verified', 'role:seller', 'nocache'])->pre
     Route::get('/account', [SellerController::class, 'account'])->name('account');
     Route::patch('/account/profile', [SellerController::class, 'updateProfile'])->name('account.profile');
     Route::patch('/account/store', [SellerController::class, 'updateStore'])->name('account.store');
+        Route::post('/account/cover', [ShopCoverController::class, 'update'])->middleware('throttle:10,1')->name('account.cover.update');
+        Route::delete('/account/cover', [ShopCoverController::class, 'destroy'])->name('account.cover.destroy');
     Route::put('/account/password', [SellerController::class, 'updatePassword'])->name('account.password');
     Route::get('/chat', [ChatController::class, 'index'])->name('chat');
     Route::get('/logistics-messages', [LogisticsChatController::class, 'seller'])->name('logistics-messages');

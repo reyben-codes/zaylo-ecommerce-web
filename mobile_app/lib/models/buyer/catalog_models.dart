@@ -56,6 +56,8 @@ class Product {
     this.reviewCount = 0,
     this.stock,
     this.sellerName,
+    this.shopId,
+    this.unitsSold,
     this.images = const [],
     this.variants = const [],
   });
@@ -85,6 +87,12 @@ class Product {
 
   /// Detail-only fields; empty or null on list payloads.
   final String? sellerName;
+
+  /// The shop to open from "Sold by"; null from older servers.
+  final int? shopId;
+
+  /// Units delivered, on a shop's product lists only.
+  final int? unitsSold;
   final List<String> images;
   final List<ProductVariant> variants;
 
@@ -112,6 +120,8 @@ class Product {
         reviewCount: (json['review_count'] as num?)?.toInt() ?? 0,
         stock: (json['stock'] as num?)?.toInt(),
         sellerName: json['seller_name'] as String?,
+        shopId: (json['shop_id'] as num?)?.toInt(),
+        unitsSold: (json['units_sold'] as num?)?.toInt(),
         images: List<String>.from(json['images'] as List<dynamic>? ?? const []),
         variants: (json['variants'] as List<dynamic>? ?? const [])
             .map((item) => ProductVariant.fromJson(item as Map<String, dynamic>))

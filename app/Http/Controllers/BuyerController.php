@@ -179,6 +179,11 @@ class BuyerController extends Controller
                     'price' => '₱'.number_format($product->price, 2),
                     'sold_out' => (bool) $product->is_sold_out,
                 ]),
+                'shops' => Shop::search($validated['search'], 3)->map(fn (Shop $shop) => [
+                    'name' => $shop->name,
+                    'url' => $shop->url(),
+                    'image' => $shop->owner->avatar_url ?: asset('images/ZAYLO_ICON_DARK.png'),
+                ]),
             ]);
         }
 
@@ -202,6 +207,7 @@ class BuyerController extends Controller
 
         return view('buyer.products', [
             'products' => $query->paginate(15)->appends($validated),
+            'shops' => $validated['search'] !== '' && $request->integer('page', 1) === 1 ? Shop::search($validated['search']) : collect(),
             'category' => $validated['category'] ?? null,
             'filters' => $validated, 'filterChips' => $chips,
             'sizes' => $this->catalogSizes(),

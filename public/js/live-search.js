@@ -1,4 +1,4 @@
-// Search as you type. The header search shows the best matching products in a dropdown; the catalog page's
+// Search as you type. The header search shows the best matching shops and products in a dropdown; the catalog page's
 // search refreshes its results in place. Both fall back to a normal form submit without JavaScript.
 (() => {
     const debounce = (callback, delay) => {
@@ -40,15 +40,21 @@
             }
         };
 
-        const render = (term, products) => {
+        const render = (term, products, shops) => {
             const allUrl = `${form.action}?search=${encodeURIComponent(term)}`;
+            const shopItems = shops.map((shop, index) => `
+                <a class="live-search__item live-search__item--shop" id="live-search-shop-${index}" role="option" aria-selected="false" href="${escapeHtml(shop.url)}">
+                    <img src="${escapeHtml(shop.image)}" alt="" loading="lazy">
+                    <span class="live-search__name">${escapeHtml(shop.name)}</span>
+                    <span class="live-search__price">Shop</span>
+                </a>`).join('');
             const items = products.map((product, index) => `
                 <a class="live-search__item" id="live-search-option-${index}" role="option" aria-selected="false" href="${escapeHtml(product.url)}">
                     <img src="${escapeHtml(product.image)}" alt="" loading="lazy"${product.sold_out ? ' class="is-sold-out"' : ''}>
                     <span class="live-search__name">${escapeHtml(product.name)}</span>
                     <span class="live-search__price">${product.sold_out ? 'Sold out' : escapeHtml(product.price)}</span>
                 </a>`).join('');
-            list.innerHTML = (items || `<p class="live-search__empty">No products match “${escapeHtml(term)}”.</p>`)
+            list.innerHTML = shopItems + (items || (shopItems ? '' : `<p class="live-search__empty">No products or shops match “${escapeHtml(term)}”.</p>`))
                 + `<a class="live-search__all" id="live-search-option-all" role="option" aria-selected="false" href="${escapeHtml(allUrl)}">See all results for “${escapeHtml(term)}”</a>`;
             options = [...list.querySelectorAll('[role="option"]')];
             active = -1;
@@ -72,7 +78,7 @@
                 if (!response.ok) return;
                 const data = await response.json();
                 // Ignore a reply that arrives after the box was cleared or left.
-                if (input.value.trim() && document.activeElement === input) render(term, data.products || []);
+                if (input.value.trim() && document.activeElement === input) render(term, data.products || [], data.shops || []);
             } catch (error) {
                 if (error.name !== 'AbortError') close();
             }

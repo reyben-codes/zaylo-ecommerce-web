@@ -49,7 +49,7 @@ class CatalogSearchTest extends TestCase
             ->assertExactJson(['products' => [[
                 'name' => 'Bluetooth speaker', 'url' => route('products.show', $partial),
                 'image' => asset('images/ZAYLO_ICON_DARK.png'), 'price' => '₱1,000.00', 'sold_out' => false,
-            ]]]);
+            ]], 'shops' => []]);
     }
 
     public function test_catalog_page_marks_the_results_region_that_live_search_refreshes(): void

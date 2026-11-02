@@ -37,8 +37,8 @@
         <div class="nav-actions">
             <form class="search-wrapper" method="GET" action="{{ route('products.index') }}" role="search" data-live-search>
                 <span class="search-icon">⌕</span>
-                <input type="search" name="search" placeholder="Search products" aria-label="Search products" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="live-search-results" maxlength="100" />
-                <div class="live-search" id="live-search-results" role="listbox" aria-label="Matching products" hidden></div>
+                <input type="search" name="search" placeholder="Search products and shops" aria-label="Search products and shops" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="live-search-results" maxlength="100" />
+                <div class="live-search" id="live-search-results" role="listbox" aria-label="Matching products and shops" hidden></div>
             </form>
             <div class="icon-group">
                 <button type="button" class="theme-toggle" data-theme-toggle aria-label="Switch theme"></button>

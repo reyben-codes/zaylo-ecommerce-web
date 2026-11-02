@@ -28,6 +28,22 @@
         </nav>
     @endif
 
+    @if($shops->isNotEmpty())
+        <section class="catalog-shops" aria-label="Matching shops">
+            @foreach($shops as $shop)
+                <a href="{{ $shop->url() }}" class="catalog-shop">
+                    @if($shop->owner->avatar_url)
+                        <img src="{{ $shop->owner->avatar_url }}" alt="" loading="lazy">
+                    @else
+                        <span aria-hidden="true">{{ $shop->initials() }}</span>
+                    @endif
+                    <strong>{{ $shop->name }}</strong>
+                    <small>Visit shop</small>
+                </a>
+            @endforeach
+        </section>
+    @endif
+
     @if($products->count())
         <div class="product-grid">
             @foreach($products as $product)

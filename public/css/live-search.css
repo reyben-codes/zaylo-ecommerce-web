@@ -73,3 +73,7 @@
     .live-search { animation: none; }
     .catalog-live-results { transition: none; }
 }
+
+.live-search__item--shop img {
+    border-radius: 50%;
+}

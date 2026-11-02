@@ -43,3 +43,42 @@
     .catalog-filters input:not([type=checkbox]), .catalog-filters select { font-size: 16px; }
 }
 @media (max-width: 380px) { .catalog-filter-fields { grid-template-columns: minmax(0, 1fr); } }
+
+/* Shops whose name matches the search, above the products. */
+.catalog-shops {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 18px;
+    overflow-x: auto;
+}
+
+.catalog-shop {
+    display: grid;
+    flex: none;
+    grid-template-columns: 44px auto;
+    gap: 0 12px;
+    align-items: center;
+    padding: 10px 16px 10px 10px;
+    border: 1px solid var(--c-e5dfd8);
+    background: var(--c-ffffff);
+    color: var(--c-1a1714);
+    text-decoration: none;
+}
+
+.catalog-shop img,
+.catalog-shop span {
+    display: grid;
+    grid-row: span 2;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--c-1a1714);
+    color: var(--c-ffffff);
+    font-size: .85rem;
+}
+
+.catalog-shop small {
+    color: var(--c-6b5f54);
+}
