@@ -134,6 +134,7 @@ class BuyerController extends Controller
                         $match->orWhereHas('category', fn ($category) => $category->whereRaw("LOWER(name) LIKE ? ESCAPE '!'", [$pattern]));
                     }
                     $match->orWhereHas('additionalCategories', fn ($extra) => $extra->whereRaw("LOWER(category) LIKE ? ESCAPE '!'", [$pattern]));
+                    $match->orWhereRaw("LOWER(products.custom_tags) LIKE ? ESCAPE '!'", [$pattern]);
                     $match->orWhereHas('variants', fn ($variant) => $variant->where('is_active', true)->whereRaw("LOWER(sku) LIKE ? ESCAPE '!'", [$pattern]));
                 });
             }

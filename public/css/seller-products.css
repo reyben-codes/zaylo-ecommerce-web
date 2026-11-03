@@ -965,6 +965,50 @@
     display: none;
 }
 
+/* "Other:" takes a full row so sellers have room to type their own tags. */
+.product-form__category-other {
+    grid-column: 1 / -1;
+    cursor: text;
+}
+
+.product-form__category-other > span {
+    flex: none;
+    font-weight: 500;
+}
+
+.seller-field .product-form__category-other input {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+    height: auto;
+    min-height: 0;
+    padding: 2px 0;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    color: inherit;
+}
+
+.seller-field .product-form__category-other input:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+.product-form__category-other:has(input:focus-visible) {
+    outline: 2px solid var(--c-1a1714);
+    outline-offset: 2px;
+}
+
+.product-form__category-other:has(input:not(:placeholder-shown)) {
+    border-color: var(--c-1a1714);
+    background: var(--c-faf7f2);
+}
+
+.product-form__category-other-error {
+    grid-column: 1 / -1;
+    margin: 0;
+}
+
 .product-form__category-option:has(input:checked) {
     border-color: var(--c-1a1714);
     background: var(--c-faf7f2);

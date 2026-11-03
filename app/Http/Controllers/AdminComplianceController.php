@@ -188,7 +188,7 @@ class AdminComplianceController extends Controller
 
     private function prohibitedWords(Product $product): array
     {
-        $text = mb_strtolower($product->name.' '.$product->description);
+        $text = mb_strtolower($product->name.' '.$product->description.' '.implode(' ', $product->custom_tag_list));
 
         return array_values(array_filter(config('marketplace.prohibited_keywords', []), fn ($word) => preg_match('/\b'.preg_quote($word, '/').'\b/u', $text)));
     }

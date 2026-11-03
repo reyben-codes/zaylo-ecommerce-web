@@ -168,7 +168,7 @@ class SellerController extends Controller
 
             // What buyers read or see changed (or a rejected listing was fixed): an admin checks it again.
             // Price, stock, sales and visibility changes stay live.
-            $contentChanged = $product->wasChanged(['name', 'description', 'gender', 'image_url'])
+            $contentChanged = $product->wasChanged(['name', 'description', 'gender', 'image_url', 'custom_tags'])
                 || $request->hasFile('image') || $request->hasFile('photos')
                 || $product->fresh()->category_keys != $categoriesBefore;
             if (Product::usesReview() && ! $product->is_archived && ($product->is_rejected || ($contentChanged && ! $product->is_pending_review))) {
@@ -1174,8 +1174,10 @@ class SellerController extends Controller
             'sku' => Product::usesLegacySchema()
                 ? 'nullable|string|max:80|unique:products,sku,'.($product?->id ?? 'NULL')
                 : "nullable|string|max:80|unique:product_variants,sku,{$variantId}",
-            'categories' => 'required|array|min:1|max:6',
+            'categories' => 'nullable|array|max:6',
             'categories.*' => ['distinct', Rule::in(array_keys(config('marketplace.categories')))],
+            'custom_tags' => 'nullable|array',
+            'custom_tags.*' => 'nullable|string|max:200',
             'gender' => ['nullable', Rule::in(array_keys(config('marketplace.genders')))],
             'description' => 'nullable|string|max:2000',
             'price' => ($product ? 'sometimes|' : '').'required|numeric|min:0|max:99999999.99',
@@ -1199,8 +1201,6 @@ class SellerController extends Controller
             ],
             'badge' => 'nullable|in:New,Sale,Best Seller',
         ], [
-            'categories.required' => 'Choose at least one category.',
-            'categories.min' => 'Choose at least one category.',
             'categories.max' => 'Choose up to 6 categories.',
             'categories.*.in' => 'Choose categories from the list.',
             'photos.max' => 'Upload up to '.self::PHOTOS_PER_UPLOAD.' photos at a time.',
@@ -1209,7 +1209,18 @@ class SellerController extends Controller
             'photos.*.max' => 'Each photo must be 5 MB or smaller.',
         ]);
         unset($data['photos']);
-        [$data['category'], $data['additional_categories']] = $this->splitCategories(array_values(array_unique($data['categories'])), $product);
+        if ($request->has('custom_tags')) {
+            $data['custom_tags'] = $this->customTags($data['custom_tags'] ?? []);
+        }
+        $categories = array_values(array_unique($data['categories'] ?? []));
+        if ($categories === []) {
+            // Only "Other" tags: the product is listed under the main category they were typed in.
+            $categories = array_slice(array_keys($data['custom_tags'] ?? []), 0, 1);
+        }
+        if ($categories === []) {
+            throw ValidationException::withMessages(['categories' => 'Choose at least one category, or type your own under Other.']);
+        }
+        [$data['category'], $data['additional_categories']] = $this->splitCategories($categories, $product);
         unset($data['categories']);
 
         $kept = $product ? $product->extra_photos->whereNotIn('id', array_map('intval', $data['remove_photos'] ?? []))->count() : 0;
@@ -1218,6 +1229,32 @@ class SellerController extends Controller
         }
 
         return $data;
+    }
+
+    /**
+     * The seller's own tags typed under "Other", by main category: comma-separated, up to 3 per category and 30
+     * characters each, without repeats.
+     *
+     * @return array<string, list<string>>|null
+     */
+    private function customTags(array $input): ?array
+    {
+        $tags = [];
+        foreach (array_intersect_key($input, config('marketplace.category_tree')) as $main => $text) {
+            $typed = collect(explode(',', (string) $text))->map(fn ($tag) => Str::squish($tag))->filter()
+                ->unique(fn ($tag) => mb_strtolower($tag))->values();
+            if ($typed->contains(fn ($tag) => mb_strlen($tag) > 30)) {
+                throw ValidationException::withMessages(["custom_tags.{$main}" => 'Keep each tag to 30 characters or fewer.']);
+            }
+            if ($typed->count() > 3) {
+                throw ValidationException::withMessages(["custom_tags.{$main}" => 'Add up to 3 of your own tags per category.']);
+            }
+            if ($typed->isNotEmpty()) {
+                $tags[$main] = $typed->all();
+            }
+        }
+
+        return $tags ?: null;
     }
 
     /**

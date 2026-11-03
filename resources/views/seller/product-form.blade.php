@@ -89,12 +89,13 @@
                     @php
                         $chosenCategories = (array) old('categories', $product?->category_keys ?? []);
                         $categoryError = $fieldError('categories') ? $errors->first('categories') : ($errors->has('categories.*') ? $errors->first('categories.*') : null);
+                        $customTags = $product?->custom_tags ?? [];
                     @endphp
                     <fieldset class="seller-field seller-field--full product-form__categories" data-categories aria-describedby="productCategoriesHelp"
                               @if($categoryError) aria-invalid="true" @endif>
                         <legend>Categories</legend>
-                        <p class="seller-field__help" id="productCategoriesHelp">Tick every category buyers should find this in, e.g. a shoe cabinet under Shoe Cabinets and Shoe Racks. Choose at least one.</p>
-                        @foreach(config('marketplace.category_tree') as $main)
+                        <p class="seller-field__help" id="productCategoriesHelp">Tick every category buyers should find this in, e.g. a shoe cabinet under Shoe Cabinets and Shoe Racks. Choose at least one, or type your own under Other.</p>
+                        @foreach(config('marketplace.category_tree') as $mainKey => $main)
                             <p class="product-form__category-group">{{ $main['label'] }}</p>
                             <div class="product-form__category-options">
                                 @foreach($main['subcategories'] as $key => $label)
@@ -103,6 +104,15 @@
                                         <span>{{ $label }}</span>
                                     </label>
                                 @endforeach
+                                @php $otherError = $errors->first("custom_tags.{$mainKey}"); @endphp
+                                <label class="product-form__category-option product-form__category-other">
+                                    <span>Other:</span>
+                                    <input type="text" name="custom_tags[{{ $mainKey }}]" value="{{ old("custom_tags.{$mainKey}", implode(', ', $customTags[$mainKey] ?? [])) }}"
+                                           maxlength="200" placeholder="Your own tags, separated by commas" data-category-other
+                                           aria-label="Other {{ $main['label'] }} tags, separated by commas" aria-describedby="productCategoriesHelp"
+                                           @if($otherError) aria-invalid="true" @endif>
+                                </label>
+                                @if($otherError)<p class="seller-field__error product-form__category-other-error">{{ $otherError }}</p>@endif
                             </div>
                         @endforeach
                         <p class="seller-field__error" data-categories-error @if(! $categoryError) hidden @endif>{{ $categoryError }}</p>

@@ -93,14 +93,15 @@
 })();
 
 (() => {
-    // Categories: at least one box must be ticked; the browser points to the first box until one is.
+    // Categories: at least one box must be ticked or an "Other" tag typed; the browser points to the first box until then.
     const group = document.querySelector('[data-categories]');
     if (!group) return;
     const boxes = [...group.querySelectorAll('input[name="categories[]"]')];
+    const others = [...group.querySelectorAll('[data-category-other]')];
     const error = group.querySelector('[data-categories-error]');
-    const message = 'Choose at least one category.';
+    const message = 'Choose at least one category, or type your own under Other.';
     const sync = () => {
-        const none = !boxes.some((box) => box.checked);
+        const none = !boxes.some((box) => box.checked) && !others.some((other) => other.value.trim());
         boxes[0].setCustomValidity(none ? message : '');
         group.toggleAttribute('aria-invalid', none && !error.hidden);
         if (!none) error.hidden = true;
@@ -111,6 +112,7 @@
         group.setAttribute('aria-invalid', 'true');
     });
     group.addEventListener('change', sync);
+    group.addEventListener('input', sync);
     sync();
 })();
 

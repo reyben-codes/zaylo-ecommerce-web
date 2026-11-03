@@ -42,9 +42,10 @@ class Product extends Model
         'sale_type', 'sale_value', 'sale_starts_at', 'sale_ends_at', 'sale_variant_id',
         'sale_is_flash', 'flash_quantity', 'flash_sold',
         'archived_at',
+        'custom_tags',
     ];
 
-    protected $casts = ['is_active' => 'boolean', 'sale_value' => 'decimal:2', 'sale_starts_at' => 'datetime', 'sale_ends_at' => 'datetime', 'sale_variant_id' => 'integer', 'sale_is_flash' => 'boolean', 'flash_quantity' => 'integer', 'flash_sold' => 'integer', 'archived_at' => 'datetime', 'reviewed_at' => 'datetime'];
+    protected $casts = ['is_active' => 'boolean', 'sale_value' => 'decimal:2', 'sale_starts_at' => 'datetime', 'sale_ends_at' => 'datetime', 'sale_variant_id' => 'integer', 'sale_is_flash' => 'boolean', 'flash_quantity' => 'integer', 'flash_sold' => 'integer', 'archived_at' => 'datetime', 'reviewed_at' => 'datetime', 'custom_tags' => 'array'];
 
     protected static function booted(): void
     {
@@ -285,11 +286,19 @@ class Product extends Model
             ->filter()->unique()->values()->all();
     }
 
-    /** @return array<string, string> Category key => label, main category first. */
+    /** @return array<string, string> Category key => label, main category first, then the seller's own "Other" tags. */
     public function getCategoryTagsAttribute(): array
     {
         return collect($this->category_keys)
-            ->mapWithKeys(fn ($key) => [$key => config('marketplace.categories')[$key] ?? Str::headline($key)])->all();
+            ->mapWithKeys(fn ($key) => [$key => config('marketplace.categories')[$key] ?? Str::headline($key)])
+            ->merge(collect($this->custom_tag_list)->mapWithKeys(fn ($tag) => ['other:'.mb_strtolower($tag) => $tag]))
+            ->all();
+    }
+
+    /** @return list<string> The seller's own tags from every main category's "Other" box. */
+    public function getCustomTagListAttribute(): array
+    {
+        return collect($this->custom_tags ?? [])->flatten()->unique(fn ($tag) => mb_strtolower($tag))->values()->all();
     }
 
     public function getCategoryLabelsAttribute(): array

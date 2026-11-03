@@ -100,7 +100,7 @@ class MarketplaceFlowTest extends TestCase
             ->assertDontSee('name="additional_categories[]"', false);
 
         $payload = ['name' => 'Steel Kettle', 'price' => 999, 'stock' => 4, 'is_active' => 1];
-        $this->post(route('seller.products.store'), $payload)->assertSessionHasErrors(['categories' => 'Choose at least one category.']);
+        $this->post(route('seller.products.store'), $payload)->assertSessionHasErrors(['categories' => 'Choose at least one category, or type your own under Other.']);
         $this->post(route('seller.products.store'), $payload + ['categories' => []])->assertSessionHasErrors('categories');
         $this->post(route('seller.products.store'), $payload + ['categories' => ['weapons']])->assertSessionHasErrors('categories.0');
         $this->assertSame(0, Product::count());
@@ -118,6 +118,39 @@ class MarketplaceFlowTest extends TestCase
         $this->assertSame(['rice_cookers', 'blenders', 'storage_bins'], $kettle->fresh()->category_keys);
         $this->put(route('seller.products.update', $kettle), $payload + ['categories' => ['blenders', 'storage_bins']])->assertSessionHasNoErrors();
         $this->assertSame(['blenders', 'storage_bins'], $kettle->fresh()->category_keys);
+    }
+
+    public function test_sellers_can_type_their_own_tags_under_other_in_each_category(): void
+    {
+        $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);
+        $this->actingAs($seller)->get(route('seller.products.create'))->assertOk()
+            ->assertSee('name="custom_tags[home_garden]"', false)
+            ->assertSee('name="custom_tags[kitchen_appliances]"', false);
+
+        // "Other" tags alone are enough: the product is listed under the main category they were typed in.
+        $payload = ['name' => 'Bamboo Caddy', 'price' => 350, 'stock' => 5, 'is_active' => 1];
+        $this->post(route('seller.products.store'), $payload + ['custom_tags' => ['home_garden' => ' Bathroom  Caddies, bamboo , Bamboo,']])
+            ->assertSessionHasNoErrors();
+        $caddy = Product::where('name', 'Bamboo Caddy')->firstOrFail();
+        $this->assertSame(['home_garden' => ['Bathroom Caddies', 'bamboo']], $caddy->custom_tags);
+        $this->assertSame(['home_garden'], $caddy->category_keys);
+        $this->assertSame(['Home and Garden', 'Bathroom Caddies', 'bamboo'], $caddy->category_labels);
+        $this->get(route('seller.products.edit', $caddy))->assertOk()
+            ->assertSee('name="custom_tags[home_garden]" value="Bathroom Caddies, bamboo"', false);
+
+        // Ticked categories and tags in another main category work together; clearing a box removes its tags.
+        $this->put(route('seller.products.update', $caddy), $payload + ['categories' => ['storage_bins'], 'custom_tags' => ['home_garden' => '', 'kitchen_appliances' => 'Rice Washers']])
+            ->assertSessionHasNoErrors();
+        $caddy->refresh();
+        $this->assertSame(['kitchen_appliances' => ['Rice Washers']], $caddy->custom_tags);
+        $this->assertSame(['storage_bins'], $caddy->category_keys);
+
+        $this->put(route('seller.products.update', $caddy), $payload + ['categories' => ['storage_bins'], 'custom_tags' => ['home_garden' => 'a, b, c, d']])
+            ->assertSessionHasErrors(['custom_tags.home_garden' => 'Add up to 3 of your own tags per category.']);
+        $this->put(route('seller.products.update', $caddy), $payload + ['categories' => ['storage_bins'], 'custom_tags' => ['home_garden' => str_repeat('x', 31)]])
+            ->assertSessionHasErrors(['custom_tags.home_garden' => 'Keep each tag to 30 characters or fewer.']);
+        $this->post(route('seller.products.store'), $payload + ['custom_tags' => ['home_garden' => ' , ']])
+            ->assertSessionHasErrors(['categories' => 'Choose at least one category, or type your own under Other.']);
     }
 
     public function test_the_main_category_follows_the_sellers_registered_shop_category(): void
