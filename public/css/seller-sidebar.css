@@ -142,6 +142,11 @@
     color: var(--c-8d403b);
 }
 
+/* "Show Zay" (partials/faq-bot-restore): only while Zay is hidden; faq-bot.js shows it. */
+.zay-restore[hidden] {
+    display: none !important;
+}
+
 @media (max-width: 1100px) and (min-width: 821px) {
     .seller-sidebar.sidebar {
         width: 220px;

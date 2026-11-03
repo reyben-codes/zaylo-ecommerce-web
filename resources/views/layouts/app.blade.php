@@ -57,6 +57,7 @@
             </form>
             <div class="icon-group">
                 <button type="button" class="theme-toggle" data-theme-toggle aria-label="Switch theme"></button>
+                @include('partials.faq-bot-restore')
                 @if(auth()->user()?->role === 'buyer')
                     @include('partials.buyer-nav-icons')
                 @else

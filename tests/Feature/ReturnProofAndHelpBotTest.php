@@ -129,7 +129,10 @@ class ReturnProofAndHelpBotTest extends TestCase
     public function test_the_help_bot_answers_for_each_kind_of_account(): void
     {
         $this->actingAs($this->seller)->get(route('seller.dashboard'))->assertOk()
-            ->assertSee('data-faq-bot', false)->assertSee('js/faq-bot.js', false);
+            ->assertSee('data-faq-bot', false)->assertSee('js/faq-bot.js', false)
+            // Zay can be hidden from its panel, and Show Zay in the sidebar brings it back.
+            ->assertSee('data-faq-hide', false)->assertSee('data-faq-drop-target', false)
+            ->assertSee('data-zay-restore', false)->assertSee('Show Zay');
         $this->getJson(route('faq'))->assertOk()
             ->assertJsonPath('items.0.q', 'How do I add a product?')
             ->assertJsonPath('items.0.link.url', route('seller.products.create'))
@@ -148,7 +151,7 @@ class ReturnProofAndHelpBotTest extends TestCase
 
         // Guests browsing the store do not get the bot.
         auth()->logout();
-        $this->get('/')->assertDontSee('data-faq-bot', false);
+        $this->get('/')->assertDontSee('data-faq-bot', false)->assertDontSee('data-zay-restore', false);
     }
 
     private function order(): Order

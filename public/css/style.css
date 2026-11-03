@@ -474,6 +474,8 @@ img.is-sold-out, .detail-image.is-sold-out img[data-gallery-main], .detail-thumb
 .status-pill { display: inline-block; padding: 6px 10px; background: var(--c-eee6de); color: var(--c-4a4037); font-size: .72rem; text-transform: capitalize; }
 .icon-group .buyer-nav-icon[aria-current="page"] i { color: var(--c-a17455); }
 .icon-group .buyer-nav-icon:focus-visible { outline: 2px solid var(--c-a17455); outline-offset: 5px; border-radius: 3px; }
+/* "Show Zay" (partials/faq-bot-restore): only while Zay is hidden; faq-bot.js shows it. */
+.zay-restore[hidden] { display: none !important; }
 .orders-page { max-width: 1120px; }
 .order-tabs { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 28px; }
 .order-tab { display: inline-flex; align-items: center; gap: 9px; padding: 11px 16px; border: 1px solid var(--c-d9d0c7); border-radius: 999px; background: var(--c-ffffff); color: var(--c-4a4037); font-size: .82rem; font-weight: 500; text-decoration: none; }

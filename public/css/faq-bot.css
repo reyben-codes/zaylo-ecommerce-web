@@ -107,7 +107,13 @@
     background: var(--c-f5f0ea);
     box-shadow: 0 6px 22px #241a1638;
     cursor: pointer;
+    touch-action: none;
+    user-select: none;
     transition: transform 200ms ease-out, box-shadow 200ms ease-out;
+}
+
+.faq-bot__toggle[hidden] {
+    display: none;
 }
 
 .faq-bot__toggle .zay {
@@ -121,6 +127,32 @@
 
 .faq-bot__toggle[aria-expanded="true"] .zay {
     animation: none;
+}
+
+/* Being dragged: lifted, and faded while over the hide target. */
+.faq-bot__toggle.is-dragging,
+.faq-bot__toggle.is-dragging:hover {
+    box-shadow: 0 12px 32px #241a1655;
+    cursor: grabbing;
+    transform: scale(1.06);
+}
+
+.faq-bot__toggle.is-dragging .zay {
+    animation: none;
+}
+
+.faq-bot__toggle.is-over-drop {
+    opacity: .7;
+}
+
+/* Brought back with Show Zay. */
+.faq-bot__toggle.is-returning {
+    animation: zay-return 320ms ease-out;
+}
+
+@keyframes zay-return {
+    from { opacity: 0; transform: scale(.6); }
+    to { opacity: 1; transform: none; }
 }
 
 .faq-bot__toggle:focus-visible,
@@ -408,6 +440,69 @@
     30% { opacity: 1; transform: translateY(-4px); }
 }
 
+/* ------------------------------------------------------- Hiding and showing */
+
+.faq-bot__drop {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 1489;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+    padding: 30px 0 max(20px, env(safe-area-inset-bottom));
+    background: linear-gradient(transparent, #21181199);
+    pointer-events: none;
+}
+
+.faq-bot__drop[hidden],
+.faq-bot__notice[hidden] {
+    display: none;
+}
+
+.faq-bot__drop-label {
+    padding: 6px 12px;
+    border-radius: 20px;
+    background: var(--c-2b241f);
+    color: var(--c-ffffff);
+    font-size: .75rem;
+}
+
+.faq-bot__drop-target {
+    display: grid;
+    width: 84px;
+    height: 84px;
+    place-items: center;
+    border: 2px solid #ffffffb3;
+    border-radius: 50%;
+    background: #30231fcc;
+    color: var(--c-ffffff);
+    font-size: 28px;
+    transition: background 150ms, transform 150ms;
+}
+
+.faq-bot__drop.is-active .faq-bot__drop-target {
+    background: var(--c-963e38);
+    transform: scale(1.12);
+}
+
+.faq-bot__notice {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    z-index: 1491;
+    width: max-content;
+    max-width: calc(100vw - 32px);
+    margin: 0;
+    padding: 12px 18px;
+    border-radius: 10px;
+    background: var(--c-2b241f);
+    color: var(--c-ffffff);
+    box-shadow: 0 4px 18px #241a1622;
+    text-align: center;
+    transform: translateX(-50%);
+}
+
 @media (max-width: 640px) {
     .faq-bot__toggle,
     .faq-bot__teaser,
@@ -442,7 +537,12 @@
         transition: none;
     }
 
+    .faq-bot__drop-target {
+        transition: none;
+    }
+
     .faq-bot__toggle .zay,
+    .faq-bot__toggle.is-returning,
     .faq-bot__message,
     .faq-bot__teaser,
     .faq-bot__typing span,

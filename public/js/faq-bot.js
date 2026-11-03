@@ -2,7 +2,8 @@
     // Zay, the help bot (partials/faq-bot). Zay blinks now and then, follows the pointer with its eyes, "types"
     // before answering and changes its face with the conversation. Close matches to the account's questions
     // (FaqController) and short small talk are answered here; anything else goes to the AI models (ZayAssistant), and
-    // if they cannot answer → the nearest question or a link to Help & support.
+    // if they cannot answer → the nearest question or a link to Help & support. Zay can be dragged around or hidden,
+    // and Show Zay (partials/faq-bot-restore) brings it back.
     const root = document.querySelector('[data-faq-bot]');
     if (!root) return;
 
@@ -557,24 +558,50 @@
 
     // Where there is a chat bubble (chat-widget.js), Zay sits just above it and follows it around, or just below it
     // near the top of the screen. If the bubble is dismissed, Zay takes its place. Without one, faq-bot.css applies.
+    // Once the user drags Zay somewhere, Zay stays there instead (see "Dragging and hiding").
     const chatBubble = document.querySelector('[data-chat-bubble]');
     const STACK_GAP = 12;
     const SCREEN_EDGE = 8;
+    const SIDE_GAP = 12;
     let bubbleSpot = null;
 
-    const clamp = (value, max) => Math.max(SCREEN_EDGE, Math.min(max - SCREEN_EDGE, value));
+    // Where the user put Zay and whether they hid it, remembered in this browser for this account.
+    const storeKey = `zaylo-zay:${root.dataset.faqUser ?? ''}`;
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem(storeKey)) || {}; } catch (error) { /* storage unavailable */ }
+    if (typeof saved !== 'object' || Array.isArray(saved)) saved = {};
+    const saveZay = () => {
+        try { localStorage.setItem(storeKey, JSON.stringify(saved)); } catch (error) { /* storage unavailable */ }
+    };
+    const hasSpot = () => Number.isFinite(saved.x) && Number.isFinite(saved.y);
 
-    // Keeps a panel or teaser beside Zay, on the side with room, inside the screen.
+    const clamp = (value, max) => Math.max(SCREEN_EDGE, Math.min(max - SCREEN_EDGE, value));
+    const viewSize = () => ({ width: document.documentElement.clientWidth, height: window.innerHeight });
+
+    // Keeps a panel or teaser beside Zay, on the side with room, inside the screen. Only while Zay has a spot of
+    // its own (on the bubble or where the user dropped it); otherwise faq-bot.css places both.
     const placeBesideZay = (element) => {
-        if (!chatBubble || element.hidden) return;
+        if (!toggle.style.top || element.hidden) return;
         const zay = { left: parseFloat(toggle.style.left), top: parseFloat(toggle.style.top), size: toggle.offsetWidth };
         const { offsetWidth: width, offsetHeight: height } = element;
-        const view = { width: document.documentElement.clientWidth, height: window.innerHeight };
+        const view = viewSize();
         const onRight = zay.left + zay.size / 2 > view.width / 2;
         const above = zay.top - STACK_GAP - height;
         const below = zay.top + zay.size + STACK_GAP;
         const opensUp = above >= SCREEN_EDGE || below + height > view.height - SCREEN_EDGE;
         element.dataset.side = onRight ? 'right' : 'left';
+        // Dropped mid-screen with no room above or below: open beside Zay instead of over it.
+        const beside = onRight ? zay.left - STACK_GAP - width : zay.left + zay.size + STACK_GAP;
+        if (above < SCREEN_EDGE && below + height > view.height - SCREEN_EDGE
+            && beside >= SCREEN_EDGE && beside + width <= view.width - SCREEN_EDGE) {
+            Object.assign(element.style, {
+                left: `${beside}px`,
+                top: `${clamp(zay.top + zay.size / 2 - height / 2, view.height - height)}px`,
+                bottom: 'auto',
+                transformOrigin: `center ${onRight ? 'right' : 'left'}`,
+            });
+            return;
+        }
         Object.assign(element.style, {
             left: `${clamp(onRight ? zay.left + zay.size - width : zay.left, view.width - width)}px`,
             top: `${clamp(opensUp ? above : below, view.height - height)}px`,
@@ -583,10 +610,30 @@
         });
     };
 
+    const moveZay = (left, top, glide) => {
+        Object.assign(toggle.style, { left: `${left}px`, top: `${top}px`, bottom: 'auto' });
+        [toggle, panel, teaser].forEach((element) => element?.classList.toggle('is-gliding', glide));
+        placeBesideZay(panel);
+        if (teaser) placeBesideZay(teaser);
+    };
+
+    // Puts Zay where the user dragged it, kept inside the screen.
+    const placeAt = (x, y, glide = false) => {
+        const size = toggle.offsetWidth || 62;
+        const view = viewSize();
+        saved.x = clamp(x, view.width - size);
+        saved.y = clamp(y, view.height - size);
+        moveZay(saved.x, saved.y, glide);
+    };
+
     const followBubble = (glide = false) => {
+        if (hasSpot()) {
+            placeAt(saved.x, saved.y, glide);
+            return;
+        }
         if (!chatBubble) return;
         const size = toggle.offsetWidth;
-        const view = { width: document.documentElement.clientWidth, height: window.innerHeight };
+        const view = viewSize();
         // Measured by its center: the bubble is scaled down while the chat is open.
         const box = chatBubble.getBoundingClientRect();
         const shown = box.width > 0;
@@ -597,10 +644,20 @@
             top = spot.y - spot.size / 2 - STACK_GAP - size;
             if (top < SCREEN_EDGE) top = spot.y + spot.size / 2 + STACK_GAP;
         }
-        Object.assign(toggle.style, { left: `${clamp(spot.x - size / 2, view.width - size)}px`, top: `${clamp(top, view.height - size)}px`, bottom: 'auto' });
-        [toggle, panel, teaser].forEach((element) => element?.classList.toggle('is-gliding', glide));
-        placeBesideZay(panel);
-        if (teaser) placeBesideZay(teaser);
+        moveZay(clamp(spot.x - size / 2, view.width - size), clamp(top, view.height - size), glide);
+    };
+
+    // Forgets the user's spot: Zay goes back on the chat bubble, or to faq-bot.css's corner.
+    const forgetSpot = (glide = false) => {
+        delete saved.x;
+        delete saved.y;
+        [toggle, panel, teaser].forEach((element) => {
+            if (!element) return;
+            ['left', 'top', 'bottom', 'transformOrigin'].forEach((property) => { element.style[property] = ''; });
+            element.classList.remove('is-gliding');
+            delete element.dataset.side;
+        });
+        followBubble(glide);
     };
 
     // ---------------------------------------------------------- Opening and closing
@@ -629,6 +686,8 @@
         try { sessionStorage.setItem('zay-teaser-seen', '1'); } catch (error) { /* storage unavailable */ }
     };
 
+    const isOpen = () => toggle.getAttribute('aria-expanded') === 'true';
+
     const open = async () => {
         window.clearTimeout(closeTimer);
         hideTeaser();
@@ -645,16 +704,156 @@
         panel.classList.remove('is-open');
         toggle.setAttribute('aria-expanded', 'false');
         closeTimer = window.setTimeout(() => { panel.hidden = true; }, reducedMotion.matches ? 0 : 300);
-        if (returnFocus) toggle.focus();
+        if (returnFocus && !toggle.hidden) toggle.focus();
     };
 
-    toggle.addEventListener('click', () => (toggle.getAttribute('aria-expanded') === 'true' ? close() : open()));
+    // ------------------------------------------------------- Dragging and hiding
+
+    // Zay can be dragged anywhere; on release it snaps to the nearer side of the screen and stays there. Dropping
+    // it on the target at the bottom (or pressing Delete, or Hide Zay in the panel) hides it until the user picks
+    // Show Zay (partials/faq-bot-restore) in the header or sidebar. The conversation is kept while Zay is hidden.
+    const drop = root.querySelector('[data-faq-drop]');
+    const dropTarget = root.querySelector('[data-faq-drop-target]');
+    const notice = root.querySelector('[data-faq-notice]');
+    const restoreButtons = [...document.querySelectorAll('[data-zay-restore]')];
+    let gesture = null;
+    let suppressClickUntil = 0;
+    let noticeTimer;
+
+    const announce = (text) => {
+        window.clearTimeout(noticeTimer);
+        notice.textContent = text;
+        notice.hidden = false;
+        noticeTimer = window.setTimeout(() => { notice.hidden = true; }, 5000);
+    };
+
+    const overDrop = () => {
+        const a = toggle.getBoundingClientRect();
+        const b = dropTarget.getBoundingClientRect();
+        return Math.hypot(a.left + a.width / 2 - b.left - b.width / 2, a.top + a.height / 2 - b.top - b.height / 2) < 60;
+    };
+
+    const resetDrop = () => {
+        drop.hidden = true;
+        drop.classList.remove('is-active');
+        toggle.classList.remove('is-dragging', 'is-over-drop');
+    };
+
+    const hideZay = () => {
+        if (isOpen()) close(false);
+        hideTeaser();
+        resetDrop();
+        toggle.hidden = true;
+        saved.dismissed = true;
+        saveZay();
+        restoreButtons.forEach((button) => { button.hidden = false; });
+        announce('Zay is hidden. Use Show Zay in the menu to bring Zay back.');
+        // Keyboard users land on the way back instead of the top of the page.
+        restoreButtons.find((button) => button.offsetParent !== null)?.focus({ preventScroll: true });
+    };
+
+    const showZay = () => {
+        saved.dismissed = false;
+        restoreButtons.forEach((button) => { button.hidden = true; });
+        toggle.hidden = false;
+        forgetSpot();
+        saveZay();
+        if (!reducedMotion.matches) {
+            toggle.classList.add('is-returning');
+            const done = (event) => {
+                if (event.target !== toggle) return;
+                toggle.classList.remove('is-returning');
+                toggle.removeEventListener('animationend', done);
+            };
+            toggle.addEventListener('animationend', done);
+        }
+        setMood('waving', 1800);
+        toggle.focus({ preventScroll: true });
+        announce('Zay is back. Drag Zay to move it, or drop it on the X to hide it again.');
+    };
+
+    // Zay moves with our own pointer drag; never start the browser's native drag of the picture.
+    toggle.addEventListener('dragstart', (event) => event.preventDefault());
+    toggle.addEventListener('pointerdown', (event) => {
+        if (!event.isPrimary || event.button !== 0) return;
+        const rect = toggle.getBoundingClientRect();
+        gesture = {
+            id: event.pointerId,
+            x: event.clientX,
+            y: event.clientY,
+            left: rect.left,
+            top: rect.top,
+            previous: hasSpot() ? { x: saved.x, y: saved.y } : null,
+            moved: false,
+        };
+        toggle.setPointerCapture(event.pointerId);
+    });
+    toggle.addEventListener('pointermove', (event) => {
+        if (!gesture || event.pointerId !== gesture.id) return;
+        const dx = event.clientX - gesture.x;
+        const dy = event.clientY - gesture.y;
+        if (!gesture.moved && Math.hypot(dx, dy) < 6) return;
+        if (!gesture.moved) {
+            gesture.moved = true;
+            if (isOpen()) close(false);
+            hideTeaser();
+            notice.hidden = true;
+            drop.hidden = false;
+            toggle.classList.add('is-dragging');
+        }
+        placeAt(gesture.left + dx, gesture.top + dy);
+        const active = overDrop();
+        drop.classList.toggle('is-active', active);
+        toggle.classList.toggle('is-over-drop', active);
+    });
+    const finishDrag = (event, cancelled = false) => {
+        if (!gesture || event.pointerId !== gesture.id) return;
+        const previous = gesture;
+        gesture = null;
+        if (previous.moved) {
+            suppressClickUntil = performance.now() + 400;
+            if (cancelled) {
+                if (previous.previous) placeAt(previous.previous.x, previous.previous.y, true);
+                else forgetSpot(true);
+            } else if (overDrop()) {
+                hideZay();
+            } else {
+                const size = toggle.offsetWidth;
+                const { width } = viewSize();
+                placeAt(saved.x + size / 2 < width / 2 ? SIDE_GAP : width - size - SIDE_GAP, saved.y, true);
+                saveZay();
+            }
+        }
+        resetDrop();
+        if (toggle.hasPointerCapture(event.pointerId)) toggle.releasePointerCapture(event.pointerId);
+    };
+    toggle.addEventListener('pointerup', (event) => finishDrag(event));
+    toggle.addEventListener('pointercancel', (event) => finishDrag(event, true));
+    toggle.addEventListener('lostpointercapture', (event) => finishDrag(event, true));
+    toggle.addEventListener('keydown', (event) => {
+        if (event.key === 'Delete' || event.key === 'Backspace') {
+            event.preventDefault();
+            hideZay();
+        }
+    });
+    root.querySelector('[data-faq-hide]').addEventListener('click', hideZay);
+    restoreButtons.forEach((button) => button.addEventListener('click', showZay));
+
+    toggle.addEventListener('click', (event) => {
+        // A drag ends with a click on Zay; it should not also open the panel.
+        if (event.detail && performance.now() < suppressClickUntil) return;
+        isOpen() ? close() : open();
+    });
     root.querySelector('[data-faq-close]').addEventListener('click', () => close());
     panel.addEventListener('keydown', (event) => { if (event.key === 'Escape') close(); });
     document.addEventListener('zaylo:chat-bubble-moved', (event) => followBubble(event.detail.glide));
     // The open chat covers Zay's corner, so Zay steps aside; the chat takes the focus.
-    document.addEventListener('zaylo:chat-opened', () => { if (toggle.getAttribute('aria-expanded') === 'true') close(false); });
+    document.addEventListener('zaylo:chat-opened', () => { if (isOpen()) close(false); });
     window.addEventListener('resize', () => followBubble());
+    if (saved.dismissed) {
+        toggle.hidden = true;
+        restoreButtons.forEach((button) => { button.hidden = false; });
+    }
     followBubble();
     form.addEventListener('submit', (event) => {
         event.preventDefault();
@@ -670,7 +869,7 @@
     if (teaser && !teaserSeen) {
         root.querySelector('[data-faq-teaser-close]').addEventListener('click', hideTeaser);
         window.setTimeout(() => {
-            if (toggle.getAttribute('aria-expanded') === 'true') return;
+            if (isOpen() || toggle.hidden || gesture) return;
             teaser.hidden = false;
             placeBesideZay(teaser);
             setMood('waving', 1800);
