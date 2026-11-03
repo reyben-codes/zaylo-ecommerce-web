@@ -3,6 +3,7 @@
 /// or the mobile controller that returns it.
 library;
 
+import 'package:zaylo_mobile/models/chat_media.dart';
 import 'package:zaylo_mobile/models/json_parsing.dart';
 
 /// A message in the user's chat with ZAYLO support (MobileSupportController).
@@ -13,6 +14,8 @@ class SupportMessage {
     required this.fromStaff,
     this.id,
     this.sentAt,
+    this.media = const ChatMedia(),
+    this.attachment,
     this.pending = false,
     this.failed = false,
   });
@@ -26,6 +29,12 @@ class SupportMessage {
   final bool fromStaff;
   final DateTime? sentAt;
 
+  /// The photo or video sent with it, once stored.
+  final ChatMedia media;
+
+  /// The picked photo or video while sending, so a failed send can be retried.
+  final ChatAttachment? attachment;
+
   /// Shown immediately while sending, then replaced by the server copy.
   final bool pending;
   final bool failed;
@@ -36,6 +45,8 @@ class SupportMessage {
         body: body,
         fromStaff: fromStaff,
         sentAt: sentAt,
+        media: media,
+        attachment: attachment,
         pending: pending ?? this.pending,
         failed: failed ?? this.failed,
       );
@@ -46,6 +57,7 @@ class SupportMessage {
         body: json['body'] as String? ?? '',
         fromStaff: json['from_staff'] as bool? ?? false,
         sentAt: parseDate(json['sent_at']),
+        media: ChatMedia.fromJson(json),
       );
 }
 

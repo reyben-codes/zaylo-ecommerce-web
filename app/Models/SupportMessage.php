@@ -2,17 +2,18 @@
 
 namespace App\Models;
 
+use App\Services\ChatMedia;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SupportMessage extends Model
 {
-    protected $fillable = ['support_thread_id', 'sender_id', 'client_id', 'body', 'image_path', 'read_at'];
+    protected $fillable = ['support_thread_id', 'sender_id', 'client_id', 'body', 'image_path', 'video_path', 'read_at'];
 
-    /** What a list preview or the app shows for a message: its text, or "Photo" when only a photo was sent. */
+    /** What a list preview shows for a message: its text, or "Photo" or "Video" when only one was sent. */
     public function getPreviewAttribute(): string
     {
-        return filled($this->body) ? (string) $this->body : ($this->image_path ? '📷 Photo' : '');
+        return ChatMedia::preview($this);
     }
 
     protected $casts = ['read_at' => 'datetime'];

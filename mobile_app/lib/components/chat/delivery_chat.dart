@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'package:zaylo_mobile/api/api_exception.dart';
+import 'package:zaylo_mobile/components/chat/chat_media_view.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
+import 'package:zaylo_mobile/models/chat_media.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 import 'package:zaylo_mobile/utils/formatters.dart';
 import 'package:zaylo_mobile/utils/ids.dart';
@@ -18,6 +20,8 @@ class DeliveryChatMessage {
     this.id,
     this.read = false,
     this.sentAt,
+    this.media = const ChatMedia(),
+    this.attachment,
     this.pending = false,
     this.failed = false,
   });
@@ -28,6 +32,12 @@ class DeliveryChatMessage {
   final bool mine;
   final bool read;
   final DateTime? sentAt;
+
+  /// The photo or video sent with it, once stored.
+  final ChatMedia media;
+
+  /// The picked photo or video while sending, so a failed send can be retried.
+  final ChatAttachment? attachment;
 
   /// Local-only states while a send is in flight or after it failed.
   final bool pending;
@@ -40,6 +50,7 @@ class DeliveryChatMessage {
         mine: json['mine'] as bool? ?? false,
         read: json['read'] as bool? ?? false,
         sentAt: DateTime.tryParse(json['sent_at'] as String? ?? '')?.toLocal(),
+        media: ChatMedia.fromJson(json),
       );
 
   DeliveryChatMessage copyWith({bool? pending, bool? failed}) => DeliveryChatMessage(
@@ -49,6 +60,8 @@ class DeliveryChatMessage {
         mine: mine,
         read: read,
         sentAt: sentAt,
+        media: media,
+        attachment: attachment,
         pending: pending ?? this.pending,
         failed: failed ?? this.failed,
       );
@@ -89,12 +102,20 @@ class DeliveryChat {
 
 /// Chat between the rider delivering an order and the buyer receiving it.
 /// The rider and buyer apps pass their own [load] and [send] calls. New
-/// messages are fetched every [_pollEvery] while the screen is open.
+/// messages are fetched every [_pollEvery] while the screen is open. A message
+/// can carry a photo or video, such as the gate the rider is at.
 class DeliveryChatScreen extends StatefulWidget {
-  const DeliveryChatScreen({super.key, required this.load, required this.send, this.title = 'Chat'});
+  const DeliveryChatScreen({
+    super.key,
+    required this.load,
+    required this.send,
+    required this.mediaHeaders,
+    this.title = 'Chat',
+  });
 
   final Future<DeliveryChat> Function() load;
-  final Future<DeliveryChatMessage> Function(String body, String clientId) send;
+  final Future<DeliveryChatMessage> Function(String body, String clientId, ChatAttachment? attachment) send;
+  final MediaHeaders mediaHeaders;
 
   /// Shown until the chat loads and names the other person.
   final String title;
@@ -113,6 +134,9 @@ class _DeliveryChatScreenState extends State<DeliveryChatScreen> {
 
   /// Sent but not yet confirmed (or failed), keyed by client id.
   final _outbox = <String, DeliveryChatMessage>{};
+
+  /// The photo or video picked for the next message.
+  ChatAttachment? _attachment;
   Object? _error;
   Timer? _poll;
 
@@ -148,16 +172,32 @@ class _DeliveryChatScreenState extends State<DeliveryChatScreen> {
     }
   }
 
+  Future<void> _attach() async {
+    final attachment = await pickChatAttachment(context);
+    if (attachment != null && mounted) setState(() => _attachment = attachment);
+  }
+
   Future<void> _send([DeliveryChatMessage? retry]) async {
     final body = retry?.body ?? _input.text.trim();
-    if (body.isEmpty) return;
+    final attachment = retry == null ? _attachment : retry.attachment;
+    if (body.isEmpty && attachment == null) return;
     final draft = retry?.copyWith(pending: true, failed: false) ??
-        DeliveryChatMessage(clientId: newUuidV4(), body: body, mine: true, sentAt: DateTime.now(), pending: true);
-    setState(() => _outbox[draft.clientId] = draft);
+        DeliveryChatMessage(
+          clientId: newUuidV4(),
+          body: body,
+          mine: true,
+          sentAt: DateTime.now(),
+          attachment: attachment,
+          pending: true,
+        );
+    setState(() {
+      _outbox[draft.clientId] = draft;
+      if (retry == null) _attachment = null;
+    });
     if (retry == null) _input.clear();
     _scrollToEnd();
     try {
-      final saved = await widget.send(body, draft.clientId);
+      final saved = await widget.send(body, draft.clientId, attachment);
       if (!mounted) return;
       final chat = _chat;
       setState(() {
@@ -222,7 +262,12 @@ class _DeliveryChatScreenState extends State<DeliveryChatScreen> {
                     children: [
                       _ChatIntro(chat: chat),
                       for (final message in thread)
-                        _Bubble(message: message, otherName: chat.otherName, onRetry: () => _send(message)),
+                        _Bubble(
+                          message: message,
+                          otherName: chat.otherName,
+                          mediaHeaders: widget.mediaHeaders,
+                          onRetry: () => _send(message),
+                        ),
                     ],
                   ),
                 ),
@@ -240,31 +285,36 @@ class _DeliveryChatScreenState extends State<DeliveryChatScreen> {
             color: ZayloColors.paper,
             border: Border(top: BorderSide(color: ZayloColors.line)),
           ),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Expanded(
-              child: TextField(
-                controller: _input,
-                minLines: 1,
-                maxLines: 4,
-                maxLength: _maxLength,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: InputDecoration(
-                  hintText: 'Message ${_chat?.otherName ?? ''}'.trim(),
-                  counterText: '',
-                  filled: true,
-                  fillColor: ZayloColors.white,
-                  border: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(22))),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            if (_attachment != null)
+              ChatAttachmentChip(attachment: _attachment!, onRemove: () => setState(() => _attachment = null)),
+            Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              ChatAttachButton(onPressed: _attach),
+              Expanded(
+                child: TextField(
+                  controller: _input,
+                  minLines: 1,
+                  maxLines: 4,
+                  maxLength: _maxLength,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: InputDecoration(
+                    hintText: 'Message ${_chat?.otherName ?? ''}'.trim(),
+                    counterText: '',
+                    filled: true,
+                    fillColor: ZayloColors.white,
+                    border: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(22))),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 6),
-            IconButton.filled(
-              tooltip: 'Send',
-              onPressed: () => _send(),
-              style: IconButton.styleFrom(backgroundColor: ZayloColors.ink, foregroundColor: ZayloColors.white),
-              icon: const Icon(Icons.send),
-            ),
+              const SizedBox(width: 6),
+              IconButton.filled(
+                tooltip: 'Send',
+                onPressed: () => _send(),
+                style: IconButton.styleFrom(backgroundColor: ZayloColors.ink, foregroundColor: ZayloColors.white),
+                icon: const Icon(Icons.send),
+              ),
+            ]),
           ]),
         ),
       );
@@ -324,10 +374,11 @@ class _ClosedNotice extends StatelessWidget {
 }
 
 class _Bubble extends StatelessWidget {
-  const _Bubble({required this.message, required this.otherName, required this.onRetry});
+  const _Bubble({required this.message, required this.otherName, required this.mediaHeaders, required this.onRetry});
 
   final DeliveryChatMessage message;
   final String otherName;
+  final MediaHeaders mediaHeaders;
   final VoidCallback onRetry;
 
   @override
@@ -361,7 +412,13 @@ class _Bubble extends StatelessWidget {
             border: message.failed ? Border.all(color: Colors.redAccent) : null,
           ),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(message.body, style: TextStyle(color: mine ? ZayloColors.white : ZayloColors.ink)),
+            if (!message.media.isEmpty || message.attachment != null)
+              Padding(
+                padding: EdgeInsets.only(bottom: message.body.isEmpty ? 0 : 8),
+                child: ChatMediaThumbnail(media: message.media, local: message.attachment, headers: mediaHeaders),
+              ),
+            if (message.body.isNotEmpty)
+              Text(message.body, style: TextStyle(color: mine ? ZayloColors.white : ZayloColors.ink)),
             const SizedBox(height: 4),
             Text(status,
                 style: TextStyle(

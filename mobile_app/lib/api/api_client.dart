@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 
 import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/models/auth_models.dart';
+import 'package:zaylo_mobile/models/chat_media.dart';
 import 'package:zaylo_mobile/models/location.dart';
 import 'package:zaylo_mobile/models/support_models.dart';
 import 'package:zaylo_mobile/utils/ids.dart';
@@ -132,11 +133,22 @@ class ApiClient {
           .toList();
 
   /// [clientId] makes a retried send safe: the server stores it only once.
-  Future<SupportMessage> sendSupportMessage(String body, {String? clientId}) async =>
-      SupportMessage.fromJson((await send('POST', '$accountPrefix/support/messages', body: {
-        'body': body,
-        'client_id': clientId ?? newUuidV4(),
-      }))['message'] as Map<String, dynamic>);
+  /// An [attachment] (photo or video) goes with the text, or alone.
+  Future<SupportMessage> sendSupportMessage(String body, {String? clientId, ChatAttachment? attachment}) async =>
+      SupportMessage.fromJson((await sendChatMessage('$accountPrefix/support/messages',
+          body: body, clientId: clientId ?? newUuidV4(), attachment: attachment))['message'] as Map<String, dynamic>);
+
+  /// Sends a chat message: JSON for text alone, multipart with a photo or video.
+  @protected
+  Future<Map<String, dynamic>> sendChatMessage(String path,
+          {required String body, required String clientId, ChatAttachment? attachment}) async =>
+      attachment == null
+          ? await send('POST', path, body: {'body': body, 'client_id': clientId})
+          : await sendMultipart(path,
+              fields: {'body': body, 'client_id': clientId},
+              files: attachment.field,
+              // A video can take a while on mobile data.
+              timeout: attachment.isVideo ? const Duration(minutes: 4) : const Duration(seconds: 90));
 
   /// Support replies not opened yet.
   Future<int> supportUnreadCount() async => (await send('GET', '$accountPrefix/support/unread'))['unread'] as int? ?? 0;
@@ -174,6 +186,11 @@ class ApiClient {
 
   /// For loading private files, such as complaint evidence, with this session.
   Map<String, String> get authHeaders => {if (token != null) HttpHeaders.authorizationHeader: 'Bearer $token'};
+
+  /// The headers for a chat photo or video: the session's for ZAYLO's own
+  /// links, none for a signed storage link, which refuses a second sign-in.
+  Map<String, String> mediaHeaders(String url) =>
+      Uri.tryParse(url)?.host == Uri.parse(baseUrl).host ? authHeaders : const {};
 
   // -------------------------------------------- Philippine locations (PSGC)
 
@@ -235,6 +252,7 @@ class ApiClient {
     String path, {
     required Map<String, String> fields,
     required Map<String, File> files,
+    Duration timeout = const Duration(seconds: 90),
   }) async {
     const crlf = '\r\n';
     final boundary = 'zaylo-${DateTime.now().microsecondsSinceEpoch}';
@@ -256,7 +274,7 @@ class ApiClient {
     text('--$boundary--$crlf');
     final bytes = body.takeBytes();
 
-    final data = await _execute('POST', path, timeout: const Duration(seconds: 90), writeBody: (request) async {
+    final data = await _execute('POST', path, timeout: timeout, writeBody: (request) async {
       request.headers.contentType = ContentType('multipart', 'form-data', parameters: {'boundary': boundary});
       request.contentLength = bytes.length;
       request.add(bytes);
@@ -269,6 +287,10 @@ class ApiClient {
         'webp' => 'image/webp',
         'heic' => 'image/heic',
         'pdf' => 'application/pdf',
+        'mp4' || 'm4v' => 'video/mp4',
+        'mov' => 'video/quicktime',
+        'webm' => 'video/webm',
+        '3gp' => 'video/3gpp',
         _ => 'image/jpeg',
       };
 

@@ -106,11 +106,12 @@ class Shipment extends Model
      * Adds a message; a repeated [$clientId] returns the existing one, so a send retried after a dropped connection
      * is not stored twice.
      */
-    public function postMessage(User $sender, string $body, bool $fromRider, ?string $clientId = null): DeliveryMessage
+    /** [$attachment] is the stored photo or video from ChatMedia::store, if any. */
+    public function postMessage(User $sender, string $body, bool $fromRider, ?string $clientId = null, array $attachment = []): DeliveryMessage
     {
         return $this->messages()->firstOrCreate(
             ['client_id' => $clientId ?: (string) Str::uuid()],
-            ['sender_id' => $sender->id, 'from_rider' => $fromRider, 'body' => trim($body)],
+            ['sender_id' => $sender->id, 'from_rider' => $fromRider, 'body' => trim($body)] + $attachment,
         );
     }
 

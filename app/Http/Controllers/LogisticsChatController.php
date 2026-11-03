@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\LogisticsMessage;
 use App\Models\LogisticsProvider;
 use App\Models\LogisticsThread;
 use App\Models\Product;
 use App\Models\Rider;
 use App\Models\User;
+use App\Services\ChatMedia;
 use App\Services\LogisticsMessenger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -89,17 +91,31 @@ class LogisticsChatController extends Controller
         return response()->json(['messages' => $messages->map(fn ($message) => $this->messenger->payload($message, $request->user()))]);
     }
 
-    public function send(Request $request, LogisticsThread $thread)
+    public function send(Request $request, LogisticsThread $thread, ChatMedia $media)
     {
         abort_unless($thread->isOpenTo($request->user()), 403);
-        $data = $request->validate(['body' => ['required', 'string', 'max:2000']], ['body.required' => 'Type a message first.']);
-        $message = $this->messenger->send($thread, $request->user(), trim($data['body']));
+        $canAttach = ChatMedia::supported('logistics_messages');
+        // A message is text, a photo or video, or both.
+        $data = $request->validate(
+            $canAttach ? ChatMedia::rules() : ['body' => ['required', 'string', 'max:2000']],
+            ['body.required' => 'Type a message first.'] + ChatMedia::messages(),
+        );
+        $attachment = $canAttach ? $media->store($request, "logistics-chat/{$thread->id}") : [];
+        $message = $this->messenger->send($thread, $request->user(), trim((string) ($data['body'] ?? '')), $attachment);
 
         if ($request->expectsJson()) {
             return response()->json(['message' => $this->messenger->payload($message->load('sender'), $request->user())], 201);
         }
 
         return back();
+    }
+
+    /** A photo or video from the thread, for the partner and the seller or rider in it. */
+    public function media(Request $request, LogisticsThread $thread, LogisticsMessage $message, string $kind)
+    {
+        abort_unless($thread->isOpenTo($request->user()) && (int) $message->logistics_thread_id === (int) $thread->id, 403);
+
+        return ChatMedia::response($message, $kind);
     }
 
     private function threads($query, User $viewer): Collection

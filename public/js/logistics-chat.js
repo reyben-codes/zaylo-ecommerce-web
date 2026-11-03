@@ -1,4 +1,5 @@
-// Logistics chat: send without reloading, and show new messages every few seconds.
+// Logistics and support chat: send without reloading, and show new messages every few seconds. A message can carry one
+// photo or video.
 (() => {
     const list = document.querySelector('[data-logistics-chat]');
     const form = document.querySelector('[data-logistics-chat-form]');
@@ -7,10 +8,12 @@
     const textarea = form.querySelector('textarea');
     const button = form.querySelector('button[type="submit"]');
     const error = document.querySelector('[data-chat-error]');
-    // Support chats can carry one photo per message (partials/logistics-chat $photos).
-    const photoInput = form.querySelector('[data-chat-photo]');
-    const photoName = document.querySelector('[data-chat-photo-name]');
+    const fileInput = form.querySelector('[data-chat-attach]');
+    const fileName = document.querySelector('[data-chat-attach-name]');
+    const fileIcon = fileName?.querySelector('[data-chat-attach-icon]');
+    // The server's limits (App\Services\ChatMedia).
     const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+    const MAX_VIDEO_BYTES = 25 * 1024 * 1024;
     const token = form.querySelector('input[name="_token"]').value;
     let lastId = Number(list.dataset.lastId || 0);
     let polling = false;
@@ -37,6 +40,17 @@
             image.addEventListener('load', () => { if (list.scrollHeight - list.scrollTop - list.clientHeight < 400) scrollToEnd(); }, { once: true });
             link.append(image);
             item.append(link);
+        }
+        if (message.video) {
+            const video = document.createElement('video');
+            video.className = 'logistics-chat__video';
+            video.src = message.video;
+            video.controls = true;
+            video.playsInline = true;
+            video.preload = 'metadata';
+            video.setAttribute('aria-label', `Video from ${message.mine ? 'you' : message.sender}`);
+            video.addEventListener('loadedmetadata', () => { if (list.scrollHeight - list.scrollTop - list.clientHeight < 400) scrollToEnd(); }, { once: true });
+            item.append(video);
         }
         if (message.body) {
             const body = document.createElement('p');
@@ -73,48 +87,58 @@
         }
     };
 
-    const chosenPhoto = () => photoInput?.files?.[0] ?? null;
-    const clearPhoto = () => {
-        if (!photoInput) return;
-        photoInput.value = '';
-        photoName.hidden = true;
+    const chosenFile = () => fileInput?.files?.[0] ?? null;
+    const isVideo = (file) => file.type.startsWith('video/');
+    const clearFile = () => {
+        if (!fileInput) return;
+        fileInput.value = '';
+        fileInput.name = 'photo';
+        fileName.hidden = true;
     };
 
-    photoInput?.addEventListener('change', () => {
-        const file = chosenPhoto();
-        if (file && file.size > MAX_PHOTO_BYTES) {
-            clearPhoto();
-            showError('The photo must be 5 MB or smaller.');
+    fileInput?.addEventListener('change', () => {
+        const file = chosenFile();
+        if (!file) {
+            clearFile();
+            return;
+        }
+        const video = isVideo(file);
+        if (file.size > (video ? MAX_VIDEO_BYTES : MAX_PHOTO_BYTES)) {
+            clearFile();
+            showError(video ? 'The video must be 25 MB or smaller.' : 'The photo must be 5 MB or smaller.');
             return;
         }
         showError('');
-        photoName.hidden = !file;
-        photoName.querySelector('span').textContent = file ? file.name : '';
+        // The server reads a video from the "video" field and a photo from "photo".
+        fileInput.name = video ? 'video' : 'photo';
+        fileIcon.className = `fas ${video ? 'fa-video' : 'fa-image'}`;
+        fileName.hidden = false;
+        fileName.querySelector('span').textContent = file.name;
     });
-    photoName?.querySelector('[data-chat-photo-clear]').addEventListener('click', () => {
-        clearPhoto();
-        photoInput.focus();
+    fileName?.querySelector('[data-chat-attach-clear]').addEventListener('click', () => {
+        clearFile();
+        fileInput.focus();
     });
 
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
         const body = textarea.value.trim();
-        const photo = chosenPhoto();
-        if (!body && !photo) return;
+        const file = chosenFile();
+        if (!body && !file) return;
         button.disabled = true;
         showError('');
         try {
-            // A photo goes as form data; text alone stays JSON.
-            const payload = photo ? new FormData(form) : JSON.stringify({ body });
+            // A photo or video goes as form data; text alone stays JSON.
+            const payload = file ? new FormData(form) : JSON.stringify({ body });
             const response = await fetch(form.action, {
                 method: 'POST',
-                headers: { Accept: 'application/json', 'X-CSRF-TOKEN': token, ...(photo ? {} : { 'Content-Type': 'application/json' }) },
+                headers: { Accept: 'application/json', 'X-CSRF-TOKEN': token, ...(file ? {} : { 'Content-Type': 'application/json' }) },
                 body: payload,
             });
             if (!response.ok) {
                 const data = await response.json().catch(() => ({}));
-                showError(data.errors?.body?.[0] || data.errors?.photo?.[0]
-                    || (response.status === 413 ? 'The photo must be 5 MB or smaller.' : 'Your message was not sent. Try again.'));
+                showError(data.errors?.body?.[0] || data.errors?.photo?.[0] || data.errors?.video?.[0]
+                    || (response.status === 413 ? 'The file is too large to send.' : 'Your message was not sent. Try again.'));
                 return;
             }
             const { message } = await response.json();
@@ -122,7 +146,7 @@
             render(message);
             textarea.value = '';
             textarea.style.height = '';
-            clearPhoto();
+            clearFile();
             scrollToEnd();
         } catch (_) {
             showError('You seem to be offline. Your message was not sent.');

@@ -216,6 +216,8 @@ Route::middleware(['auth', 'active', 'verified', 'role:buyer,seller', 'nocache']
     Route::post('/{conversation}', [ChatController::class, 'send'])->whereNumber('conversation')->middleware('throttle:30,1')->name('send');
     Route::post('/{conversation}/typing', [ChatController::class, 'typing'])->whereNumber('conversation')->middleware('throttle:60,1')->name('typing');
     Route::post('/{conversation}/read', [ChatController::class, 'read'])->whereNumber('conversation')->middleware('throttle:120,1')->name('read');
+    // A photo or video sent in the conversation.
+    Route::get('/{conversation}/media/{message}/{kind}', [ChatController::class, 'media'])->whereNumber(['conversation', 'message'])->whereIn('kind', ['photo', 'video'])->middleware('throttle:240,1')->name('media');
 });
 
 Route::middleware(['auth', 'active', 'verified', 'role:courier', 'nocache'])->prefix('courier')->name('courier.')->group(function () {
@@ -314,7 +316,7 @@ Route::middleware(['auth', 'active', 'verified', 'nocache'])->group(function () 
     Route::get('/support', [SupportChatController::class, 'user'])->middleware('role:buyer,seller,rider,logistics')->name('support');
     Route::get('/support/{thread}/messages', [SupportChatController::class, 'messages'])->middleware('throttle:120,1')->name('support.messages');
     Route::post('/support/{thread}', [SupportChatController::class, 'send'])->middleware('throttle:30,1')->name('support.send');
-    Route::get('/support/{thread}/messages/{message}/photo', [SupportChatController::class, 'photo'])->middleware('throttle:240,1')->name('support.photo');
+    Route::get('/support/{thread}/messages/{message}/{kind}', [SupportChatController::class, 'media'])->whereIn('kind', ['photo', 'video'])->middleware('throttle:240,1')->name('support.media');
     // The rider's photo of a delivered parcel, for the people in the order.
     Route::get('/deliveries/{shipment}/proof', [DeliveryProofController::class, 'show'])->middleware('throttle:120,1')->name('delivery-proof');
     // Photos of a returned item at pickup and at the hub, for the case, its rider and the logistics partner.
@@ -383,4 +385,5 @@ Route::middleware(['auth', 'active', 'verified', 'role:logistics', 'nocache'])->
 Route::middleware(['auth', 'active', 'verified', 'role:logistics,seller,rider', 'nocache'])->prefix('logistics-chat')->name('logistics-chat.')->group(function () {
     Route::get('/{thread}/messages', [LogisticsChatController::class, 'messages'])->middleware('throttle:120,1')->name('messages');
     Route::post('/{thread}', [LogisticsChatController::class, 'send'])->middleware('throttle:30,1')->name('send');
+    Route::get('/{thread}/messages/{message}/{kind}', [LogisticsChatController::class, 'media'])->whereIn('kind', ['photo', 'video'])->middleware('throttle:240,1')->name('media');
 });

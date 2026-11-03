@@ -16,7 +16,8 @@ class SupportScreen extends StatelessWidget {
         appBar: AppBar(title: const Text('Help & support')),
         body: SupportChatView(
           load: api.supportMessages,
-          send: (body, clientId) => api.sendSupportMessage(body, clientId: clientId),
+          send: (body, clientId, attachment) => api.sendSupportMessage(body, clientId: clientId, attachment: attachment),
+          mediaHeaders: api.mediaHeaders,
           intro: 'Message the ZAYLO team about orders, payments, refunds, or your account. '
               'Include the order number if it is about an order.',
         ),

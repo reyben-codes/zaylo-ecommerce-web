@@ -24,10 +24,11 @@ class LogisticsMessenger
         return LogisticsThread::firstOrCreate(['logistics_provider_id' => $provider->id, 'user_id' => $participant->id]);
     }
 
-    public function send(LogisticsThread $thread, User $sender, string $body): LogisticsMessage
+    /** [$attachment] is the stored photo or video from ChatMedia::store, if any. */
+    public function send(LogisticsThread $thread, User $sender, string $body, array $attachment = []): LogisticsMessage
     {
-        return DB::transaction(function () use ($thread, $sender, $body) {
-            $message = $thread->messages()->create(['sender_id' => $sender->id, 'body' => $body]);
+        return DB::transaction(function () use ($thread, $sender, $body, $attachment) {
+            $message = $thread->messages()->create(['sender_id' => $sender->id, 'body' => $body] + $attachment);
             $thread->update(['last_message_at' => $message->created_at]);
 
             return $message;
@@ -71,6 +72,6 @@ class LogisticsMessenger
             'mine' => (int) $message->sender_id === (int) $viewer->id,
             'sender' => $message->sender?->name,
             'time' => $message->created_at?->timezone('Asia/Manila')->format('M j, g:i A'),
-        ];
+        ] + ChatMedia::links($message, fn (string $kind) => route('logistics-chat.media', [$message->logistics_thread_id, $message, $kind]));
     }
 }

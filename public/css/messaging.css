@@ -59,6 +59,24 @@
 .messaging-compose-row textarea { flex: 1; min-width: 0; resize: none; overflow-y: auto; padding: 12px; border: 1px solid var(--c-ded3c7); border-radius: 9px; background: var(--c-fffdfb); font-size: .84rem; }
 .messaging-compose-row button { display: flex; gap: 8px; align-items: center; border: 0; border-radius: 9px; background: var(--c-1a1714); color: var(--c-ffffff); min-height: 44px; padding: 12px 17px; font-size: .78rem; }
 .messaging-composer > p { font-size: .65rem; color: var(--c-8c7c6d); margin: 7px 0 0; }
+/* A photo or video with a message: the paperclip in the composer, the chosen file above it, and the media in the bubble. */
+.messaging-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.messaging-attach { position: relative; display: grid; flex: 0 0 auto; place-items: center; width: 44px; height: 44px; border: 1px solid var(--c-ded3c7); border-radius: 9px; background: var(--c-fffdfb); color: var(--c-6b5f54); cursor: pointer; }
+.messaging-attach:hover { background: var(--c-f5f0ea); color: var(--c-1a1714); }
+.messaging-attach:focus-within { outline: 2px solid var(--c-9a755e); outline-offset: 2px; }
+.messaging-attach input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.messaging-attach:has(input:disabled) { cursor: default; opacity: .55; }
+.messaging-attached { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; color: var(--c-6b5f54); font-size: .74rem; }
+.messaging-attached[hidden] { display: none; }
+.messaging-attached span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.messaging-attached button { padding: 2px 6px; border: 0; border-radius: 6px; background: transparent; color: inherit; cursor: pointer; }
+.messaging-attached button:hover { background: var(--c-f5f0ea); }
+.messaging-bubble.has-media { display: grid; gap: 8px; padding: 5px; }
+.messaging-bubble.has-media .messaging-text { padding: 0 9px 5px; }
+.messaging-media { display: block; overflow: hidden; border-radius: 10px; line-height: 0; }
+.messaging-media img, video.messaging-media { display: block; max-width: min(100%, 280px); max-height: 280px; object-fit: cover; }
+video.messaging-media { width: min(100%, 300px); background: var(--c-1a1714); }
+.messaging-media:focus-visible { outline: 2px solid var(--c-9a755e); outline-offset: 2px; }
 .messaging-empty { padding: 24px 20px; color: var(--c-867466); font-size: .8rem; }
 .messaging-thread > .messaging-welcome { flex-shrink: 1; min-height: 0; overflow-y: auto; margin: auto; max-width: 370px; padding: 30px 25px; text-align: center; }
 .messaging-welcome > i { font-size: 3rem; color: var(--c-a9876d); }

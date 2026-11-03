@@ -145,7 +145,9 @@ class _RiderShellState extends State<RiderShell> {
                 RiderHistoryTab(api: widget.api, period: _historyPeriod),
                 SupportChatView(
                   load: widget.api.supportMessages,
-                  send: (body, clientId) => widget.api.sendSupportMessage(body, clientId: clientId),
+                  send: (body, clientId, attachment) =>
+                      widget.api.sendSupportMessage(body, clientId: clientId, attachment: attachment),
+                  mediaHeaders: widget.api.mediaHeaders,
                   intro: 'Message the ZAYLO support team about pickups, deliveries, payments, or your account. '
                       'Include the order number if it is about a delivery.',
                   visible: _tab == _chatTab,

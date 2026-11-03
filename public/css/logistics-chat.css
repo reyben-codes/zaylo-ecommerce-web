@@ -195,7 +195,20 @@
     text-align: left;
 }
 
-/* Photos in support chats: a rounded thumbnail that opens the full photo. */
+/* Photos and videos in a message: a rounded thumbnail that opens the full photo, or a video that plays in place. */
+.logistics-chat__video {
+    display: block;
+    justify-self: start;
+    width: min(100%, 320px);
+    max-height: 320px;
+    border-radius: 14px;
+    background: var(--c-1a1714);
+}
+
+.logistics-chat__message.is-mine .logistics-chat__video {
+    justify-self: end;
+}
+
 .logistics-chat__photo {
     display: block;
     justify-self: start;

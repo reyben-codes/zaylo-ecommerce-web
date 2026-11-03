@@ -6,6 +6,7 @@ use App\Models\DeliveryMessage;
 use App\Models\Order;
 use App\Models\Shipment;
 use App\Models\User;
+use App\Services\ChatMedia;
 use App\Services\ShipmentWorkflow;
 use App\Support\OrderParties;
 use App\Support\ParcelView;
@@ -23,6 +24,8 @@ use Illuminate\Validation\ValidationException;
  */
 class MobileDeliveryChatController extends Controller
 {
+    public function __construct(private readonly ChatMedia $media) {}
+
     public function riderShow(Request $request, Shipment $shipment): JsonResponse
     {
         $this->authorizeRider($request, $shipment);
@@ -64,20 +67,45 @@ class MobileDeliveryChatController extends Controller
         return $shipment;
     }
 
+    /** The rider's own copy of a photo or video in the delivery chat. */
+    public function riderMedia(Request $request, Shipment $shipment, DeliveryMessage $message, string $kind)
+    {
+        $this->authorizeRider($request, $shipment);
+
+        return $this->serveMedia($shipment, $message, $kind);
+    }
+
+    public function buyerMedia(Request $request, Order $order, DeliveryMessage $message, string $kind)
+    {
+        return $this->serveMedia($this->buyerShipment($request, $order), $message, $kind);
+    }
+
+    private function serveMedia(Shipment $shipment, DeliveryMessage $message, string $kind)
+    {
+        abort_unless((int) $message->shipment_id === (int) $shipment->id, 404);
+
+        return ChatMedia::response($message, $kind);
+    }
+
     private function send(Request $request, Shipment $shipment, bool $rider): JsonResponse
     {
-        $validated = $request->validate([
-            'body' => ['required', 'string', 'max:2000'],
-            'client_id' => ['nullable', 'uuid'],
-        ], ['body.required' => 'Type a message to send.']);
+        $canAttach = ChatMedia::supported('delivery_messages');
+        $validated = $request->validate(
+            ($canAttach ? ChatMedia::rules() : ['body' => ['required', 'string', 'max:2000']]) + ['client_id' => ['nullable', 'uuid']],
+            ['body.required' => 'Type a message to send.'] + ChatMedia::messages(),
+        );
 
         if (! $shipment->chatIsOpen()) {
             throw ValidationException::withMessages(['body' => $this->closedReason($shipment)]);
         }
 
-        $message = $shipment->postMessage($request->user(), $validated['body'], fromRider: $rider, clientId: $validated['client_id'] ?? null);
+        // A retried send with the same client id is stored once, so its file is not saved twice either.
+        $retried = isset($validated['client_id']) && $shipment->messages()->where('client_id', $validated['client_id'])->exists();
+        $attachment = $canAttach && ! $retried ? $this->media->store($request, "delivery-chat/{$shipment->id}") : [];
+        $message = $shipment->postMessage($request->user(), (string) ($validated['body'] ?? ''), fromRider: $rider,
+            clientId: $validated['client_id'] ?? null, attachment: $attachment);
 
-        return response()->json(['message' => $this->messagePayload($message, rider: $rider)], 201);
+        return response()->json(['message' => $this->messagePayload($message, $shipment, rider: $rider)], 201);
     }
 
     /** The whole thread, oldest first; opening it marks the other side's messages as read. */
@@ -99,7 +127,7 @@ class MobileDeliveryChatController extends Controller
                 : Str::of(User::find($shipment->riderUserId())?->name ?? 'Your rider')->before(' ')->toString(),
             'other_role' => $rider ? 'Buyer' : 'Rider',
             'messages' => $shipment->messages()->get()
-                ->map(fn (DeliveryMessage $message) => $this->messagePayload($message, rider: $rider))->values(),
+                ->map(fn (DeliveryMessage $message) => $this->messagePayload($message, $shipment, rider: $rider))->values(),
         ];
     }
 
@@ -113,8 +141,13 @@ class MobileDeliveryChatController extends Controller
         };
     }
 
-    private function messagePayload(DeliveryMessage $message, bool $rider): array
+    private function messagePayload(DeliveryMessage $message, Shipment $shipment, bool $rider): array
     {
+        // Each side opens the files through its own route: the rider by delivery, the buyer by order.
+        $route = fn (string $kind) => $rider
+            ? route('mobile.rider.deliveries.chat.media', [$shipment->id, $message, $kind])
+            : route('mobile.orders.chat.media', [($shipment->order ?? $shipment->sellerOrder?->order)?->id, $message, $kind]);
+
         return [
             'id' => $message->id,
             'client_id' => $message->client_id,
@@ -122,6 +155,6 @@ class MobileDeliveryChatController extends Controller
             'mine' => $message->from_rider === $rider,
             'read' => $message->read_at !== null,
             'sent_at' => $message->created_at?->toIso8601String(),
-        ];
+        ] + ChatMedia::links($message, $route);
     }
 }

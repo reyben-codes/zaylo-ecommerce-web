@@ -102,6 +102,7 @@ Route::prefix('mobile')->name('mobile.')->middleware('throttle:60,1')->group(fun
             // Chat with the buyer while the parcel is with the rider.
             Route::get('/deliveries/{shipment}/chat', [MobileDeliveryChatController::class, 'riderShow'])->name('deliveries.chat');
             Route::post('/deliveries/{shipment}/chat', [MobileDeliveryChatController::class, 'riderSend'])->middleware('throttle:20,1,mobile-delivery-chat')->name('deliveries.chat.send');
+            Route::get('/deliveries/{shipment}/chat/{message}/{kind}', [MobileDeliveryChatController::class, 'riderMedia'])->whereIn('kind', ['photo', 'video'])->name('deliveries.chat.media');
             Route::get('/history', [MobileRiderDashboardController::class, 'history'])->name('history');
             Route::get('/earnings', [MobileRiderDashboardController::class, 'earnings'])->name('earnings');
             Route::get('/reports', [MobileRiderDashboardController::class, 'reports'])->name('reports');
@@ -114,6 +115,7 @@ Route::prefix('mobile')->name('mobile.')->middleware('throttle:60,1')->group(fun
             Route::get('/support', [MobileRiderSupportController::class, 'show'])->name('support');
             Route::get('/support/unread', [MobileRiderSupportController::class, 'unread'])->name('support.unread');
             Route::post('/support/messages', [MobileRiderSupportController::class, 'send'])->middleware('throttle:20,1,mobile-support')->name('support.send');
+            Route::get('/support/messages/{message}/{kind}', [MobileRiderSupportController::class, 'media'])->whereIn('kind', ['photo', 'video'])->name('support.media');
 
             // Complaints about deliveries the rider handled.
             $complaintRoutes();
@@ -142,6 +144,7 @@ Route::prefix('mobile')->name('mobile.')->middleware('throttle:60,1')->group(fun
             Route::get('/orders/{order}/delivery-photo', [MobileOrderController::class, 'deliveryPhoto'])->name('orders.delivery-photo');
             Route::get('/orders/{order}/chat', [MobileDeliveryChatController::class, 'buyerShow'])->name('orders.chat');
             Route::post('/orders/{order}/chat', [MobileDeliveryChatController::class, 'buyerSend'])->middleware('throttle:20,1,mobile-delivery-chat')->name('orders.chat.send');
+            Route::get('/orders/{order}/chat/{message}/{kind}', [MobileDeliveryChatController::class, 'buyerMedia'])->whereIn('kind', ['photo', 'video'])->name('orders.chat.media');
             Route::post('/orders/{order}/complaint', [MobileComplaintController::class, 'store'])->middleware('throttle:10,1,mobile-complaint')->name('orders.complaint');
             Route::post('/order-items/{orderItem}/review', [MobileOrderController::class, 'review'])->middleware('throttle:10,1,mobile-review')->name('order-items.review');
 
@@ -180,12 +183,14 @@ Route::prefix('mobile')->name('mobile.')->middleware('throttle:60,1')->group(fun
                 Route::post('/', [ChatController::class, 'send'])->middleware('throttle:30,1,mobile-chat-send')->name('send');
                 Route::post('/typing', [ChatController::class, 'typing'])->name('typing');
                 Route::post('/read', [ChatController::class, 'read'])->name('read');
+                Route::get('/media/{message}/{kind}', [ChatController::class, 'media'])->whereNumber('message')->whereIn('kind', ['photo', 'video'])->name('media');
             });
 
             // Help & support: the same thread as the website, answered from the Admin Center.
             Route::get('/support', [MobileRiderSupportController::class, 'show'])->name('support');
             Route::get('/support/unread', [MobileRiderSupportController::class, 'unread'])->name('support.unread');
             Route::post('/support/messages', [MobileRiderSupportController::class, 'send'])->middleware('throttle:20,1,mobile-support')->name('support.send');
+            Route::get('/support/messages/{message}/{kind}', [MobileRiderSupportController::class, 'media'])->whereIn('kind', ['photo', 'video'])->name('support.media');
 
             // The buyer's complaints.
             $complaintRoutes();

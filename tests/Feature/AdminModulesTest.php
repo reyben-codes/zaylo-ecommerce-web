@@ -280,7 +280,7 @@ class AdminModulesTest extends TestCase
         $thread = SupportThread::create(['user_id' => $buyer->id]);
 
         $this->actingAs($this->admin)->get(route('admin.chat', ['thread' => $thread->id]))->assertOk()
-            ->assertSee('data-chat-photo', false)->assertSee('enctype="multipart/form-data"', false);
+            ->assertSee('data-chat-attach', false)->assertSee('enctype="multipart/form-data"', false);
 
         // A photo alone is a message; it is re-encoded and kept on the private disk.
         $sent = $this->post(route('support.send', $thread), ['photo' => UploadedFile::fake()->image('damaged-box.jpg', 2400, 1800)], ['Accept' => 'application/json'])
@@ -289,12 +289,12 @@ class AdminModulesTest extends TestCase
         $this->assertSame('', $message->body);
         Storage::disk('local')->assertExists($message->image_path);
         $this->assertStringStartsWith("support/{$thread->id}/", $message->image_path);
-        $this->assertSame(route('support.photo', [$thread, $message]), $sent['photo']);
+        $this->assertSame(route('support.media', [$thread, $message, 'photo']), $sent['photo']);
         [$width] = getimagesizefromstring(Storage::disk('local')->get($message->image_path));
         $this->assertSame(1600, $width);
 
         // Text and a photo together, from the user's Help & support page.
-        $this->actingAs($buyer)->get(route('support'))->assertOk()->assertSee('data-chat-photo', false)->assertSee($sent['photo']);
+        $this->actingAs($buyer)->get(route('support'))->assertOk()->assertSee('data-chat-attach', false)->assertSee($sent['photo']);
         $this->post(route('support.send', $thread), ['body' => 'Here is the receipt.', 'photo' => UploadedFile::fake()->image('receipt.png', 400, 600)], ['Accept' => 'application/json'])
             ->assertCreated()->assertJsonPath('message.body', 'Here is the receipt.');
         $this->get($sent['photo'])->assertOk();

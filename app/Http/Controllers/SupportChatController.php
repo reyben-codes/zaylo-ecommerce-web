@@ -5,12 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\SupportMessage;
 use App\Models\SupportThread;
 use App\Models\User;
-use App\Services\ChatPhotos;
+use App\Services\ChatMedia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Help & support: every user can message the ZAYLO admin team, and admins can message any user.
@@ -72,19 +71,19 @@ class SupportChatController extends Controller
         return response()->json(['messages' => $messages->map(fn ($message) => $this->payload($message, $request->user()))]);
     }
 
-    public function send(Request $request, SupportThread $thread, ChatPhotos $photos)
+    public function send(Request $request, SupportThread $thread, ChatMedia $media)
     {
         abort_unless($thread->isOpenTo($request->user()), 403);
-        $canAttach = Schema::hasColumn('support_messages', 'image_path');
-        // A message is text, a photo, or both.
+        $canAttach = ChatMedia::supported('support_messages');
+        // A message is text, a photo or video, or both.
         $data = $request->validate(
-            ['body' => [$canAttach ? 'required_without:photo' : 'required', 'nullable', 'string', 'max:2000']] + ($canAttach ? ChatPhotos::rules() : []),
-            ['body.required' => 'Type a message first.', 'body.required_without' => 'Type a message or add a photo.'] + ChatPhotos::messages(),
+            $canAttach ? ChatMedia::rules() : ['body' => ['required', 'string', 'max:2000']],
+            ['body.required' => 'Type a message first.'] + ChatMedia::messages(),
         );
-        $imagePath = $canAttach && $request->hasFile('photo') ? $photos->store($request->file('photo'), "support/{$thread->id}") : null;
-        $message = DB::transaction(function () use ($thread, $request, $data, $imagePath) {
+        $attachment = $canAttach ? $media->store($request, "support/{$thread->id}") : [];
+        $message = DB::transaction(function () use ($thread, $request, $data, $attachment) {
             $message = $thread->messages()->create(['sender_id' => $request->user()->id, 'body' => trim((string) ($data['body'] ?? ''))]
-                + ($imagePath ? ['image_path' => $imagePath] : []));
+                + $attachment);
             $thread->update(['last_message_at' => $message->created_at]);
 
             return $message;
@@ -95,16 +94,12 @@ class SupportChatController extends Controller
             : back();
     }
 
-    /** A photo from a support conversation; only its user and the admin team can open it. */
-    public function photo(Request $request, SupportThread $thread, SupportMessage $message)
+    /** A photo or video from a support conversation; only its user and the admin team can open it. */
+    public function media(Request $request, SupportThread $thread, SupportMessage $message, string $kind)
     {
         abort_unless($thread->isOpenTo($request->user()) && (int) $message->support_thread_id === (int) $thread->id, 403);
-        abort_unless($message->image_path && Storage::disk('local')->exists($message->image_path), 404);
 
-        return Storage::disk('local')->response($message->image_path, 'photo.'.pathinfo($message->image_path, PATHINFO_EXTENSION), [
-            'Cache-Control' => 'private, max-age=86400',
-            'X-Content-Type-Options' => 'nosniff',
-        ], 'inline');
+        return ChatMedia::response($message, $kind);
     }
 
     private function conversation(Request $request, Collection $threads, Collection $contacts): array
@@ -140,12 +135,11 @@ class SupportChatController extends Controller
         return [
             'id' => $message->id,
             'body' => $message->body,
-            'photo' => $message->image_path ? route('support.photo', [$message->support_thread_id, $message]) : null,
             'mine' => (int) $message->sender_id === (int) $viewer->id,
             // Users see one support team; admins see which admin answered.
             'sender' => $fromAdmin && ! $viewer->hasRole('admin') ? 'ZAYLO support' : $message->sender?->name,
             'time' => $message->created_at?->timezone('Asia/Manila')->format('M j, g:i A'),
-        ];
+        ] + ChatMedia::links($message, fn (string $kind) => route('support.media', [$message->support_thread_id, $message, $kind]));
     }
 
     private function roleLabel(?User $user): string

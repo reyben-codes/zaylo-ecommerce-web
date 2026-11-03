@@ -66,7 +66,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       builder: (_) => DeliveryChatScreen(
         title: 'Chat with rider',
         load: () => api.orderChat(order.id),
-        send: (body, clientId) => api.sendOrderMessage(order.id, body, clientId: clientId),
+        send: (body, clientId, attachment) =>
+            api.sendOrderMessage(order.id, body, clientId: clientId, attachment: attachment),
+        mediaHeaders: api.mediaHeaders,
       ),
     ));
     if (mounted) await _load();

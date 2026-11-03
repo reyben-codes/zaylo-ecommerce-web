@@ -254,7 +254,9 @@ mixin RiderDeliveryActions<T extends StatefulWidget> on State<T> {
       builder: (_) => DeliveryChatScreen(
         title: 'Chat with buyer',
         load: () => riderApi.deliveryChat(delivery.id),
-        send: (body, clientId) => riderApi.sendDeliveryMessage(delivery.id, body, clientId: clientId),
+        send: (body, clientId, attachment) =>
+            riderApi.sendDeliveryMessage(delivery.id, body, clientId: clientId, attachment: attachment),
+        mediaHeaders: riderApi.mediaHeaders,
       ),
     ));
     if (mounted) await reloadDeliveries();

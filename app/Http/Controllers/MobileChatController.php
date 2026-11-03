@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Product;
+use App\Services\ChatMedia;
 use App\Services\ChatStarter;
 use App\Support\MobilePayload;
 use Illuminate\Http\JsonResponse;
@@ -98,7 +99,7 @@ class MobileChatController extends Controller
             'name' => $details['name'],
             'product_name' => $details['product']['name'] ?? null,
             'product_image_url' => $details['product']['image_url'] ?? null,
-            'preview' => $latest?->body,
+            'preview' => $latest ? ChatMedia::preview($latest) : null,
             'last_message_mine' => $latest ? (int) $latest->sender_id === (int) $request->user()->id : false,
             'unread' => (int) ($chat->unread_count ?? 0),
             'updated_at' => ($chat->last_message_at ?? $chat->created_at)?->toIso8601String(),

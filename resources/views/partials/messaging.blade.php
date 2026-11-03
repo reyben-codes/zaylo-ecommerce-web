@@ -55,11 +55,19 @@
                 <form class="messaging-composer" method="POST" action="{{ route('messages.send', $conversation) }}" data-message-form>
                     @csrf
                     <label class="messaging-label" for="message-body">Your message</label>
+                    <div class="messaging-attached" data-message-attached hidden>
+                        <i class="fas fa-image" aria-hidden="true" data-message-attached-icon></i><span></span>
+                        <button type="button" data-message-attach-clear aria-label="Remove attachment"><i class="fas fa-xmark" aria-hidden="true"></i></button>
+                    </div>
                     <div class="messaging-compose-row">
-                        <textarea id="message-body" name="body" rows="2" maxlength="2000" placeholder="Write a message…" required disabled></textarea>
+                        <label class="messaging-attach" title="Add a photo or video">
+                            <i class="fas fa-paperclip" aria-hidden="true"></i><span class="messaging-sr">Add a photo or video</span>
+                            <input type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm,video/3gpp" data-message-attach disabled>
+                        </label>
+                        <textarea id="message-body" name="body" rows="2" maxlength="2000" placeholder="Write a message…" disabled></textarea>
                         <button type="submit" disabled><i class="fas fa-paper-plane" aria-hidden="true"></i><span>Send</span></button>
                     </div>
-                    <p>Press Enter to send, Shift + Enter for a new line. Up to 2,000 characters; keep it about shopping and orders.</p>
+                    <p>Press Enter to send, Shift + Enter for a new line. Add a photo (up to 5 MB) or video (up to 25 MB); keep it about shopping and orders.</p>
                 </form>
             @else
                 <div class="messaging-welcome"><i class="far fa-comments" aria-hidden="true"></i><h2>A little conversation goes a long way.</h2><p>Select a conversation{{ $sellerView ? ' to reply to a buyer.' : ' or use “Chat with seller” on a product page.' }}</p></div>

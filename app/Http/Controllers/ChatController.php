@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Product;
+use App\Services\ChatMedia;
 use App\Services\ChatStarter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -52,7 +53,7 @@ class ChatController extends Controller
             'conversations' => $conversations->map(function ($chat) use ($userId) {
                 return [
                     'id' => $chat->id, 'name' => $this->partnerName($chat, $userId),
-                    'preview' => $chat->latestMessage?->body ?? 'Start the conversation',
+                    'preview' => ChatMedia::preview($chat->latestMessage, 'Start the conversation'),
                     'unread' => $chat->unread_count,
                     'updated_at' => $chat->last_message_at?->toIso8601String(),
                     'url' => route($chat->buyer_id == $userId ? 'buyer.chat' : 'seller.chat', ['conversation' => $chat->id]),
@@ -105,20 +106,29 @@ class ChatController extends Controller
         ]);
     }
 
-    public function send(Request $request, int $conversation)
+    public function send(Request $request, int $conversation, ChatMedia $media)
     {
         $chat = $this->owned($request, $conversation);
         $request->merge(['body' => is_string($request->input('body')) ? trim($request->input('body')) : $request->input('body')]);
-        $data = $request->validate(['body' => 'required|string|max:2000', 'client_id' => 'required|uuid']);
+        // A message is text, a photo or video, or both (once the media columns exist).
+        $canAttach = ChatMedia::supported('messages');
+        $data = $request->validate(
+            ($canAttach ? ChatMedia::rules() : ['body' => 'required|string|max:2000']) + ['client_id' => 'required|uuid'],
+            $canAttach ? ChatMedia::messages() : [],
+        );
         $other = $chat->buyer_id == $request->user()->id ? $chat->seller : $chat->buyer;
         abort_unless($other->isActive() && $other->hasVerifiedEmail(), 422, 'This account is currently unavailable for messaging.');
 
-        $message = DB::transaction(function () use ($chat, $request, $data) {
+        // A retried send with the same client id is stored once, so its file is not saved twice either.
+        $existing = $chat->messages()->where('sender_id', $request->user()->id)->where('client_id', $data['client_id'])->first();
+        $attachment = $canAttach && ! $existing ? $media->store($request, "chat/{$chat->id}") : [];
+
+        $message = $existing ?? DB::transaction(function () use ($chat, $request, $data, $attachment) {
             // Serializing sends also keeps message IDs and inbox ordering consistent.
             $locked = Conversation::whereKey($chat->id)->lockForUpdate()->firstOrFail();
             $message = $locked->messages()->firstOrCreate([
                 'sender_id' => $request->user()->id, 'client_id' => $data['client_id'],
-            ], ['body' => $data['body']]);
+            ], ['body' => (string) ($data['body'] ?? '')] + $attachment);
             if ($message->wasRecentlyCreated) {
                 $locked->update(['last_message_at' => $message->created_at]);
             }
@@ -129,6 +139,14 @@ class ChatController extends Controller
         Cache::forget($this->typingKey($chat, (int) $request->user()->id));
 
         return response()->json(['message' => $this->messageData($message, (int) $request->user()->id)]);
+    }
+
+    /** A photo or video sent in the conversation, for its buyer and seller only. */
+    public function media(Request $request, int $conversation, int $message, string $kind)
+    {
+        $chat = $this->owned($request, $conversation);
+
+        return ChatMedia::response($chat->messages()->findOrFail($message), $kind);
     }
 
     /**
@@ -182,10 +200,13 @@ class ChatController extends Controller
 
     private function messageData(Message $message, int $userId): array
     {
+        // The app and the website reach the same files through their own routes.
+        $route = request()->routeIs('mobile.*') ? 'mobile.messages.media' : 'messages.media';
+
         return [
             'id' => $message->id, 'body' => $message->body,
             'mine' => (int) $message->sender_id === $userId,
             'created_at' => $message->created_at->toIso8601String(),
-        ];
+        ] + ChatMedia::links($message, fn (string $kind) => route($route, [$message->conversation_id, $message->id, $kind]));
     }
 }

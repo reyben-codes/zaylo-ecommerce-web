@@ -21,7 +21,6 @@
         'startField' => 'participant_id',
         'fetchRoute' => 'support.messages',
         'sendRoute' => 'support.send',
-        'photos' => true,
         'emptyText' => 'When someone writes to ZAYLO support, the conversation appears here. You can also start one.',
     ])
 @endsection

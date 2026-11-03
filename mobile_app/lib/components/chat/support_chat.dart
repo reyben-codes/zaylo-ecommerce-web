@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'package:zaylo_mobile/api/api_exception.dart';
+import 'package:zaylo_mobile/components/chat/chat_media_view.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
+import 'package:zaylo_mobile/models/chat_media.dart';
 import 'package:zaylo_mobile/models/support_models.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 import 'package:zaylo_mobile/utils/formatters.dart';
@@ -11,19 +13,22 @@ import 'package:zaylo_mobile/utils/ids.dart';
 
 /// Chat with ZAYLO support, for buyers and riders. Staff reply from the admin
 /// Chat page; new replies are fetched every [_pollEvery] while it is visible.
-/// Each app passes its own [load] and [send] calls.
+/// Each app passes its own [load] and [send] calls. A message can carry a
+/// photo or video, opened with [mediaHeaders].
 class SupportChatView extends StatefulWidget {
   const SupportChatView({
     super.key,
     required this.load,
     required this.send,
     required this.intro,
+    required this.mediaHeaders,
     this.visible = true,
     this.onRead,
   });
 
   final Future<List<SupportMessage>> Function() load;
-  final Future<SupportMessage> Function(String body, String clientId) send;
+  final Future<SupportMessage> Function(String body, String clientId, ChatAttachment? attachment) send;
+  final MediaHeaders mediaHeaders;
 
   /// What to message support about, shown above the thread.
   final String intro;
@@ -48,6 +53,9 @@ class _SupportChatViewState extends State<SupportChatView> {
 
   /// Sent but not yet confirmed (or failed), keyed by client id.
   final _outbox = <String, SupportMessage>{};
+
+  /// The photo or video picked for the next message.
+  ChatAttachment? _attachment;
   bool _loading = false;
   Object? _error;
   Timer? _poll;
@@ -100,16 +108,31 @@ class _SupportChatViewState extends State<SupportChatView> {
     }
   }
 
+  Future<void> _attach() async {
+    final attachment = await pickChatAttachment(context);
+    if (attachment != null && mounted) setState(() => _attachment = attachment);
+  }
+
   Future<void> _send([SupportMessage? retry]) async {
     final body = retry?.body ?? _input.text.trim();
-    if (body.isEmpty) return;
+    final attachment = retry == null ? _attachment : retry.attachment;
+    if (body.isEmpty && attachment == null) return;
     final draft = retry?.copyWith(pending: true, failed: false) ??
-        SupportMessage(clientId: newUuidV4(), body: body, fromStaff: false, sentAt: DateTime.now(), pending: true);
-    setState(() => _outbox[draft.clientId] = draft);
+        SupportMessage(
+            clientId: newUuidV4(),
+            body: body,
+            fromStaff: false,
+            sentAt: DateTime.now(),
+            attachment: attachment,
+            pending: true);
+    setState(() {
+      _outbox[draft.clientId] = draft;
+      if (retry == null) _attachment = null;
+    });
     if (retry == null) _input.clear();
     _scrollToEnd();
     try {
-      final saved = await widget.send(body, draft.clientId);
+      final saved = await widget.send(body, draft.clientId, attachment);
       if (!mounted) return;
       setState(() {
         _outbox.remove(draft.clientId);
@@ -148,7 +171,8 @@ class _SupportChatViewState extends State<SupportChatView> {
                       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
                       children: [
                         _SupportIntro(widget.intro),
-                        for (final message in thread) _Bubble(message: message, onRetry: () => _send(message)),
+                        for (final message in thread)
+                          _Bubble(message: message, mediaHeaders: widget.mediaHeaders, onRetry: () => _send(message)),
                       ],
                     ),
                   ),
@@ -158,29 +182,34 @@ class _SupportChatViewState extends State<SupportChatView> {
         child: Container(
           padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
           decoration: BoxDecoration(border: Border(top: BorderSide(color: ZayloColors.line))),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Expanded(
-              child: TextField(
-                controller: _input,
-                minLines: 1,
-                maxLines: 4,
-                maxLength: _maxLength,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(
-                  hintText: 'Message ZAYLO support',
-                  counterText: '',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(22))),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            if (_attachment != null)
+              ChatAttachmentChip(attachment: _attachment!, onRemove: () => setState(() => _attachment = null)),
+            Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              ChatAttachButton(onPressed: _attach),
+              Expanded(
+                child: TextField(
+                  controller: _input,
+                  minLines: 1,
+                  maxLines: 4,
+                  maxLength: _maxLength,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: const InputDecoration(
+                    hintText: 'Message ZAYLO support',
+                    counterText: '',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(22))),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 6),
-            IconButton.filled(
-              tooltip: 'Send',
-              onPressed: () => _send(),
-              style: IconButton.styleFrom(backgroundColor: ZayloColors.ink, foregroundColor: ZayloColors.white),
-              icon: const Icon(Icons.send),
-            ),
+              const SizedBox(width: 6),
+              IconButton.filled(
+                tooltip: 'Send',
+                onPressed: () => _send(),
+                style: IconButton.styleFrom(backgroundColor: ZayloColors.ink, foregroundColor: ZayloColors.white),
+                icon: const Icon(Icons.send),
+              ),
+            ]),
           ]),
         ),
       ),
@@ -207,9 +236,10 @@ class _SupportIntro extends StatelessWidget {
 }
 
 class _Bubble extends StatelessWidget {
-  const _Bubble({required this.message, required this.onRetry});
+  const _Bubble({required this.message, required this.mediaHeaders, required this.onRetry});
 
   final SupportMessage message;
+  final MediaHeaders mediaHeaders;
   final VoidCallback onRetry;
 
   @override
@@ -234,7 +264,13 @@ class _Bubble extends StatelessWidget {
             border: message.failed ? Border.all(color: Colors.redAccent) : null,
           ),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(message.body, style: TextStyle(color: mine ? ZayloColors.white : ZayloColors.ink)),
+            if (!message.media.isEmpty || message.attachment != null)
+              Padding(
+                padding: EdgeInsets.only(bottom: message.body.isEmpty ? 0 : 8),
+                child: ChatMediaThumbnail(media: message.media, local: message.attachment, headers: mediaHeaders),
+              ),
+            if (message.body.isNotEmpty)
+              Text(message.body, style: TextStyle(color: mine ? ZayloColors.white : ZayloColors.ink)),
             const SizedBox(height: 4),
             Text(status,
                 style: TextStyle(

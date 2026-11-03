@@ -2,6 +2,7 @@
 /// website's ChatController JSON for the messages in a thread.
 library;
 
+import 'package:zaylo_mobile/models/chat_media.dart';
 import 'package:zaylo_mobile/models/json_parsing.dart';
 
 /// One conversation in the buyer's inbox: a seller, about a product.
@@ -49,6 +50,8 @@ class SellerChatMessage {
     required this.mine,
     this.id,
     this.sentAt,
+    this.media = const ChatMedia(),
+    this.attachment,
     this.pending = false,
     this.failed = false,
   });
@@ -61,6 +64,12 @@ class SellerChatMessage {
   final String body;
   final bool mine;
   final DateTime? sentAt;
+
+  /// The photo or video sent with it, once stored.
+  final ChatMedia media;
+
+  /// The picked photo or video while sending, so a failed send can be retried.
+  final ChatAttachment? attachment;
   final bool pending;
   final bool failed;
 
@@ -70,6 +79,8 @@ class SellerChatMessage {
         body: body,
         mine: mine,
         sentAt: sentAt,
+        media: media,
+        attachment: attachment,
         pending: pending ?? this.pending,
         failed: failed ?? this.failed,
       );
@@ -80,6 +91,7 @@ class SellerChatMessage {
         body: json['body'] as String? ?? '',
         mine: json['mine'] as bool? ?? false,
         sentAt: parseDate(json['created_at']),
+        media: ChatMedia.fromJson(json),
       );
 }
 

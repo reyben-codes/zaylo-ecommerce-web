@@ -4,6 +4,7 @@ import 'package:zaylo_mobile/api/api_client.dart';
 import 'package:zaylo_mobile/components/address/ph_address_section.dart';
 import 'package:zaylo_mobile/components/chat/delivery_chat.dart';
 import 'package:zaylo_mobile/models/auth_models.dart';
+import 'package:zaylo_mobile/models/chat_media.dart';
 import 'package:zaylo_mobile/models/rider/rider_activity_models.dart';
 import 'package:zaylo_mobile/models/rider/rider_dashboard_models.dart';
 import 'package:zaylo_mobile/models/rider/rider_models.dart';
@@ -114,11 +115,11 @@ class RiderApi extends ApiClient {
       DeliveryChat.fromJson((await send('GET', '/mobile/rider/deliveries/$id/chat'))['chat'] as Map<String, dynamic>);
 
   /// [clientId] makes a retried send safe: the server stores it only once.
-  Future<DeliveryChatMessage> sendDeliveryMessage(int id, String body, {required String clientId}) async =>
-      DeliveryChatMessage.fromJson((await send('POST', '/mobile/rider/deliveries/$id/chat', body: {
-        'body': body,
-        'client_id': clientId,
-      }))['message'] as Map<String, dynamic>);
+  /// An [attachment] (photo or video) goes with the text, or alone.
+  Future<DeliveryChatMessage> sendDeliveryMessage(int id, String body,
+          {required String clientId, ChatAttachment? attachment}) async =>
+      DeliveryChatMessage.fromJson((await sendChatMessage('/mobile/rider/deliveries/$id/chat',
+          body: body, clientId: clientId, attachment: attachment))['message'] as Map<String, dynamic>);
 
   Future<RiderEarnings> earnings() async => RiderEarnings.fromJson(await send('GET', '/mobile/rider/earnings'));
 

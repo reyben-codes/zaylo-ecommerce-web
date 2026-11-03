@@ -5,7 +5,11 @@
     const list = find('[data-message-list]');
     const form = find('[data-message-form]');
     const input = form?.querySelector('textarea');
-    const sendButton = form?.querySelector('button');
+    const sendButton = form?.querySelector('button[type="submit"]');
+    // One photo or video can go with a message, within the server's limits (App\Services\ChatMedia).
+    const attachInput = form?.querySelector('[data-message-attach]');
+    const attached = form?.querySelector('[data-message-attached]');
+    const MAX_PHOTO_BYTES = 5 * 1024 * 1024, MAX_VIDEO_BYTES = 25 * 1024 * 1024;
     const olderButton = find('[data-load-older]');
     const feedback = find('[data-chat-feedback]');
     const inboxScroll = find('[data-inbox-scroll]');
@@ -26,16 +30,19 @@
     const showError = (text, source = 'action') => { feedback.textContent = text; feedback.dataset.source = source; feedback.hidden = false; };
     const clearError = () => { feedback.hidden = true; };
     const request = async (url, data) => {
+        // A photo or video goes as form data (and may take a while to upload); everything else is JSON.
+        const upload = data instanceof FormData;
         const response = await fetch(url, {
             method: data ? 'POST' : 'GET', credentials: 'same-origin',
-            headers: { Accept: 'application/json', 'X-CSRF-TOKEN': csrf, ...(data ? { 'Content-Type': 'application/json' } : {}) },
-            body: data ? JSON.stringify(data) : undefined,
-            signal: AbortSignal.timeout(15000),
+            headers: { Accept: 'application/json', 'X-CSRF-TOKEN': csrf, ...(data && !upload ? { 'Content-Type': 'application/json' } : {}) },
+            body: upload ? data : (data ? JSON.stringify(data) : undefined),
+            signal: AbortSignal.timeout(upload ? 180000 : 15000),
         });
         if ([401, 403, 419].includes(response.status)) {
             stopped = true;
             throw new Error('Your session is no longer available. Refresh the page and sign in again.');
         }
+        if (response.status === 413) throw new Error('The file is too large to send.');
         if (!response.ok) {
             const json = await response.json().catch(() => ({}));
             throw new Error(Object.values(json.errors ?? {}).flat()[0] ?? (response.status === 429 ? 'Please wait a moment before trying again.' : json.message || 'Messages could not be loaded. Please try again.'));
@@ -136,7 +143,24 @@
             const row = element('article', `messaging-message${message.mine ? ' is-mine' : ''}`);
             row.dataset.messageId = message.id;
             row.setAttribute('aria-label', message.mine ? 'You' : 'Reply');
-            const bubble = element('div', 'messaging-bubble', message.body);
+            const bubble = element('div', `messaging-bubble${message.photo || message.video ? ' has-media' : ''}`);
+            const keepAtEnd = () => { if (follow) list.scrollTop = list.scrollHeight; };
+            if (message.photo) {
+                const link = element('a', 'messaging-media');
+                link.href = message.photo; link.target = '_blank'; link.rel = 'noopener';
+                const image = element('img');
+                image.src = message.photo; image.alt = message.mine ? 'Photo you sent' : 'Photo'; image.loading = 'lazy';
+                image.addEventListener('load', keepAtEnd, { once: true });
+                link.append(image); bubble.append(link);
+            }
+            if (message.video) {
+                const video = element('video', 'messaging-media');
+                video.src = message.video; video.controls = true; video.playsInline = true; video.preload = 'metadata';
+                video.setAttribute('aria-label', message.mine ? 'Video you sent' : 'Video');
+                video.addEventListener('loadedmetadata', keepAtEnd, { once: true });
+                bubble.append(video);
+            }
+            if (message.body) bubble.append(element('span', 'messaging-text', message.body));
             const time = element('time', '', new Date(message.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }));
             time.dateTime = message.created_at;
             row.append(bubble, time); fragment.append(row);
@@ -169,7 +193,7 @@
                 showTyping(Boolean(data.typing));
                 if (!initialized) olderButton.hidden = !data.has_older;
                 initialized = true;
-                if (!sending) { input.disabled = false; sendButton.disabled = false; }
+                if (!sending) { input.disabled = false; sendButton.disabled = false; attachInput.disabled = false; }
                 await markRead();
             }
             await inbox();
@@ -177,24 +201,53 @@
         } catch (error) { showError(error.message, 'refresh'); }
         finally { refreshing = false; }
     };
+    const chosenFile = () => attachInput?.files?.[0] ?? null;
+    const isVideo = file => file.type.startsWith('video/');
+    const clearFile = () => { if (attachInput) attachInput.value = ''; if (attached) attached.hidden = true; };
+    attachInput?.addEventListener('change', () => {
+        const file = chosenFile();
+        if (!file) { clearFile(); return; }
+        if (file.size > (isVideo(file) ? MAX_VIDEO_BYTES : MAX_PHOTO_BYTES)) {
+            clearFile();
+            showError(isVideo(file) ? 'The video must be 25 MB or smaller.' : 'The photo must be 5 MB or smaller.');
+            return;
+        }
+        clearError();
+        attached.querySelector('[data-message-attached-icon]').className = `fas ${isVideo(file) ? 'fa-video' : 'fa-image'}`;
+        attached.querySelector('span').textContent = file.name;
+        attached.hidden = false;
+        input.focus();
+    });
+    attached?.querySelector('[data-message-attach-clear]').addEventListener('click', () => { clearFile(); attachInput.focus(); });
     form?.addEventListener('submit', async event => {
         event.preventDefault();
         if (sending || stopped) return;
         const body = input.value.trim();
-        if (!body) { showError('Write a message first.'); input.focus(); return; }
-        if (!retry || retry.body !== body) retry = { body, client_id: crypto.randomUUID() };
-        sending = true; input.disabled = true; sendButton.disabled = true;
-        clearError();
+        const file = chosenFile();
+        if (!body && !file) { showError('Write a message, or add a photo or video.'); input.focus(); return; }
+        // A retried send keeps its client id, so the server stores it once.
+        if (!retry || retry.body !== body || retry.file !== file) retry = { body, file, client_id: crypto.randomUUID() };
+        let payload = { body, client_id: retry.client_id };
+        if (file) {
+            payload = new FormData();
+            payload.append('body', body);
+            payload.append('client_id', retry.client_id);
+            payload.append(isVideo(file) ? 'video' : 'photo', file);
+        }
+        sending = true; input.disabled = true; sendButton.disabled = true; attachInput.disabled = true;
+        if (file) { feedback.textContent = isVideo(file) ? 'Sending your video…' : 'Sending your photo…'; feedback.dataset.source = 'upload'; feedback.hidden = false; }
+        else clearError();
         try {
-            await request(root.dataset.sendUrl, retry);
-            retry = null; input.value = '';
+            await request(root.dataset.sendUrl, payload);
+            if (feedback.dataset.source === 'upload') clearError();
+            retry = null; input.value = ''; clearFile();
             typingActive = false; typingSentAt = 0;
             list.scrollTop = list.scrollHeight;
             // Fetch from the previous cursor so simultaneous incoming messages are not skipped.
             await refresh();
         } catch (error) { showError(`${error.message} Your draft has been kept.`); }
         finally {
-            sending = false; input.disabled = stopped; sendButton.disabled = stopped;
+            sending = false; input.disabled = stopped; sendButton.disabled = stopped; attachInput.disabled = stopped;
             if (!stopped) input.focus();
         }
     });

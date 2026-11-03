@@ -112,7 +112,7 @@ class WorkspaceNotificationFeed
                 ->latest('id')->limit(200)->get()->unique('support_thread_id')->take(self::LIMIT)
                 ->each(fn (SupportMessage $message) => $items->push($this->item(
                     'support:'.$message->id, 'message', 'fa-comments', 'Support message',
-                    ($message->thread?->user?->name ?? 'A user').': '.(filled($message->body) ? str($message->body)->limit(90) : 'sent a photo'), route('admin.chat', ['thread' => $message->support_thread_id]), 'Reply', $message->created_at,
+                    ($message->thread?->user?->name ?? 'A user').': '.(filled($message->body) ? str($message->body)->limit(90) : ($message->video_path ? 'sent a video' : 'sent a photo')), route('admin.chat', ['thread' => $message->support_thread_id]), 'Reply', $message->created_at,
                 )));
         }
 

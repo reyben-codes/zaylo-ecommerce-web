@@ -34,6 +34,7 @@ import 'package:zaylo_mobile/features/buyer/shop/shop_screen.dart';
 import 'package:zaylo_mobile/features/rider/dashboard/widgets/rider_dashboard_widgets.dart';
 import 'package:zaylo_mobile/features/rider/history/rider_history_tab.dart';
 import 'package:zaylo_mobile/models/auth_models.dart';
+import 'package:zaylo_mobile/models/chat_media.dart';
 import 'package:zaylo_mobile/features/buyer/catalog/product_card.dart';
 import 'package:zaylo_mobile/models/buyer/account_models.dart';
 import 'package:zaylo_mobile/models/buyer/cart_models.dart';
@@ -458,11 +459,17 @@ class FakeRiderApi extends RiderApi {
         'order_number': 'ZAY-ORDER-$id',
         'messages': [
           {'id': 1, 'client_id': 'c1', 'body': 'The gate is blue.', 'mine': false, 'read': true, 'sent_at': '2026-10-12T08:00:00Z'},
+          // A video alone, such as the buyer showing where to leave the parcel.
+          {
+            'id': 3, 'client_id': 'c3', 'body': '', 'mine': false, 'read': true, 'sent_at': '2026-10-12T08:01:00Z',
+            'video': 'http://fake.test/api/mobile/rider/deliveries/1/chat/3/video',
+          },
         ],
       });
 
   @override
-  Future<DeliveryChatMessage> sendDeliveryMessage(int id, String body, {required String clientId}) async {
+  Future<DeliveryChatMessage> sendDeliveryMessage(int id, String body,
+      {required String clientId, ChatAttachment? attachment}) async {
     chatSent.add(body);
     return DeliveryChatMessage(id: 2, clientId: clientId, body: body, mine: true, sentAt: DateTime(2026, 10, 12));
   }
@@ -692,7 +699,7 @@ class FakeRiderApi extends RiderApi {
   }
 
   @override
-  Future<SupportMessage> sendSupportMessage(String body, {String? clientId}) async {
+  Future<SupportMessage> sendSupportMessage(String body, {String? clientId, ChatAttachment? attachment}) async {
     sent.add(body);
     return SupportMessage.fromJson({'id': 2, 'client_id': clientId, 'body': body, 'from_staff': false});
   }
@@ -1114,6 +1121,9 @@ void main() {
 
     expect(find.text('The gate is blue.'), findsOneWidget);
     expect(find.text('Buyer · ZAY-ORDER-1'), findsOneWidget);
+    // Photos and videos can be sent too, and a received video plays from its bubble.
+    expect(find.byTooltip('Add photo or video'), findsOneWidget);
+    expect(find.byIcon(Icons.play_circle_fill), findsOneWidget);
     await tester.enterText(find.byType(TextField), 'Arriving in 5 minutes');
     await tester.tap(find.byTooltip('Send'));
     await tester.pumpAndSettle();
