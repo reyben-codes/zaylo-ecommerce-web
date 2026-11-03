@@ -316,9 +316,14 @@ Route::middleware(['auth', 'active', 'verified', 'nocache'])->group(function () 
     Route::get('/deliveries/{shipment}/proof', [DeliveryProofController::class, 'show'])->middleware('throttle:120,1')->name('delivery-proof');
     // Photos of a returned item at pickup and at the hub, for the case, its rider and the logistics partner.
     Route::get('/returns/{dispute}/photos/{kind}', [ReturnPhotoController::class, 'show'])->whereIn('kind', ['pickup', 'hub'])->middleware('throttle:120,1')->name('return-photo');
-    // Answers for the help bot on every portal.
+});
+
+// The help bot on every portal and on the landing page, where guests get the shopper answers. Signed-in accounts
+// still need to be active and verified (FaqController).
+Route::middleware('nocache')->group(function () {
     Route::get('/help/faq', [FaqController::class, 'web'])->middleware('throttle:60,1')->name('faq');
-    // Questions the bot could not match go to the AI models, within limits shared with the app.
+    // Questions the bot could not match go to the AI models, within limits shared with the app (per account, or per
+    // address for guests).
     Route::post('/help/ask', [FaqController::class, 'ask'])->middleware(['throttle:10,1,zay-ask', 'throttle:20,1440,zay-ask-day'])->name('faq.ask');
 });
 

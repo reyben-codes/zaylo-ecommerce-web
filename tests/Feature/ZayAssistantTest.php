@@ -141,12 +141,22 @@ class ZayAssistantTest extends TestCase
         Http::assertSent(fn (Request $request) => str_contains($request['messages'][0]['content'], 'How do I collect a returned item?'));
     }
 
-    public function test_guests_cannot_ask_and_bad_input_is_refused(): void
+    public function test_guests_on_the_website_ask_with_the_shopper_answers(): void
+    {
+        Http::fake([self::GROQ => $this->answer('Welcome')]);
+
+        $this->postJson(route('faq.ask'), ['question' => 'What is ZAYLO?'])->assertOk()->assertJsonPath('reply', 'Welcome');
+        Http::assertSent(fn (Request $request) => str_contains($request['messages'][0]['content'], 'How much is shipping?'));
+        // The app's route still needs a signed-in account.
+        $this->postJson('/api/mobile/help/ask', ['question' => 'Hello?'])->assertUnauthorized();
+    }
+
+    public function test_inactive_accounts_cannot_ask_and_bad_input_is_refused(): void
     {
         Http::fake();
 
-        $this->postJson('/api/mobile/help/ask', ['question' => 'Hello?'])->assertUnauthorized();
-        $this->postJson(route('faq.ask'), ['question' => 'Hello?'])->assertUnauthorized();
+        $this->actingAs(User::factory()->create(['role' => 'buyer', 'status' => 'suspended']));
+        $this->postJson(route('faq.ask'), ['question' => 'Hello?'])->assertForbidden();
 
         $this->actingAs($this->buyer);
         $this->postJson(route('faq.ask'), ['question' => str_repeat('a', 201)])->assertUnprocessable();

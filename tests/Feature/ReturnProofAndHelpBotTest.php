@@ -149,9 +149,18 @@ class ReturnProofAndHelpBotTest extends TestCase
             ->assertJsonMissingPath('items.0.link');
         $this->getJson('/api/mobile/faq?role=admin')->assertUnprocessable();
 
-        // Guests browsing the store do not get the bot.
+        // Guests get Zay on the landing page only, with the shopper answers and a way to sign in for support.
         auth()->logout();
-        $this->get('/')->assertDontSee('data-faq-bot', false)->assertDontSee('data-zay-restore', false);
+        $this->get('/')->assertSee('data-faq-bot', false)->assertSee('data-faq-user="guest"', false)
+            ->assertSee('data-zay-restore', false);
+        $this->get(route('products.index'))->assertDontSee('data-faq-bot', false)->assertDontSee('data-zay-restore', false);
+        $this->getJson(route('faq'))->assertOk()
+            ->assertJsonPath('greeting', fn (string $greeting) => str_starts_with($greeting, 'Hi there!'))
+            ->assertJsonFragment(['q' => 'How much is shipping?'])
+            ->assertJsonPath('support.url', route('login'));
+
+        // Signed-in accounts still need to be active.
+        $this->actingAs(User::factory()->create(['role' => 'buyer', 'status' => 'suspended']))->getJson(route('faq'))->assertForbidden();
     }
 
     private function order(): Order

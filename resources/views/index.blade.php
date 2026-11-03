@@ -42,6 +42,7 @@
             </form>
             <div class="icon-group">
                 <button type="button" class="theme-toggle" data-theme-toggle aria-label="Switch theme"></button>
+                @include('partials.faq-bot-restore', ['guests' => true])
                 @if(auth()->user()?->role === 'buyer')
                     @include('partials.buyer-nav-icons')
                 @else
@@ -174,6 +175,7 @@
 <script src="{{ asset('js/live-search.js') }}?v={{ filemtime(public_path('js/live-search.js')) }}" defer></script>
 @include('partials.chat-widget')
 @include('partials.cart-animation')
+@include('partials.faq-bot', ['guests' => true])
 </body>
 </html>
     

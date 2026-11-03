@@ -2,11 +2,12 @@
     The help bot on every portal: Zay answers common questions for the signed-in account (FaqController,
     config/faq.php), asks the AI models about anything else (ZayAssistant) and hands over to Help & support when they
     cannot answer. Zay can be dragged around, or dropped on the hide target; partials/faq-bot-restore brings it back.
+    Guests only get Zay where the page passes ['guests' => true] (the landing page), with the shopper answers.
     Behaviour in public/js/faq-bot.js.
 --}}
-@if(auth()->user()?->isActive() && auth()->user()->hasVerifiedEmail())
+@if(auth()->check() ? auth()->user()->isActive() && auth()->user()->hasVerifiedEmail() : ($guests ?? false))
     <link rel="stylesheet" href="{{ asset('css/faq-bot.css') }}?v={{ filemtime(public_path('css/faq-bot.css')) }}">
-    <div class="faq-bot" data-faq-bot data-faq-url="{{ route('faq') }}" data-faq-ask-url="{{ route('faq.ask') }}" data-faq-csrf="{{ csrf_token() }}" data-faq-user="{{ auth()->id() }}">
+    <div class="faq-bot" data-faq-bot data-faq-url="{{ route('faq') }}" data-faq-ask-url="{{ route('faq.ask') }}" data-faq-csrf="{{ csrf_token() }}" data-faq-user="{{ auth()->id() ?? 'guest' }}">
         <p class="faq-bot__teaser" data-faq-teaser hidden>
             <span>Hi! I'm Zay. Need a hand?</span>
             <button type="button" data-faq-teaser-close aria-label="Dismiss">

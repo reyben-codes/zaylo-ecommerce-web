@@ -10,8 +10,8 @@ use Illuminate\Support\Facades\Route;
 
 /**
  * Questions and answers for Zay, the help bot (config/faq.php): the signed-in account's own, plus the ones for everyone.
- * The bot matches typed questions itself, asks ZayAssistant about the rest and hands over to Help & support when that
- * has no answer either.
+ * Guests on the landing page get the shopper answers. The bot matches typed questions itself, asks ZayAssistant about
+ * the rest and hands over to Help & support when that has no answer either.
  */
 class FaqController extends Controller
 {
@@ -24,6 +24,10 @@ class FaqController extends Controller
     /** A typed question the bot could not match, from the website or the app. "reply" is null when no AI could answer. */
     public function ask(Request $request, ZayAssistant $assistant): JsonResponse
     {
+        // The app's route has its own sign-in checks; the website's is open to guests.
+        if ($request->routeIs('faq.ask')) {
+            self::abortUnlessAllowed($request->user());
+        }
         $validated = $request->validate([
             'question' => ['required', 'string', 'max:200'],
             'history' => ['nullable', 'array', 'max:6'],
@@ -44,15 +48,19 @@ class FaqController extends Controller
     /** The bot on every website portal. */
     public function web(Request $request): JsonResponse
     {
-        $role = self::roleOf($request->user());
+        $user = $request->user();
+        self::abortUnlessAllowed($user);
+        $role = self::roleOf($user);
 
         return response()->json([
-            'greeting' => 'Hi '.(strtok((string) $request->user()->name, ' ') ?: 'there')."! I'm Zay, ZAYLO's helper. Tap a question below or ask me in your own words.".self::PRIVACY_NOTE,
+            'greeting' => 'Hi '.(strtok((string) $user?->name, ' ') ?: 'there')."! I'm Zay, ZAYLO's helper. Tap a question below or ask me in your own words.".self::PRIVACY_NOTE,
             'items' => self::items($role, withLinks: true),
-            // Admins are the support team, so they get their inbox instead.
-            'support' => $role === 'admin'
-                ? ['url' => route('admin.chat'), 'label' => 'Open support inbox']
-                : ['url' => route('support'), 'label' => 'Message ZAYLO support'],
+            // Admins are the support team, so they get their inbox instead; guests sign in to message support.
+            'support' => match (true) {
+                $user === null => ['url' => route('login'), 'label' => 'Log in to message ZAYLO support'],
+                $role === 'admin' => ['url' => route('admin.chat'), 'label' => 'Open support inbox'],
+                default => ['url' => route('support'), 'label' => 'Message ZAYLO support'],
+            },
         ]);
     }
 
@@ -83,10 +91,20 @@ class FaqController extends Controller
         }, $entries);
     }
 
-    public static function roleOf(User $user): string
+    /** Guests get the shopper answers. */
+    public static function roleOf(?User $user): string
     {
+        if (! $user) {
+            return 'buyer';
+        }
         $role = self::ROLE_ALIASES[$user->role] ?? $user->role;
 
         return config()->has("faq.{$role}") ? $role : 'buyer';
+    }
+
+    /** Signed-in accounts get the bot once they are active and verified, as on the portals; guests always do. */
+    private static function abortUnlessAllowed(?User $user): void
+    {
+        abort_if($user && (! $user->isActive() || ! $user->hasVerifiedEmail()), 403);
     }
 }
