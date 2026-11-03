@@ -45,10 +45,9 @@ class ProductReviews
         return $item->product_id !== null && $this->delivered($item) && ! $item->review;
     }
 
-    /** Any listed product can be reviewed from its page, once the database allows reviews without a purchase. */
+    /** Any listed product can be reviewed from its page. */
     public function authorizeProduct(Product $product): void
     {
-        abort_unless(ProductReview::opensToEveryone(), 404);
         abort_unless($product->is_listed, 404);
     }
 

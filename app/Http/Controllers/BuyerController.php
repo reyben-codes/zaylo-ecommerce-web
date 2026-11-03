@@ -312,7 +312,7 @@ class BuyerController extends Controller
      */
     private function reviewFormFor(Product $product, bool $preview): ?string
     {
-        if ($preview || ! \App\Models\ProductReview::opensToEveryone()) {
+        if ($preview) {
             return null;
         }
         $user = auth()->user();
