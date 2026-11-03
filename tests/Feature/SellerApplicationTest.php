@@ -29,7 +29,9 @@ class SellerApplicationTest extends TestCase
     {
         $this->get(route('register', ['role' => 'seller']))->assertOk()
             ->assertSee('name="shop_name"', false)->assertSee('name="tin"', false)->assertSee('name="dti_certificate"', false)
-            ->assertSee('enctype="multipart/form-data"', false);
+            ->assertSee('enctype="multipart/form-data"', false)
+            // Shops can sell in several categories, so registration does not ask for one.
+            ->assertDontSee('name="shop_category"', false);
 
         $this->post(route('register'), $this->signupData())->assertSessionHasNoErrors()->assertRedirect(route('verification.notice'));
         // Until the code is entered there is no account or application, only the parked documents.
@@ -45,6 +47,8 @@ class SellerApplicationTest extends TestCase
         $this->assertSame('Maria Clara Handicrafts', $application->shop_name);
         $this->assertSame('Maria Clara Handicrafts', $user->sellerStoreName());
         $this->assertSame('sole_proprietorship', $application->seller_type);
+        $this->assertNull($application->shop_category);
+        $this->assertNull($application->category_label);
         $this->assertSame('123-456-789-000', $application->tin);
         // Place names come from the location service, not the form.
         $this->assertSame('Quezon City', $application->city_name);
@@ -108,7 +112,7 @@ class SellerApplicationTest extends TestCase
         $oldDti = $seller->sellerApplication->dti_certificate_path;
         $admin = User::factory()->create(['role' => 'admin', 'status' => 'active']);
 
-        $this->actingAs($admin)->get(route('admin.registrations'))->assertOk()->assertSee('Home &amp; Living', false)->assertSee(route('admin.seller-applications.show', $seller));
+        $this->actingAs($admin)->get(route('admin.registrations'))->assertOk()->assertSee('Sole Proprietorship')->assertDontSee('Home &amp; Living', false)->assertSee(route('admin.seller-applications.show', $seller));
         $this->get(route('admin.seller-applications.show', $seller))->assertOk()
             ->assertSee('123-456-789-000')->assertSee('Quezon City')->assertSee('DTI Certificate')->assertSee('Reason shown to the seller')
             // Documents open in the viewer modal; the link still works as a new tab without JavaScript.
@@ -198,7 +202,7 @@ class SellerApplicationTest extends TestCase
     private function applicationFields(array $overrides = []): array
     {
         return array_replace([
-            'shop_name' => 'Maria Clara Handicrafts', 'shop_category' => 'home_garden', 'seller_type' => 'sole_proprietorship', 'tin' => '123-456-789-000',
+            'shop_name' => 'Maria Clara Handicrafts', 'seller_type' => 'sole_proprietorship', 'tin' => '123-456-789-000',
             'region_code' => '130000000', 'province_code' => '', 'city_code' => '137404000', 'barangay_code' => '137404001',
             'street_address' => 'Blk 12 Lot 8, Sampaguita St.', 'postal_code' => '1121',
             'government_id' => UploadedFile::fake()->create('govt_id_front.jpg', 1200, 'image/jpeg'),

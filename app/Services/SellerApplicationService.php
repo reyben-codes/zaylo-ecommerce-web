@@ -40,7 +40,6 @@ class SellerApplicationService
                     $fail('This shop name is already taken.');
                 }
             }],
-            'shop_category' => ['required', Rule::in(array_keys(SellerApplication::categories()))],
             'seller_type' => ['required', Rule::in(array_keys(SellerApplication::SELLER_TYPES))],
             'tin' => ['required', 'string', 'regex:/^[0-9]{3}-[0-9]{3}-[0-9]{3}-[0-9]{3}$/D',
                 Rule::unique('seller_applications', 'tin')->ignore($existing?->id), function (string $attribute, mixed $value, \Closure $fail) {
@@ -74,7 +73,6 @@ class SellerApplicationService
         $messages = [
             'shop_name.min' => 'The shop name must be 3 to 30 characters.',
             'shop_name.max' => 'The shop name must be 3 to 30 characters.',
-            'shop_category.required' => 'Choose your shop category.',
             'seller_type.required' => 'Choose your seller type.',
             'tin.regex' => 'Enter the TIN as 000-000-000-000 (12 digits).',
             'tin.unique' => 'This TIN is already registered.',
@@ -146,7 +144,6 @@ class SellerApplicationService
 
         $application->fill([
             'shop_name' => trim($data['shop_name']),
-            'shop_category' => $data['shop_category'],
             'seller_type' => $data['seller_type'],
             'tin' => $data['tin'],
             'region_code' => $data['region_code'],

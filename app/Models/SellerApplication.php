@@ -73,9 +73,10 @@ class SellerApplication extends Model
         return self::SELLER_TYPES[$this->seller_type] ?? $this->seller_type;
     }
 
-    public function getCategoryLabelAttribute(): string
+    /** Only shops that registered before categories became optional have one. */
+    public function getCategoryLabelAttribute(): ?string
     {
-        return config('marketplace.categories')[$this->shop_category] ?? $this->shop_category;
+        return $this->shop_category ? (config('marketplace.categories')[$this->shop_category] ?? $this->shop_category) : null;
     }
 
     public function getFormattedAddressAttribute(): string

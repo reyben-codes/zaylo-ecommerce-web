@@ -52,7 +52,7 @@
             <h2 id="application-summary-title">What you submitted</h2>
             <dl>
                 <div><dt>Shop name</dt><dd>{{ $application->shop_name }}</dd></div>
-                <div><dt>Shop category</dt><dd>{{ $application->category_label }}</dd></div>
+                @if($application->category_label)<div><dt>Shop category</dt><dd>{{ $application->category_label }}</dd></div>@endif
                 <div><dt>Seller type</dt><dd>{{ $application->seller_type_label }}</dd></div>
                 <div><dt>TIN</dt><dd>{{ $application->tin }}</dd></div>
                 <div><dt>Pickup address</dt><dd>{{ $application->formatted_address }}</dd></div>

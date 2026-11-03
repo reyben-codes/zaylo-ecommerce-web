@@ -21,25 +21,14 @@
             <input id="shop_name" name="shop_name" value="{{ $value('shop_name') }}" minlength="3" maxlength="30" autocomplete="organization" required>
             <p class="field-note">3 to 30 characters. Buyers see this name. It must not be used by another shop.</p>
         </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label for="shop_category">Shop category</label>
-                <select id="shop_category" name="shop_category" required>
-                    <option value="">Choose a category</option>
-                    @foreach(\App\Models\SellerApplication::categories() as $key => $label)
-                        <option value="{{ $key }}" @selected($value('shop_category') === $key)>{{ $label }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="seller_type">Seller type</label>
-                <select id="seller_type" name="seller_type" data-seller-type required>
-                    <option value="">Choose a seller type</option>
-                    @foreach(\App\Models\SellerApplication::SELLER_TYPES as $key => $label)
-                        <option value="{{ $key }}" @selected($selectedType === $key)>{{ $label }}</option>
-                    @endforeach
-                </select>
-            </div>
+        <div class="form-group">
+            <label for="seller_type">Seller type</label>
+            <select id="seller_type" name="seller_type" data-seller-type required>
+                <option value="">Choose a seller type</option>
+                @foreach(\App\Models\SellerApplication::SELLER_TYPES as $key => $label)
+                    <option value="{{ $key }}" @selected($selectedType === $key)>{{ $label }}</option>
+                @endforeach
+            </select>
         </div>
         <div class="form-group">
             <label for="tin">TIN</label>

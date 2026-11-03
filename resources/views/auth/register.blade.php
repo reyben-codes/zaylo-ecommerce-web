@@ -55,7 +55,6 @@
         'license_document',
         'or_cr_document',
         'shop_name',
-        'shop_category',
         'seller_type',
         'tin',
         'region_code',

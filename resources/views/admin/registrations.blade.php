@@ -60,7 +60,7 @@
                                 @endif
                                 @if($applicant->role === 'seller' && $applicant->relationLoaded('sellerApplication'))
                                     @if($applicant->sellerApplication)
-                                        <span class="seller-cell-note">{{ $applicant->sellerApplication->category_label }} · {{ $applicant->sellerApplication->seller_type_label }}</span>
+                                        <span class="seller-cell-note">{{ collect([$applicant->sellerApplication->category_label, $applicant->sellerApplication->seller_type_label])->filter()->implode(' · ') }}</span>
                                     @else
                                         <span class="seller-cell-note">Application details not submitted yet</span>
                                     @endif
