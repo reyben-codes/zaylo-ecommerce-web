@@ -205,11 +205,15 @@ class ProductReview {
     this.comment,
     this.photos = const [],
     this.createdAt,
+    this.verifiedPurchase = true,
   });
 
   final int id;
   final int rating;
   final String buyerName;
+
+  /// From a delivered order. Older servers only had these, so a missing flag means verified.
+  final bool verifiedPurchase;
   final String? comment;
   final List<String> photos;
   final DateTime? createdAt;
@@ -221,6 +225,7 @@ class ProductReview {
         comment: json['comment'] as String?,
         photos: List<String>.from(json['photos'] as List<dynamic>? ?? const []),
         createdAt: parseDate(json['created_at']),
+        verifiedPurchase: json['verified_purchase'] as bool? ?? true,
       );
 }
 

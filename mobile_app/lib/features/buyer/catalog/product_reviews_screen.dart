@@ -156,7 +156,7 @@ class _ReviewCard extends StatelessWidget {
               StarRow(rating: review.rating.toDouble(), size: 15),
             ]),
             const SizedBox(height: 2),
-            Text('Verified purchase · ${shortDate(review.createdAt)}',
+            Text('${review.verifiedPurchase ? 'Verified purchase · ' : ''}${shortDate(review.createdAt)}',
                 style: TextStyle(fontSize: 11, color: ZayloColors.muted)),
             if (review.comment != null && review.comment!.trim().isNotEmpty) ...[
               const SizedBox(height: 8),

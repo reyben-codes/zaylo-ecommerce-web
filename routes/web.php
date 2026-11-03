@@ -135,6 +135,8 @@ Route::middleware(['auth', 'active', 'verified', 'role:buyer', 'nocache'])->pref
     Route::get('/orders', [BuyerController::class, 'orders'])->name('orders');
     Route::get('/order-items/{orderItem}/review', [\App\Http\Controllers\ProductReviewController::class, 'create'])->name('reviews.create');
     Route::post('/order-items/{orderItem}/review', [\App\Http\Controllers\ProductReviewController::class, 'store'])->middleware('throttle:10,1')->name('reviews.store');
+    // Reviews from the product page, without buying it.
+    Route::post('/products/{product}/review', [\App\Http\Controllers\ProductReviewController::class, 'storeForProduct'])->middleware('throttle:10,1')->name('products.review');
     Route::post('/orders/{order}/cancel', [BuyerController::class, 'cancelOrder'])->name('orders.cancel');
     Route::post('/orders/{order}/received', [BuyerController::class, 'confirmReceived'])->middleware('throttle:20,1')->name('orders.received');
     Route::get('/cart', [BuyerController::class, 'cart'])->name('cart');

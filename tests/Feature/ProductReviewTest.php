@@ -75,6 +75,84 @@ class ProductReviewTest extends TestCase
         $this->assertSame([], Storage::disk('public')->allFiles());
     }
 
+    public function test_any_buyer_can_review_a_product_from_its_page_without_buying_it(): void
+    {
+        Storage::fake('public');
+        [, , $product] = $this->purchase();
+        $shopper = User::factory()->create(['role' => 'buyer', 'status' => 'active', 'name' => 'Ana Shopper']);
+
+        $this->actingAs($shopper)->get(route('products.show', $product))->assertOk()
+            ->assertSee('Write a review')->assertSee(route('buyer.products.review', $product), false)
+            ->assertSee('Be the first to review this product.');
+        $this->post(route('buyer.products.review', $product), ['rating' => 4, 'comment' => 'Looks well made.', 'photos' => [$this->photo()]])
+            ->assertRedirect(route('products.show', $product).'#customer-reviews');
+
+        $review = ProductReview::firstOrFail();
+        $this->assertNull($review->order_item_id);
+        $this->assertSame([$shopper->id, $product->id, 4], [$review->user_id, $review->product_id, $review->rating]);
+        Storage::disk('public')->assertExists($review->photos[0]);
+        // Shown with the rest, but not as a verified purchase; the form is replaced by a thank-you note.
+        $this->get(route('products.show', $product))->assertOk()
+            ->assertSee('4.0/5')->assertSee('Looks well made.')->assertSee('Ana')
+            ->assertDontSee('Verified purchase')->assertDontSee('Write a review')->assertSee('Thanks for reviewing this product!');
+
+        // One review per buyer and product.
+        $this->post(route('buyer.products.review', $product), ['rating' => 1])->assertSessionHasErrors('review');
+        $this->assertDatabaseCount('product_reviews', 1);
+    }
+
+    public function test_a_buyer_who_bought_the_product_can_still_review_the_delivery_separately(): void
+    {
+        [$buyer, $item, $product] = $this->purchase();
+        $this->actingAs($buyer)->post(route('buyer.products.review', $product), ['rating' => 3])->assertRedirect();
+        $this->post(route('buyer.reviews.store', $item), ['rating' => 5])->assertRedirect(route('buyer.orders'));
+
+        $this->assertSame(2, ProductReview::where('user_id', $buyer->id)->count());
+        $this->get(route('products.show', $product))->assertSee('Verified purchase');
+    }
+
+    public function test_only_signed_in_buyers_review_listed_products_from_the_page(): void
+    {
+        [, , $product] = $this->purchase();
+
+        $this->get(route('products.show', $product))->assertOk()->assertSee('Log in to write a review')->assertDontSee('Write a review');
+        $this->post(route('buyer.products.review', $product), ['rating' => 5])->assertRedirect(route('login'));
+
+        // Other roles are refused and get no form.
+        $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);
+        $this->actingAs($seller)->post(route('buyer.products.review', $product), ['rating' => 5])->assertForbidden();
+        $this->get(route('products.show', $product))->assertDontSee('Write a review')->assertDontSee('Log in to write a review');
+
+        $shopper = User::factory()->create(['role' => 'buyer', 'status' => 'active']);
+        $product->update(['is_active' => false]);
+        $this->actingAs($shopper)->post(route('buyer.products.review', $product), ['rating' => 5])->assertNotFound();
+        $this->assertDatabaseCount('product_reviews', 0);
+    }
+
+    public function test_page_reviews_are_validated_and_leave_no_photos_behind(): void
+    {
+        Storage::fake('public');
+        [, , $product] = $this->purchase();
+        $this->actingAs(User::factory()->create(['role' => 'buyer', 'status' => 'active']));
+
+        foreach ([0, 6, 'bad'] as $rating) $this->postJson(route('buyer.products.review', $product), ['rating' => $rating])->assertUnprocessable();
+        $this->post(route('buyer.products.review', $product), ['rating' => 4, 'photos' => array_map(fn () => $this->photo(), range(1, 4))])->assertSessionHasErrors('photos');
+        $this->assertDatabaseCount('product_reviews', 0);
+        $this->assertSame([], Storage::disk('public')->allFiles());
+    }
+
+    public function test_the_app_marks_which_reviews_are_verified_purchases(): void
+    {
+        [$buyer, $item, $product] = $this->purchase();
+        $this->actingAs($buyer)->post(route('buyer.reviews.store', $item), ['rating' => 5]);
+        $this->actingAs(User::factory()->create(['role' => 'buyer', 'status' => 'active']))->post(route('buyer.products.review', $product), ['rating' => 2]);
+
+        $this->getJson("/api/mobile/products/{$product->slug}/reviews")->assertOk()
+            ->assertJsonPath('count', 2)
+            ->assertJsonPath('reviews.0.verified_purchase', false)
+            ->assertJsonPath('reviews.1.verified_purchase', true);
+    }
+
     public function test_reviews_accumulate_in_buyer_product_card_summaries(): void
     {
         [$buyer, $item, $product] = $this->purchase();

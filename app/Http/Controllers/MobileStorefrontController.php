@@ -132,6 +132,8 @@ class MobileStorefrontController extends Controller
                 'rating' => $review->rating,
                 'comment' => $review->comment,
                 'buyer_name' => Str::of($review->buyer?->name ?? 'ZAYLO buyer')->before(' ')->toString(),
+                // Reviews written on the website without buying the product are not marked "Verified purchase".
+                'verified_purchase' => $review->isVerifiedPurchase(),
                 'photos' => collect($review->photos ?? [])->map(fn (string $path) => MobilePayload::imageUrl(Storage::disk('public')->url($path)))->values(),
                 'created_at' => $review->created_at?->toIso8601String(),
             ])->values(),

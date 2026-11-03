@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Product;
 use App\Models\ProductReview;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
@@ -12,7 +13,8 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Buyer reviews of delivered purchases, shared by the website and the mobile app.
+ * Buyer reviews, shared by the website and the mobile app: reviews of delivered purchases ("Verified purchase"), and
+ * one review per buyer for any listed product, written from its page without buying it.
  */
 class ProductReviews
 {
@@ -43,31 +45,82 @@ class ProductReviews
         return $item->product_id !== null && $this->delivered($item) && ! $item->review;
     }
 
+    /** Any listed product can be reviewed from its page, once the database allows reviews without a purchase. */
+    public function authorizeProduct(Product $product): void
+    {
+        abort_unless(ProductReview::opensToEveryone(), 404);
+        abort_unless($product->is_listed, 404);
+    }
+
+    /** The buyer's own review of the product from its page, if they wrote one. */
+    public function openReviewBy(User $buyer, Product $product): ?ProductReview
+    {
+        return ProductReview::where('product_id', $product->id)->where('user_id', $buyer->id)->whereNull('order_item_id')->first();
+    }
+
     /** @param UploadedFile[] $photos */
     public function publish(User $buyer, OrderItem $orderItem, int $rating, ?string $comment, array $photos): ProductReview
     {
-        $paths = [];
-        try {
-            return DB::transaction(function () use ($buyer, $orderItem, $rating, $comment, $photos, &$paths) {
-                $item = OrderItem::whereKey($orderItem->id)->lockForUpdate()->firstOrFail();
-                $this->authorize($buyer, $item);
-                if ($item->review()->exists()) {
-                    throw ValidationException::withMessages(['review' => 'You already reviewed this purchased item.']);
-                }
-                foreach ($photos as $photo) {
-                    $path = $photo->store('reviews', 'public');
-                    if (! $path) {
-                        throw new \RuntimeException('Unable to store review photo.');
-                    }
-                    $paths[] = $path;
-                }
+        return $this->storing($photos, function (\Closure $store) use ($buyer, $orderItem, $rating, $comment) {
+            $item = OrderItem::whereKey($orderItem->id)->lockForUpdate()->firstOrFail();
+            $this->authorize($buyer, $item);
+            if ($item->review()->exists()) {
+                throw ValidationException::withMessages(['review' => 'You already reviewed this purchased item.']);
+            }
 
-                return ProductReview::create([
-                    'order_item_id' => $item->id, 'product_id' => $item->product_id,
-                    'user_id' => $buyer->id, 'rating' => $rating,
-                    'comment' => $comment, 'photos' => $paths,
-                ]);
-            });
+            return ProductReview::create([
+                'order_item_id' => $item->id, 'product_id' => $item->product_id,
+                'user_id' => $buyer->id, 'rating' => $rating,
+                'comment' => $comment, 'photos' => $store(),
+            ]);
+        });
+    }
+
+    /**
+     * A review written from the product page without buying it: not a verified purchase, one per buyer and product.
+     *
+     * @param UploadedFile[] $photos
+     */
+    public function publishForProduct(User $buyer, Product $product, int $rating, ?string $comment, array $photos): ProductReview
+    {
+        return $this->storing($photos, function (\Closure $store) use ($buyer, $product, $rating, $comment) {
+            $this->authorizeProduct($product);
+            // Two quick submits from the same buyer wait here, so the second sees the first.
+            User::whereKey($buyer->id)->lockForUpdate()->first();
+            if ($this->openReviewBy($buyer, $product)) {
+                throw ValidationException::withMessages(['review' => 'You already reviewed this product.']);
+            }
+
+            return ProductReview::create([
+                'order_item_id' => null, 'product_id' => $product->id,
+                'user_id' => $buyer->id, 'rating' => $rating,
+                'comment' => $comment, 'photos' => $store(),
+            ]);
+        });
+    }
+
+    /**
+     * Runs $create in a transaction; it calls the store function it is given to save the photos once its checks pass.
+     * The photos are deleted again if anything fails.
+     *
+     * @param UploadedFile[] $photos
+     */
+    private function storing(array $photos, \Closure $create): ProductReview
+    {
+        $paths = [];
+        $store = function () use ($photos, &$paths): array {
+            foreach ($photos as $photo) {
+                $path = $photo->store('reviews', 'public');
+                if (! $path) {
+                    throw new \RuntimeException('Unable to store review photo.');
+                }
+                $paths[] = $path;
+            }
+
+            return $paths;
+        };
+        try {
+            return DB::transaction(fn () => $create($store));
         } catch (\Throwable $exception) {
             Storage::disk('public')->delete($paths);
             throw $exception;

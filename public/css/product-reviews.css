@@ -40,3 +40,11 @@
 .order-review-link:active { background: var(--c-e3d3c3); }
 .order-review-link:focus-visible { outline: 2px solid var(--c-795a43); outline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) { .order-review-link { transition: none; } }
+/* "Write a review" on the product page (partials/product-reviews), opened with smooth-disclosure.js. */
+.review-write { margin: 4px 0 8px; }
+.review-write > summary { list-style: none; cursor: pointer; }
+.review-write > summary::-webkit-details-marker { display: none; }
+.review-write[open] > summary { background: var(--c-ece0d4); border-color: var(--c-9a755e); }
+.review-write__form { max-width: 640px; margin: 4px 0 16px; padding: 18px; border: 1px solid var(--c-e3dbd3); border-radius: 12px; background: var(--c-f8f4ef); }
+.review-write__note { margin: 4px 0 8px; color: var(--c-6b5f54); font-size: .86rem; }
+@media (max-width: 480px) { .review-write__form { padding: 14px; } }

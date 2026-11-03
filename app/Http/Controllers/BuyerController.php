@@ -301,8 +301,29 @@ class BuyerController extends Controller
         $reviewAverage = (clone $reviewQuery)->avg('rating');
         $reviews = $reviewQuery->with('buyer')->latest()->paginate(5, ['*'], 'reviews_page');
         $shop = $product->seller_id ? \App\Support\Shop::find((int) $product->seller_id) : null;
+        $reviewForm = $this->reviewFormFor($product, $preview);
 
-        return view('buyer.product-show', compact('product', 'galleryImages', 'reviews', 'reviewCount', 'reviewAverage', 'optionLabel', 'variantImages', 'colorGroups', 'shop', 'preview'));
+        return view('buyer.product-show', compact('product', 'galleryImages', 'reviews', 'reviewCount', 'reviewAverage', 'optionLabel', 'variantImages', 'colorGroups', 'shop', 'preview', 'reviewForm'));
+    }
+
+    /**
+     * What the reviews section offers: "write" for a buyer who has not reviewed the product from its page yet,
+     * "written" once they have, "login" for guests, or null (other accounts, previews, or before the migration).
+     */
+    private function reviewFormFor(Product $product, bool $preview): ?string
+    {
+        if ($preview || ! \App\Models\ProductReview::opensToEveryone()) {
+            return null;
+        }
+        $user = auth()->user();
+        if (! $user) {
+            return 'login';
+        }
+        if ($user->role !== 'buyer' || ! $user->isActive() || ! $user->hasVerifiedEmail()) {
+            return null;
+        }
+
+        return app(\App\Services\ProductReviews::class)->openReviewBy($user, $product) ? 'written' : 'write';
     }
 
     public function orders(Request $request, OrderReceipts $receipts)
