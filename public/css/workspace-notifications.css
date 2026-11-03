@@ -4,14 +4,16 @@
     margin: 0;
     padding: 0;
     list-style: none;
+    border-radius: inherit;
+    overflow: hidden;
 }
 
 .workspace-notice {
     display: grid;
     grid-template-columns: 40px minmax(0, 1fr) auto;
-    gap: 14px;
+    gap: 16px;
     align-items: start;
-    padding: 16px 4px;
+    padding: 18px 20px;
     border-bottom: 1px solid var(--c-e5d8c9);
 }
 
@@ -104,6 +106,8 @@
 @media (max-width: 640px) {
     .workspace-notice {
         grid-template-columns: 40px minmax(0, 1fr);
+        gap: 12px 14px;
+        padding: 16px;
     }
 
     .workspace-notice__action {
