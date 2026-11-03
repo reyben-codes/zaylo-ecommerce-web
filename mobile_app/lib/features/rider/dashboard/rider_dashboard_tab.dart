@@ -13,9 +13,10 @@ import 'package:zaylo_mobile/models/rider/rider_activity_models.dart';
 import 'package:zaylo_mobile/models/rider/rider_dashboard_models.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 
-/// The Home tab: today's numbers (each opens its own list), new assignments
-/// to accept or decline, returned items to collect from buyers, deliveries in
-/// progress with their next step, and the most recent completed ones.
+/// The Home tab: delivery counts and earnings for a period the rider picks
+/// (each opens its own list), new assignments to accept or decline, returned
+/// items to collect from buyers, deliveries in progress with their next step,
+/// and the most recent completed ones.
 class RiderDashboardTab extends StatefulWidget {
   const RiderDashboardTab({super.key, required this.api, required this.onOpenHistory});
 
@@ -30,6 +31,9 @@ class RiderDashboardTab extends StatefulWidget {
 
 class RiderDashboardTabState extends State<RiderDashboardTab> with RiderDeliveryActions {
   late Future<RiderDashboard> _dashboard = widget.api.dashboard();
+
+  /// The period the earnings card shows; kept while the app is open.
+  RiderPeriod _earningsPeriod = RiderPeriod.today;
 
   @override
   RiderApi get riderApi => widget.api;
@@ -93,8 +97,14 @@ class RiderDashboardTabState extends State<RiderDashboardTab> with RiderDelivery
             stats: data.stats,
             onActive: () => _open(RiderDeliveryListScreen(api: widget.api)),
             onDelivered: () => widget.onOpenHistory(RiderPeriod.all),
-            onDeliveredToday: () => widget.onOpenHistory(RiderPeriod.today),
-            onEarnedToday: () => _open(RiderEarningsScreen(
+          ),
+          const SizedBox(height: 12),
+          RiderEarningsCard(
+            stats: data.stats,
+            period: _earningsPeriod,
+            onPeriodChanged: (period) => setState(() => _earningsPeriod = period),
+            onOpenHistory: widget.onOpenHistory,
+            onOpenEarnings: () => _open(RiderEarningsScreen(
               api: widget.api,
               onOpenHistory: (period) {
                 Navigator.of(context).pop();

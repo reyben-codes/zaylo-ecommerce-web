@@ -73,6 +73,8 @@ class MobileRiderDashboardController extends Controller
                 'completed_today' => $completedToday->count(),
                 'earnings_today' => $this->fees($completedToday),
                 'earnings_total' => $this->fees($completed),
+                // The Home tab's earnings card lets the rider switch between these without another request.
+                'earnings' => $this->periodTotals($completed),
             ],
             'active' => $active->map(fn (Shipment $shipment) => $this->shipmentPayload($shipment))->values(),
             // Returned items to collect from buyers and bring to the hub.
@@ -177,12 +179,7 @@ class MobileRiderDashboardController extends Controller
         });
 
         return response()->json([
-            'periods' => collect(self::PERIODS)->mapWithKeys(function (string $period) use ($completed) {
-                $since = $this->since($period);
-                $inPeriod = $since ? $completed->filter(fn (Shipment $s) => RiderDeliveries::deliveredAt($s)?->gte($since)) : $completed;
-
-                return [$period => ['deliveries' => $inPeriod->count(), 'earnings' => $this->fees($inPeriod)]];
-            }),
+            'periods' => $this->periodTotals($completed),
             'last_7_days' => $days->values(),
             'note' => 'Earnings show the delivery fee of each parcel you delivered. Your logistics partner sets how riders are paid.',
         ]);
@@ -282,6 +279,17 @@ class MobileRiderDashboardController extends Controller
             'month' => $now->copy()->startOfMonth(),
             default => null,
         };
+    }
+
+    /** Deliveries and delivery fees for today, this week, this month and all time. */
+    private function periodTotals(Collection $completed): Collection
+    {
+        return collect(self::PERIODS)->mapWithKeys(function (string $period) use ($completed) {
+            $since = $this->since($period);
+            $inPeriod = $since ? $completed->filter(fn (Shipment $s) => RiderDeliveries::deliveredAt($s)?->gte($since)) : $completed;
+
+            return [$period => ['deliveries' => $inPeriod->count(), 'earnings' => $this->fees($inPeriod)]];
+        });
     }
 
     private function fees(Collection $shipments): float

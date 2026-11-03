@@ -8,7 +8,7 @@ import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 import 'package:zaylo_mobile/utils/formatters.dart';
 
 /// Earnings from delivery fees: today, this week, this month, all time, and
-/// a day-by-day view of the last 7 days. Opened from the "Earned today" tile.
+/// a day-by-day view of the last 7 days. Opened from the Home tab's earnings card.
 class RiderEarningsScreen extends StatefulWidget {
   const RiderEarningsScreen({super.key, required this.api, this.onOpenHistory});
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:zaylo_mobile/components/layout.dart';
 import 'package:zaylo_mobile/components/return_steps.dart';
+import 'package:zaylo_mobile/models/rider/rider_activity_models.dart';
 import 'package:zaylo_mobile/models/rider/rider_dashboard_models.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 import 'package:zaylo_mobile/utils/formatters.dart';
@@ -78,58 +79,122 @@ class LicenseWarningBanner extends StatelessWidget {
   }
 }
 
-/// Four headline numbers: available, active, delivered today, earned today.
-/// Each tile opens the matching list or screen.
+/// Two headline numbers: active and delivered. Each tile opens the matching list.
 class RiderStatsGrid extends StatelessWidget {
-  const RiderStatsGrid({
-    super.key,
-    required this.stats,
-    this.onDelivered,
-    this.onActive,
-    this.onDeliveredToday,
-    this.onEarnedToday,
-  });
+  const RiderStatsGrid({super.key, required this.stats, this.onDelivered, this.onActive});
 
   final RiderStats stats;
   final VoidCallback? onDelivered;
   final VoidCallback? onActive;
-  final VoidCallback? onDeliveredToday;
-  final VoidCallback? onEarnedToday;
 
   @override
-  Widget build(BuildContext context) => Column(children: [
+  Widget build(BuildContext context) => Row(children: [
+        Expanded(
+          child: _StatTile(
+              icon: Icons.local_shipping_outlined, label: 'Active', value: '${stats.active}', onTap: onActive),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _StatTile(
+              icon: Icons.inventory_2_outlined, label: 'Delivered', value: '${stats.completed}', onTap: onDelivered),
+        ),
+      ]);
+}
+
+/// Delivery fees earned in the period the rider picks: today, this week, this
+/// month or all time. The deliveries count opens History for that period.
+class RiderEarningsCard extends StatelessWidget {
+  const RiderEarningsCard({
+    super.key,
+    required this.stats,
+    required this.period,
+    required this.onPeriodChanged,
+    this.onOpenEarnings,
+    this.onOpenHistory,
+  });
+
+  final RiderStats stats;
+  final RiderPeriod period;
+  final ValueChanged<RiderPeriod> onPeriodChanged;
+  final VoidCallback? onOpenEarnings;
+  final ValueChanged<RiderPeriod>? onOpenHistory;
+
+  static const _within = {
+    RiderPeriod.today: 'today',
+    RiderPeriod.week: 'this week',
+    RiderPeriod.month: 'this month',
+    RiderPeriod.all: 'in total',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final totals = stats.earnings[period];
+    final deliveries = totals == null
+        ? null
+        : '${totals.deliveries} deliver${totals.deliveries == 1 ? 'y' : 'ies'} ${_within[period]}';
+    return SectionCard(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          Expanded(
-            child: _StatTile(
-                icon: Icons.local_shipping_outlined, label: 'Active', value: '${stats.active}', onTap: onActive),
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: ZayloColors.sand,
+            child: Icon(Icons.payments_outlined, size: 20, color: ZayloColors.ink),
           ),
           const SizedBox(width: 12),
-          Expanded(
-            child: _StatTile(
-                icon: Icons.inventory_2_outlined, label: 'Delivered', value: '${stats.completed}', onTap: onDelivered),
-          ),
+          const Expanded(child: Text('Earnings', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700))),
+          if (onOpenEarnings != null)
+            TextButton(
+              onPressed: onOpenEarnings,
+              style: TextButton.styleFrom(foregroundColor: ZayloColors.ink),
+              child: const Text('Details', style: TextStyle(fontWeight: FontWeight.w700)),
+            ),
         ]),
         const SizedBox(height: 12),
-        Row(children: [
-          Expanded(
-            child: _StatTile(
-              icon: Icons.task_alt,
-              label: 'Delivered today',
-              value: '${stats.completedToday}',
-              onTap: onDeliveredToday,
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          for (final option in RiderPeriod.values)
+            ChoiceChip(
+              label: Text(option.label),
+              selected: period == option,
+              selectedColor: ZayloColors.ink,
+              labelStyle: TextStyle(color: period == option ? ZayloColors.white : ZayloColors.ink),
+              onSelected: (_) => onPeriodChanged(option),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _StatTile(
-              icon: Icons.payments_outlined,
-              label: 'Earned today',
-              value: peso(stats.earningsToday, cents: false),
-              onTap: onEarnedToday,
-            ),
-          ),
         ]),
-      ]);
+        const SizedBox(height: 16),
+        AnimatedSwitcher(
+          duration: MediaQuery.disableAnimationsOf(context) ? Duration.zero : const Duration(milliseconds: 200),
+          child: Semantics(
+            key: ValueKey(period),
+            label: '${period.label} earnings: ${totals == null ? 'not available' : peso(totals.earnings)}',
+            excludeSemantics: true,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(totals == null ? '—' : peso(totals.earnings),
+                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800)),
+            ),
+          ),
+        ),
+        const SizedBox(height: 2),
+        if (deliveries == null)
+          Text('Open Details to see this period.', style: TextStyle(fontSize: 13, color: ZayloColors.muted))
+        else if (onOpenHistory == null)
+          Text(deliveries, style: TextStyle(fontSize: 13, color: ZayloColors.muted))
+        else
+          InkWell(
+            onTap: () => onOpenHistory!(period),
+            borderRadius: BorderRadius.circular(6),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Flexible(child: Text(deliveries, style: TextStyle(fontSize: 13, color: ZayloColors.muted))),
+                Icon(Icons.chevron_right, size: 18, color: ZayloColors.muted),
+              ]),
+            ),
+          ),
+      ]),
+    );
+  }
 }
 
 class _StatTile extends StatelessWidget {

@@ -31,6 +31,7 @@ import 'package:zaylo_mobile/features/buyer/messages/seller_chat_screen.dart';
 import 'package:zaylo_mobile/features/buyer/messages/seller_inbox_screen.dart';
 import 'package:zaylo_mobile/features/buyer/shop/followed_shops_screen.dart';
 import 'package:zaylo_mobile/features/buyer/shop/shop_screen.dart';
+import 'package:zaylo_mobile/features/rider/dashboard/widgets/rider_dashboard_widgets.dart';
 import 'package:zaylo_mobile/features/rider/history/rider_history_tab.dart';
 import 'package:zaylo_mobile/models/auth_models.dart';
 import 'package:zaylo_mobile/features/buyer/catalog/product_card.dart';
@@ -492,7 +493,20 @@ class FakeRiderApi extends RiderApi {
           'license_expiring_soon': true,
         },
         'delivery_mode': 'logistics',
-        'stats': {'available': 0, 'active': 2, 'completed': 3, 'completed_today': 1, 'earnings_today': 49, 'earnings_total': 147},
+        'stats': {
+          'available': 0,
+          'active': 2,
+          'completed': 3,
+          'completed_today': 1,
+          'earnings_today': 49,
+          'earnings_total': 147,
+          'earnings': {
+            'today': {'deliveries': 1, 'earnings': 49},
+            'week': {'deliveries': 2, 'earnings': 98},
+            'month': {'deliveries': 3, 'earnings': 147},
+            'all': {'deliveries': 3, 'earnings': 147},
+          },
+        },
         'active': [
           if (withNewAssignment && !updates.any((update) => update.endsWith(':3') || update.contains(':3:')))
             delivery(3, 'new'),
@@ -1115,7 +1129,7 @@ void main() {
     expect(find.text('SIGN OUT'), findsNothing);
     expect(find.byTooltip('Sign out'), findsNothing);
     expect(find.textContaining('expires in 9 days'), findsOneWidget);
-    expect(find.text('Earned today'), findsOneWidget);
+    expect(find.descendant(of: find.byType(RiderEarningsCard), matching: find.text('₱49.00')), findsOneWidget);
     expect(find.text('Your active deliveries'), findsOneWidget);
     // Riders no longer claim parcels; the logistics partner assigns them.
     expect(find.text('Available deliveries'), findsNothing);
@@ -1284,25 +1298,48 @@ void main() {
       expect(find.text('Delivered to the buyer'), findsOneWidget);
     });
 
-    testWidgets('Delivered today opens history filtered to today', (tester) async {
+    testWidgets('the earnings card switches between today, this week, this month and all time', (tester) async {
+      await pumpRider(tester);
+      expect(tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Today')).selected, isTrue);
+      expect(find.descendant(of: find.byType(RiderEarningsCard), matching: find.text('₱49.00')), findsOneWidget);
+      expect(find.text('1 delivery today'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(ChoiceChip, 'This week'));
+      await tester.pumpAndSettle();
+      expect(find.descendant(of: find.byType(RiderEarningsCard), matching: find.text('₱98.00')), findsOneWidget);
+      expect(find.text('2 deliveries this week'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(ChoiceChip, 'This month'));
+      await tester.pumpAndSettle();
+      expect(find.descendant(of: find.byType(RiderEarningsCard), matching: find.text('₱147.00')), findsOneWidget);
+      expect(find.text('3 deliveries this month'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(ChoiceChip, 'All time'));
+      await tester.pumpAndSettle();
+      expect(find.descendant(of: find.byType(RiderEarningsCard), matching: find.text('₱147.00')), findsOneWidget);
+      expect(find.text('3 deliveries in total'), findsOneWidget);
+    });
+
+    testWidgets('the earnings card opens history for the chosen period', (tester) async {
       final api = await pumpRider(tester);
 
-      await tester.tap(find.text('Delivered today'));
+      await tester.tap(find.widgetWithText(ChoiceChip, 'This week'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('2 deliveries this week'));
       await tester.pumpAndSettle();
       expect(find.text('Delivery history'), findsOneWidget, reason: 'History tab title');
-      expect(api.historyRequests.last, RiderPeriod.today);
-      expect(tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Today')).selected, isTrue);
+      expect(api.historyRequests.last, RiderPeriod.week);
+      expect(tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'This week')).selected, isTrue);
       expect(find.text('Delivery fees earned'), findsOneWidget);
     });
 
-    testWidgets('Earned today opens the earnings breakdown', (tester) async {
+    testWidgets('earnings Details opens the earnings breakdown', (tester) async {
       await pumpRider(tester);
 
-      await tester.tap(find.text('Earned today'));
+      await tester.tap(find.text('Details'));
       await tester.pumpAndSettle();
-      expect(find.text('Earnings'), findsOneWidget);
-      expect(find.text('This week'), findsOneWidget);
       expect(find.text('Last 7 days'), findsOneWidget);
+      expect(find.text('This week'), findsOneWidget);
     });
 
     testWidgets('support chat shows unread replies and sends a message', (tester) async {

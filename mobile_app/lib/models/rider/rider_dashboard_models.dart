@@ -2,6 +2,7 @@
 library;
 
 import 'package:zaylo_mobile/components/address/ph_address_section.dart';
+import 'package:zaylo_mobile/models/rider/rider_activity_models.dart';
 import 'package:zaylo_mobile/models/support_models.dart';
 
 double _money(Object? value) => (value as num?)?.toDouble() ?? 0;
@@ -98,6 +99,7 @@ class RiderStats {
     this.completedToday = 0,
     this.earningsToday = 0,
     this.earningsTotal = 0,
+    this.earnings = const {},
   });
 
   final int available;
@@ -112,15 +114,36 @@ class RiderStats {
   final double earningsToday;
   final double earningsTotal;
 
-  factory RiderStats.fromJson(Map<String, dynamic> json) => RiderStats(
-        available: json['available'] as int? ?? 0,
-        active: json['active'] as int? ?? 0,
-        awaitingAcceptance: json['awaiting_acceptance'] as int? ?? 0,
-        completed: json['completed'] as int? ?? 0,
-        completedToday: json['completed_today'] as int? ?? 0,
-        earningsToday: _money(json['earnings_today']),
-        earningsTotal: _money(json['earnings_total']),
-      );
+  /// Deliveries and fees for each period the Home tab's earnings card can show.
+  /// Older servers send only today and all time; the other periods are then missing.
+  final Map<RiderPeriod, RiderTotals> earnings;
+
+  factory RiderStats.fromJson(Map<String, dynamic> json) {
+    final periods = json['earnings'] as Map<String, dynamic>?;
+    final completed = json['completed'] as int? ?? 0;
+    final completedToday = json['completed_today'] as int? ?? 0;
+    final earningsToday = _money(json['earnings_today']);
+    final earningsTotal = _money(json['earnings_total']);
+    return RiderStats(
+      available: json['available'] as int? ?? 0,
+      active: json['active'] as int? ?? 0,
+      awaitingAcceptance: json['awaiting_acceptance'] as int? ?? 0,
+      completed: completed,
+      completedToday: completedToday,
+      earningsToday: earningsToday,
+      earningsTotal: earningsTotal,
+      earnings: periods != null
+          ? {
+              for (final period in RiderPeriod.values)
+                if (periods[period.value] is Map<String, dynamic>)
+                  period: RiderTotals.fromJson(periods[period.value] as Map<String, dynamic>),
+            }
+          : {
+              RiderPeriod.today: RiderTotals(deliveries: completedToday, earnings: earningsToday),
+              RiderPeriod.all: RiderTotals(deliveries: completed, earnings: earningsTotal),
+            },
+    );
+  }
 }
 
 /// One line of the parcel: what the rider collects from the seller.

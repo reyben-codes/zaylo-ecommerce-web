@@ -134,6 +134,9 @@ class MobileRiderDashboardTest extends TestCase
         $this->getJson('/api/mobile/rider/dashboard')
             ->assertJsonPath('stats.completed', 1)
             ->assertJsonPath('stats.earnings_today', 49)
+            ->assertJsonPath('stats.earnings.today.deliveries', 1)
+            ->assertJsonPath('stats.earnings.week.earnings', 49)
+            ->assertJsonPath('stats.earnings.all.earnings', 49)
             ->assertJsonCount(1, 'recent')
             ->assertJsonPath('recent.0.chat_open', false);
         // The rider does not finish the order: it waits for the buyer to confirm they received it.
