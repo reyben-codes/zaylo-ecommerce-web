@@ -25,6 +25,7 @@ use App\Http\Controllers\DeliveryProofController;
 use App\Http\Controllers\DisputeController;
 use App\Http\Controllers\FaqController;
 use App\Http\Controllers\LogisticsApplicationController;
+use App\Http\Controllers\LogisticsAttendanceController;
 use App\Http\Controllers\LogisticsChatController;
 use App\Http\Controllers\LogisticsController;
 use App\Http\Controllers\LogisticsOperationsController;
@@ -342,6 +343,10 @@ Route::middleware(['auth', 'active', 'verified', 'role:logistics', 'nocache'])->
     Route::get('/riders/{rider}/documents/{document}', [LogisticsController::class, 'riderDocument'])->name('riders.document');
     Route::patch('/riders/{rider}', [LogisticsController::class, 'updateRider'])->middleware('throttle:60,1')->name('riders.update');
     Route::patch('/riders/{rider}/availability', [LogisticsController::class, 'riderAvailability'])->name('riders.availability');
+    Route::patch('/riders/{rider}/schedule', [LogisticsAttendanceController::class, 'updateSchedule'])->middleware('throttle:60,1')->name('riders.schedule');
+    // Rider time in and time out: riders scan the hub screen's QR code, which changes every 30 seconds.
+    Route::get('/attendance', [LogisticsAttendanceController::class, 'index'])->name('attendance');
+    Route::get('/attendance/code', [LogisticsAttendanceController::class, 'code'])->middleware('throttle:30,1')->name('attendance.code');
 
     // Sorting center: the logistics partner moves parcels from seller pickup to delivery.
     Route::get('/pickups', [LogisticsOperationsController::class, 'pickups'])->name('pickups');

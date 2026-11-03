@@ -492,6 +492,17 @@ class FakeRiderApi extends RiderApi {
           'license_days_left': 9,
           'license_expiring_soon': true,
         },
+        'attendance': {
+          'schedule': 'Mon–Fri · 8:00 AM – 5:00 PM',
+          'shift': '8:00 AM – 5:00 PM',
+          'works_today': true,
+          'time_in': '2026-10-12T08:10:00+08:00',
+          'time_out': null,
+          'late': true,
+          'status': 'on_shift',
+          'status_label': 'On shift',
+          'next_action': 'time_out',
+        },
         'delivery_mode': 'logistics',
         'stats': {
           'available': 0,
@@ -1171,6 +1182,29 @@ void main() {
     await tester.tap(find.text('REPORT FAILED DELIVERY'));
     await tester.pumpAndSettle();
     expect(api.updates, ['1:out_for_delivery', '2:failed:buyer_unavailable']);
+  });
+
+  testWidgets("rider Home shows today's attendance and scans the hub code to time out", (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(320, 4000);
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(home: RiderShell(api: FakeRiderApi())));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull, reason: 'fits a 320px phone');
+    expect(find.text('Attendance'), findsOneWidget);
+    expect(find.text('Mon–Fri · 8:00 AM – 5:00 PM'), findsOneWidget);
+    expect(find.text('On shift'), findsOneWidget);
+    expect(find.text('Late'), findsOneWidget);
+
+    // The hub's code changes every 30 seconds, so the scanner offers no typing.
+    await tester.tap(find.text('TIME OUT'));
+    await tester.pumpAndSettle();
+    expect(find.text('Time out'), findsOneWidget, reason: 'scanner title');
+    expect(find.text('Label damaged? Type the tracking number'), findsNothing);
+    expect(find.text('Type tracking number'), findsNothing);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
   });
 
   group('rider app tabs', () {

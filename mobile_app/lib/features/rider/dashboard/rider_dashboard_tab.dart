@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/api/rider_api.dart';
 import 'package:zaylo_mobile/components/announcement_banner.dart';
 import 'package:zaylo_mobile/components/announcement_popups.dart';
@@ -7,16 +8,18 @@ import 'package:zaylo_mobile/components/feedback.dart';
 import 'package:zaylo_mobile/features/rider/dashboard/rider_delivery_list_screen.dart';
 import 'package:zaylo_mobile/features/rider/dashboard/rider_earnings_screen.dart';
 import 'package:zaylo_mobile/features/rider/dashboard/rider_reports_screen.dart';
+import 'package:zaylo_mobile/features/rider/dashboard/rider_scan_screen.dart';
 import 'package:zaylo_mobile/features/rider/dashboard/widgets/rider_dashboard_widgets.dart';
 import 'package:zaylo_mobile/features/rider/dashboard/widgets/rider_delivery_actions.dart';
 import 'package:zaylo_mobile/models/rider/rider_activity_models.dart';
 import 'package:zaylo_mobile/models/rider/rider_dashboard_models.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 
-/// The Home tab: delivery counts and earnings for a period the rider picks
-/// (each opens its own list), new assignments to accept or decline, returned
-/// items to collect from buyers, deliveries in progress with their next step,
-/// and the most recent completed ones.
+/// The Home tab: today's attendance (time in / time out by scanning the hub's
+/// QR code), delivery counts and earnings for a period the rider picks (each
+/// opens its own list), new assignments to accept or decline, returned items
+/// to collect from buyers, deliveries in progress with their next step, and
+/// the most recent completed ones.
 class RiderDashboardTab extends StatefulWidget {
   const RiderDashboardTab({super.key, required this.api, required this.onOpenHistory});
 
@@ -31,6 +34,7 @@ class RiderDashboardTab extends StatefulWidget {
 
 class RiderDashboardTabState extends State<RiderDashboardTab> with RiderDeliveryActions {
   late Future<RiderDashboard> _dashboard = widget.api.dashboard();
+  bool _attendanceBusy = false;
 
   /// The period the earnings card shows; kept while the app is open.
   RiderPeriod _earningsPeriod = RiderPeriod.today;
@@ -55,6 +59,33 @@ class RiderDashboardTabState extends State<RiderDashboardTab> with RiderDelivery
   Future<void> _open(Widget screen) async {
     await Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
     if (mounted) await reloadDeliveries();
+  }
+
+  /// Scans the attendance QR code at the hub: the first scan of the day times in, the next one times out.
+  Future<void> _scanAttendance(RiderAttendance attendance) async {
+    final code = await Navigator.of(context).push<String>(MaterialPageRoute(
+      builder: (_) => RiderScanScreen(
+        title: attendance.canTimeOut ? 'Time out' : 'Time in',
+        hint: "Scan the attendance QR code on your logistics hub's screen.",
+        instructions: 'The code changes every 30 seconds, so scan it at the hub, not from a photo.',
+        manualEntry: false,
+        accept: (code) => RiderAttendance.isAttendanceCode(code)
+            ? null
+            : "That is not the attendance code. Scan the QR code on the hub's attendance screen.",
+      ),
+    ));
+    if (code == null || !mounted) return;
+    setState(() => _attendanceBusy = true);
+    try {
+      final result = await widget.api.scanAttendance(code);
+      if (mounted) showMessage(context, result.message);
+      await reloadDeliveries();
+    } on ApiException catch (error) {
+      debugPrint('[ZAYLO] Attendance scan failed: ${error.debugDescription}');
+      if (mounted) showMessage(context, error.message);
+    } finally {
+      if (mounted) setState(() => _attendanceBusy = false);
+    }
   }
 
   @override
@@ -91,6 +122,14 @@ class RiderDashboardTabState extends State<RiderDashboardTab> with RiderDelivery
           if (data.rider.licenseExpiringSoon) ...[
             const SizedBox(height: 12),
             LicenseWarningBanner(rider: data.rider),
+          ],
+          if (data.attendance != null) ...[
+            const SizedBox(height: 16),
+            RiderAttendanceCard(
+              attendance: data.attendance!,
+              busy: _attendanceBusy,
+              onScan: busyDeliveryId == null ? () => _scanAttendance(data.attendance!) : null,
+            ),
           ],
           const SizedBox(height: 16),
           RiderStatsGrid(

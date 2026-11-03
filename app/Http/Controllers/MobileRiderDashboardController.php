@@ -8,6 +8,7 @@ use App\Models\Shipment;
 use App\Models\User;
 use App\Services\ChatPhotos;
 use App\Services\ReturnPickups;
+use App\Services\RiderAttendanceClock;
 use App\Services\RiderDeliveries;
 use App\Services\ShipmentWorkflow;
 use App\Support\MobilePayload;
@@ -33,7 +34,25 @@ class MobileRiderDashboardController extends Controller
 
     private const PERIODS = ['today', 'week', 'month', 'all'];
 
-    public function __construct(private readonly RiderDeliveries $deliveries, private readonly ReturnPickups $returns) {}
+    public function __construct(
+        private readonly RiderDeliveries $deliveries,
+        private readonly ReturnPickups $returns,
+        private readonly RiderAttendanceClock $attendance,
+    ) {}
+
+    /** The rider scanned the attendance QR code at their logistics hub: the first scan times in, the next times out. */
+    public function scanAttendance(Request $request): JsonResponse
+    {
+        $data = $request->validate(['code' => 'required|string|max:200']);
+        [$attendance, $action] = $this->attendance->scan($request->user(), $data['code']);
+        $time = ($action === 'in' ? $attendance->time_in_at : $attendance->time_out_at)->timezone(self::TIMEZONE)->format('g:i A');
+
+        return response()->json([
+            'message' => $action === 'in' ? "Timed in at {$time}. Have a safe shift!" : "Timed out at {$time}. Thanks for today!",
+            'action' => $action,
+            'attendance' => $this->attendance->riderPayload($request->user()->rider),
+        ]);
+    }
 
     /** The rider scanned a return slip at the buyer's door: the item is on its way to the hub. */
     public function scanReturn(Request $request): JsonResponse
@@ -60,6 +79,7 @@ class MobileRiderDashboardController extends Controller
 
         return response()->json([
             'rider' => $this->riderPayload($rider),
+            'attendance' => $rider->rider ? $this->attendance->riderPayload($rider->rider) : null,
             'announcements' => MobilePayload::announcements(Announcement::for('rider')),
             'announcement_popups' => MobilePayload::announcements(Announcement::popupsFor('rider')),
             // The partner assigns parcels here; the app shows this only while sellers deliver their own orders.

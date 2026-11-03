@@ -7,9 +7,17 @@ import 'scan_feedback.dart';
 
 /// Reads the QR code or barcode on a parcel's waybill and pops with its text. When [accept]
 /// is given, codes it rejects (another parcel's label) are ignored with a
-/// message and scanning goes on. A damaged label can be typed in instead.
+/// message and scanning goes on. A damaged label can be typed in instead,
+/// unless [manualEntry] is off (the hub's attendance code changes too often to type).
 class RiderScanScreen extends StatefulWidget {
-  const RiderScanScreen({super.key, required this.title, required this.hint, this.accept});
+  const RiderScanScreen({
+    super.key,
+    required this.title,
+    required this.hint,
+    this.accept,
+    this.instructions = 'Point the camera at the QR code or barcode on the waybill.',
+    this.manualEntry = true,
+  });
 
   final String title;
 
@@ -18,6 +26,12 @@ class RiderScanScreen extends StatefulWidget {
 
   /// Returns an error message for a code that is not the expected parcel, or null to accept it.
   final String? Function(String code)? accept;
+
+  /// The smaller line under [hint]: what to point the camera at.
+  final String instructions;
+
+  /// Offers typing the tracking number when a label cannot be read.
+  final bool manualEntry;
 
   @override
   State<RiderScanScreen> createState() => _RiderScanScreenState();
@@ -111,7 +125,8 @@ class _RiderScanScreenState extends State<RiderScanScreen> {
               MobileScanner(
                 controller: _controller,
                 onDetect: _onDetect,
-                errorBuilder: (context, error) => _CameraError(error: error, onEnterManually: _enterManually),
+                errorBuilder: (context, error) =>
+                    _CameraError(error: error, onEnterManually: widget.manualEntry ? _enterManually : null),
               ),
               IgnorePointer(
                 child: Center(
@@ -144,15 +159,17 @@ class _RiderScanScreenState extends State<RiderScanScreen> {
               ],
               Text(widget.hint, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
               const SizedBox(height: 4),
-              Text('Point the camera at the QR code or barcode on the waybill.',
+              Text(widget.instructions,
                   textAlign: TextAlign.center, style: TextStyle(color: Colors.white.withValues(alpha: .7), fontSize: 12)),
-              const SizedBox(height: 10),
-              TextButton.icon(
-                onPressed: _enterManually,
-                style: TextButton.styleFrom(foregroundColor: Colors.white),
-                icon: const Icon(Icons.keyboard_outlined),
-                label: const Text('Label damaged? Type the tracking number'),
-              ),
+              if (widget.manualEntry) ...[
+                const SizedBox(height: 10),
+                TextButton.icon(
+                  onPressed: _enterManually,
+                  style: TextButton.styleFrom(foregroundColor: Colors.white),
+                  icon: const Icon(Icons.keyboard_outlined),
+                  label: const Text('Label damaged? Type the tracking number'),
+                ),
+              ],
             ]),
           ),
         ]),
@@ -160,10 +177,12 @@ class _RiderScanScreenState extends State<RiderScanScreen> {
 }
 
 class _CameraError extends StatelessWidget {
-  const _CameraError({required this.error, required this.onEnterManually});
+  const _CameraError({required this.error, this.onEnterManually});
 
   final MobileScannerException error;
-  final VoidCallback onEnterManually;
+
+  /// Null where typing a code is not offered.
+  final VoidCallback? onEnterManually;
 
   @override
   Widget build(BuildContext context) => ColoredBox(
@@ -175,18 +194,24 @@ class _CameraError extends StatelessWidget {
               const Icon(Icons.no_photography_outlined, color: Colors.white, size: 40),
               const SizedBox(height: 12),
               Text(
-                error.errorCode == MobileScannerErrorCode.permissionDenied
-                    ? 'ZAYLO needs camera access to scan parcels. Allow it in your phone settings, or type the tracking number.'
-                    : 'The camera could not start. You can type the tracking number instead.',
+                switch ((error.errorCode == MobileScannerErrorCode.permissionDenied, onEnterManually != null)) {
+                  (true, true) =>
+                    'ZAYLO needs camera access to scan parcels. Allow it in your phone settings, or type the tracking number.',
+                  (true, false) => 'ZAYLO needs camera access to scan. Allow it in your phone settings, then try again.',
+                  (false, true) => 'The camera could not start. You can type the tracking number instead.',
+                  (false, false) => 'The camera could not start. Close this screen and try again.',
+                },
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.white),
               ),
-              const SizedBox(height: 12),
-              FilledButton(
-                onPressed: onEnterManually,
-                style: FilledButton.styleFrom(backgroundColor: ZayloColors.white, foregroundColor: ZayloColors.ink),
-                child: const Text('Type tracking number'),
-              ),
+              if (onEnterManually != null) ...[
+                const SizedBox(height: 12),
+                FilledButton(
+                  onPressed: onEnterManually,
+                  style: FilledButton.styleFrom(backgroundColor: ZayloColors.white, foregroundColor: ZayloColors.ink),
+                  child: const Text('Type tracking number'),
+                ),
+              ],
             ]),
           ),
         ),

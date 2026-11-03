@@ -495,10 +495,75 @@ class RiderReturn {
       );
 }
 
+/// The rider's day: their work schedule from the logistics partner and today's
+/// time in and time out, recorded by scanning the attendance QR code at the hub.
+class RiderAttendance {
+  const RiderAttendance({
+    required this.statusLabel,
+    this.status = '',
+    this.schedule,
+    this.shift,
+    this.worksToday = false,
+    this.timeIn,
+    this.timeOut,
+    this.late = false,
+    this.nextAction,
+  });
+
+  /// on_shift, timed_out, not_in_yet, absent, day_off or no_schedule.
+  final String status;
+  final String statusLabel;
+
+  /// e.g. "Mon–Fri · 8:00 AM – 5:00 PM"; null until the partner sets one.
+  final String? schedule;
+
+  /// e.g. "8:00 AM – 5:00 PM".
+  final String? shift;
+  final bool worksToday;
+  final DateTime? timeIn;
+  final DateTime? timeOut;
+  final bool late;
+
+  /// time_in or time_out: what the next scan records. Null once the rider timed out for the day.
+  final String? nextAction;
+
+  bool get canTimeOut => nextAction == 'time_out';
+
+  /// True for the code shown on the hub's attendance screen, so a waybill
+  /// scanned by mistake is turned away before it reaches the server.
+  static bool isAttendanceCode(String code) => code.trim().startsWith('ZAYLO-ATT.');
+
+  factory RiderAttendance.fromJson(Map<String, dynamic> json) => RiderAttendance(
+        status: json['status'] as String? ?? '',
+        statusLabel: json['status_label'] as String? ?? '',
+        schedule: json['schedule'] as String?,
+        shift: json['shift'] as String?,
+        worksToday: json['works_today'] as bool? ?? false,
+        timeIn: _date(json['time_in']),
+        timeOut: _date(json['time_out']),
+        late: json['late'] as bool? ?? false,
+        nextAction: json['next_action'] as String?,
+      );
+}
+
+/// What the attendance scan recorded: a time in or a time out.
+class RiderAttendanceScanResult {
+  const RiderAttendanceScanResult({required this.message, required this.attendance});
+
+  final String message;
+  final RiderAttendance attendance;
+
+  factory RiderAttendanceScanResult.fromJson(Map<String, dynamic> json) => RiderAttendanceScanResult(
+        message: json['message'] as String? ?? '',
+        attendance: RiderAttendance.fromJson(json['attendance'] as Map<String, dynamic>? ?? const {}),
+      );
+}
+
 class RiderDashboard {
   const RiderDashboard({
     required this.rider,
     required this.stats,
+    this.attendance,
     this.returns = const [],
     this.active = const [],
     this.recent = const [],
@@ -510,6 +575,9 @@ class RiderDashboard {
 
   final RiderProfile rider;
   final RiderStats stats;
+
+  /// Schedule and today's time in / time out; null from servers without attendance.
+  final RiderAttendance? attendance;
 
   /// Parcels the logistics partner assigned to the rider, still in progress.
   final List<RiderDelivery> active;
@@ -540,6 +608,9 @@ class RiderDashboard {
   factory RiderDashboard.fromJson(Map<String, dynamic> json) => RiderDashboard(
         rider: RiderProfile.fromJson(json['rider'] as Map<String, dynamic>? ?? const {}),
         stats: RiderStats.fromJson(json['stats'] as Map<String, dynamic>? ?? const {}),
+        attendance: json['attendance'] is Map<String, dynamic>
+            ? RiderAttendance.fromJson(json['attendance'] as Map<String, dynamic>)
+            : null,
         active: _deliveries(json['active']),
         returns: (json['returns'] as List<dynamic>? ?? const [])
             .map((item) => RiderReturn.fromJson(item as Map<String, dynamic>))

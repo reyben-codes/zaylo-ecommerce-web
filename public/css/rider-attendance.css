@@ -1,0 +1,234 @@
+/* Logistics Attendance page: the hub's attendance QR code, the day's summary, and rider schedules. */
+
+.attendance-top {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+    gap: 22px;
+    align-items: start;
+    margin-bottom: 22px;
+}
+
+.attendance-top--single {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.attendance-top > .seller-panel + .seller-panel {
+    margin-top: 0;
+}
+
+.attendance-qr__body {
+    display: grid;
+    gap: 12px;
+    justify-items: center;
+    text-align: center;
+}
+
+/* Scanners need dark modules on a light background, so the code keeps a white card in dark mode too. */
+.attendance-qr__image {
+    width: min(240px, 100%);
+    height: auto;
+    padding: 8px;
+    border-radius: 10px;
+    background: #ffffff;
+    transition: opacity .2s ease-out;
+}
+
+.attendance-qr__image.is-stale {
+    opacity: .35;
+}
+
+.attendance-qr__note {
+    margin: 0;
+    color: var(--zaylo-muted);
+    font-size: .72rem;
+}
+
+.attendance-qr:fullscreen {
+    display: grid;
+    place-content: center;
+    overflow: auto;
+    padding: 24px;
+    border-radius: 0;
+    background: var(--zaylo-surface);
+}
+
+.attendance-qr:fullscreen .attendance-qr__image {
+    width: min(70vh, 80vw);
+}
+
+.attendance-qr:fullscreen .attendance-qr__note {
+    font-size: 1rem;
+}
+
+.attendance-date {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.attendance-date input {
+    min-height: 34px;
+    padding: 6px 10px;
+    border: 1px solid var(--c-dcd2c8);
+    border-radius: 7px;
+    background: var(--zaylo-surface);
+    color: var(--zaylo-ink);
+    font: inherit;
+    font-size: .76rem;
+}
+
+.attendance-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin: 16px 0 0;
+}
+
+.attendance-summary div {
+    padding: 12px;
+    border: 1px solid var(--zaylo-border);
+    border-radius: 10px;
+}
+
+.attendance-summary dt {
+    color: var(--zaylo-muted);
+    font-size: .68rem;
+    font-weight: 600;
+}
+
+.attendance-summary dd {
+    margin: 4px 0 0;
+    color: var(--zaylo-ink);
+    font-size: 1.3rem;
+    font-weight: 700;
+}
+
+.attendance-flag {
+    color: var(--c-8f5b17);
+    font-weight: 600;
+}
+
+.attendance-status--active {
+    background: var(--c-dcebd8);
+    color: var(--c-2d6d3e);
+}
+
+.attendance-status--pending {
+    background: var(--c-fff0d5);
+    color: var(--c-8f5b17);
+}
+
+.attendance-status--rejected {
+    background: var(--c-fde4e1);
+    color: var(--c-a4413b);
+}
+
+.attendance-status--none {
+    background: var(--c-f1ebe5);
+    color: var(--zaylo-muted);
+}
+
+.attendance-schedule {
+    min-width: 0;
+}
+
+.attendance-schedule summary {
+    list-style: none;
+}
+
+.attendance-schedule summary::-webkit-details-marker {
+    display: none;
+}
+
+.attendance-schedule__form {
+    display: grid;
+    gap: 10px;
+    width: min(300px, 75vw);
+    margin-top: 8px;
+    padding: 12px;
+    border: 1px solid var(--zaylo-border);
+    border-radius: 8px;
+    background: var(--c-fcfaf8);
+}
+
+.attendance-schedule__form label,
+.attendance-schedule__days legend {
+    color: var(--c-4f453c);
+    font-size: .7rem;
+    font-weight: 700;
+}
+
+.attendance-schedule__times {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.attendance-schedule__times div {
+    display: grid;
+    gap: 4px;
+}
+
+.attendance-schedule__times input {
+    width: 100%;
+    padding: 7px 8px;
+    border: 1px solid var(--c-dcd2c8);
+    border-radius: 7px;
+    background: var(--zaylo-surface);
+    color: var(--zaylo-ink);
+    font: inherit;
+    font-size: .74rem;
+}
+
+.attendance-schedule__times input:focus,
+.attendance-date input:focus {
+    border-color: var(--zaylo-accent);
+    outline: 0;
+    box-shadow: 0 0 0 3px rgba(154, 117, 94, .12);
+}
+
+.attendance-schedule__days {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.attendance-schedule__days legend {
+    margin-bottom: 4px;
+    padding: 0;
+}
+
+.attendance-schedule__days label {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+    font-weight: 500;
+}
+
+.attendance-schedule__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+@media (max-width: 900px) {
+    .attendance-top {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .attendance-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .attendance-qr__image {
+        transition: none;
+    }
+}

@@ -551,6 +551,97 @@ class RiderReturnCard extends StatelessWidget {
 }
 
 /// Shown when a list is empty, inside the scrolling dashboard.
+/// Today's attendance: the schedule from the logistics partner, time in and
+/// time out, and the button that scans the hub's attendance QR code.
+class RiderAttendanceCard extends StatelessWidget {
+  const RiderAttendanceCard({super.key, required this.attendance, required this.busy, this.onScan});
+
+  final RiderAttendance attendance;
+  final bool busy;
+
+  /// Null while another scan is running.
+  final VoidCallback? onScan;
+
+  static String _clock(DateTime? time) {
+    if (time == null) return '—';
+    final hour = time.hour % 12 == 0 ? 12 : time.hour % 12;
+    return '$hour:${time.minute.toString().padLeft(2, '0')} ${time.hour < 12 ? 'AM' : 'PM'}';
+  }
+
+  Color get _statusColor => switch (attendance.status) {
+        'on_shift' || 'timed_out' => _green,
+        'not_in_yet' => _amber,
+        'absent' => _red,
+        _ => ZayloColors.muted,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final done = attendance.nextAction == null;
+    final label = done ? 'DONE FOR TODAY' : (attendance.canTimeOut ? 'TIME OUT' : 'TIME IN');
+    return SectionCard(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Icon(Icons.badge_outlined, color: ZayloColors.ink),
+          const SizedBox(width: 8),
+          Expanded(child: Text('Attendance', style: TextStyle(fontWeight: FontWeight.w700, color: ZayloColors.ink))),
+          if (attendance.statusLabel.isNotEmpty) _Pill(label: attendance.statusLabel, color: _statusColor),
+        ]),
+        const SizedBox(height: 6),
+        Text(
+          attendance.schedule ?? 'Your logistics partner has not set your schedule yet.',
+          style: TextStyle(fontSize: 13, color: ZayloColors.muted),
+        ),
+        const SizedBox(height: 12),
+        Row(children: [
+          Expanded(child: _AttendanceTime(label: 'Time in', value: _clock(attendance.timeIn), note: attendance.late ? 'Late' : null)),
+          Expanded(child: _AttendanceTime(label: 'Time out', value: _clock(attendance.timeOut))),
+        ]),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: done || busy ? null : onScan,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: ZayloColors.ink,
+              side: BorderSide(color: ZayloColors.ink),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+            icon: busy
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                : Icon(done ? Icons.check_circle_outline : Icons.qr_code_scanner),
+            label: Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
+          ),
+        ),
+        if (!done) ...[
+          const SizedBox(height: 6),
+          Text("Scan the attendance QR code on your logistics hub's screen.",
+              style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
+        ],
+      ]),
+    );
+  }
+}
+
+class _AttendanceTime extends StatelessWidget {
+  const _AttendanceTime({required this.label, required this.value, this.note});
+
+  final String label;
+  final String value;
+  final String? note;
+
+  @override
+  Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(label, style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
+        const SizedBox(height: 2),
+        // Wraps so "Late" drops below the time on narrow phones or with large text.
+        Wrap(spacing: 6, crossAxisAlignment: WrapCrossAlignment.center, children: [
+          Text(value, style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: ZayloColors.ink)),
+          if (note != null) Text(note!, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _amber)),
+        ]),
+      ]);
+}
+
 class RiderEmptyCard extends StatelessWidget {
   const RiderEmptyCard({super.key, required this.icon, required this.message});
 

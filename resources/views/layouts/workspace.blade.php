@@ -49,6 +49,7 @@
                 ['route' => 'logistics.monitoring', 'label' => 'Monitoring', 'icon' => 'fa-satellite-dish'],
                 ['heading' => 'Team'],
                 ['route' => 'logistics.riders', 'label' => 'Riders', 'icon' => 'fa-motorcycle'],
+                ['route' => 'logistics.attendance', 'label' => 'Attendance', 'icon' => 'fa-user-clock'],
                 ['route' => 'logistics.messages', 'label' => 'Messages', 'icon' => 'fa-comments'],
                 ['route' => 'support', 'label' => 'ZAYLO support', 'icon' => 'fa-life-ring'],
                 ['route' => 'logistics.reports', 'label' => 'Reports', 'icon' => 'fa-chart-column'],
