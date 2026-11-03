@@ -102,9 +102,6 @@ class BuyerApi extends ApiClient {
         'device_name': deviceName,
       }));
 
-  Future<UserProfile> me() async =>
-      UserProfile.fromJson((await send('GET', '/mobile/me'))['user'] as Map<String, dynamic>);
-
   Future<Map<String, dynamic>> register({
     required String firstName,
     required String lastName,

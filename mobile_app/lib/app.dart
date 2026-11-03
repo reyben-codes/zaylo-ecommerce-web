@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import 'package:zaylo_mobile/api/rider_api.dart';
 import 'package:zaylo_mobile/components/app_update.dart';
 import 'package:zaylo_mobile/features/buyer/messages/chat_head_overlay.dart';
 import 'package:zaylo_mobile/navigation/buyer_shell.dart';
+import 'package:zaylo_mobile/navigation/rider_shell.dart';
 import 'package:zaylo_mobile/state/app_state.dart';
 import 'package:zaylo_mobile/theme/theme_controller.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
@@ -11,10 +13,13 @@ import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 final zayloNavigatorKey = GlobalKey<NavigatorState>();
 
 class ZayloApp extends StatefulWidget {
-  ZayloApp({super.key, required this.state, ThemeController? theme}) : theme = theme ?? ThemeController();
+  ZayloApp({super.key, required this.state, ThemeController? theme, this.rider}) : theme = theme ?? ThemeController();
 
   final AppState state;
   final ThemeController theme;
+
+  /// The rider client whose saved session reopens the rider app on launch; one for the live server by default.
+  final RiderApi? rider;
 
   @override
   State<ZayloApp> createState() => _ZayloAppState();
@@ -36,6 +41,14 @@ class _ZayloAppState extends State<ZayloApp> with WidgetsBindingObserver {
         await _updates.checkPatchNotes();
       }
     });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _resumeRider());
+  }
+
+  /// A rider who signed in before (and never signed out) goes straight back to the rider app.
+  Future<void> _resumeRider() async {
+    final rider = widget.rider ?? RiderApi(baseUrl: widget.state.api.baseUrl);
+    if (!await rider.resume()) return;
+    zayloNavigatorKey.currentState?.push(MaterialPageRoute(builder: (_) => RiderShell(api: rider)));
   }
 
   @override

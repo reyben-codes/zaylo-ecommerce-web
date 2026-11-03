@@ -50,7 +50,7 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
     setState(() => _submitting = true);
     try {
       final result = await _api.login(_email.text.trim(), _password.text);
-      _api.token = result.token;
+      await _api.keepSignedIn(result.token);
       if (!mounted) return;
       Navigator.of(context).pushReplacement(MaterialPageRoute(
         builder: (_) => RiderShell(api: _api, user: result.user),
@@ -73,7 +73,7 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
   /// "Continue with Google" for riders who already applied; errors show in the screen's banner.
   Future<void> _googleSignIn(String idToken) async {
     final result = await _api.googleSignIn(idToken);
-    _api.token = result.token;
+    await _api.keepSignedIn(result.token);
     if (!mounted) return;
     Navigator.of(context).pushReplacement(MaterialPageRoute(
       builder: (_) => RiderShell(api: _api, user: result.user),

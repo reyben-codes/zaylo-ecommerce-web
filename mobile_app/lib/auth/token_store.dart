@@ -9,25 +9,32 @@ abstract class TokenStore {
 }
 
 class SecureTokenStore implements TokenStore {
-  static const _key = 'zaylo_api_token';
+  /// The buyer session uses the default key; the rider session keeps its own.
+  SecureTokenStore({this.key = 'zaylo_api_token'});
+
+  final String key;
   final _storage = const FlutterSecureStorage();
 
   @override
   Future<String?> read() async {
     try {
-      return await _storage.read(key: _key);
+      return await _storage.read(key: key);
     } catch (_) {
       // A corrupted keystore entry must not keep the app from starting.
-      await clear();
+      try {
+        await clear();
+      } catch (_) {
+        // Nothing more to do; the entry is ignored.
+      }
       return null;
     }
   }
 
   @override
-  Future<void> write(String token) => _storage.write(key: _key, value: token);
+  Future<void> write(String token) => _storage.write(key: key, value: token);
 
   @override
-  Future<void> clear() => _storage.delete(key: _key);
+  Future<void> clear() => _storage.delete(key: key);
 }
 
 class MemoryTokenStore implements TokenStore {

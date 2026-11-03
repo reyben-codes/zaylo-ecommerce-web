@@ -45,6 +45,7 @@ class _RiderShellState extends State<RiderShell> {
   @override
   void initState() {
     super.initState();
+    widget.api.onUnauthorized = _sessionExpired;
     _refreshUnread();
     _unreadPoll = Timer.periodic(const Duration(seconds: 30), (_) => _refreshUnread());
   }
@@ -52,6 +53,7 @@ class _RiderShellState extends State<RiderShell> {
   @override
   void dispose() {
     _unreadPoll?.cancel();
+    widget.api.onUnauthorized = null;
     _historyPeriod.dispose();
     _navVisibility.dispose();
     super.dispose();
@@ -86,12 +88,23 @@ class _RiderShellState extends State<RiderShell> {
     } on ApiException {
       // The token is dropped either way; the server expires it on its own.
     }
-    widget.api.token = null;
+    await widget.api.forget();
     // So the next "Continue with Google" lets the rider choose an account again.
     await GoogleAuth.source.signOut();
     if (!mounted) return;
     Navigator.of(context).pop();
     showMessage(context, 'Signed out of your rider account.');
+  }
+
+  /// The server no longer accepts the saved token (e.g. it was revoked), so the rider signs in again.
+  Future<void> _sessionExpired() async {
+    if (_signingOut) return;
+    _signingOut = true;
+    _unreadPoll?.cancel();
+    await widget.api.forget();
+    if (!mounted) return;
+    Navigator.of(context).pop();
+    showMessage(context, 'Your rider session has ended. Please sign in again.');
   }
 
   /// Back from another tab returns Home; back on Home asks before signing out.

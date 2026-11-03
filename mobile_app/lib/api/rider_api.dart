@@ -1,6 +1,8 @@
 import 'dart:io';
 
 import 'package:zaylo_mobile/api/api_client.dart';
+import 'package:zaylo_mobile/api/api_exception.dart';
+import 'package:zaylo_mobile/auth/token_store.dart';
 import 'package:zaylo_mobile/components/address/ph_address_section.dart';
 import 'package:zaylo_mobile/components/chat/delivery_chat.dart';
 import 'package:zaylo_mobile/models/auth_models.dart';
@@ -11,9 +13,43 @@ import 'package:zaylo_mobile/models/rider/rider_models.dart';
 
 /// Rider endpoints. A rider token lives on its own [RiderApi], separate from
 /// the buyer session in AppState, so signing in as a rider never signs the
-/// buyer out. Logout and forgot-password come from [ApiClient].
+/// buyer out. Logout and forgot-password come from [ApiClient]. The token is
+/// kept on the phone under its own key, so a rider stays signed in after the
+/// app closes.
 class RiderApi extends ApiClient {
-  RiderApi({super.baseUrl});
+  RiderApi({super.baseUrl, TokenStore? tokens}) : _tokens = tokens ?? SecureTokenStore(key: 'zaylo_rider_token');
+
+  final TokenStore _tokens;
+
+  /// Uses [token] from a sign-in and saves it for the next launch.
+  Future<void> keepSignedIn(String? token) async {
+    this.token = token;
+    if (token != null) await _tokens.write(token);
+  }
+
+  /// Drops the token here and on the phone.
+  Future<void> forget() async {
+    token = null;
+    await _tokens.clear();
+  }
+
+  /// Picks up a saved rider session on launch. A rejected token is forgotten;
+  /// network failures keep it, so a rider who opens the app offline is not
+  /// signed out.
+  Future<bool> resume() async {
+    final saved = await _tokens.read();
+    if (saved == null) return false;
+    token = saved;
+    try {
+      await me();
+    } on ApiException catch (error) {
+      if (error.statusCode == 401) {
+        await forget();
+        return false;
+      }
+    }
+    return true;
+  }
 
   /// Support chat and complaints live under the rider prefix.
   @override

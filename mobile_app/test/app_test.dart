@@ -366,7 +366,16 @@ class FakeGoogleIdTokenSource implements GoogleIdTokenSource {
 
 /// Rider API that answers from memory, in the shape MobileRiderDashboardController returns.
 class FakeRiderApi extends RiderApi {
-  FakeRiderApi() : super(baseUrl: 'http://fake.test/api');
+  FakeRiderApi({TokenStore? tokens}) : super(baseUrl: 'http://fake.test/api', tokens: tokens ?? MemoryTokenStore());
+
+  /// Whether the server still accepts the saved rider token.
+  bool tokenAccepted = true;
+
+  @override
+  Future<UserProfile> me() async {
+    if (!tokenAccepted) throw ApiException('Unauthenticated.', statusCode: 401);
+    return UserProfile.fromJson({'id': 34, 'name': 'Jun Reyes', 'email': 'jun.rider@example.test'});
+  }
 
   /// ID tokens sent to [googleSignIn].
   final googleTokens = <String>[];
@@ -706,7 +715,7 @@ class FakeRiderApi extends RiderApi {
 }
 
 Future<void> pumpApp(WidgetTester tester,
-    {String? token, List<int> cart = const [], double width = 400, ThemeController? theme, FakeApi? api}) async {
+    {String? token, List<int> cart = const [], double width = 400, ThemeController? theme, FakeApi? api, FakeRiderApi? rider}) async {
   final tokens = MemoryTokenStore();
   if (token != null) await tokens.write(token);
   final state = AppState(api: api ?? FakeApi(cartIds: cart), tokens: tokens);
@@ -715,7 +724,7 @@ Future<void> pumpApp(WidgetTester tester,
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = Size(width, 4000);
   addTearDown(tester.view.reset);
-  await tester.pumpWidget(ZayloApp(state: state, theme: theme));
+  await tester.pumpWidget(ZayloApp(state: state, theme: theme, rider: rider ?? FakeRiderApi()));
   await state.restore();
   await tester.pumpAndSettle(const Duration(milliseconds: 100), EnginePhase.sendSemanticsUpdate, const Duration(seconds: 2));
 }
@@ -1523,6 +1532,43 @@ void main() {
       expect(buyer.signedIn, isFalse, reason: 'the rider session never replaces a buyer session');
     });
 
+    testWidgets('keeps the rider signed in after the app closes, until they sign out', (tester) async {
+      GoogleAuth.source = FakeGoogleIdTokenSource();
+      final tokens = MemoryTokenStore();
+      await tokens.write('rider-saved-session');
+
+      // Reopening the app goes straight back to the rider app.
+      final rider = FakeRiderApi(tokens: tokens);
+      await pumpApp(tester, api: FakeApi(), rider: rider);
+      expect(find.byType(RiderShell), findsOneWidget);
+      expect(rider.token, 'rider-saved-session');
+
+      // Leaving rider mode signs out and forgets the saved session.
+      tester.state<NavigatorState>(find.byType(Navigator).first).maybePop();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Sign out'));
+      await tester.pumpAndSettle();
+      expect(find.byType(RiderShell), findsNothing);
+      expect(await tokens.read(), isNull);
+      expect(rider.token, isNull);
+    });
+
+    testWidgets('a rider sign-in is saved for the next launch', (tester) async {
+      final (rider, _) = await openRiderLogin(tester, FakeGoogleIdTokenSource());
+      await tapGoogle(tester);
+      expect(await rider.resume(), isTrue);
+      expect(rider.token, 'rider-google-session');
+    });
+
+    testWidgets('a saved rider session the server rejects opens the buyer app instead', (tester) async {
+      final tokens = MemoryTokenStore();
+      await tokens.write('revoked');
+      final rider = FakeRiderApi(tokens: tokens)..tokenAccepted = false;
+      await pumpApp(tester, api: FakeApi(), rider: rider);
+      expect(find.byType(RiderShell), findsNothing);
+      expect(await tokens.read(), isNull);
+    });
+
     testWidgets('shows why the server refused and lets the rider pick another account', (tester) async {
       final google = FakeGoogleIdTokenSource(token: 'rejected');
       final (rider, _) = await openRiderLogin(tester, google);
@@ -1630,7 +1676,7 @@ void main() {
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = const Size(400, 900);
       addTearDown(tester.view.reset);
-      await tester.pumpWidget(ZayloApp(state: state, theme: ThemeController(store: MemoryThemeModeStore())));
+      await tester.pumpWidget(ZayloApp(state: state, theme: ThemeController(store: MemoryThemeModeStore()), rider: FakeRiderApi()));
       await state.restore();
       await tester.pump();
       expect(teaser(), findsNothing);

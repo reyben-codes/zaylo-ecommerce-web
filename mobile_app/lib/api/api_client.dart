@@ -40,6 +40,9 @@ class ApiClient {
 
   // ------------------------------------------------- Shared account endpoints
 
+  Future<UserProfile> me() async =>
+      UserProfile.fromJson((await send('GET', '/mobile/me'))['user'] as Map<String, dynamic>);
+
   Future<void> logout() => send('POST', '/mobile/logout');
 
   static const _githubReleasesApi = 'https://api.github.com/repos/reyben-codes/zaylo-ecommerce-web/releases/latest';
