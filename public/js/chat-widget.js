@@ -72,7 +72,10 @@
         } catch { /* No usable photo: initials are shown. */ }
         return { name, avatar };
     };
-    const bubbleLabel = () => (state.partner ? `Open chat with ${state.partner.name}` : 'Open messages');
+    const bubbleLabel = () => {
+        const label = state.partner ? `Open chat with ${state.partner.name}` : 'Open messages';
+        return state.unread ? `${label}. ${state.unread} unread ${state.unread === 1 ? 'chat' : 'chats'}` : label;
+    };
     const showPartner = () => {
         const partner = state.partner;
         bubble.classList.toggle('has-partner', Boolean(partner));
@@ -285,6 +288,8 @@
         if (wasOpen) animatePanel(false);
         tuckBubble(false);
         if (focus && wasOpen && !bubble.hidden) bubble.focus({ preventScroll: true });
+        // Chats read while it was open come off the counter right away.
+        if (wasOpen) checkTyping();
     };
     const open = url => {
         if (state.dismissed) { const { width, height } = bounds(); place(width - 76, height - 76); }
@@ -415,6 +420,17 @@
             }
         } catch { /* The full Messages link remains available if the session expires. */ }
     });
+    // Unread counter: how many chats have unread messages. The last count is remembered across pages, so the badge
+    // does not blink out on every page load while the first check is on its way.
+    const unreadBadge = document.createElement('span');
+    unreadBadge.className = 'chat-widget-unread';
+    unreadBadge.setAttribute('aria-hidden', 'true');
+    bubble.append(unreadBadge);
+    const showUnread = count => {
+        if (count !== state.unread) { state.unread = count; save(); }
+        unreadBadge.hidden = !count;
+        unreadBadge.textContent = count > 99 ? '99+' : String(count);
+    };
     // Typing dots: while the chat is closed, the bubble checks every few seconds whether anyone is typing to this
     // account and shows animated dots beside itself, like Messenger's chat heads. The open chat shows its own.
     const typingUrl = root.dataset.typingUrl;
@@ -444,7 +460,7 @@
         if (changed) typingStatus.textContent = names.length ? typingLabel(names) : '';
     };
     const stopTyping = () => { clearInterval(typingTimer); typingTimer = null; };
-    const checkTyping = async () => {
+    async function checkTyping() {
         if (bubble.hidden || isOpen()) { if (typingNames.length) showTyping([]); return; }
         if (typingBusy || document.visibilityState !== 'visible') return;
         typingBusy = true;
@@ -459,9 +475,10 @@
             if (!response.ok) return;
             const data = await response.json();
             const names = (Array.isArray(data?.typing) ? data.typing : []).map(item => String(item?.name || 'Someone').trim().slice(0, 80));
+            if (Number.isInteger(data?.unread_chats)) showUnread(data.unread_chats);
             showTyping(names);
         } catch { /* Offline or slow: the next check tries again. */ } finally { typingBusy = false; }
-    };
+    }
     const startTyping = () => {
         if (typingTimer || !typingUrl) return;
         typingTimer = setInterval(checkTyping, TYPING_POLL_MS);
@@ -472,6 +489,7 @@
     window.addEventListener('resize', () => { stopReturn(); if (Number.isFinite(state.x) && Number.isFinite(state.y)) place(state.x, state.y); });
     reducedMotion.addEventListener('change', () => { if (reducedMotion.matches) stopReturn(); });
     state.partner = cleanPartner(state.partner);
+    showUnread(Number.isInteger(state.unread) && state.unread > 0 ? state.unread : 0);
     showPartner();
     root.hidden = false; bubble.hidden = Boolean(state.dismissed);
     if (Number.isFinite(state.x) && Number.isFinite(state.y)) place(state.x, state.y);

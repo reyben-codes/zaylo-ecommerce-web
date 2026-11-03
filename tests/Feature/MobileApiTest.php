@@ -367,13 +367,13 @@ class MobileApiTest extends TestCase
         $this->assertSame(1, Conversation::count());
 
         // App -> website, with the typing indicator in between.
-        $asWebsite()->getJson(route('messages.typing-status'))->assertOk()->assertExactJson(['typing' => []]);
+        $asWebsite()->getJson(route('messages.typing-status'))->assertOk()->assertExactJson(['typing' => [], 'unread_chats' => 0]);
         $asApp()->postJson("/api/mobile/chat/conversations/{$chatId}/typing", ['typing' => true])->assertNoContent();
         $asWebsite()->getJson(route('messages.list', $chatId))->assertOk()->assertJsonPath('typing', true);
         // The website's floating bubble shows the dots before the seller opens the chat.
         $this->getJson(route('messages.typing-status'))->assertJsonCount(1, 'typing')
             ->assertJsonPath('typing.0.conversation_id', $chatId)->assertJsonPath('typing.0.name', 'Ana Buyer');
-        $asApp()->getJson('/api/mobile/chat/typing')->assertExactJson(['typing' => []]);
+        $asApp()->getJson('/api/mobile/chat/typing')->assertExactJson(['typing' => [], 'unread_chats' => 0]);
         $asApp()->postJson("/api/mobile/chat/conversations/{$chatId}/messages", ['body' => 'Is this still available?', 'client_id' => (string) str()->uuid()])
             ->assertOk()->assertJsonPath('message.mine', true);
         $asWebsite()->getJson(route('messages.list', $chatId))->assertJsonPath('typing', false)

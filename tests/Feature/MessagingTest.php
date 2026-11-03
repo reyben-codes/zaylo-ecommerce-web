@@ -167,9 +167,34 @@ class MessagingTest extends TestCase
         $this->actingAs($buyer)->get(route('products.show', $product))->assertOk()->assertSee('data-chat-widget', false)
             // The bubble checks who is typing so it can show typing dots while the chat is closed.
             ->assertSee('data-typing-url="'.route('messages.typing-status').'"', false);
-        $this->getJson(route('messages.typing-status'))->assertOk()->assertExactJson(['typing' => []]);
+        $this->getJson(route('messages.typing-status'))->assertOk()->assertExactJson(['typing' => [], 'unread_chats' => 0]);
         $this->get(route('home'))->assertOk()->assertSee('data-chat-widget', false);
         $buyer->forceFill(['email_verified_at' => null])->save();
         $this->actingAs($buyer->fresh())->get(route('products.show', $product))->assertOk()->assertDontSee('data-chat-widget', false);
+    }
+
+    public function test_bubble_counter_counts_chats_with_unread_messages_not_messages(): void
+    {
+        [$buyer, $seller] = $this->accounts();
+        $otherBuyer = User::factory()->create(['role' => 'buyer', 'status' => 'active']);
+        $unreadCount = fn (User $user) => $this->actingAs($user)->getJson(route('messages.typing-status'))->assertOk()->json('unread_chats');
+        $say = function (User $sender, Conversation $chat, string $body) {
+            return $this->actingAs($sender)->postJson(route('messages.send', $chat), ['body' => $body, 'client_id' => (string) Str::uuid()])
+                ->assertOk()->json('message.id');
+        };
+        $first = Conversation::create(['buyer_id' => $buyer->id, 'seller_id' => $seller->id]);
+        $second = Conversation::create(['buyer_id' => $otherBuyer->id, 'seller_id' => $seller->id]);
+
+        // Two messages in one chat count once, and your own messages never count.
+        $say($buyer, $first, 'Hello?');
+        $latest = $say($buyer, $first, 'Anyone there?');
+        $this->assertSame(1, $unreadCount($seller));
+        $this->assertSame(0, $unreadCount($buyer));
+
+        $say($otherBuyer, $second, 'Hi!');
+        $this->assertSame(2, $unreadCount($seller));
+
+        $this->actingAs($seller)->postJson(route('messages.read', $first), ['through' => $latest])->assertNoContent();
+        $this->assertSame(1, $unreadCount($seller));
     }
 }

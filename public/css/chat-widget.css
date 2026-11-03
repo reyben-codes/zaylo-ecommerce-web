@@ -17,6 +17,8 @@
 .chat-widget-bubble .chat-widget-face-badge svg { width: 13px; height: 13px; }
 .chat-widget-bubble.has-partner:hover .chat-widget-face { filter: brightness(1.08); }
 @keyframes chat-face-in { from { opacity: 0; transform: scale(.85); } to { opacity: 1; transform: none; } }
+/* How many chats have unread messages. */
+.chat-widget-unread { position: absolute; top: -7px; right: -7px; min-width: 22px; height: 22px; padding: 0 6px; border: 2px solid var(--c-fffdfb); border-radius: 11px; background: var(--c-963e38); color: var(--c-ffffff); font: 700 .7rem/18px 'Inter', sans-serif; text-align: center; box-shadow: 0 2px 6px #241a1640; pointer-events: none; animation: chat-face-in .25s ease-out; }
 /* Someone is typing to you while the chat is closed: a little speech bubble of dots beside the chat head. */
 .chat-widget-typing { position: absolute; top: 50%; right: calc(100% + 10px); display: flex; align-items: center; gap: 4px; padding: 10px 13px; border: 1px solid var(--c-e7ded5); border-radius: 16px 16px 4px 16px; background: var(--c-fffdfb); box-shadow: 0 4px 16px #241a1633; transform: translateY(-50%); pointer-events: none; animation: chat-typing-in .25s ease-out; }
 .chat-widget-typing.is-right { right: auto; left: calc(100% + 10px); border-radius: 16px 16px 16px 4px; }
@@ -69,4 +71,4 @@
     .chat-widget-toolbar[data-chat-drag-handle] { cursor: default; }
     .chat-widget-move, .chat-widget-resize { display: none !important; }
 }
-@media (prefers-reduced-motion: reduce) { .chat-widget-drop-target, .chat-widget-bubble, .chat-widget-bubble.is-tucked { transition: none; } .chat-widget-face, .chat-widget-typing, .chat-widget-typing i { animation: none; } .chat-widget-typing i { opacity: .8; } }
+@media (prefers-reduced-motion: reduce) { .chat-widget-drop-target, .chat-widget-bubble, .chat-widget-bubble.is-tucked { transition: none; } .chat-widget-face, .chat-widget-unread, .chat-widget-typing, .chat-widget-typing i { animation: none; } .chat-widget-typing i { opacity: .8; } }

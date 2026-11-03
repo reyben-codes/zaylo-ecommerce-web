@@ -64,8 +64,9 @@ class ChatController extends Controller
     }
 
     /**
-     * Who is typing to this account right now, across its recent conversations. The floating chat bubble
-     * (website and mobile app) polls this to show typing dots while the chat itself is closed.
+     * Who is typing to this account right now, across its recent conversations, and how many of its chats have
+     * unread messages. The floating chat bubble (website and mobile app) polls this to show typing dots and its
+     * unread counter while the chat itself is closed.
      */
     public function typingStatus(Request $request)
     {
@@ -81,6 +82,8 @@ class ChatController extends Controller
                 'name' => $this->partnerName($chat, $userId),
                 'url' => route($chat->buyer_id == $userId ? 'buyer.chat' : 'seller.chat', ['conversation' => $chat->id]),
             ])->values(),
+            'unread_chats' => Conversation::forUser($userId)
+                ->whereHas('messages', fn ($q) => $q->where('sender_id', '!=', $userId)->whereNull('read_at'))->count(),
         ]);
     }
 
