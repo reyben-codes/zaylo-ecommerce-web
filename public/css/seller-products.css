@@ -742,6 +742,10 @@
     transition: border-color .18s ease, background-color .18s ease;
 }
 
+.product-form__size-button[hidden] {
+    display: none;
+}
+
 .product-form__size-button:hover {
     border-color: var(--zaylo-accent);
     background: var(--c-faf7f2);
