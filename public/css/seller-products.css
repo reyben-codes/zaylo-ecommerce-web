@@ -1019,7 +1019,7 @@
     outline-offset: 2px;
 }
 
-.seller-field .product-form__category-option input {
+.seller-field .product-form__category-option input[type="checkbox"] {
     flex: none;
     width: 16px;
     min-height: 0;
