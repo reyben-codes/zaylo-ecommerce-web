@@ -44,6 +44,7 @@ class ParcelDeliveryUpdate extends Notification
                 : (new MailMessage)
                     ->subject("Order {$order} was delivered")
                     ->line("The rider scanned parcel {$parcel} and handed order {$order} to the buyer.")
+                    ->lineIf(Shipment::tracksDeliveryProof(),"The rider's photo of the parcel at the delivery address is in your orders.")
                     ->action('View orders', route('seller.orders'));
         }
 

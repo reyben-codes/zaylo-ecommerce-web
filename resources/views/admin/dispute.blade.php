@@ -100,6 +100,10 @@
                             <a href="{{ route('admin.parcels.waybill.print', $parcel) }}" class="seller-button seller-button--small seller-button--secondary" target="_blank" rel="noopener"
                                aria-label="Print the waybill for order {{ $order->order_number }} (opens in a new tab)"><i class="fas fa-print" aria-hidden="true"></i> Waybill</a>
                         @endif
+                        @if($parcel?->delivery_proof_path)
+                            <a href="{{ route('delivery-proof', $parcel) }}" class="seller-button seller-button--small seller-button--secondary" target="_blank" rel="noopener"
+                               aria-label="See the rider's delivery photo for order {{ $order->order_number }} (opens in a new tab)"><i class="fas fa-camera" aria-hidden="true"></i> Delivery photo</a>
+                        @endif
                     </header>
                     <ul class="case-items">
                         @foreach($order->items as $item)
