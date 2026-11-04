@@ -35,7 +35,7 @@
     const limitQuantity = (stock) => {
         const quantity = form?.querySelector('[name="quantity"]');
         if (!quantity) return;
-        quantity.max = Math.max(1, Math.min(99, stock));
+        quantity.max = Math.max(1, stock);
         if (Number(quantity.value) > Number(quantity.max)) quantity.value = quantity.max;
         quantity.dispatchEvent(new Event('input', { bubbles: true }));
     };

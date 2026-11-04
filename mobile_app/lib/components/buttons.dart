@@ -112,14 +112,14 @@ class _QuantityStepperState extends State<QuantityStepper> {
             onTap: widget.enabled && widget.value > 1 ? () => _step(-1) : null,
           ),
           SizedBox(
-            width: 44,
+            width: 44.0 + 9 * ('${widget.max}'.length - 3).clamp(0, 4),
             child: TextField(
               controller: _controller,
               focusNode: _focus,
               enabled: widget.enabled,
               keyboardType: TextInputType.number,
               textInputAction: TextInputAction.done,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(4)],
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter('${widget.max}'.length.clamp(1, 7))],
               textAlign: TextAlign.center,
               style: const TextStyle(fontWeight: FontWeight.w700),
               decoration: const InputDecoration(

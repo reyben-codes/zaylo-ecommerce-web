@@ -1,6 +1,30 @@
 (() => {
+    const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    // Above Zaylo's warehouse capacity, show the "ships from the seller's warehouse" note, sliding it open or shut.
+    const warehouseNote = input => {
+        const note = input.id ? document.querySelector(`[data-warehouse-note="${CSS.escape(input.id)}"]`) : null;
+        if (!note) return () => {};
+        const capacity = Number(note.dataset.warehouseCapacity) || 100;
+        let animation = null, open = !note.hidden;
+        return () => {
+            const show = input.valueAsNumber > capacity;
+            if (show === open) return;
+            open = show;
+            const from = note.hidden ? 0 : note.getBoundingClientRect().height;
+            const fromOpacity = note.hidden ? 0 : Number(getComputedStyle(note).opacity);
+            animation?.cancel();
+            note.hidden = false;
+            if (reducedMotionQuery.matches || !note.animate) { note.hidden = !show; return; }
+            const to = show ? note.scrollHeight : 0;
+            animation = note.animate([{ height: `${from}px`, opacity: fromOpacity }, { height: `${to}px`, opacity: show ? 1 : 0 }], { duration: 300, easing: 'cubic-bezier(.22, 1, .36, 1)' });
+            animation.finished.then(() => { animation = null; note.hidden = !show; }, () => {});
+        };
+    };
+
     document.querySelectorAll('[data-quantity-stepper]').forEach(stepper => {
         const input = stepper.querySelector('input');
+        const syncNote = warehouseNote(input);
         const minus = stepper.querySelector('[data-quantity-change="-1"]');
         const plus = stepper.querySelector('[data-quantity-change="1"]');
         const updateButton = input.form?.querySelector('[data-quantity-update]');
@@ -74,6 +98,7 @@
             const { min, max } = bounds();
             const value = input.valueAsNumber;
             showUpdate(value !== originalQuantity);
+            syncNote();
             const busy = input.form?.getAttribute('aria-busy') === 'true';
             minus.disabled = input.disabled || busy || max < min || (Number.isFinite(value) && value <= min);
             plus.disabled = input.disabled || busy || max < min || (Number.isFinite(value) && value >= max);

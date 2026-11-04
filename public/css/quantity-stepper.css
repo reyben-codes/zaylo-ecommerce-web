@@ -19,3 +19,7 @@
 .quantity-stepper.quantity-stepper button:disabled { opacity: .4; cursor: not-allowed; }
 .quantity-stepper :is(input, button):focus-visible { outline: 2px solid var(--c-795a43); outline-offset: 2px; z-index: 1; }
 @media (prefers-reduced-motion: reduce) { .quantity-stepper.quantity-stepper button { transition: none; } }
+.warehouse-note { overflow: hidden; }
+.warehouse-note[hidden] { display: none; }
+.warehouse-note p { display: flex; align-items: flex-start; gap: 8px; margin: 8px 0 0; padding: 10px 12px; border: 1px solid var(--c-decfc0); border-radius: 10px; background: var(--c-f5eee6); color: var(--c-6b503d); font-size: .82rem; line-height: 1.45; }
+.warehouse-note i { margin-top: 2px; }

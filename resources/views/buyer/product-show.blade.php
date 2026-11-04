@@ -100,6 +100,7 @@
             @csrf
             <label for="product-quantity">Quantity</label>
             @include('partials.quantity-stepper', ['quantityId' => 'product-quantity', 'quantityMax' => $displayVariant?->stock ?? $product->stock])
+            @include('partials.warehouse-note', ['quantityId' => 'product-quantity', 'quantity' => 1])
             <div class="product-buy-actions">
                 <button class="market-button product-add-cart-button" type="submit" name="purchase_action" value="add_to_cart">Add to Cart</button>
                 <button class="market-button product-buy-now-button" type="submit" name="purchase_action" value="buy_now">Buy Now</button>

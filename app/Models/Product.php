@@ -19,6 +19,9 @@ class Product extends Model
     public const REVIEW_APPROVED = 'approved';
     public const REVIEW_REJECTED = 'rejected';
 
+    // Zaylo's warehouse holds at most this many of one item; larger orders ship straight from the seller's warehouse.
+    public const WAREHOUSE_CAPACITY = 100;
+
     private array $variantInput = [];
     private ?string $coverImageInput = null;
 

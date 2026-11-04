@@ -39,6 +39,7 @@
                     @if(!$item->product->is_listed || $item->availableStock() < $item->quantity)
                         <p class="cart-stock-warning">{{ $item->product->is_listed ? 'Only '.$item->availableStock().' left in stock.' : 'This product is unavailable.' }}</p>
                     @endif
+                    @include('partials.warehouse-note', ['quantityId' => 'quantity-'.$item->id, 'quantity' => $item->quantity])
                 </div>
                     <div class="cart-item-actions">
                         <form method="POST" action="{{ route('buyer.cart.update', $item) }}" class="quantity-form">

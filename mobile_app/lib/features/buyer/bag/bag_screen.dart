@@ -5,6 +5,7 @@ import 'package:zaylo_mobile/components/buttons.dart';
 import 'package:zaylo_mobile/components/cart_icon.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
 import 'package:zaylo_mobile/components/layout.dart';
+import 'package:zaylo_mobile/components/warehouse_note.dart';
 import 'package:zaylo_mobile/features/buyer/checkout/checkout_screen.dart';
 import 'package:zaylo_mobile/features/buyer/widgets/shop_actions.dart';
 import 'package:zaylo_mobile/features/buyer/widgets/signed_out_prompt.dart';
@@ -325,7 +326,7 @@ class _BagItemTile extends StatelessWidget {
               Wrap(spacing: 12, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
                 QuantityStepper(
                   value: item.quantity,
-                  max: item.availableStock.clamp(1, 99),
+                  max: item.availableStock < 1 ? 1 : item.availableStock,
                   enabled: !busy,
                   onChanged: onQuantity,
                 ),
@@ -336,6 +337,7 @@ class _BagItemTile extends StatelessWidget {
                   Text(peso(item.lineTotal),
                       style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: ZayloColors.ink)),
               ]),
+              WarehouseNote(quantity: item.quantity),
             ]),
           ),
         ]),

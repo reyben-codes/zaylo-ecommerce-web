@@ -60,7 +60,7 @@ class MobileShoppingController extends Controller
     public function addToCart(Request $request, Product $product): JsonResponse
     {
         $validated = $request->validate([
-            'quantity' => 'required|integer|min:1|max:99',
+            'quantity' => 'required|integer|min:1|max:1000000',
             'product_variant_id' => 'nullable|integer|exists:product_variants,id',
         ]);
         $item = $this->carts->add($request->user(), $product, (int) $validated['quantity'], isset($validated['product_variant_id']) ? (int) $validated['product_variant_id'] : null);
@@ -74,7 +74,7 @@ class MobileShoppingController extends Controller
     public function updateCartItem(Request $request, CartItem $cartItem): JsonResponse
     {
         $this->ownCartItem($request, $cartItem);
-        $validated = $request->validate(['quantity' => 'required|integer|min:1|max:99']);
+        $validated = $request->validate(['quantity' => 'required|integer|min:1|max:1000000']);
         $this->carts->updateQuantity($cartItem, (int) $validated['quantity']);
 
         return response()->json($this->cartPayload($this->loadedCart($request)));

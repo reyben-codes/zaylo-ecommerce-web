@@ -8,6 +8,7 @@ import 'package:zaylo_mobile/components/feedback.dart';
 import 'package:zaylo_mobile/components/form_fields.dart';
 import 'package:zaylo_mobile/components/layout.dart';
 import 'package:zaylo_mobile/components/star_rating.dart';
+import 'package:zaylo_mobile/components/warehouse_note.dart';
 import 'package:zaylo_mobile/features/buyer/catalog/product_card.dart';
 import 'package:zaylo_mobile/features/buyer/catalog/product_reviews_screen.dart';
 import 'package:zaylo_mobile/features/buyer/checkout/checkout_screen.dart';
@@ -61,8 +62,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   int _maxQuantity(Product product) {
-    final stock = _variant?.stock ?? product.stock ?? 99;
-    return stock.clamp(1, 99);
+    final stock = _variant?.stock ?? product.stock ?? 1;
+    return stock < 1 ? 1 : stock;
   }
 
   Future<void> _add(Product product, {required bool buyNow}) async {
@@ -331,7 +332,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                     onSelected: variant.inStock
                                         ? (_) => setState(() {
                                               _variant = variant;
-                                              _quantity = _quantity.clamp(1, variant.stock.clamp(1, 99));
+                                              _quantity = _quantity.clamp(1, variant.stock < 1 ? 1 : variant.stock);
                                             })
                                         : null,
                                   ),
@@ -360,6 +361,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                   style: TextStyle(fontSize: 12, color: ZayloColors.muted),
                                 ),
                               ),
+                              WarehouseNote(quantity: _quantity),
                             ],
                           ],
                           const SizedBox(height: 22),
