@@ -118,6 +118,10 @@ class MobileShoppingController extends Controller
             'totals' => $this->checkout->quote($items, $voucher),
             'voucher_code' => $voucher?->code,
             'shipping_per_seller' => CheckoutService::SHIPPING_PER_SELLER,
+            // The same courier trucks the website offers; the first is the default.
+            'couriers' => collect(Order::COURIERS)->map(fn (array $courier, string $key) => [
+                'key' => $key, 'name' => $courier['title'], 'description' => $courier['description'],
+            ])->values(),
             // Orders need an approved ID; the app can say so before the buyer taps Place order.
             'identity_verified' => $request->user()->isIdentityVerified(),
             'estimated_delivery' => [
@@ -136,10 +140,12 @@ class MobileShoppingController extends Controller
             'notes' => 'nullable|string|max:500',
             'idempotency_key' => 'required|uuid',
             'payment_method' => ['nullable', 'string', 'in:cod,gcash'],
+            'courier_choice' => ['nullable', 'string', Rule::in(array_keys(Order::COURIERS))],
             'cart_item_ids' => ['required', 'array', 'min:1'],
             'cart_item_ids.*' => ['required', 'integer', 'distinct'],
             'voucher_code' => ['nullable', 'string', 'max:50'],
         ]);
+        $validated['courier_choice'] ??= Order::DEFAULT_COURIER;
 
         // A retried request (for example after a dropped connection) must not order twice.
         if ($this->checkout->alreadyPlaced($validated['idempotency_key'])) {

@@ -186,6 +186,7 @@ class MobilePayload
             'shipping_discount' => (float) $order->shipping_discount,
             'total' => (float) $order->total,
             'payment_method' => $order->payment_method,
+            'courier' => $order->courierName(),
             'voucher_code' => $order->voucher_code,
             'placed_at' => $order->placed_at?->toIso8601String(),
             'item_count' => (int) $order->items->sum('quantity'),

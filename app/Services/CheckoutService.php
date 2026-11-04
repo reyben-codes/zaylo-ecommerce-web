@@ -142,7 +142,7 @@ class CheckoutService
                     'notes' => $input['notes'] ?? null, 'placed_at' => now(),
                 ] + (Schema::hasColumn('orders', 'courier_choice')
                     // Only once the 2026_10_26 migration has added the column.
-                    ? ['courier_choice' => $input['courier_choice'] ?? 'zaylo_express']
+                    ? ['courier_choice' => $input['courier_choice'] ?? Order::DEFAULT_COURIER]
                     : []));
 
                 foreach ($prepared as $row) {

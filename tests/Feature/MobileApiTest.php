@@ -114,6 +114,29 @@ class MobileApiTest extends TestCase
         $this->withToken($other->createToken('test'))->deleteJson('/api/mobile/cart/items/'.$item)->assertForbidden();
     }
 
+    public function test_buyers_choose_the_courier_truck_in_the_app_like_on_the_website(): void
+    {
+        $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);
+        $product = Product::create(['seller_id' => $seller->id, 'name' => 'Rattan Basket', 'category' => 'storage_bins', 'price' => 450, 'stock' => 4, 'is_active' => true]);
+        $buyer = User::factory()->create(['role' => 'buyer', 'status' => 'active']);
+        $token = $buyer->createToken('test');
+        $item = $this->withToken($token)->postJson('/api/mobile/cart/'.$product->slug, ['quantity' => 1])->assertCreated()->json('added_item_id');
+        $address = $buyer->addresses()->create($this->savedAddressData());
+
+        $this->withToken($token)->postJson('/api/mobile/checkout/quote', ['cart_item_ids' => [$item]])->assertOk()
+            ->assertJsonCount(3, 'couriers')
+            ->assertJsonPath('couriers.0.key', 'zaylo_express')
+            ->assertJsonPath('couriers.1.name', 'J&T Express Delivery');
+
+        $order = ['address_id' => $address->id, 'cart_item_ids' => [$item]];
+        $this->withToken($token)->postJson('/api/mobile/checkout', $order + ['idempotency_key' => (string) str()->uuid(), 'courier_choice' => 'lbc'])
+            ->assertUnprocessable()->assertJsonValidationErrors('courier_choice');
+
+        // Orders show the chosen courier by name, and older orders without one show the default.
+        $this->assertSame('J&T Express', (new Order(['courier_choice' => 'jnt_express']))->courierName());
+        $this->assertSame('ZAYLO Express', (new Order)->courierName());
+    }
+
     public function test_buyers_manage_saved_addresses(): void
     {
         $this->fakeLocations();

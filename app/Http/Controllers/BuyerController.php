@@ -533,12 +533,12 @@ class BuyerController extends Controller
             'cart_item_ids' => ['nullable', 'array', 'min:1'],
             'cart_item_ids.*' => ['required', 'integer', 'distinct'],
             'voucher_code' => ['nullable', 'string', 'max:50'],
-            'courier_choice' => ['nullable', 'string', Rule::in(['zaylo_express', 'jnt_express', 'flash_express'])],
+            'courier_choice' => ['nullable', 'string', Rule::in(array_keys(Order::COURIERS))],
             'quoted_unit_prices' => ['nullable', 'array'],
             'quoted_unit_prices.*' => ['required', 'numeric', 'min:0', 'decimal:0,2'],
         ]);
         $validated['payment_method'] ??= 'cod';
-        $validated['courier_choice'] ??= 'zaylo_express';
+        $validated['courier_choice'] ??= Order::DEFAULT_COURIER;
         if ($this->checkoutService->alreadyPlaced($validated['idempotency_key'])) {
             return redirect()->route('buyer.orders')->with('status', 'This checkout was already completed.');
         }

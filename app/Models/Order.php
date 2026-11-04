@@ -10,6 +10,15 @@ use Illuminate\Support\Facades\Schema;
 
 class Order extends Model
 {
+    /** Courier trucks a buyer can pick at checkout (web and app), with what each one offers. */
+    public const COURIERS = [
+        'zaylo_express' => ['name' => 'ZAYLO Express', 'title' => 'ZAYLO Express (Standard Delivery)', 'description' => 'Official ZAYLO courier truck · 2–4 business days · Door-to-door barcode scan'],
+        'jnt_express' => ['name' => 'J&T Express', 'title' => 'J&T Express Delivery', 'description' => 'J&T delivery truck pickup & drop · 1–3 business days · Real-time tracking scan'],
+        'flash_express' => ['name' => 'Flash Express', 'title' => 'Flash Express', 'description' => 'Speed delivery truck · 1–2 business days · Priority door scan'],
+    ];
+
+    public const DEFAULT_COURIER = 'zaylo_express';
+
     protected $fillable = [
         'order_number', 'user_id', 'seller_id', 'status', 'subtotal', 'shipping_fee',
         'total', 'currency', 'recipient_name', 'phone', 'notes', 'placed_at', 'completed_at', 'delivered_at', 'shipping_discount',
@@ -19,11 +28,7 @@ class Order extends Model
 
     public function courierName(): string
     {
-        return match ($this->courier_choice) {
-            'jnt_express' => 'J&T Express',
-            'flash_express' => 'Flash Express',
-            default => 'ZAYLO Express',
-        };
+        return (self::COURIERS[$this->courier_choice] ?? self::COURIERS[self::DEFAULT_COURIER])['name'];
     }
 
     protected function casts(): array

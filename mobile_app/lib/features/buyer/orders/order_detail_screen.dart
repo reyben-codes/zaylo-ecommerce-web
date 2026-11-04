@@ -248,6 +248,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     SectionCard(
                       child: Column(children: [
                         SummaryRow('Method', order.paymentLabel),
+                        if (order.courier != null) SummaryRow('Courier', order.courier!),
                         if (order.paymentStatus != null)
                           SummaryRow('Payment status',
                               order.paymentStatus![0].toUpperCase() + order.paymentStatus!.substring(1)),

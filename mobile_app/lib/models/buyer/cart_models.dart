@@ -85,6 +85,21 @@ class CheckoutTotals {
       );
 }
 
+/// A courier truck the buyer can choose at checkout, as listed by the server.
+class CourierOption {
+  const CourierOption({required this.key, required this.name, required this.description});
+
+  final String key;
+  final String name;
+  final String description;
+
+  factory CourierOption.fromJson(Map<String, dynamic> json) => CourierOption(
+        key: json['key'] as String,
+        name: json['name'] as String,
+        description: json['description'] as String? ?? '',
+      );
+}
+
 class CheckoutQuote {
   const CheckoutQuote({
     required this.items,
@@ -94,6 +109,7 @@ class CheckoutQuote {
     this.deliveryFrom,
     this.deliveryTo,
     this.identityVerified = true,
+    this.couriers = const [],
   });
 
   final List<CartItem> items;
@@ -105,6 +121,9 @@ class CheckoutQuote {
 
   /// False until an administrator approves the buyer's ID; orders are refused until then.
   final bool identityVerified;
+
+  /// Courier trucks to choose from; the first is the default.
+  final List<CourierOption> couriers;
 
   factory CheckoutQuote.fromJson(Map<String, dynamic> json) {
     final delivery = json['estimated_delivery'] as Map<String, dynamic>?;
@@ -120,6 +139,9 @@ class CheckoutQuote {
       deliveryFrom: parseDate(delivery?['from']),
       deliveryTo: parseDate(delivery?['to']),
       identityVerified: json['identity_verified'] as bool? ?? true,
+      couriers: (json['couriers'] as List<dynamic>? ?? const [])
+          .map((item) => CourierOption.fromJson(item as Map<String, dynamic>))
+          .toList(),
     );
   }
 }

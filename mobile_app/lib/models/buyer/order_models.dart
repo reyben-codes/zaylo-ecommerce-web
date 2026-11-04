@@ -70,6 +70,7 @@ class Order {
     required this.itemCount,
     required this.items,
     this.paymentMethod,
+    this.courier,
     this.voucherCode,
     this.placedAt,
     this.recipientName,
@@ -105,6 +106,9 @@ class Order {
   final int itemCount;
   final List<OrderItem> items;
   final String? paymentMethod;
+
+  /// The courier truck chosen at checkout, e.g. "J&T Express".
+  final String? courier;
   final String? voucherCode;
   final DateTime? placedAt;
 
@@ -156,6 +160,7 @@ class Order {
             .map((item) => OrderItem.fromJson(item as Map<String, dynamic>))
             .toList(),
         paymentMethod: json['payment_method'] as String?,
+        courier: json['courier'] as String?,
         voucherCode: json['voucher_code'] as String?,
         placedAt: parseDate(json['placed_at']),
         recipientName: json['recipient_name'] as String?,

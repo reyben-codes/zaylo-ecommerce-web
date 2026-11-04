@@ -39,6 +39,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   String? _appliedVoucher;
   int? _addressId;
   String _payment = 'cod';
+  String? _courier;
   bool _quoting = false;
   bool _placing = false;
 
@@ -69,6 +70,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         _quote = quote;
         _error = null;
         _appliedVoucher = quote.voucherCode;
+        if (quote.couriers.isNotEmpty && !quote.couriers.any((courier) => courier.key == _courier)) {
+          _courier = quote.couriers.first.key;
+        }
         final addresses = quote.addresses.where((address) => address.isStructured).toList();
         if (_addressId == null || !addresses.any((address) => address.id == _addressId)) {
           _addressId = addresses.isEmpty
@@ -140,6 +144,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         cartItemIds: widget.cartItemIds,
         addressId: addressId,
         paymentMethod: _payment,
+        courierChoice: _courier,
         idempotencyKey: _idempotencyKey,
         voucherCode: _appliedVoucher,
         notes: _notes.text,
@@ -209,6 +214,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 const SizedBox(height: 18),
                 _section('Items (${quote.items.fold<int>(0, (sum, item) => sum + item.quantity)})', _itemsSection(quote)),
                 const SizedBox(height: 18),
+                if (quote.couriers.isNotEmpty) ...[
+                  _section('Delivery courier truck', _courierSection(quote)),
+                  const SizedBox(height: 18),
+                ],
                 _section('Payment method', _paymentSection()),
                 const SizedBox(height: 18),
                 _section('Voucher', _voucherSection()),
@@ -335,6 +344,26 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       ]),
     );
   }
+
+  Widget _courierSection(CheckoutQuote quote) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('Choose which courier truck picks up from the seller and delivers to your home with parcel scanning.',
+            style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
+        const SizedBox(height: 10),
+        for (final (index, courier) in quote.couriers.indexed) ...[
+          if (index > 0) const SizedBox(height: 10),
+          _PaymentOption(
+            icon: switch (courier.key) {
+              'flash_express' => Icons.bolt_outlined,
+              'jnt_express' => Icons.local_shipping_outlined,
+              _ => Icons.local_shipping,
+            },
+            title: courier.name,
+            subtitle: courier.description,
+            selected: _courier == courier.key,
+            onTap: () => setState(() => _courier = courier.key),
+          ),
+        ],
+      ]);
 
   Widget _paymentSection() => Column(children: [
         _PaymentOption(

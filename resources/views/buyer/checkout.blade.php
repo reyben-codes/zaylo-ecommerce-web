@@ -100,30 +100,17 @@
                 </div>
                 <fieldset class="payment-method-options courier-options">
                     <legend class="sr-only">Choose delivery truck</legend>
-                    <label class="payment-method-option {{ old('courier_choice', 'zaylo_express') === 'zaylo_express' ? 'selected' : '' }}">
-                        <input type="radio" name="courier_choice" value="zaylo_express" @checked(old('courier_choice', 'zaylo_express') === 'zaylo_express')>
-                        <span class="payment-method-option-icon"><i class="fas fa-truck-fast" aria-hidden="true"></i></span>
-                        <span class="payment-method-option-content">
-                            <span class="payment-method-option-title">ZAYLO Express (Standard Delivery)</span>
-                            <span class="payment-method-option-description">Official ZAYLO courier truck · 2–4 business days · Door-to-door barcode scan</span>
-                        </span>
-                    </label>
-                    <label class="payment-method-option {{ old('courier_choice') === 'jnt_express' ? 'selected' : '' }}">
-                        <input type="radio" name="courier_choice" value="jnt_express" @checked(old('courier_choice') === 'jnt_express')>
-                        <span class="payment-method-option-icon"><i class="fas fa-truck" aria-hidden="true"></i></span>
-                        <span class="payment-method-option-content">
-                            <span class="payment-method-option-title">J&T Express Delivery</span>
-                            <span class="payment-method-option-description">J&T delivery truck pickup & drop · 1–3 business days · Real-time tracking scan</span>
-                        </span>
-                    </label>
-                    <label class="payment-method-option {{ old('courier_choice') === 'flash_express' ? 'selected' : '' }}">
-                        <input type="radio" name="courier_choice" value="flash_express" @checked(old('courier_choice') === 'flash_express')>
-                        <span class="payment-method-option-icon"><i class="fas fa-bolt-lightning" aria-hidden="true"></i></span>
-                        <span class="payment-method-option-content">
-                            <span class="payment-method-option-title">Flash Express</span>
-                            <span class="payment-method-option-description">Speed delivery truck · 1–2 business days · Priority door scan</span>
-                        </span>
-                    </label>
+                    @foreach(\App\Models\Order::COURIERS as $courierKey => $courier)
+                        @php($courierChecked = old('courier_choice', \App\Models\Order::DEFAULT_COURIER) === $courierKey)
+                        <label class="payment-method-option {{ $courierChecked ? 'selected' : '' }}">
+                            <input type="radio" name="courier_choice" value="{{ $courierKey }}" @checked($courierChecked)>
+                            <span class="payment-method-option-icon"><i class="fas {{ ['jnt_express' => 'fa-truck', 'flash_express' => 'fa-bolt-lightning'][$courierKey] ?? 'fa-truck-fast' }}" aria-hidden="true"></i></span>
+                            <span class="payment-method-option-content">
+                                <span class="payment-method-option-title">{{ $courier['title'] }}</span>
+                                <span class="payment-method-option-description">{{ $courier['description'] }}</span>
+                            </span>
+                        </label>
+                    @endforeach
                 </fieldset>
             </section>
 
