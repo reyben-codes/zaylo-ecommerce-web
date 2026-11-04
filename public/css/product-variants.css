@@ -178,3 +178,9 @@
         transition: none;
     }
 }
+
+.variant-stock {
+    margin: -6px 0 16px;
+    color: var(--c-6b5f54);
+    font-size: .85rem;
+}

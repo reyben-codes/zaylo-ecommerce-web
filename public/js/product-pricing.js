@@ -32,7 +32,9 @@
         savings.textContent = `${regular > 0 ? Math.round((1 - price / regular) * 100) : 0}% off`;
     };
 
+    const stockLine = document.querySelector('[data-variant-stock]');
     const limitQuantity = (stock) => {
+        if (stockLine) stockLine.textContent = stock > 0 ? `${stock.toLocaleString('en-PH')} available` : 'Sold out';
         const quantity = form?.querySelector('[name="quantity"]');
         if (!quantity) return;
         quantity.max = Math.max(1, stock);
@@ -56,7 +58,14 @@
             group.querySelector('[data-size-selected]').textContent = chosen ? chosen.dataset.name : (available.length ? 'Select a size' : 'Sold out');
             // Until a size is picked, show the color's starting price and allow up to its largest stock.
             showPrice(chosen ?? available[0] ?? sizes[0]);
-            limitQuantity(chosen ? Number(chosen.dataset.stock) : Math.max(0, ...available.map((input) => Number(input.dataset.stock))));
+            const largest = Math.max(0, ...available.map((input) => Number(input.dataset.stock)));
+            if (chosen) {
+                limitQuantity(Number(chosen.dataset.stock));
+            } else {
+                // The stock line shows the whole color; the quantity is still capped by its largest size.
+                limitQuantity(largest);
+                if (stockLine && largest > 0) stockLine.textContent = `${available.reduce((sum, input) => sum + Number(input.dataset.stock), 0).toLocaleString('en-PH')} available in ${colorName.textContent} · pick a size`;
+            }
         };
 
         const showColor = (changePhoto) => {

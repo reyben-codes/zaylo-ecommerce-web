@@ -14,6 +14,8 @@
     $displayPrice = $displayVariant?->price ?? $product->price;
     $displayRegular = $displayVariant?->regular_price ?? ($product->original_price ?? $product->regular_price);
     $availableStock = $product->variants->isNotEmpty() ? $product->variants->sum('stock') : (\App\Models\Product::usesLegacySchema() ? $product->stock : 0);
+    // Stock of the preselected option, or of the first in-stock color before a size is picked.
+    $optionStock = $colorGroups ? ($colorGroups->firstWhere('stock', '>', 0)['stock'] ?? 0) : ($displayVariant?->stock ?? 0);
 @endphp
 @if($preview ?? false)
     <aside class="product-review-notice product-review-notice--page product-review-notice--{{ $product->is_active ? $product->review_status : 'hidden' }}" role="status">
@@ -93,6 +95,10 @@
         @elseif($product->variants->count())
             {{-- Shown to everyone so shoppers can browse colors and see which are sold out; it submits with the buy form below. --}}
             @include('partials.variant-picker', ['variants' => $product->variants, 'selected' => $displayVariant, 'label' => $optionLabel, 'images' => $variantImages, 'formId' => 'product-buy-form'])
+        @endif
+        @if($product->variants->count() > 1 && $availableStock > 0)
+            {{-- Stock of the chosen option (or, before a size is picked, of the chosen color); product-pricing.js keeps it current. --}}
+            <p class="variant-stock" data-variant-stock aria-live="polite">{{ number_format($optionStock) }} available</p>
         @endif
         @if(auth()->check() && auth()->user()->role === 'buyer')
         @if($availableStock > 0)
