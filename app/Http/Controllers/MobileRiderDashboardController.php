@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Announcement;
+use App\Models\Rider;
 use App\Models\Dispute;
 use App\Models\Shipment;
 use App\Models\User;
+use App\Services\ActivityLogger;
 use App\Services\ChatPhotos;
 use App\Services\ReturnPickups;
 use App\Services\RiderAttendanceClock;
@@ -46,6 +48,23 @@ class MobileRiderDashboardController extends Controller
         $data = $request->validate(['code' => 'required|string|max:200']);
         [$attendance, $action] = $this->attendance->scan($request->user(), $data['code']);
         $time = ($action === 'in' ? $attendance->time_in_at : $attendance->time_out_at)->timezone(self::TIMEZONE)->format('g:i A');
+
+        // Kept in the activity log, where the rider's logistics partner and the admins can see it.
+        $rider = $request->user()->rider;
+        $status = $this->attendance->status($rider, $attendance->work_date, $attendance);
+        $flag = match (true) {
+            $action === 'in' && $status['late'] => ' (late)',
+            $action === 'out' && $status['left_early'] => ' (left early)',
+            default => '',
+        };
+        app(ActivityLogger::class)->record(
+            $action === 'in' ? 'rider.time_in' : 'rider.time_out',
+            'attendance',
+            ($action === 'in' ? 'Timed in' : 'Timed out')." at {$time}{$flag}",
+            $request->user(),
+            $rider,
+            ['shift' => $attendance->scheduled_start && $attendance->scheduled_end ? Rider::shiftLabel($attendance->scheduled_start, $attendance->scheduled_end) : null],
+        );
 
         return response()->json([
             'message' => $action === 'in' ? "Timed in at {$time}. Have a safe shift!" : "Timed out at {$time}. Thanks for today!",

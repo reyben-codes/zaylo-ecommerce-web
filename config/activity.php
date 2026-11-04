@@ -19,6 +19,7 @@ return [
         'deliveries' => 'Deliveries',
         'logistics' => 'Sorting center',
         'riders' => 'Riders',
+        'attendance' => 'Rider attendance',
         'users' => 'User management',
         'marketplace' => 'Marketplace',
         'finance' => 'Finance',

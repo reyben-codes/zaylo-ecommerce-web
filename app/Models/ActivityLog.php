@@ -26,7 +26,7 @@ class ActivityLog extends Model
     private const DETAIL_LABELS = [
         'status' => 'Status', 'decision' => 'Decision', 'action' => 'Action', 'available' => 'Available',
         'stock' => 'Stock', 'area' => 'Area', 'pickup_date' => 'Pickup date', 'reason' => 'Reason',
-        'slug' => 'Page', 'report' => 'Report', 'document' => 'Document', 'code' => 'Parcel',
+        'slug' => 'Page', 'report' => 'Report', 'document' => 'Document', 'code' => 'Parcel', 'shift' => 'Scheduled shift',
     ];
 
     public function user(): BelongsTo
@@ -49,6 +49,7 @@ class ActivityLog extends Model
         return match ($this->event) {
             'auth.failed' => 'fa-triangle-exclamation',
             'logout' => 'fa-right-from-bracket',
+            'rider.time_out' => 'fa-clock-rotate-left',
             default => match ($this->category) {
                 'auth' => 'fa-right-to-bracket',
                 'account' => 'fa-user-gear',
@@ -58,6 +59,7 @@ class ActivityLog extends Model
                 'deliveries' => 'fa-motorcycle',
                 'logistics' => 'fa-layer-group',
                 'riders' => 'fa-people-group',
+                'attendance' => 'fa-clock',
                 'users' => 'fa-users-gear',
                 'marketplace' => 'fa-shield-halved',
                 'finance' => 'fa-percent',

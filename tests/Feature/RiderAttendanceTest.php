@@ -87,6 +87,27 @@ class RiderAttendanceTest extends TestCase
             ->assertJsonPath('attendance.shift', '8:00 AM – 5:00 PM');
     }
 
+    public function test_time_in_and_time_out_are_kept_in_the_activity_log(): void
+    {
+        $rider = $this->rider($this->partner, schedule: ['shift_start' => '08:00', 'shift_end' => '17:00', 'work_days' => ['mon', 'tue', 'wed', 'thu', 'fri']]);
+
+        $this->at('2026-11-02 08:10');
+        $this->scan($rider)->assertOk();
+        $this->at('2026-11-02 16:30');
+        $this->scan($rider)->assertOk();
+
+        $logs = \App\Models\ActivityLog::where('category', 'attendance')->orderBy('id')->get();
+        $this->assertSame(['rider.time_in', 'rider.time_out'], $logs->pluck('event')->all());
+        $this->assertSame(['Timed in at 8:10 AM (late)', 'Timed out at 4:30 PM (left early)'], $logs->pluck('description')->all());
+        $this->assertSame($rider->id, $logs[0]->user_id);
+        $this->assertSame($this->partner->id, (int) $logs[0]->logistics_provider_id);
+        $this->assertSame(['Scheduled shift' => '8:00 AM – 5:00 PM'], $logs[0]->details());
+
+        // The rider's logistics partner sees them on its activity log.
+        $this->actingAs($this->partner->owner)->get(route('logistics.activity'))->assertOk()
+            ->assertSee('Timed in at 8:10 AM (late)')->assertSee('Timed out at 4:30 PM (left early)')->assertSee('Rider attendance');
+    }
+
     public function test_a_night_shift_times_out_after_midnight_on_the_same_day(): void
     {
         $rider = $this->rider($this->partner);
