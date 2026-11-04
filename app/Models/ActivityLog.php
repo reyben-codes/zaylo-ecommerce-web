@@ -26,7 +26,7 @@ class ActivityLog extends Model
     private const DETAIL_LABELS = [
         'status' => 'Status', 'decision' => 'Decision', 'action' => 'Action', 'available' => 'Available',
         'stock' => 'Stock', 'area' => 'Area', 'pickup_date' => 'Pickup date', 'reason' => 'Reason',
-        'slug' => 'Page', 'report' => 'Report', 'document' => 'Document', 'code' => 'Parcel', 'shift' => 'Scheduled shift',
+        'slug' => 'Page', 'report' => 'Report', 'document' => 'Document', 'code' => 'Parcel', 'shift' => 'Scheduled shift', 'reference' => 'Reference',
     ];
 
     public function user(): BelongsTo

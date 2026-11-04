@@ -29,6 +29,7 @@ use App\Http\Controllers\LogisticsAttendanceController;
 use App\Http\Controllers\LogisticsChatController;
 use App\Http\Controllers\LogisticsController;
 use App\Http\Controllers\LogisticsOperationsController;
+use App\Http\Controllers\LogisticsPayoutController;
 use App\Http\Controllers\SellerApplicationController;
 use App\Http\Controllers\SellerController;
 use App\Http\Controllers\SellerReturnController;
@@ -277,6 +278,9 @@ Route::middleware(['auth', 'active', 'verified', 'role:admin', 'nocache'])->pref
     Route::get('/commissions', [AdminFinanceController::class, 'commissions'])->name('commissions');
     Route::post('/commissions/record', [AdminFinanceController::class, 'recordCommissions'])->name('commissions.record');
     Route::post('/commissions/settle', [AdminFinanceController::class, 'settleCommissions'])->name('commissions.settle');
+    // Logistics partners' share of the shipping fee of each parcel they delivered.
+    Route::get('/logistics-payouts', [LogisticsPayoutController::class, 'admin'])->name('logistics-payouts');
+    Route::post('/logistics-payouts/{provider}', [LogisticsPayoutController::class, 'pay'])->middleware('throttle:30,1')->name('logistics-payouts.pay');
     Route::get('/reports', [AdminFinanceController::class, 'reports'])->name('reports');
     Route::get('/reports/download', [AdminFinanceController::class, 'downloadReport'])->middleware('throttle:30,1')->name('reports.download');
     Route::get('/reports/{report}.pdf', [AdminFinanceController::class, 'reportPdf'])->whereIn('report', ['sales', 'commission'])->name('reports.pdf');
@@ -362,6 +366,7 @@ Route::middleware(['auth', 'active', 'verified', 'role:logistics', 'nocache'])->
     Route::get('/sorting', [LogisticsOperationsController::class, 'sorting'])->name('sorting');
     Route::get('/monitoring', [LogisticsOperationsController::class, 'monitoring'])->name('monitoring');
     Route::get('/reports', [LogisticsOperationsController::class, 'reports'])->name('reports');
+    Route::get('/earnings', [LogisticsPayoutController::class, 'partner'])->name('earnings');
     Route::get('/reports/export', [LogisticsOperationsController::class, 'exportReport'])->name('reports.export');
     Route::get('/activity', [ActivityLogController::class, 'logistics'])->name('activity');
     Route::get('/parcels/{shipment}/waybill', [WaybillController::class, 'logistics'])->middleware('throttle:120,1')->name('parcels.waybill');

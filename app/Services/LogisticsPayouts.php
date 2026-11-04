@@ -1,0 +1,155 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\LogisticsPayout;
+use App\Models\LogisticsProvider;
+use App\Models\Shipment;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+
+/**
+ * What ZAYLO owes logistics partners: for every parcel a partner delivered, PARTNER_SHARE of its shipping fee goes
+ * to the partner company and the rest stays with ZAYLO. The admin pays partners in batches (LogisticsPayout); a
+ * partner with several branches is paid as one company and pays its branches itself.
+ */
+class LogisticsPayouts
+{
+    public const PARTNER_SHARE = 0.80;
+
+    /** Whether the database can track payouts (the 2026_11_04 migration ran and parcels record their partner). */
+    public static function ready(): bool
+    {
+        return Shipment::tracksProvider() && Schema::hasTable('logistics_payouts') && Schema::hasColumn('shipments', 'logistics_payout_id');
+    }
+
+    public static function partnerPercent(): int
+    {
+        return (int) round(self::PARTNER_SHARE * 100);
+    }
+
+    /**
+     * Every delivered parcel with a partner, newest first.
+     *
+     * @return Collection<int, array{shipment_id:int, tracking:string, provider_id:int, provider:string, delivered_at:?Carbon,
+     *     fee:float, partner:float, zaylo:float, payout_id:?int}>
+     */
+    public function rows(?LogisticsProvider $provider = null): Collection
+    {
+        if (! self::ready()) {
+            return collect();
+        }
+
+        return $this->delivered($provider)->with([...$this->relations(), 'provider'])->get()
+            ->map(fn (Shipment $shipment) => $this->row($shipment))
+            ->sortByDesc(fn (array $row) => $row['delivered_at']?->getTimestamp() ?? 0)->values();
+    }
+
+    /** Totals over rows: shipping fees, each side's share, and what is paid and still owed to partners. */
+    public function summary(Collection $rows): array
+    {
+        $unpaid = $rows->whereNull('payout_id');
+
+        return [
+            'parcels' => $rows->count(),
+            'fees' => round($rows->sum('fee'), 2),
+            'partner' => round($rows->sum('partner'), 2),
+            'zaylo' => round($rows->sum('zaylo'), 2),
+            'paid' => round($rows->whereNotNull('payout_id')->sum('partner'), 2),
+            'owed' => round($unpaid->sum('partner'), 2),
+            'unpaidParcels' => $unpaid->count(),
+        ];
+    }
+
+    /** The summary per partner, most owed first. */
+    public function byProvider(Collection $rows): Collection
+    {
+        return $rows->groupBy('provider_id')
+            ->map(fn (Collection $group) => ['provider_id' => $group->first()['provider_id'], 'provider' => $group->first()['provider']] + $this->summary($group))
+            ->sortByDesc('owed')->values();
+    }
+
+    /**
+     * Pays the partner its share of every delivered parcel not paid yet. Returns null when nothing is owed.
+     */
+    public function pay(LogisticsProvider $provider, User $admin, ?string $reference = null): ?LogisticsPayout
+    {
+        if (! self::ready()) {
+            return null;
+        }
+
+        return DB::transaction(function () use ($provider, $admin, $reference) {
+            // Locked so two admins paying at once cannot pay the same parcels twice.
+            $shipments = $this->delivered($provider)->whereNull('logistics_payout_id')->lockForUpdate()->with($this->relations())->get();
+            if ($shipments->isEmpty()) {
+                return null;
+            }
+            $rows = $shipments->map(fn (Shipment $shipment) => $this->row($shipment));
+
+            $payout = $provider->payouts()->create([
+                'parcels' => $rows->count(),
+                'shipping_fees' => round($rows->sum('fee'), 2),
+                'amount' => round($rows->sum('partner'), 2),
+                'partner_share' => self::PARTNER_SHARE,
+                'reference' => filled($reference) ? trim($reference) : null,
+                'paid_by' => $admin->id,
+                'paid_at' => now(),
+            ]);
+            Shipment::whereKey($shipments->modelKeys())->update(['logistics_payout_id' => $payout->id]);
+
+            return $payout;
+        });
+    }
+
+    /** The full shipping fee of a parcel. A free-shipping voucher is paid by ZAYLO, so the partner's share still counts it. */
+    public static function feeOf(Shipment $shipment): float
+    {
+        if ((int) $shipment->getAttribute('fee_minor') > 0) {
+            return round($shipment->fee_minor / 100, 2);
+        }
+        if ($shipment->sellerOrder) {
+            return round((int) $shipment->sellerOrder->shipping_fee_minor / 100, 2);
+        }
+        $order = $shipment->order;
+
+        return round((float) ($order?->shipping_fee ?? 0) + (float) ($order?->shipping_discount ?? 0), 2);
+    }
+
+    private function row(Shipment $shipment): array
+    {
+        $fee = self::feeOf($shipment);
+        $partner = round($fee * self::PARTNER_SHARE, 2);
+
+        return [
+            'shipment_id' => $shipment->id,
+            'tracking' => $shipment->tracking_number ?? $shipment->tracking_code ?? '#'.$shipment->id,
+            'provider_id' => (int) $shipment->logistics_provider_id,
+            'provider' => $shipment->provider?->name ?? 'Logistics partner #'.$shipment->logistics_provider_id,
+            'delivered_at' => RiderDeliveries::deliveredAt($shipment),
+            'fee' => $fee,
+            'partner' => $partner,
+            'zaylo' => round($fee - $partner, 2),
+            'payout_id' => $shipment->logistics_payout_id ? (int) $shipment->logistics_payout_id : null,
+        ];
+    }
+
+    private function delivered(?LogisticsProvider $provider): Builder
+    {
+        return ShipmentWorkflow::whereStage(Shipment::query(), ['delivered'])
+            ->whereNotNull('logistics_provider_id')
+            ->when($provider, fn (Builder $query) => $query->where('logistics_provider_id', $provider->id));
+    }
+
+    /** The order the fee comes from, on whichever schema this database uses. */
+    private function relations(): array
+    {
+        return array_values(array_filter([
+            Schema::hasColumn('shipments', 'order_id') ? 'order' : null,
+            Schema::hasColumn('shipments', 'seller_order_id') ? 'sellerOrder' : null,
+        ]));
+    }
+}

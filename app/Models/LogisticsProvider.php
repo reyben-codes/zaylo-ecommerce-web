@@ -57,6 +57,11 @@ class LogisticsProvider extends Model
         return $this->hasMany(Shipment::class);
     }
 
+    public function payouts(): HasMany
+    {
+        return $this->hasMany(LogisticsPayout::class);
+    }
+
     /** True once the partner has submitted business details (partners from before applications have none). */
     public function hasApplication(): bool
     {

@@ -105,6 +105,7 @@ return [
         'admin.compliance.review' => ['marketplace', 'Reviewed a product listing', ['decision', 'reason']],
         'admin.commissions.record' => ['finance', 'Recorded commissions'],
         'admin.commissions.settle' => ['finance', 'Settled commissions'],
+        'admin.logistics-payouts.pay' => ['finance', 'Paid a logistics partner', ['reference']],
         'admin.reports.pdf' => ['documents', 'Downloaded a report'],
         'admin.announcements.store' => ['settings', 'Created an announcement'],
         'admin.announcements.update' => ['settings', 'Updated an announcement'],

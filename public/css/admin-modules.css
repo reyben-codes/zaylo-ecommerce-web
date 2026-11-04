@@ -568,3 +568,8 @@
     background: var(--c-fdf1ef);
     color: var(--c-a4413b);
 }
+
+/* Logistics payouts: optional payment reference and the pay button side by side. */
+.payout-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; }
+.payout-form input { width: 170px; max-width: 100%; min-height: 40px; padding: 8px 10px; border: 1px solid var(--c-decfc0); border-radius: 8px; background: var(--c-fffdfb); font: inherit; font-size: .82rem; }
+.payout-form .seller-button { white-space: nowrap; }
