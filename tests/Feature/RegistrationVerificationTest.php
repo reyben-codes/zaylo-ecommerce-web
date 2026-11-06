@@ -39,14 +39,18 @@ class RegistrationVerificationTest extends TestCase
     public function test_registration_has_the_requested_step_order(): void
     {
         $response = $this->get(route('register'))->assertOk()->assertSeeInOrder([
-            'Details', 'Sign-in', 'Verify',
             'Your personal details', 'Your sign-in details', 'Send verification code',
         ])->assertDontSee('name="address"', false)
-            ->assertDontSee('Continue to address')
-            ->assertDontSee('id="step3"', false)
-            ->assertSee('id="step2-title"', false);
-        $this->assertSame(3, substr_count($response->getContent(), 'data-step="'));
-        $this->assertSame(2, substr_count($response->getContent(), 'class="step-content"'));
+            ->assertDontSee('Continue to address');
+        // Buyers fill in two wizard steps before the email code.
+        $this->assertSame(2, substr_count($response->getContent(), 'data-wizard-step'));
+
+        // Partner applications are split into short steps: personal details, each part of the application, sign-in details.
+        foreach (['seller' => ['Your shop', 'Pickup address', 'Business documents'], 'logistics' => ['Your company', 'Service areas', 'Office address', 'Business documents'], 'courier' => ["Where you'll deliver", 'Your vehicle', "Driver's license", 'License documents']] as $role => $steps) {
+            $page = $this->get(route('register', ['role' => $role]))->assertOk()
+                ->assertSeeInOrder(['Your personal details', ...$steps, 'Your sign-in details'], false);
+            $this->assertSame(count($steps) + 2, substr_count($page->getContent(), 'data-wizard-step'), $role);
+        }
     }
 
     public function test_registration_ignores_submitted_addresses_for_every_role(): void
@@ -68,11 +72,12 @@ class RegistrationVerificationTest extends TestCase
 
     public function test_registration_errors_select_the_correct_step(): void
     {
-        foreach (['first_name' => 1, 'last_name' => 1, 'phone' => 1, 'date_of_birth' => 1, 'role' => 1, 'email' => 2, 'password' => 2, 'password_confirmation' => 2] as $field => $step) {
+        // The wizard opens the step holding the first field named in these errors and shows the message beside it.
+        foreach (['first_name', 'last_name', 'phone', 'date_of_birth', 'role', 'email', 'password', 'password_confirmation'] as $field) {
             $errors = new \Illuminate\Support\ViewErrorBag;
             $errors->put('default', new \Illuminate\Support\MessageBag([$field => 'Test error']));
-            $response = $this->withSession(['errors' => $errors])->get(route('register'))->assertOk();
-            $this->assertMatchesRegularExpression('/const firstErrorStep\s*=\s*'.$step.';/', $response->getContent());
+            $response = $this->withSession(['errors' => $errors])->get(route('register'))->assertOk()->assertSee('Test error');
+            $this->assertStringContainsString('data-errors="'.e(json_encode([$field => ['Test error']])).'"', $response->getContent());
         }
     }
 
@@ -134,7 +139,7 @@ class RegistrationVerificationTest extends TestCase
         $this->assertMatchesRegularExpression('/^[0-9]{6}$/', $code);
         $this->assertTrue(Hash::check($code, $pending->code_hash));
         $this->get(route('verification.notice'))->assertOk()->assertSee('name="otp"', false)->assertSee('shopper@example.com')->assertDontSee($code)
-            ->assertSee('Start over')->assertSee('data-step="3"  aria-current="step"', false);
+            ->assertSee('Start over')->assertSee('Final step');
         $this->get(route('buyer.dashboard'))->assertRedirect(route('login'));
 
         $this->post(route('verification.verify'), ['otp' => $code])->assertRedirect(route('buyer.dashboard'));

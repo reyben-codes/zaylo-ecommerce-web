@@ -1,6 +1,8 @@
 (() => {
     // A saved-address form, or a pickup-address block inside a larger form (seller sign-up), which has no save button.
-    document.querySelectorAll('[data-address-form]').forEach(root => {
+    const init = (scope) => scope.querySelectorAll('[data-address-form]').forEach(root => {
+        if (root.dataset.addressBound) return;
+        root.dataset.addressBound = 'true';
         const form = root.tagName === 'FORM' ? root : root.closest('form');
         const fields = Object.fromEntries(['region', 'province', 'city', 'barangay'].map(key => [key, root.querySelector('[data-location="' + key + '"]')]));
         const status = root.querySelector('[data-location-status]');
@@ -130,4 +132,8 @@
             await loadRegion(signal, fields.province.dataset.selected, fields.city.dataset.selected, fields.barangay.dataset.selected);
         });
     });
+
+    init(document);
+    // Forms the sign-in modal loads later (public/js/auth-modal.js) announce themselves with this event.
+    document.addEventListener('zaylo:content', (event) => init(event.target));
 })();

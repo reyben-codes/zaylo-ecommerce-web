@@ -23,6 +23,8 @@ use App\Services\EmailVerificationService;
 use App\Services\LogisticsApplicationService;
 use App\Services\PendingRegistrationService;
 use App\Services\SellerApplicationService;
+use App\Support\AuthModal;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -41,14 +43,14 @@ class AuthController extends Controller
         'admin' => ['login' => 'admin.login', 'dashboard' => 'admin.dashboard', 'account' => 'admin', 'page' => 'Admin Center sign-in'],
     ];
 
-    public function showLogin()
+    public function showLogin(Request $request)
     {
-        return view('auth.login');
+        return AuthModal::respond($request, 'login', ['portal' => 'shop'], 'ZAYLO · Log In');
     }
 
-    public function showSellerLogin()
+    public function showSellerLogin(Request $request)
     {
-        return view('auth.login', ['portal' => 'seller']);
+        return AuthModal::respond($request, 'login', ['portal' => 'seller'], 'ZAYLO · Seller Sign In');
     }
 
     /** The shop sign-in, for buyers only. */
@@ -62,9 +64,9 @@ class AuthController extends Controller
         return $this->portalLogin($request, 'seller');
     }
 
-    public function showLogisticsLogin()
+    public function showLogisticsLogin(Request $request)
     {
-        return view('auth.login', ['portal' => 'logistics']);
+        return AuthModal::respond($request, 'login', ['portal' => 'logistics'], 'ZAYLO · Logistics Sign In');
     }
 
     public function logisticsLogin(Request $request)
@@ -72,9 +74,9 @@ class AuthController extends Controller
         return $this->portalLogin($request, 'logistics');
     }
 
-    public function showAdminLogin()
+    public function showAdminLogin(Request $request)
     {
-        return view('auth.login', ['portal' => 'admin']);
+        return AuthModal::respond($request, 'login', ['portal' => 'admin'], 'ZAYLO · Admin Sign In');
     }
 
     public function adminLogin(Request $request)
@@ -128,27 +130,48 @@ class AuthController extends Controller
             throw ValidationException::withMessages(['email' => $message]);
         }
 
+        // Shoppers who signed in from the modal go back to the page they were looking at.
+        if ($portal === 'buyer' && ($returnTo = $this->safeReturnPath($request->input('return_to')))) {
+            return redirect($returnTo);
+        }
+
         return redirect()->route(self::PORTALS[$portal]['dashboard']);
+    }
+
+    /** A path on this site to go back to after signing in: never another site, and never a sign-in form itself. */
+    private function safeReturnPath(mixed $path): ?string
+    {
+        if (! is_string($path) || strlen($path) > 2000 || ! str_starts_with($path, '/') || str_starts_with($path, '//') || str_contains($path, '\\')) {
+            return null;
+        }
+
+        return in_array(parse_url($path, PHP_URL_PATH) ?: '/', AuthModal::paths(), true) ? null : $path;
     }
 
     /** Refuses a sign-in on the wrong page and shows a link to the page this account belongs to. */
     private function refuseWrongPortal(string $accountPortal): never
     {
         $target = self::PORTALS[$accountPortal] ?? self::PORTALS['buyer'];
-        session()->flash('portal_hint', ['url' => route($target['login']), 'label' => 'Go to the '.$target['page']]);
+        $hint = ['url' => route($target['login']), 'label' => 'Go to the '.$target['page']];
+        $message = 'This is '.(preg_match('/^[aeiou]/i', $target['account']) ? 'an ' : 'a ').$target['account'].' account, so it can\'t sign in here. Please use the '.$target['page'].' page instead.';
 
-        throw ValidationException::withMessages([
-            'email' => 'This is '.(preg_match('/^[aeiou]/i', $target['account']) ? 'an ' : 'a ').$target['account'].' account, so it can\'t sign in here. Please use the '.$target['page'].' page instead.',
-        ]);
+        // The modal shows the link with the error; a flashed hint would linger until the next page load.
+        if (request()->expectsJson()) {
+            throw new HttpResponseException(response()->json(['message' => $message, 'errors' => ['email' => [$message]], 'hint' => $hint], 422));
+        }
+
+        session()->flash('portal_hint', $hint);
+
+        throw ValidationException::withMessages(['email' => $message]);
     }
 
-    public function showRegister()
+    public function showRegister(Request $request)
     {
-        return view('auth.register', [
+        return AuthModal::respond($request, 'register', [
             'logisticsPartners' => Schema::hasTable('logistics_providers')
                 ? LogisticsProvider::acceptingRiders()->get(['id', 'name', 'service_area'])
                 : collect(),
-        ]);
+        ], 'ZAYLO · Create new account');
     }
 
     public function register(Request $request, SellerApplicationService $sellerApplications, LogisticsApplicationService $logisticsApplications, PendingRegistrationService $registrations)
@@ -279,12 +302,12 @@ class AuthController extends Controller
                 return $this->verificationComplete($request);
             }
 
-            return view('auth.verify-email', [
+            return AuthModal::respond($request, 'verify', [
                 'email' => $request->user()->email,
                 'role' => $request->user()->role,
                 'active' => $request->user()->isActive(),
                 'pending' => false,
-            ]);
+            ], 'ZAYLO · Verify your email');
         }
 
         $pending = $registrations->current($request);
@@ -292,12 +315,12 @@ class AuthController extends Controller
             return redirect()->route('login');
         }
 
-        return view('auth.verify-email', [
+        return AuthModal::respond($request, 'verify', [
             'email' => $pending->email,
             'role' => $pending->role === 'courier' ? 'rider' : $pending->role,
             'active' => $pending->role === 'buyer',
             'pending' => true,
-        ]);
+        ], 'ZAYLO · Verify your email');
     }
 
     public function verifyEmail(Request $request, EmailVerificationService $verification, PendingRegistrationService $registrations)
@@ -420,9 +443,9 @@ class AuthController extends Controller
         return back()->with('status', 'A new verification code has been sent. Only the latest code will work.');
     }
 
-    public function showForgotPassword()
+    public function showForgotPassword(Request $request)
     {
-        return view('auth.forgot-password');
+        return AuthModal::respond($request, 'forgot-password', [], 'ZAYLO · Reset Password');
     }
 
     public function sendResetLink(Request $request)

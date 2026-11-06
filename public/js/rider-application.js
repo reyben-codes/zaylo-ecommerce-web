@@ -1,5 +1,7 @@
 (() => {
-    document.querySelectorAll('[data-rider-application]').forEach((root) => {
+    const init = (scope) => scope.querySelectorAll('[data-rider-application]').forEach((root) => {
+        if (root.dataset.riderBound) return;
+        root.dataset.riderBound = 'true';
         const vehicle = root.querySelector('[data-vehicle-type]');
         const unlicensed = (root.dataset.unlicensed || '').split(' ').filter(Boolean);
         const sections = [...root.querySelectorAll('[data-rider-licensed]')];
@@ -54,4 +56,8 @@
             });
         });
     });
+
+    init(document);
+    // Forms the sign-in modal loads later (public/js/auth-modal.js) announce themselves with this event.
+    document.addEventListener('zaylo:content', (event) => init(event.target));
 })();

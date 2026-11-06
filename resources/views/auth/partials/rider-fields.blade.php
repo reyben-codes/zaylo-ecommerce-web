@@ -6,7 +6,7 @@
 @endphp
 
 <div class="rider-application" data-rider-application data-unlicensed="{{ implode(' ', \App\Models\Rider::UNLICENSED_VEHICLES) }}">
-    <fieldset class="rider-application__group">
+    <fieldset class="rider-application__group" data-wizard-step data-step-title="Where you'll deliver">
         <legend>Where you'll deliver</legend>
         <div class="form-group">
             <label for="logistics_provider_id">Logistics partner</label>
@@ -26,7 +26,7 @@
         </div>
     </fieldset>
 
-    <fieldset class="rider-application__group">
+    <fieldset class="rider-application__group" data-wizard-step data-step-title="Your vehicle">
         <legend>Your vehicle</legend>
         <div class="form-row">
             <div class="form-group">
@@ -53,7 +53,7 @@
 
     <div class="rider-licensed{{ $unlicensed ? ' is-collapsed' : '' }}" data-rider-licensed @if($unlicensed) inert @endif>
         <div class="rider-licensed__inner">
-            <fieldset class="rider-application__group">
+            <fieldset class="rider-application__group" data-wizard-step data-step-title="Driver's license">
                 <legend>Driver's license</legend>
                 <div class="form-row">
                     <div class="form-group">
@@ -73,7 +73,7 @@
             </fieldset>
 
             @if($documentsReady)
-                <fieldset class="rider-application__group">
+                <fieldset class="rider-application__group" data-wizard-step data-step-title="License documents">
                     <legend>Documents</legend>
                     <p class="field-note">JPG, PNG or PDF, up to 5 MB each. Your logistics partner checks these before approving you.</p>
                     @foreach(\App\Models\Rider::DOCUMENTS as $field => $label)

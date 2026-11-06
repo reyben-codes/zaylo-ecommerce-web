@@ -14,7 +14,7 @@
 @endphp
 
 <div class="seller-application" data-seller-application>
-    <fieldset class="seller-application__group">
+    <fieldset class="seller-application__group" data-wizard-step data-step-title="Your shop">
         <legend>Your shop</legend>
         <div class="form-group">
             <label for="shop_name">Shop name</label>
@@ -38,7 +38,7 @@
         </div>
     </fieldset>
 
-    <fieldset class="seller-application__group" data-address-form data-locations-url="{{ url('/api/locations') }}" data-location-ready-text="Locations loaded. Choose your pickup location.">
+    <fieldset class="seller-application__group" data-wizard-step data-step-title="Pickup address" data-address-form data-locations-url="{{ url('/api/locations') }}" data-location-ready-text="Locations loaded. Choose your pickup location.">
         <legend>Pickup address</legend>
         <div class="form-row">
             <div class="form-group">
@@ -76,7 +76,7 @@
         </div>
     </fieldset>
 
-    <fieldset class="seller-application__group">
+    <fieldset class="seller-application__group" data-wizard-step data-step-title="Business documents">
         <legend>Documents</legend>
         <p class="field-note">JPG, PNG or PDF, up to 5 MB each. Choose your seller type to see which documents you need.</p>
         @foreach(\App\Models\SellerApplication::DOCUMENTS as $field => $label)

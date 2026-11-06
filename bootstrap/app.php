@@ -33,6 +33,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'nocache'  => \App\Http\Middleware\NoCacheHeaders::class,
             'active'   => \App\Http\Middleware\EnsureAccountIsActive::class,
             'throttle' => \App\Http\Middleware\ThrottleRequests::class,
+            // Sign-in modal forms post in the background and get {"redirect": url} instead of a redirect.
+            'json.redirect' => \App\Http\Middleware\RedirectAsJson::class,
             // Mobile app API (routes/api.php): JSON versions of the web's account checks.
             'mobile.buyer' => \App\Http\Middleware\EnsureMobileBuyer::class,
             'mobile.rider' => \App\Http\Middleware\EnsureMobileRider::class,

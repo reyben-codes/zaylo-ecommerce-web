@@ -29,7 +29,14 @@
         validate();
     }
 
-    document.querySelectorAll('[data-person-name]').forEach((input) => {
+    const fresh = (scope, selector) => [...scope.querySelectorAll(selector)].filter((input) => {
+        if (input.dataset.detailsBound) return false;
+        input.dataset.detailsBound = 'true';
+        return true;
+    });
+
+    const init = (scope) => {
+    fresh(scope, '[data-person-name]').forEach((input) => {
         bind(
             input,
             (value) => value.replace(/[^\p{L}\p{M} .'\u2019-]/gu, '').replace(/^[^\p{L}]+/u, ''),
@@ -42,7 +49,7 @@
         );
     });
 
-    document.querySelectorAll('[data-phone-number]').forEach((input) => {
+    fresh(scope, '[data-phone-number]').forEach((input) => {
         // Sign-up also accepts +639XXXXXXXXX, which the server saves as 09XXXXXXXXX.
         if (input.dataset.phoneNumber === 'international') {
             bind(
@@ -63,7 +70,7 @@
         );
     });
 
-    document.querySelectorAll('[data-adult-birthday]').forEach((input) => {
+    fresh(scope, '[data-adult-birthday]').forEach((input) => {
         const validate = () => input.setCustomValidity(
             input.value && input.max && input.value > input.max ? 'You must be at least 18 years old to register.' : '',
         );
@@ -71,4 +78,9 @@
         input.addEventListener('change', validate);
         validate();
     });
+    };
+
+    init(document);
+    // Forms the sign-in modal loads later (public/js/auth-modal.js) announce themselves with this event.
+    document.addEventListener('zaylo:content', (event) => init(event.target));
 })();

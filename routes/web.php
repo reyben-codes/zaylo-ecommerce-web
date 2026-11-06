@@ -19,6 +19,7 @@ use App\Http\Controllers\ProductSaleController;
 use App\Http\Controllers\ComplianceWarningController;
 use App\Http\Controllers\CourierController;
 use App\Http\Controllers\GoogleAuthController;
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\IdentityVerificationController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\DeliveryProofController;
@@ -43,29 +44,7 @@ use App\Models\Product;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 
-Route::get('/', function () {
-    $newArrivals = collect();
-
-    if (Schema::hasTable('products')) {
-        $query = Product::withReviewSummary()->visibleToBuyers();
-
-        if (Schema::hasColumn('products', 'stock')) {
-            $query->where('stock', '>', 0)
-                ->with(['images', 'additionalCategories'])
-                ->withCount(['variants as active_variants_count' => fn ($builder) => $builder->where('is_active', true)])
-                ->withSum(['variants as catalog_variant_stock' => fn ($builder) => $builder->where('is_active', true)], 'stock');
-        } else {
-            $query->whereHas('variants', fn ($builder) => $builder->where('is_active', true)->where('stock', '>', 0))
-                ->with(['images', 'defaultVariant', 'category', 'additionalCategories'])
-                ->withCount(['variants as active_variants_count' => fn ($builder) => $builder->where('is_active', true)])
-                ->withSum(['variants as catalog_variant_stock' => fn ($builder) => $builder->where('is_active', true)], 'stock');
-        }
-
-        $newArrivals = $query->latest()->limit(10)->get();
-    }
-
-    return view('index', compact('newArrivals'));
-})->name('home');
+Route::get('/', [HomeController::class, 'index'])->name('home');
 // Uploaded photos saved as "/storage/..." links: redirected to Cloudflare R2, or sent from storage/app/public.
 Route::get('/storage/{path}', PublicFileController::class)->where('path', '.*')->name('storage.public');
 // Shoppers on Android land here instead of the web store (App\Http\Middleware\RequireAndroidApp).
@@ -102,17 +81,17 @@ Route::middleware('guest')->group(function () {
     Route::get('/auth/google', [GoogleAuthController::class, 'redirect'])->middleware('throttle:10,1')->name('google.redirect');
     Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])->middleware('throttle:10,1')->name('google.callback');
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
+    Route::post('/login', [AuthController::class, 'login'])->middleware(['throttle:login', 'json.redirect']);
     Route::get('/seller/login', [AuthController::class, 'showSellerLogin'])->name('seller.login');
-    Route::post('/seller/login', [AuthController::class, 'sellerLogin'])->middleware('throttle:login')->name('seller.login.submit');
+    Route::post('/seller/login', [AuthController::class, 'sellerLogin'])->middleware(['throttle:login', 'json.redirect'])->name('seller.login.submit');
     Route::get('/logistics/login', [AuthController::class, 'showLogisticsLogin'])->name('logistics.login');
-    Route::post('/logistics/login', [AuthController::class, 'logisticsLogin'])->middleware('throttle:login')->name('logistics.login.submit');
+    Route::post('/logistics/login', [AuthController::class, 'logisticsLogin'])->middleware(['throttle:login', 'json.redirect'])->name('logistics.login.submit');
     Route::get('/admin/login', [AuthController::class, 'showAdminLogin'])->name('admin.login');
-    Route::post('/admin/login', [AuthController::class, 'adminLogin'])->middleware('throttle:login')->name('admin.login.submit');
+    Route::post('/admin/login', [AuthController::class, 'adminLogin'])->middleware(['throttle:login', 'json.redirect'])->name('admin.login.submit');
     Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
-    Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:6,1');
+    Route::post('/register', [AuthController::class, 'register'])->middleware(['throttle:6,1', 'json.redirect']);
     Route::get('/forgot-password', [AuthController::class, 'showForgotPassword'])->name('password.request');
-    Route::post('/forgot-password', [AuthController::class, 'sendResetLink'])->name('password.email')->middleware('throttle:5,1');
+    Route::post('/forgot-password', [AuthController::class, 'sendResetLink'])->name('password.email')->middleware(['throttle:5,1', 'json.redirect']);
     Route::get('/reset-password/{token}', [AuthController::class, 'showResetPassword'])->name('password.reset');
     Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('password.update');
 });
@@ -124,7 +103,7 @@ Route::middleware('auth')->group(function () {
 // Email codes: for a sign-up still waiting for its code (no account yet) or an older unverified account.
 Route::get('/email/verify', [AuthController::class, 'verificationNotice'])->name('verification.notice');
 Route::post('/email/verify', [AuthController::class, 'verifyEmail'])->middleware('throttle:6,1')->name('verification.verify');
-Route::post('/email/verification-notification', [AuthController::class, 'resendVerification'])->middleware('throttle:6,1')->name('verification.send');
+Route::post('/email/verification-notification', [AuthController::class, 'resendVerification'])->middleware(['throttle:6,1', 'json.redirect'])->name('verification.send');
 Route::post('/register/cancel', [AuthController::class, 'cancelRegistration'])->name('registration.cancel');
 
 Route::middleware(['auth', 'active', 'verified', 'role:buyer', 'nocache'])->prefix('buyer')->name('buyer.')->group(function () {

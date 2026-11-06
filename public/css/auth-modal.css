@@ -1,0 +1,286 @@
+/* Sign-in / sign-up modal (resources/views/partials/auth-modal.blade.php, public/js/auth-modal.js).
+   Everything is scoped to .auth-modal so the storefront's own styles are untouched. The dialog itself is the
+   dimmed full-screen layer, which works the same with showModal() and with a server-rendered <dialog open>. */
+
+.auth-modal {
+    --ink: var(--c-1a1714);
+    --muted: var(--c-6b5f54);
+    --accent: var(--c-b28b6f);
+    --cream: var(--c-faf7f2);
+    --border: var(--c-ece4db);
+    --paper: var(--c-ffffff);
+    --danger: var(--c-a52b23);
+    --danger-soft: var(--c-fdf2f2);
+    --danger-line: var(--c-f5c6c6);
+    --success: var(--c-2d7d46);
+    --success-soft: var(--c-e6f2e7);
+    --success-line: var(--c-b8dfc4);
+    --modal-ease: cubic-bezier(.2, .8, .2, 1);
+
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    margin: 0;
+    padding: 24px;
+    border: 0;
+    background: rgba(20, 16, 12, .58);
+    color: var(--ink);
+    font-family: 'Inter', 'Helvetica Neue', sans-serif;
+    overflow: hidden;
+}
+
+.auth-modal[open] { display: grid; place-items: center; }
+.auth-modal::backdrop { background: transparent; }
+.auth-modal *, .auth-modal *::before, .auth-modal *::after { box-sizing: border-box; }
+.auth-modal [hidden] { display: none !important; }
+
+html.auth-modal-open, html.auth-modal-open body { overflow: hidden; }
+
+.auth-modal__frame {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    width: min(980px, 100%);
+    height: min(760px, calc(100dvh - 48px));
+    border-radius: 24px;
+    background: var(--paper);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, .28);
+    overflow: hidden;
+}
+
+.auth-modal[open] .auth-modal__frame { animation: auth-modal-in .32s var(--modal-ease) both; }
+.auth-modal[open] { animation: auth-modal-fade .28s ease-out both; }
+.auth-modal.is-closing { animation: auth-modal-fade-out .22s ease-in both; }
+.auth-modal.is-closing .auth-modal__frame { animation: auth-modal-out .22s ease-in both; }
+
+/* Left: the brand photo and the tagline of the open panel. */
+.auth-modal__art {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 36px;
+    background: #39291d url('../images/login-marketplace.png') center / cover no-repeat;
+    color: #fff;
+}
+
+.auth-modal__art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(26, 23, 20, .15) 40%, rgba(26, 23, 20, .78)); }
+.auth-modal__art > * { position: relative; z-index: 1; }
+.auth-modal__art img { display: block; width: auto; height: 34px; }
+.auth-modal__tagline p { font-family: 'Playfair Display', 'Times New Roman', serif; font-size: 1.55rem; font-weight: 400; line-height: 1.35; margin: 0; }
+.auth-modal__tagline p + p { font-style: italic; opacity: .78; }
+.auth-modal__tagline.is-changing { animation: auth-step-in .3s ease-out; }
+
+/* Right: the scrolling form column. */
+.auth-modal__main { position: relative; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+
+.auth-modal__close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 3;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--paper);
+    color: var(--muted);
+    font-size: 1.15rem;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color .2s ease-out, color .2s ease-out;
+}
+
+.auth-modal__close:hover { background: var(--cream); color: var(--ink); }
+
+.auth-modal__body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 56px 56px 40px;
+    scrollbar-gutter: stable;
+}
+
+.auth-modal__body.is-swapping { animation: auth-step-in .28s var(--modal-ease) both; }
+
+.auth-modal__loading {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    background: color-mix(in srgb, var(--paper) 72%, transparent);
+}
+
+.auth-modal__spinner, .auth-modal .is-busy::before {
+    width: 30px;
+    height: 30px;
+    border: 3px solid var(--border);
+    border-top-color: var(--ink);
+    border-radius: 50%;
+    animation: auth-spin .75s linear infinite;
+}
+
+.auth-modal .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+/* Panel content. */
+.auth-panel { width: 100%; max-width: 480px; margin: 0 auto; }
+.auth-panel__header { margin-bottom: 26px; }
+.auth-panel__label { display: block; margin-bottom: 10px; color: var(--muted); font-size: .7rem; letter-spacing: .2em; text-transform: uppercase; }
+.auth-panel__title { margin: 0 0 6px; font-family: 'Playfair Display', 'Times New Roman', serif; font-size: 2.3rem; font-weight: 600; line-height: 1.15; color: var(--ink); outline: none; }
+.auth-panel__subtitle { margin: 0; color: var(--muted); font-size: .92rem; line-height: 1.65; }
+.auth-panel .email-address { overflow-wrap: anywhere; font-weight: 600; color: var(--ink); }
+
+.auth-panel__alerts:empty { display: none; }
+.auth-alert { margin: 0 0 20px; padding: 12px 16px; border: 1px solid var(--border); border-radius: 10px; font-size: .85rem; line-height: 1.55; animation: auth-step-in .24s ease-out; }
+.auth-alert p { margin: 0; }
+.auth-alert ul { margin: 6px 0 0; padding-left: 18px; }
+.auth-alert a { color: inherit; font-weight: 600; }
+.auth-alert--error { border-color: var(--danger-line); background: var(--danger-soft); color: var(--danger); }
+.auth-alert--success { border-color: var(--success-line); background: var(--success-soft); color: var(--success); }
+
+.auth-modal .form-group { margin: 0 0 18px; min-width: 0; }
+.auth-modal .form-group label, .auth-modal .form-group > legend { display: block; margin-bottom: 8px; color: var(--ink); font-size: .75rem; font-weight: 500; letter-spacing: .02em; }
+.auth-modal .form-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+
+/* The email code input is drawn as six boxes by email-verification.css, so it keeps its own look. */
+.auth-modal input:not([type=checkbox]):not([type=radio]):not([type=file]):not(.otp-input), .auth-modal select, .auth-modal textarea {
+    width: 100%;
+    padding: 13px 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--paper);
+    color: var(--ink);
+    font: inherit;
+    font-size: .95rem;
+    transition: border-color .2s ease-out, box-shadow .2s ease-out;
+}
+
+.auth-modal input:not(.otp-input):focus, .auth-modal select:focus, .auth-modal textarea:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+.auth-modal input::placeholder { color: var(--c-9b9188); }
+/* Without JavaScript the code is one plain field. */
+.auth-modal .otp-field:not(.is-enhanced) .otp-input { width: 100%; padding: 13px 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--paper); color: var(--ink); font: inherit; font-size: 1.6rem; letter-spacing: .35em; text-align: center; font-variant-numeric: tabular-nums; }
+.auth-modal [aria-invalid="true"]:not(.otp-input) { border-color: var(--danger) !important; }
+.auth-modal a:focus-visible, .auth-modal button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+.auth-field-error { margin: 7px 0 0; color: var(--danger); font-size: .76rem; line-height: 1.5; animation: auth-step-in .2s ease-out; }
+.auth-modal .field-note, .auth-modal .verification-note { margin: 7px 0 0; color: var(--muted); font-size: .75rem; line-height: 1.6; }
+.auth-modal .partner-note { margin: 0 0 20px; padding: 12px 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--cream); color: var(--muted); font-size: .8rem; line-height: 1.6; }
+
+.auth-modal .password-input-wrapper { position: relative; }
+.auth-modal .password-input-wrapper input { padding-right: 64px; }
+.auth-modal .toggle-password { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); min-width: 44px; min-height: 44px; border: 0; background: none; color: var(--muted); font: inherit; font-size: .75rem; cursor: pointer; }
+.auth-modal .toggle-password:hover { color: var(--ink); }
+
+.auth-panel__options { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin: 4px 0 24px; }
+.auth-modal .remember-me { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: .8rem; cursor: pointer; }
+.auth-modal .remember-me input { width: 16px; height: 16px; accent-color: var(--ink); }
+.auth-panel__link { color: var(--muted); font-size: .8rem; text-decoration: none; }
+.auth-panel__link:hover { color: var(--ink); text-decoration: underline; }
+
+.auth-modal .step-actions { display: flex; gap: 12px; margin-top: 26px; }
+.auth-modal .btn-primary, .auth-modal .btn-back {
+    position: relative;
+    min-height: 48px;
+    padding: 14px 20px;
+    border-radius: 10px;
+    font: inherit;
+    font-size: .8rem;
+    cursor: pointer;
+    transition: background-color .2s ease-out, border-color .2s ease-out, transform .2s ease-out, opacity .2s ease-out;
+}
+
+.auth-modal .btn-primary { flex: 1; border: 1px solid var(--ink); background: var(--ink); color: var(--c-ffffff); font-weight: 600; letter-spacing: .07em; text-transform: uppercase; }
+.auth-modal .btn-primary:hover:not(:disabled) { background: var(--c-46392e); }
+.auth-modal .btn-primary:disabled, .auth-modal .btn-back:disabled { opacity: .65; cursor: wait; }
+.auth-modal .btn-back { border: 1px solid var(--border); background: var(--paper); color: var(--muted); }
+.auth-modal .btn-back:hover:not(:disabled) { border-color: var(--muted); color: var(--ink); }
+.auth-modal .auth-submit { width: 100%; }
+.auth-modal .is-busy { color: transparent !important; }
+.auth-modal .is-busy::before { content: ""; position: absolute; inset: 0; margin: auto; width: 18px; height: 18px; border-width: 2px; border-color: rgba(255, 255, 255, .35); border-top-color: #fff; }
+.auth-modal .btn-back.is-busy::before { border-color: var(--border); border-top-color: var(--ink); }
+
+.auth-modal .auth-divider { display: flex; align-items: center; gap: 14px; margin: 22px 0; color: var(--c-8a8a8a); font-size: .7rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.auth-modal .auth-divider::before, .auth-modal .auth-divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+.auth-modal .btn-google { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; min-height: 48px; padding: 12px 18px; border: 1px solid var(--border); border-radius: 10px; background: var(--paper); color: var(--ink); font-size: .85rem; font-weight: 500; text-decoration: none; transition: border-color .2s ease-out, background-color .2s ease-out; }
+.auth-modal .btn-google:hover { border-color: var(--ink); background: var(--cream); }
+.auth-modal .google-icon { width: 18px; height: 18px; flex-shrink: 0; }
+
+.auth-panel__footer { margin-top: 26px; padding-top: 22px; border-top: 1px solid var(--border); color: var(--muted); font-size: .82rem; line-height: 1.65; text-align: center; }
+.auth-panel__footer p { margin: 0 0 6px; }
+.auth-panel__footer a { color: var(--ink); font-weight: 500; text-decoration: none; }
+.auth-panel__footer a:hover { text-decoration: underline; }
+.auth-panel__footer form { display: inline-block; margin-top: 6px; }
+.auth-panel__portals { margin-top: 12px; font-size: .76rem; }
+.auth-panel__portals p { margin: 0 0 3px; }
+.auth-modal .partner-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px; margin-top: 12px; font-size: .76rem; }
+.auth-modal .partner-links a { color: var(--muted); font-weight: 400; }
+
+.auth-modal .resend-form { margin-top: 20px; text-align: center; }
+.auth-modal .resend-form .btn-back { margin-top: 8px; }
+
+/* Sign-up wizard. Without JavaScript every section shows, one after another. */
+.auth-step { border: 0; margin: 0; padding: 0; min-width: 0; }
+.auth-step__heading { margin: 0 0 16px; font-size: 1rem; font-weight: 600; }
+.auth-wizard .seller-application__group, .auth-wizard .rider-application__group { margin-bottom: 22px; }
+
+.auth-wizard__progress { margin: 0 0 22px; }
+.auth-wizard__count { margin: 0 0 4px; color: var(--muted); font-size: .72rem; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; }
+.auth-wizard__title { margin: 0 0 12px; font-size: 1.05rem; font-weight: 600; outline: none; }
+.auth-wizard__bar { display: flex; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.auth-wizard__bar li { position: relative; flex: 1; height: 4px; border-radius: 4px; background: var(--border); overflow: hidden; }
+.auth-wizard__bar li::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--ink); transform: scaleX(0); transform-origin: left; transition: transform .32s var(--modal-ease), background-color .32s ease-out; }
+.auth-wizard__bar li.is-done::after { transform: scaleX(1); background: var(--accent); }
+.auth-wizard__bar li.is-current::after { transform: scaleX(1); }
+.auth-wizard__progress--final .auth-wizard__bar li:nth-child(2)::after { background: var(--accent); }
+
+/* In the wizard the progress block names the step, so the section's own heading or legend is read by screen readers only. */
+.auth-wizard.is-enhanced .auth-step__heading,
+.auth-wizard.is-enhanced [data-wizard-step] > legend { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+.auth-wizard.is-enhanced [data-wizard-step] { border: 0; padding: 0; background: none; }
+.auth-wizard.is-enhanced [data-wizard-step].is-entering { animation: auth-step-in .3s var(--modal-ease) both; }
+.auth-wizard.is-enhanced [data-wizard-step].is-entering-back { animation: auth-step-in-back .3s var(--modal-ease) both; }
+.auth-wizard.is-enhanced .auth-wizard__nav { position: sticky; bottom: -40px; margin: 20px -56px -40px; padding: 16px 56px 24px; background: linear-gradient(to bottom, color-mix(in srgb, var(--paper) 0%, transparent), var(--paper) 22%); }
+.auth-wizard.is-enhanced .auth-wizard__nav .btn-back { flex: 0 0 auto; min-width: 104px; }
+
+@keyframes auth-modal-fade { from { background-color: rgba(20, 16, 12, 0); } }
+@keyframes auth-modal-fade-out { to { background-color: rgba(20, 16, 12, 0); } }
+@keyframes auth-modal-in { from { opacity: 0; transform: translateY(18px) scale(.97); } }
+@keyframes auth-modal-out { to { opacity: 0; transform: translateY(12px) scale(.98); } }
+@keyframes auth-step-in { from { opacity: 0; transform: translateX(18px); } }
+@keyframes auth-step-in-back { from { opacity: 0; transform: translateX(-18px); } }
+@keyframes auth-spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 860px) {
+    .auth-modal__frame { grid-template-columns: 1fr; width: min(560px, 100%); }
+    .auth-modal__art { display: none; }
+    .auth-modal__body { padding: 56px 40px 36px; }
+    .auth-wizard.is-enhanced .auth-wizard__nav { margin-inline: -40px; padding-inline: 40px; bottom: -36px; margin-bottom: -36px; }
+}
+
+/* Phones: a full-screen sheet that slides up. */
+@media (max-width: 560px) {
+    .auth-modal { padding: 0; }
+    .auth-modal__frame { width: 100%; height: 100dvh; border-radius: 0; box-shadow: none; }
+    .auth-modal[open] .auth-modal__frame { animation-name: auth-sheet-in; }
+    .auth-modal.is-closing .auth-modal__frame { animation-name: auth-sheet-out; }
+    .auth-modal__body { padding: 64px 20px 28px; }
+    .auth-panel__title { font-size: 1.9rem; }
+    .auth-modal .form-row { grid-template-columns: 1fr; gap: 0; }
+    .auth-wizard.is-enhanced .auth-wizard__nav { margin-inline: -20px; padding-inline: 20px; bottom: -28px; margin-bottom: -28px; }
+}
+
+@keyframes auth-sheet-in { from { transform: translateY(100%); } }
+@keyframes auth-sheet-out { to { transform: translateY(100%); } }
+
+@media (prefers-reduced-motion: reduce) {
+    .auth-modal, .auth-modal *, .auth-modal *::before, .auth-modal *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    .auth-modal__spinner, .auth-modal .is-busy::before { animation-duration: 1.5s !important; animation-iteration-count: infinite !important; }
+}

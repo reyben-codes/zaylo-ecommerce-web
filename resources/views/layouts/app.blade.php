@@ -29,6 +29,7 @@
     <link rel="stylesheet" href="{{ asset('css/live-search.css') }}?v={{ filemtime(public_path('css/live-search.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/confirm-dialog.css') }}?v={{ filemtime(public_path('css/confirm-dialog.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/print.css') }}?v={{ filemtime(public_path('css/print.css')) }}" media="print">
+    @include('partials.auth-modal-styles')
 </head>
 <body class="@yield('body-class')">
     <!-- Navigation -->
@@ -127,5 +128,6 @@
     <script src="{{ asset('js/confirm-dialog.js') }}?v={{ filemtime(public_path('js/confirm-dialog.js')) }}" defer></script>
     <script src="{{ asset('js/print.js') }}?v={{ filemtime(public_path('js/print.js')) }}" defer></script>
     @include('partials.faq-bot')
+    @include('partials.auth-modal')
 </body>
 </html>

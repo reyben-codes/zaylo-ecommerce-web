@@ -15,7 +15,7 @@
 @endphp
 
 <div class="seller-application" data-business-application>
-    <fieldset class="seller-application__group">
+    <fieldset class="seller-application__group" data-wizard-step data-step-title="Your company">
         <legend>Your company</legend>
         <div class="form-group">
             <label for="company_name">Company name</label>
@@ -41,7 +41,7 @@
         </div>
     </fieldset>
 
-    <fieldset class="seller-application__group" data-require-one="Choose at least one region you deliver to.">
+    <fieldset class="seller-application__group" data-wizard-step data-step-title="Service areas" data-require-one="Choose at least one region you deliver to.">
         <legend>Service areas</legend>
         <p class="field-note">Choose every region you deliver to. Riders see these when choosing a partner.</p>
         <div class="service-areas">
@@ -54,7 +54,7 @@
         </div>
     </fieldset>
 
-    <fieldset class="seller-application__group" data-address-form data-locations-url="{{ url('/api/locations') }}" data-location-ready-text="Locations loaded. Choose your office location.">
+    <fieldset class="seller-application__group" data-wizard-step data-step-title="Office address" data-address-form data-locations-url="{{ url('/api/locations') }}" data-location-ready-text="Locations loaded. Choose your office location.">
         <legend>Office address</legend>
         <div class="form-row">
             <div class="form-group">
@@ -92,7 +92,7 @@
         </div>
     </fieldset>
 
-    <fieldset class="seller-application__group">
+    <fieldset class="seller-application__group" data-wizard-step data-step-title="Business documents">
         <legend>Documents</legend>
         <p class="field-note">JPG, PNG or PDF, up to 5 MB each.</p>
         @foreach(\App\Models\LogisticsProvider::DOCUMENTS as $field => $label)

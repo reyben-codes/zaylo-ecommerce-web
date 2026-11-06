@@ -1,6 +1,8 @@
 (() => {
     // Seller applications, and logistics applications that share the same fields and checks.
-    document.querySelectorAll('[data-seller-application], [data-business-application]').forEach((root) => {
+    const init = (scope) => scope.querySelectorAll('[data-seller-application], [data-business-application]').forEach((root) => {
+        if (root.dataset.applicationBound) return;
+        root.dataset.applicationBound = 'true';
         const type = root.querySelector('[data-seller-type]');
         const documents = [...root.querySelectorAll('[data-seller-document]')];
 
@@ -57,4 +59,8 @@
             });
         });
     });
+
+    init(document);
+    // Forms the sign-in modal loads later (public/js/auth-modal.js) announce themselves with this event.
+    document.addEventListener('zaylo:content', (event) => init(event.target));
 })();

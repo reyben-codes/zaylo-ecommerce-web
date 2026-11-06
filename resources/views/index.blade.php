@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ZAYLO</title>
+    <title>{{ $authModal['title'] ?? 'ZAYLO' }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600&display=swap" rel="stylesheet" />
@@ -16,6 +16,7 @@
     <link rel="stylesheet" href="{{ asset('css/product-card-description.css') }}?v={{ filemtime(public_path('css/product-card-description.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/shop-card.css') }}?v={{ filemtime(public_path('css/shop-card.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/live-search.css') }}?v={{ filemtime(public_path('css/live-search.css')) }}">
+    @include('partials.auth-modal-styles', ['withConfirmDialog' => true])
 </head>
 <body>
     <header class="navbar">
@@ -176,6 +177,7 @@
 @include('partials.chat-widget')
 @include('partials.cart-animation')
 @include('partials.faq-bot', ['guests' => true])
+@include('partials.auth-modal', ['withConfirmDialog' => true])
 </body>
 </html>
     
