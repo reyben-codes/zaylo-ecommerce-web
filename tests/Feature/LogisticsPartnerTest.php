@@ -145,8 +145,8 @@ class LogisticsPartnerTest extends TestCase
         $this->get(route('logistics.login'))->assertOk()
             ->assertSee('ZAYLO LOGISTICS CENTER')
             ->assertSee('action="'.route('logistics.login.submit').'"', false)
-            ->assertSee(route('register', ['role' => 'logistics']))
-            ->assertDontSee('Continue with Google');
+            ->assertSee(route('register', ['role' => 'logistics']));
+        $this->assertGoogleHidden(route('logistics.login'));
         $this->get(route('login'))->assertOk()->assertSee(route('logistics.login'));
         $this->get(route('register', ['role' => 'logistics']))->assertSee(route('logistics.login'));
 
@@ -179,9 +179,10 @@ class LogisticsPartnerTest extends TestCase
         $this->get(route('admin.dashboard'))->assertRedirect(route('admin.login'));
         $this->get(route('admin.login'))->assertOk()
             ->assertSee('ZAYLO ADMIN CENTER')
-            ->assertSee('action="'.route('admin.login.submit').'"', false)
-            ->assertDontSee('Continue with Google');
-        $this->get(route('login'))->assertSeeInOrder(['Sign in on the ZAYLO app', 'Administrator?', route('admin.login')]);
+            ->assertSee('action="'.route('admin.login.submit').'"', false);
+        $this->assertGoogleHidden(route('admin.login'));
+        // The sign-in role cards: the rider card leads to the app, then the admin card.
+        $this->get(route('login'))->assertSeeInOrder([route('rider.app'), 'In the app', route('admin.login')]);
 
         $admin = User::factory()->create(['role' => 'admin', 'status' => 'active', 'password' => 'Admin-pass1!']);
         $this->post(route('admin.login.submit'), ['email' => $admin->email, 'password' => 'Admin-pass1!'])
@@ -216,5 +217,11 @@ class LogisticsPartnerTest extends TestCase
             // Mobile numbers are unique, so derive one per email.
             'phone' => '0917'.str_pad((string) (crc32($email) % 10000000), 7, '0', STR_PAD_LEFT),
         ];
+    }
+
+    /** Logistics and admin accounts have no Google sign-in: the button is on the panel (for switching roles) but hidden. */
+    private function assertGoogleHidden(string $url): void
+    {
+        $this->assertMatchesRegularExpression('/data-portal-google\s+hidden/', $this->get($url)->getContent());
     }
 }

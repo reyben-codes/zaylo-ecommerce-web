@@ -27,6 +27,22 @@ class AuthModalTest extends TestCase
         $this->assertMatchesRegularExpression('/<dialog[^>]*data-auth-modal[^>]*\sopen\s/s', $this->get(route('login'))->getContent());
     }
 
+    public function test_sign_in_has_a_card_per_role_with_the_current_one_selected(): void
+    {
+        foreach (['login' => 'shop', 'seller.login' => 'seller', 'logistics.login' => 'logistics', 'admin.login' => 'admin'] as $route => $key) {
+            $page = $this->withHeader(AuthModal::HEADER, '1')->get(route($route))->assertOk()
+                ->assertSeeInOrder(['Sign in as', 'Buyer', 'Seller', 'Logistics', 'Rider', 'In the app', 'Admin'])
+                ->assertSee('href="'.route('rider.app').'"', false)
+                ->getContent();
+            $this->assertSame(4, substr_count($page, 'data-portal-card='), $route);
+            $this->assertMatchesRegularExpression('/class="portal-card is-active" data-portal-card="'.$key.'"\s+aria-current="page"/', $page);
+            // Each card carries its form action so the panel can switch roles in place.
+            foreach (['login', 'seller.login.submit', 'logistics.login.submit', 'admin.login.submit'] as $action) {
+                $this->assertStringContainsString(e(json_encode(route($action))), $page);
+            }
+        }
+    }
+
     public function test_the_modal_fetches_just_the_panel(): void
     {
         $panel = $this->withHeader(AuthModal::HEADER, '1')->get(route('register', ['role' => 'seller']))->assertOk()

@@ -1,36 +1,67 @@
-{{-- Sign-in panel for the shop and the seller, logistics and admin portals. Shown in the sign-in modal
-     (partials/auth-modal); behaviour lives in public/js/auth-modal.js. --}}
+{{-- Sign-in panel for every role, shown in the sign-in modal (partials/auth-modal). Role cards at the top pick the
+     account type: public/js/auth-modal.js switches the form in place from each card's data-portal, keeping what was
+     typed; without JavaScript each card is a link to that role's sign-in page. Riders sign in only in the app. --}}
 @php
     $portal ??= 'shop';
-    $copy = [
+    $portals = [
         'shop' => [
+            'name' => 'Buyer', 'icon' => 'fa-bag-shopping', 'url' => route('login'),
             'tagline' => ['Driven by passion.', 'Defined by your origin'], 'label' => 'ZAYLO ACCOUNT', 'heading' => 'Welcome Back',
             'subtitle' => 'Sign in to track orders, save favorites, and shop your everyday essentials.',
             'action' => route('login'), 'button' => 'Sign In',
+            'google' => route('google.redirect'),
+            'footer' => ["Don't have an account?", 'Create new account', route('register')],
         ],
         'seller' => [
+            'name' => 'Seller', 'icon' => 'fa-store', 'url' => route('seller.login'),
             'tagline' => ['Build your business.', 'Grow with ZAYLO'], 'label' => 'ZAYLO SELLER CENTER', 'heading' => 'Welcome, Seller',
             'subtitle' => 'Sign in to manage products, inventory, orders, and sales.',
             'action' => route('seller.login.submit'), 'button' => 'Enter Seller Center',
+            'google' => route('google.redirect', ['role' => 'seller']),
+            'footer' => ['New to ZAYLO?', 'Apply to become a seller', route('register', ['role' => 'seller'])],
         ],
         'logistics' => [
+            'name' => 'Logistics', 'icon' => 'fa-truck-fast', 'url' => route('logistics.login'),
             'tagline' => ['Deliver with confidence.', 'Move with ZAYLO'], 'label' => 'ZAYLO LOGISTICS CENTER', 'heading' => 'Welcome, Partner',
             'subtitle' => 'Sign in to review rider applications and manage your delivery team.',
             'action' => route('logistics.login.submit'), 'button' => 'Enter Logistics Center',
+            'google' => null,
+            'footer' => ['New partner?', 'Apply to become a logistics partner', route('register', ['role' => 'logistics'])],
         ],
         'admin' => [
+            'name' => 'Admin', 'icon' => 'fa-user-shield', 'url' => route('admin.login'),
             'tagline' => ['Keep the marketplace running.', 'Lead with ZAYLO'], 'label' => 'ZAYLO ADMIN CENTER', 'heading' => 'Welcome, Admin',
             'subtitle' => 'Sign in to review applications and manage marketplace accounts.',
             'action' => route('admin.login.submit'), 'button' => 'Enter Admin Center',
+            'google' => null,
+            'footer' => null,
         ],
-    ][$portal];
+    ];
+    $copy = $portals[$portal];
 @endphp
 
 <div class="auth-panel" data-auth-panel="login" data-tagline="{{ implode('|', $copy['tagline']) }}">
-    <header class="auth-panel__header">
-        <span class="auth-panel__label">{{ $copy['label'] }}</span>
-        <h2 class="auth-panel__title" id="auth-modal-title" tabindex="-1">{{ $copy['heading'] }}</h2>
-        <p class="auth-panel__subtitle">{{ $copy['subtitle'] }}</p>
+    <nav class="portal-cards" aria-labelledby="portal-cards-label">
+        <p class="portal-cards__label" id="portal-cards-label">Sign in as</p>
+        <div class="portal-cards__grid">
+            @foreach(['shop', 'seller', 'logistics'] as $key)
+                @include('auth.partials.portal-card', ['key' => $key, 'card' => $portals[$key], 'active' => $portal === $key])
+            @endforeach
+            {{-- Riders deliver with the app, so this card opens the app download page. --}}
+            <a href="{{ route('rider.app') }}" class="portal-card portal-card--app">
+                <span class="portal-card__icon" aria-hidden="true"><i class="fas fa-motorcycle"></i></span>
+                <span class="portal-card__name">Rider</span>
+                <small class="portal-card__note">In the app</small>
+            </a>
+            @include('auth.partials.portal-card', ['key' => 'admin', 'card' => $portals['admin'], 'active' => $portal === 'admin'])
+        </div>
+        <p class="sr-only" role="status" aria-live="polite" data-portal-status></p>
+    </nav>
+
+    <header class="auth-panel__header" data-portal-header>
+        <span class="auth-panel__label" data-portal-text="label">{{ $copy['label'] }}</span>
+        <h2 class="auth-panel__title" id="auth-modal-title" tabindex="-1" data-portal-text="heading">{{ $copy['heading'] }}</h2>
+        <p class="auth-panel__subtitle" data-portal-text="subtitle">{{ $copy['subtitle'] }}</p>
     </header>
 
     <div class="auth-panel__alerts" data-auth-alerts>
@@ -46,7 +77,7 @@
         @if(session('status'))<div class="auth-alert auth-alert--success" role="status">{{ session('status') }}</div>@endif
     </div>
 
-    <form method="POST" action="{{ $copy['action'] }}" id="loginForm" data-auth-form>
+    <form method="POST" action="{{ $copy['action'] }}" id="loginForm" data-auth-form data-portal-form>
         @csrf
         <input type="hidden" name="return_to" value="" data-return-to>
 
@@ -68,35 +99,19 @@
             <a href="{{ route('password.request') }}" class="auth-panel__link">Forgot password?</a>
         </div>
 
-        <button type="submit" class="btn-primary auth-submit" data-busy-label="Signing in…">{{ $copy['button'] }}</button>
+        <button type="submit" class="btn-primary auth-submit" data-busy-label="Signing in…" data-portal-text="button">{{ $copy['button'] }}</button>
     </form>
 
-    {{-- Google sign-in exists for buyer and seller accounts, each on its own page. --}}
-    @if(in_array($portal, ['shop', 'seller'], true))
+    {{-- Google sign-in exists for buyer and seller accounts. --}}
+    <div class="portal-google" data-portal-google @unless($copy['google']) hidden @endunless>
         <div class="auth-divider"><span>or</span></div>
-        <a href="{{ route('google.redirect', $portal === 'seller' ? ['role' => 'seller'] : []) }}" class="btn-google" data-auth-native>
+        <a href="{{ $copy['google'] ?? route('google.redirect') }}" class="btn-google" data-auth-native>
             @include('auth.partials.google-icon')
             <span>Continue with Google</span>
         </a>
-    @endif
+    </div>
 
-    <footer class="auth-panel__footer">
-        @if($portal === 'seller')
-            <p>New to ZAYLO? <a href="{{ route('register', ['role' => 'seller']) }}">Apply to become a seller</a></p>
-            <p>Shopping on ZAYLO? <a href="{{ route('login') }}">Use the shop sign in</a></p>
-        @elseif($portal === 'admin')
-            <p>Not an administrator? <a href="{{ route('login') }}">Use the shop sign in</a></p>
-        @elseif($portal === 'logistics')
-            <p>New partner? <a href="{{ route('register', ['role' => 'logistics']) }}">Apply to become a logistics partner</a></p>
-            <p>Shopping on ZAYLO? <a href="{{ route('login') }}">Use the shop sign in</a></p>
-        @else
-            <p>Don't have an account? <a href="{{ route('register') }}">Create new account</a></p>
-            <div class="auth-panel__portals">
-                <p>Selling on ZAYLO? <a href="{{ route('seller.login') }}">Sign in to Seller Center</a></p>
-                <p>Delivery partner? <a href="{{ route('logistics.login') }}">Sign in to Logistics Center</a></p>
-                <p>Rider? <a href="{{ route('rider.app') }}">Sign in on the ZAYLO app</a></p>
-                <p>Administrator? <a href="{{ route('admin.login') }}">Sign in to Admin Center</a></p>
-            </div>
-        @endif
+    <footer class="auth-panel__footer" data-portal-footer @unless($copy['footer']) hidden @endunless>
+        <p><span data-portal-footer-text>{{ $copy['footer'][0] ?? '' }}</span> <a href="{{ $copy['footer'][2] ?? route('register') }}" data-portal-footer-link>{{ $copy['footer'][1] ?? '' }}</a></p>
     </footer>
 </div>

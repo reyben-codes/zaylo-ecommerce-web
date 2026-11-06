@@ -178,21 +178,74 @@
         const panel = body.querySelector('[data-auth-panel]');
         if (!panel) return;
 
-        const [first, second] = (panel.dataset.tagline || '').split('|');
-        const lines = tagline?.querySelectorAll('p') || [];
-        if (first && lines[0] && lines[0].textContent !== first) {
-            lines[0].textContent = first;
-            lines[1].textContent = second || '';
-            animate(tagline, 'is-changing');
-        }
-
+        setTagline(...(panel.dataset.tagline || '').split('|'));
         panel.querySelectorAll('[data-return-to]').forEach((input) => { input.value = returnPath; });
+        setupPortalCards(panel);
 
         // Field helpers (names, phone numbers, addresses, documents, the email code) set themselves up first.
         body.dispatchEvent(new CustomEvent('zaylo:content', { bubbles: true }));
         panel.querySelectorAll('[data-auth-wizard]').forEach(setupWizard);
         showSignUpLength(panel);
         focusPanel();
+    }
+
+    function setTagline(first, second = '') {
+        const lines = tagline?.querySelectorAll('p') || [];
+        if (!first || !lines[0] || lines[0].textContent === first) return;
+        lines[0].textContent = first;
+        lines[1].textContent = second;
+        animate(tagline, 'is-changing');
+    }
+
+    // Sign-in role cards: switch the form to another account type in place, keeping the typed email and password.
+    // Each card's data-portal has that role's wording, form action, Google link and sign-up link.
+    function setupPortalCards(panel) {
+        const cards = [...panel.querySelectorAll('[data-portal-card]')];
+        if (!cards.length) return;
+        const form = panel.querySelector('[data-portal-form]');
+        const header = panel.querySelector('[data-portal-header]');
+        const text = (key) => panel.querySelector(`[data-portal-text="${key}"]`);
+        const google = panel.querySelector('[data-portal-google]');
+        const footer = panel.querySelector('[data-portal-footer]');
+        const status = panel.querySelector('[data-portal-status]');
+
+        const select = (card) => {
+            if (card.classList.contains('is-active')) return;
+            let portal;
+            try { portal = JSON.parse(card.dataset.portal); } catch { location.assign(card.href); return; }
+
+            cards.forEach((other) => {
+                const on = other === card;
+                other.classList.toggle('is-active', on);
+                if (on) other.setAttribute('aria-current', 'page');
+                else other.removeAttribute('aria-current');
+            });
+            form.action = portal.action;
+            ['label', 'heading', 'subtitle', 'button'].forEach((key) => { text(key).textContent = portal[key]; });
+            google.hidden = !portal.google;
+            if (portal.google) google.querySelector('a').href = portal.google;
+            footer.hidden = !portal.footer;
+            if (portal.footer) {
+                footer.querySelector('[data-portal-footer-text]').textContent = portal.footer[0];
+                const link = footer.querySelector('[data-portal-footer-link]');
+                link.textContent = portal.footer[1];
+                link.href = portal.footer[2];
+            }
+            // Messages about the previous role no longer apply.
+            clearErrors(form);
+            setTagline(...portal.tagline);
+            animate(header, 'is-switching');
+            status.textContent = `Signing in as ${portal.name}.`;
+
+            currentUrl = pathOf(toUrl(portal.url));
+            if (dialog.open) history.replaceState({ ...(history.state || {}), authModal: currentUrl }, '', currentUrl);
+        };
+
+        cards.forEach((card) => card.addEventListener('click', (event) => {
+            if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+            event.preventDefault();
+            select(card);
+        }));
     }
 
     // The email code step's bar matches the length of the sign-up that led to it (3 for buyers, up to 7 for partners).
