@@ -27,14 +27,30 @@ class MobileRiderWalletController extends Controller
     {
         $data = $request->validate([
             'amount' => ['required', 'numeric', 'decimal:0,2'],
-            'gcash_number' => ['required', 'string', 'max:20'],
-            'gcash_name' => ['required', 'string', 'max:100'],
+            // Older app builds type the account each time; newer ones send none and use the saved account.
+            'gcash_number' => ['nullable', 'string', 'max:20'],
+            'gcash_name' => ['nullable', 'string', 'max:100'],
         ]);
-        $withdrawal = $this->wallet->withdraw($request->user(), (float) $data['amount'], $data['gcash_number'], $data['gcash_name']);
+        $withdrawal = $this->wallet->withdraw($request->user(), (float) $data['amount'], $data['gcash_number'] ?? null, $data['gcash_name'] ?? null);
 
         return response()->json([
             'message' => 'Withdrawal requested. ₱'.number_format($withdrawal->amount, 2).' will be sent to GCash '.$withdrawal->formattedNumber().' once your logistics partner processes it.',
         ] + $this->payload($request->user()), 201);
+    }
+
+    /** Saves the GCash number and name withdrawals are sent to. */
+    public function updateAccount(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'gcash_number' => ['required', 'string', 'max:20'],
+            'gcash_name' => ['required', 'string', 'max:100'],
+        ], [
+            'gcash_number.required' => 'Enter your 11-digit GCash number starting with 09.',
+            'gcash_name.required' => 'Enter the name on your GCash account.',
+        ]);
+        $this->wallet->saveAccount($request->user(), $data['gcash_number'], $data['gcash_name']);
+
+        return response()->json(['message' => 'GCash account saved.'] + $this->payload($request->user()->fresh()));
     }
 
     private function payload(User $rider): array
@@ -44,7 +60,8 @@ class MobileRiderWalletController extends Controller
             ...$this->wallet->summary($rider),
             'commission_per_parcel' => RiderWallet::COMMISSION,
             'min_withdrawal' => RiderWallet::MIN_WITHDRAWAL,
-            'gcash' => $this->wallet->lastAccount($rider),
+            // Where withdrawals go; "saved" is false when it is only the account used last.
+            'gcash' => $this->wallet->account($rider),
             'commissions' => $this->wallet->commissions($rider)->map(fn (RiderCommission $commission) => [
                 'id' => $commission->id,
                 'amount' => $commission->amount,

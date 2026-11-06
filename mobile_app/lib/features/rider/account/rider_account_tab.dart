@@ -13,6 +13,7 @@ import 'package:zaylo_mobile/components/theme_toggle.dart';
 import 'package:zaylo_mobile/features/rider/account/rider_address_screen.dart';
 import 'package:zaylo_mobile/features/rider/account/rider_change_password_screen.dart';
 import 'package:zaylo_mobile/features/rider/dashboard/widgets/rider_dashboard_widgets.dart';
+import 'package:zaylo_mobile/features/rider/wallet/gcash_account_sheet.dart';
 import 'package:zaylo_mobile/features/rider/wallet/rider_wallet_screen.dart';
 import 'package:zaylo_mobile/models/rider/rider_dashboard_models.dart';
 import 'package:zaylo_mobile/models/rider/rider_models.dart';
@@ -58,6 +59,11 @@ class _RiderAccountTabState extends State<RiderAccountTab> {
     if (saved == null || !mounted) return;
     showMessage(context, 'Mobile number updated.');
     await _reload();
+  }
+
+  Future<void> _editGcash(RiderProfile rider) async {
+    final saved = await showGcashAccountSheet(context, api: widget.api, number: rider.gcashNumber, name: rider.gcashName);
+    if (saved != null && mounted) await _reload();
   }
 
   Future<void> _editGender(RiderProfile rider) async {
@@ -207,6 +213,17 @@ class _RiderAccountTabState extends State<RiderAccountTab> {
                     onTap: () => Navigator.of(context).push(MaterialPageRoute(
                       builder: (_) => RiderWalletScreen(api: widget.api),
                     )),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SectionCard(
+                  padding: EdgeInsets.zero,
+                  child: _Row(
+                    icon: Icons.phone_android_outlined,
+                    label: 'GCash account for withdrawals',
+                    value: rider.gcashNumber == null ? 'Not set yet' : '${rider.gcashNumber} · ${rider.gcashName ?? ''}',
+                    action: rider.gcashNumber == null ? 'Set' : 'Change',
+                    onTap: () => _editGcash(rider),
                   ),
                 ),
                 const _Heading('Security'),

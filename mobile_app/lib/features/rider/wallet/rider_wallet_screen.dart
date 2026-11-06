@@ -7,6 +7,7 @@ import 'package:zaylo_mobile/components/buttons.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
 import 'package:zaylo_mobile/components/form_fields.dart';
 import 'package:zaylo_mobile/components/layout.dart';
+import 'package:zaylo_mobile/features/rider/wallet/gcash_account_sheet.dart';
 import 'package:zaylo_mobile/models/rider/rider_wallet_models.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 import 'package:zaylo_mobile/utils/formatters.dart';
@@ -37,7 +38,23 @@ class _RiderWalletScreenState extends State<RiderWalletScreen> {
     }
   }
 
+  void _show(RiderWallet wallet) => setState(() {
+        _wallet = Future.value(wallet);
+      });
+
+  Future<RiderWallet?> _editAccount(RiderWallet wallet) async {
+    final saved = await showGcashAccountSheet(context, api: widget.api, number: wallet.gcashNumber, name: wallet.gcashName);
+    if (saved != null && mounted) _show(saved);
+    return saved;
+  }
+
   Future<void> _withdraw(RiderWallet wallet) async {
+    // Withdrawals go to the saved GCash account, so the rider sets one first.
+    if (!wallet.hasSavedAccount) {
+      final saved = await _editAccount(wallet);
+      if (saved == null || !mounted) return;
+      wallet = saved;
+    }
     final result = await showModalBottomSheet<(String, RiderWallet)>(
       context: context,
       isScrollControlled: true,
@@ -47,9 +64,7 @@ class _RiderWalletScreenState extends State<RiderWalletScreen> {
     );
     if (result == null || !mounted) return;
     final (message, updated) = result;
-    setState(() {
-      _wallet = Future.value(updated);
-    });
+    _show(updated);
     showMessage(context, message, duration: const Duration(seconds: 5));
   }
 
@@ -105,6 +120,21 @@ class _RiderWalletScreenState extends State<RiderWalletScreen> {
                             style: TextStyle(fontSize: 12, color: ZayloColors.onInkMuted)),
                       ],
                     ]),
+                  ),
+                  const SizedBox(height: 12),
+                  SectionCard(
+                    padding: EdgeInsets.zero,
+                    child: ListTile(
+                      leading: const Icon(Icons.phone_android_outlined),
+                      title: Text(wallet.hasSavedAccount ? 'Withdrawals go to' : 'GCash account',
+                          style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
+                      subtitle: Text(
+                        wallet.hasSavedAccount ? '${_spaced(wallet.gcashNumber!)} · ${wallet.gcashName}' : 'Not set yet',
+                        style: TextStyle(fontSize: 15, color: ZayloColors.ink, fontWeight: FontWeight.w600),
+                      ),
+                      trailing: Text(wallet.hasSavedAccount ? 'Change' : 'Set', style: const TextStyle(fontWeight: FontWeight.w700)),
+                      onTap: () => _editAccount(wallet),
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Row(children: [
@@ -219,7 +249,11 @@ class _WithdrawalTile extends StatelessWidget {
   }
 }
 
-/// Amount and GCash account for a withdrawal. Pops the confirmation and updated wallet once it is requested.
+/// "09171234567" as "0917 123 4567".
+String _spaced(String number) =>
+    RegExp(r'^\d{11}$').hasMatch(number) ? '${number.substring(0, 4)} ${number.substring(4, 7)} ${number.substring(7)}' : number;
+
+/// The amount to send to the rider's saved GCash account. Pops the confirmation and updated wallet once requested.
 class _WithdrawSheet extends StatefulWidget {
   const _WithdrawSheet({required this.api, required this.wallet});
 
@@ -231,20 +265,14 @@ class _WithdrawSheet extends StatefulWidget {
 }
 
 class _WithdrawSheetState extends State<_WithdrawSheet> {
-  static final _gcashNumber = RegExp(r'^09\d{9}$');
-
   final _formKey = GlobalKey<FormState>();
   late final _amount = TextEditingController(text: widget.wallet.balance.toStringAsFixed(2));
-  late final _number = TextEditingController(text: widget.wallet.gcashNumber ?? '');
-  late final _name = TextEditingController(text: widget.wallet.gcashName ?? '');
   bool _sending = false;
   Map<String, String> _errors = const {};
 
   @override
   void dispose() {
     _amount.dispose();
-    _number.dispose();
-    _name.dispose();
     super.dispose();
   }
 
@@ -261,18 +289,14 @@ class _WithdrawSheetState extends State<_WithdrawSheet> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _sending = true);
     try {
-      final result = await widget.api.withdraw(
-        amount: double.parse(_amount.text.replaceAll(',', '')),
-        gcashNumber: _number.text.trim(),
-        gcashName: _name.text.trim(),
-      );
+      final result = await widget.api.withdraw(amount: double.parse(_amount.text.replaceAll(',', '')));
       if (mounted) Navigator.of(context).pop(result);
     } on ApiException catch (error) {
       if (!mounted) return;
       setState(() => _errors = error.fieldErrors);
-      if (error.fieldErrors.isEmpty || error.fieldErrors.containsKey('withdrawal')) {
-        showMessage(context, error.fieldErrors['withdrawal'] ?? error.message);
-      }
+      // Problems with the account or the partner are not about the amount field.
+      final other = error.fieldErrors['withdrawal'] ?? error.fieldErrors['gcash_number'] ?? error.fieldErrors['gcash_name'];
+      if (error.fieldErrors.isEmpty || other != null) showMessage(context, other ?? error.message);
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -289,7 +313,18 @@ class _WithdrawSheetState extends State<_WithdrawSheet> {
               const SizedBox(height: 6),
               Text('Available: ${peso(widget.wallet.balance)} · minimum ${peso(widget.wallet.minWithdrawal)}',
                   style: TextStyle(color: ZayloColors.muted)),
-              const SizedBox(height: 18),
+              const SizedBox(height: 14),
+              SectionCard(
+                child: Row(children: [
+                  Icon(Icons.phone_android_outlined, color: ZayloColors.ink),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text('Sending to ${_spaced(widget.wallet.gcashNumber ?? '')} · ${widget.wallet.gcashName ?? ''}',
+                        style: TextStyle(fontWeight: FontWeight.w600, color: ZayloColors.ink)),
+                  ),
+                ]),
+              ),
+              const SizedBox(height: 14),
               const FieldLabel('Amount'),
               TextFormField(
                 controller: _amount,
@@ -298,27 +333,8 @@ class _WithdrawSheetState extends State<_WithdrawSheet> {
                 decoration: zayloInputDecoration('0.00', errorText: _errors['amount']).copyWith(prefixText: '₱ '),
                 validator: _amountError,
               ),
-              const SizedBox(height: 14),
-              const FieldLabel('GCash number'),
-              TextFormField(
-                controller: _number,
-                keyboardType: TextInputType.phone,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(11)],
-                decoration: zayloInputDecoration('09XXXXXXXXX', errorText: _errors['gcash_number']),
-                validator: (value) =>
-                    _gcashNumber.hasMatch(value ?? '') ? null : 'Enter your 11-digit GCash number starting with 09.',
-              ),
-              const SizedBox(height: 14),
-              const FieldLabel('Name on the GCash account'),
-              TextFormField(
-                controller: _name,
-                textCapitalization: TextCapitalization.words,
-                maxLength: 100,
-                decoration: zayloInputDecoration('e.g. Juan Dela Cruz', errorText: _errors['gcash_name']),
-                validator: (value) => (value ?? '').trim().length < 2 ? 'Enter the name on your GCash account.' : null,
-              ),
-              const SizedBox(height: 6),
-              Text('Your logistics partner sends the money, usually within 1–2 business days. Check that the number and name match your GCash account.',
+              const SizedBox(height: 10),
+              Text('Your logistics partner sends the money, usually within 1–2 business days.',
                   style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
               const SizedBox(height: 16),
               PrimaryButton(label: 'REQUEST WITHDRAWAL', busy: _sending, onPressed: _submit),

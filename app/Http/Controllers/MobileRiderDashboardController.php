@@ -398,6 +398,10 @@ class MobileRiderDashboardController extends Controller
             'license_expires_on' => $expires?->toDateString(),
             'license_days_left' => $daysLeft,
             'license_expiring_soon' => $daysLeft !== null && $daysLeft <= self::LICENSE_WARNING_DAYS,
+            // Where wallet withdrawals are sent; null until the rider saves one.
+            'gcash' => RiderWallet::savesAccounts() && $rider?->gcash_number
+                ? ['number' => $rider->gcash_number, 'name' => $rider->gcash_name]
+                : null,
         ];
     }
 

@@ -166,11 +166,16 @@ class RiderApi extends ApiClient {
 
   Future<RiderWallet> wallet() async => RiderWallet.fromJson(await send('GET', '/mobile/rider/wallet'));
 
-  /// Asks for [amount] to be sent to GCash. Returns the confirmation and the updated wallet.
-  Future<(String, RiderWallet)> withdraw({required double amount, required String gcashNumber, required String gcashName}) async {
-    final data = await send('POST', '/mobile/rider/wallet/withdrawals',
-        body: {'amount': amount, 'gcash_number': gcashNumber, 'gcash_name': gcashName});
+  /// Asks for [amount] to be sent to the rider's saved GCash account. Returns the confirmation and the updated wallet.
+  Future<(String, RiderWallet)> withdraw({required double amount}) async {
+    final data = await send('POST', '/mobile/rider/wallet/withdrawals', body: {'amount': amount});
     return (data['message'] as String? ?? 'Withdrawal requested.', RiderWallet.fromJson(data));
+  }
+
+  /// Saves the GCash number and name withdrawals are sent to. Returns the confirmation and the updated wallet.
+  Future<(String, RiderWallet)> saveGcashAccount({required String gcashNumber, required String gcashName}) async {
+    final data = await send('PUT', '/mobile/rider/wallet/gcash', body: {'gcash_number': gcashNumber, 'gcash_name': gcashName});
+    return (data['message'] as String? ?? 'GCash account saved.', RiderWallet.fromJson(data));
   }
 
   // ------------------------------------------------------- Account settings

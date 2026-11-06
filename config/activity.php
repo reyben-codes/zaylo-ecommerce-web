@@ -135,6 +135,7 @@ return [
         'mobile.rider.deliveries.update' => ['deliveries', 'Updated a delivery in the app', ['status']],
         'mobile.rider.deliveries.scan' => ['deliveries', 'Scanned a parcel in the app', ['code']],
         'mobile.rider.wallet.withdraw' => ['finance', 'Requested a GCash withdrawal in the app', ['amount']],
+        'mobile.rider.wallet.gcash' => ['account', 'Changed GCash account in the app'],
         'logistics.rider-withdrawals.pay' => ['finance', 'Sent a rider withdrawal to GCash', ['reference']],
         'logistics.rider-withdrawals.reject' => ['finance', 'Rejected a rider withdrawal', ['rejection_reason']],
         'mobile.rider.account.phone' => ['account', 'Changed mobile number in the app'],

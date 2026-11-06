@@ -38,6 +38,8 @@ class Rider extends Model
         'user_id', 'logistics_provider_id', 'vehicle_type', 'plate_no', 'license_number',
         'license_expires_on', 'license_document_path', 'or_cr_document_path',
         'is_active', 'status', 'rejection_reason', 'reviewed_at', 'shift_start', 'shift_end', 'work_days',
+        // Where wallet withdrawals are sent.
+        'gcash_number', 'gcash_name',
     ];
 
     protected $casts = ['is_active' => 'boolean', 'reviewed_at' => 'datetime', 'license_expires_on' => 'date', 'work_days' => 'array'];

@@ -74,6 +74,7 @@ class RiderWallet {
     required this.minWithdrawal,
     this.gcashNumber,
     this.gcashName,
+    this.hasSavedAccount = false,
     this.commissions = const [],
     this.withdrawals = const [],
     this.note,
@@ -92,9 +93,12 @@ class RiderWallet {
   final double commissionPerParcel;
   final double minWithdrawal;
 
-  /// The GCash account used last, to fill in the next request.
+  /// Where withdrawals go: the account the rider saved, or else the one they used last.
   final String? gcashNumber;
   final String? gcashName;
+
+  /// Whether the rider saved a GCash account; withdrawals need one.
+  final bool hasSavedAccount;
   final List<RiderCommissionEntry> commissions;
   final List<RiderWithdrawalEntry> withdrawals;
   final String? note;
@@ -113,6 +117,7 @@ class RiderWallet {
       minWithdrawal: parseMoney(json['min_withdrawal']),
       gcashNumber: gcash?['number'] as String?,
       gcashName: gcash?['name'] as String?,
+      hasSavedAccount: gcash?['saved'] as bool? ?? false,
       commissions: (json['commissions'] as List<dynamic>? ?? const [])
           .map((item) => RiderCommissionEntry.fromJson(item as Map<String, dynamic>))
           .toList(),

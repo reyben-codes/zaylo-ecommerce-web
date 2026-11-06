@@ -110,6 +110,7 @@ Route::prefix('mobile')->name('mobile.')->middleware('throttle:60,1')->group(fun
             Route::get('/earnings', [MobileRiderDashboardController::class, 'earnings'])->name('earnings');
             // The rider's wallet: a commission per delivered parcel, withdrawn to GCash.
             Route::get('/wallet', [MobileRiderWalletController::class, 'show'])->name('wallet');
+            Route::put('/wallet/gcash', [MobileRiderWalletController::class, 'updateAccount'])->middleware('throttle:20,1,mobile-rider-gcash')->name('wallet.gcash');
             Route::post('/wallet/withdrawals', [MobileRiderWalletController::class, 'withdraw'])->middleware('throttle:10,1,mobile-rider-withdraw')->name('wallet.withdraw');
             Route::get('/reports', [MobileRiderDashboardController::class, 'reports'])->name('reports');
 

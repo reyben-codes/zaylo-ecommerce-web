@@ -130,6 +130,33 @@ class RiderWalletTest extends TestCase
         $this->assertSame(2, RiderWithdrawal::count());
     }
 
+    public function test_riders_save_the_gcash_account_their_withdrawals_go_to(): void
+    {
+        $rider = $this->approvedRider();
+        $this->earn($rider, 10); // ₱150
+        $this->signInMobile($rider);
+
+        // Without a saved account, a withdrawal that names none is refused.
+        $this->postJson('/api/mobile/rider/wallet/withdrawals', ['amount' => 100])->assertUnprocessable()
+            ->assertJsonPath('errors.gcash_number.0', 'Set your GCash number and name in your account first.');
+
+        $this->putJson('/api/mobile/rider/wallet/gcash', ['gcash_number' => '0817 123 4567', 'gcash_name' => 'Juan'])->assertUnprocessable()
+            ->assertJsonValidationErrors('gcash_number');
+        $this->putJson('/api/mobile/rider/wallet/gcash', ['gcash_number' => '0917-123-4567', 'gcash_name' => '  Juan   Dela Cruz '])->assertOk()
+            ->assertJsonPath('message', 'GCash account saved.')
+            ->assertJsonPath('gcash', ['number' => '09171234567', 'name' => 'Juan Dela Cruz', 'saved' => true]);
+        $this->assertTrue(ActivityLog::where('event', 'mobile.rider.wallet.gcash')->where('user_id', $rider->id)->exists());
+        $this->getJson('/api/mobile/rider/dashboard')->assertOk()->assertJsonPath('rider.gcash', ['number' => '09171234567', 'name' => 'Juan Dela Cruz']);
+
+        $this->postJson('/api/mobile/rider/wallet/withdrawals', ['amount' => 100])->assertCreated()
+            ->assertJsonPath('withdrawals.0.gcash_number', '0917 123 4567')
+            ->assertJsonPath('withdrawals.0.gcash_name', 'Juan Dela Cruz');
+
+        // Changing the account sends later withdrawals there; earlier ones keep the account they went to.
+        $this->putJson('/api/mobile/rider/wallet/gcash', ['gcash_number' => '09987654321', 'gcash_name' => 'Juan D. Cruz'])->assertOk();
+        $this->assertSame('09171234567', RiderWithdrawal::sole()->gcash_number);
+    }
+
     public function test_only_riders_use_the_wallet(): void
     {
         $buyer = User::factory()->create(['role' => 'buyer', 'status' => 'active']);

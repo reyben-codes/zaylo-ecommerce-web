@@ -715,8 +715,9 @@ class FakeRiderApi extends RiderApi {
   @override
   Future<void> reportLocation(double latitude, double longitude) async => reportedLocations.add((latitude, longitude));
 
-  /// Wallet money the rider can withdraw, and the withdrawals asked for.
+  /// Wallet money the rider can withdraw, the GCash account they saved, and the withdrawals asked for.
   double walletBalance = 120;
+  ({String number, String name})? gcashAccount;
   final withdrawals = <({double amount, String number, String name})>[];
 
   Map<String, dynamic> walletJson() => {
@@ -727,7 +728,7 @@ class FakeRiderApi extends RiderApi {
         'parcels': 8,
         'commission_per_parcel': 15,
         'min_withdrawal': 100,
-        'gcash': null,
+        'gcash': gcashAccount == null ? null : {'number': gcashAccount!.number, 'name': gcashAccount!.name, 'saved': true},
         'commissions': [
           {'id': 1, 'amount': 15, 'tracking_number': 'TRK-ABC123', 'created_at': '2026-11-06T10:00:00+08:00'},
         ],
@@ -744,10 +745,18 @@ class FakeRiderApi extends RiderApi {
   Future<RiderWallet> wallet() async => RiderWallet.fromJson(walletJson());
 
   @override
-  Future<(String, RiderWallet)> withdraw({required double amount, required String gcashNumber, required String gcashName}) async {
-    withdrawals.add((amount: amount, number: gcashNumber, name: gcashName));
+  Future<(String, RiderWallet)> withdraw({required double amount}) async {
+    final account = gcashAccount;
+    if (account == null) throw StateError('The app must save a GCash account before withdrawing.');
+    withdrawals.add((amount: amount, number: account.number, name: account.name));
     walletBalance -= amount;
     return ('Withdrawal requested.', RiderWallet.fromJson(walletJson()));
+  }
+
+  @override
+  Future<(String, RiderWallet)> saveGcashAccount({required String gcashNumber, required String gcashName}) async {
+    gcashAccount = (number: gcashNumber, name: gcashName);
+    return ('GCash account saved.', RiderWallet.fromJson(walletJson()));
   }
 
   // PSGC lookups: one path down to a barangay, like the real API's shape.
@@ -1070,24 +1079,40 @@ void main() {
 
   testWidgets('riders withdraw their commissions to GCash from the wallet', (tester) async {
     final api = FakeRiderApi();
+    // Tall enough that the whole wallet, down to the commissions, is laid out.
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(400, 1600);
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(MaterialApp(home: RiderWalletScreen(api: api)));
     await tester.pumpAndSettle();
 
     expect(find.text('₱120.00'), findsWidgets);
     expect(find.text('₱15.00 for every parcel you deliver'), findsOneWidget);
     expect(find.text('TRK-ABC123'), findsOneWidget);
+    expect(find.text('Not set yet'), findsOneWidget, reason: 'no GCash account saved yet');
 
+    // Without a saved account, withdrawing asks for one first.
     await tester.tap(find.text('WITHDRAW TO GCASH'));
     await tester.pumpAndSettle();
-    expect(find.text('Withdraw to GCash'), findsOneWidget);
-    await tester.tap(find.text('REQUEST WITHDRAWAL'));
+    expect(find.text('GCash account'), findsWidgets);
+    await tester.tap(find.text('SAVE GCASH ACCOUNT'));
     await tester.pump();
     expect(find.text('Enter your 11-digit GCash number starting with 09.'), findsOneWidget);
-    expect(api.withdrawals, isEmpty);
+    expect(api.gcashAccount, isNull);
 
-    await tester.enterText(find.widgetWithText(TextFormField, '120.00'), '99');
     await tester.enterText(find.widgetWithText(TextFormField, '09XXXXXXXXX'), '09171234567');
     await tester.enterText(find.widgetWithText(TextFormField, 'e.g. Juan Dela Cruz'), 'Juan Dela Cruz');
+    await tester.tap(find.text('SAVE GCASH ACCOUNT'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(api.gcashAccount, (number: '09171234567', name: 'Juan Dela Cruz'));
+    await tester.pump(const Duration(milliseconds: 600));
+
+    // Then only the amount is asked, and it goes to the saved account.
+    expect(find.text('Withdraw to GCash'), findsOneWidget);
+    expect(find.text('Sending to 0917 123 4567 · Juan Dela Cruz'), findsOneWidget);
+    expect(find.widgetWithText(TextFormField, '09XXXXXXXXX'), findsNothing);
+    await tester.enterText(find.widgetWithText(TextFormField, '120.00'), '99');
     await tester.tap(find.text('REQUEST WITHDRAWAL'));
     await tester.pump();
     expect(find.text('The minimum withdrawal is ₱100.00.'), findsOneWidget);
@@ -1102,6 +1127,8 @@ void main() {
     expect(find.text('₱20.00'), findsOneWidget, reason: 'balance after the request');
     expect(find.text('Processing'), findsWidgets);
     expect(find.text('You can withdraw once you have ₱100.00 or more.'), findsOneWidget);
+    expect(find.text('0917 123 4567 · Juan Dela Cruz'), findsOneWidget, reason: 'the saved account, with Change');
+    expect(find.text('Change'), findsOneWidget);
   });
 
   testWidgets('home has no menu, and the sign-in screen opens the rider login screen', (tester) async {

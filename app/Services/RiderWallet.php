@@ -91,30 +91,60 @@ class RiderWallet
             : collect();
     }
 
-    /** The GCash account the rider used last, to fill in the next request. */
-    public function lastAccount(User $rider): ?array
+    /** Whether riders can save a GCash account (after the 2026_11_07_000005 migration). */
+    public static function savesAccounts(): bool
     {
-        $last = self::ready() ? RiderWithdrawal::where('user_id', $rider->id)->latest('id')->first() : null;
-
-        return $last ? ['number' => $last->gcash_number, 'name' => $last->gcash_name] : null;
+        return Schema::hasColumn('riders', 'gcash_number');
     }
 
-    public function withdraw(User $rider, float $amount, string $number, string $name): RiderWithdrawal
+    /**
+     * The GCash account withdrawals go to: the one the rider saved, or else the one they used last.
+     *
+     * @return array{number: string, name: string, saved: bool}|null
+     */
+    public function account(User $rider): ?array
+    {
+        $profile = $rider->rider;
+        if (self::savesAccounts() && $profile?->gcash_number && $profile->gcash_name) {
+            return ['number' => $profile->gcash_number, 'name' => $profile->gcash_name, 'saved' => true];
+        }
+        $last = self::ready() ? RiderWithdrawal::where('user_id', $rider->id)->latest('id')->first() : null;
+
+        return $last ? ['number' => $last->gcash_number, 'name' => $last->gcash_name, 'saved' => false] : null;
+    }
+
+    /** Saves the GCash account the rider's withdrawals are sent to. */
+    public function saveAccount(User $rider, string $number, string $name): array
+    {
+        abort_unless(self::savesAccounts(), 503, 'GCash accounts can be saved after the latest database update.');
+        $profile = $rider->rider;
+        abort_unless($profile, 404, 'No rider profile is linked to this account.');
+        [$number, $name] = self::checkedAccount($number, $name);
+        $profile->update(['gcash_number' => $number, 'gcash_name' => $name]);
+
+        return ['number' => $number, 'name' => $name, 'saved' => true];
+    }
+
+    /**
+     * Asks for [$amount] to be sent to GCash. Without a number and name (the app sends none once the rider saved an
+     * account), it goes to the saved account.
+     */
+    public function withdraw(User $rider, float $amount, ?string $number = null, ?string $name = null): RiderWithdrawal
     {
         abort_unless(self::ready(), 503, 'Wallets are being set up. Please try again later.');
-        $number = preg_replace('/[\s-]+/', '', $number) ?? '';
-        $name = trim(preg_replace('/\s+/', ' ', $name) ?? '');
         $amount = round($amount, 2);
         $partnerId = $rider->rider?->logistics_provider_id;
         if (! $partnerId) {
             throw ValidationException::withMessages(['withdrawal' => 'Your account is not linked to a logistics partner, who sends withdrawals. Contact ZAYLO support.']);
         }
-        if (! preg_match(self::GCASH_PATTERN, $number)) {
-            throw ValidationException::withMessages(['gcash_number' => 'Enter your 11-digit GCash number starting with 09.']);
+        if (blank($number) && blank($name)) {
+            $saved = $this->account($rider);
+            if (! ($saved['saved'] ?? false)) {
+                throw ValidationException::withMessages(['gcash_number' => 'Set your GCash number and name in your account first.']);
+            }
+            ['number' => $number, 'name' => $name] = $saved;
         }
-        if (mb_strlen($name) < 2 || mb_strlen($name) > 100) {
-            throw ValidationException::withMessages(['gcash_name' => 'Enter the name on your GCash account.']);
-        }
+        [$number, $name] = self::checkedAccount((string) $number, (string) $name);
         if ($amount < self::MIN_WITHDRAWAL) {
             throw ValidationException::withMessages(['amount' => 'The minimum withdrawal is ₱'.number_format(self::MIN_WITHDRAWAL, 2).'.']);
         }
@@ -132,6 +162,25 @@ class RiderWallet
                 'status' => RiderWithdrawal::PENDING,
             ]);
         });
+    }
+
+    /**
+     * A GCash number without spaces or dashes and a tidied name, or why they cannot be used.
+     *
+     * @return array{0: string, 1: string}
+     */
+    private static function checkedAccount(string $number, string $name): array
+    {
+        $number = preg_replace('/[\s-]+/', '', $number) ?? '';
+        $name = trim(preg_replace('/\s+/', ' ', $name) ?? '');
+        if (! preg_match(self::GCASH_PATTERN, $number)) {
+            throw ValidationException::withMessages(['gcash_number' => 'Enter your 11-digit GCash number starting with 09.']);
+        }
+        if (mb_strlen($name) < 2 || mb_strlen($name) > 100) {
+            throw ValidationException::withMessages(['gcash_name' => 'Enter the name on your GCash account.']);
+        }
+
+        return [$number, $name];
     }
 
     /** The logistics partner sent the money: records the GCash reference. */

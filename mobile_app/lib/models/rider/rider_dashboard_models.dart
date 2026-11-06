@@ -48,6 +48,8 @@ class RiderProfile {
     this.licenseDaysLeft,
     this.licenseExpiringSoon = false,
     this.avatarUrl,
+    this.gcashNumber,
+    this.gcashName,
   });
 
   final String name;
@@ -73,6 +75,10 @@ class RiderProfile {
 
   String get firstName => name.split(' ').first;
 
+  /// Where wallet withdrawals are sent; null until the rider saves one.
+  final String? gcashNumber;
+  final String? gcashName;
+
   factory RiderProfile.fromJson(Map<String, dynamic> json) => RiderProfile(
         name: json['name'] as String? ?? 'Rider',
         email: json['email'] as String? ?? '',
@@ -88,6 +94,8 @@ class RiderProfile {
         licenseDaysLeft: json['license_days_left'] as int?,
         licenseExpiringSoon: json['license_expiring_soon'] as bool? ?? false,
         avatarUrl: json['avatar_url'] as String?,
+        gcashNumber: (json['gcash'] as Map<String, dynamic>?)?['number'] as String?,
+        gcashName: (json['gcash'] as Map<String, dynamic>?)?['name'] as String?,
       );
 }
 
