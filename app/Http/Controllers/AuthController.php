@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Rules\PersonName;
 use App\Rules\PhoneNumber;
 use App\Rules\StrongPassword;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -303,7 +304,9 @@ class AuthController extends Controller
     {
         $pending = $request->user() ? null : $registrations->current($request);
         if (! $request->user() && ! $pending) {
-            return redirect()->route('login');
+            return $request->expectsJson()
+                ? response()->json(['message' => 'Your sign-up session has ended. Please sign in or register again.', 'redirect' => route('login')], 409)
+                : redirect()->route('login');
         }
         $request->validate(['otp' => ['required', 'string', 'regex:/^[0-9]{6}$/']], [
             'otp.required' => 'Enter the verification code from your email.',
@@ -317,12 +320,22 @@ class AuthController extends Controller
             Auth::login($user);
             $request->session()->regenerate();
 
-            return $this->verificationComplete($request);
+            return $this->verifiedResponse($request);
         }
 
         $verification->verify($request->user(), $request->input('otp'));
 
-        return $this->verificationComplete($request);
+        return $this->verifiedResponse($request);
+    }
+
+    /** The code page submits in the background and plays its success state before following this redirect. */
+    private function verifiedResponse(Request $request)
+    {
+        $response = $this->verificationComplete($request);
+
+        return $request->expectsJson() && $response instanceof RedirectResponse
+            ? response()->json(['redirect' => $response->getTargetUrl()])
+            : $response;
     }
 
     /** "Wrong email? Start over": drop the unfinished sign-up and its uploads. */

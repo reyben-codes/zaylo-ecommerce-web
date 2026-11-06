@@ -1,0 +1,184 @@
+/* Six-box email code entry. Without JavaScript the plain .otp-input stays visible and works as before;
+   email-verification.js adds .is-enhanced, which lays one transparent input over the boxes so typing,
+   pasting and one-time-code autofill all go through a single real field. */
+
+.otp-field {
+    --otp-ring: var(--c-ece4db);
+    --otp-fill: var(--c-ffffff);
+    --otp-ink: var(--c-1a1714);
+    --otp-accent: var(--c-b28b6f);
+    --otp-success: var(--c-2d7d46);
+    --otp-success-soft: var(--c-e6f2e7);
+    --otp-danger: var(--c-a52b23);
+    --otp-danger-soft: var(--c-fdf2f2);
+    position: relative;
+}
+
+.otp-slots { display: none; }
+
+.otp-field.is-enhanced .otp-slots {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 10px;
+    max-width: 380px;
+}
+
+.otp-field.is-enhanced .otp-input {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    max-width: 380px;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    caret-color: transparent;
+    font-size: 16px; /* stops iOS from zooming in on focus */
+    letter-spacing: 0;
+    cursor: text;
+}
+
+.otp-field.is-enhanced .otp-input::selection { background: transparent; }
+.otp-field.is-enhanced .otp-input::placeholder { color: transparent; }
+/* Browser autofill paints its own background; keep it invisible over the boxes. */
+.otp-field.is-enhanced .otp-input:-webkit-autofill { -webkit-box-shadow: 0 0 0 100px transparent inset; transition: background-color 99999s; }
+
+.otp-slot {
+    position: relative;
+    display: grid;
+    place-items: center;
+    height: 60px;
+    border: 1.5px solid var(--otp-ring);
+    border-radius: 12px;
+    background: var(--otp-fill);
+    color: var(--otp-ink);
+    font-size: 1.6rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    --i: 0;
+    transition: border-color .2s ease-out, background-color .2s ease-out, box-shadow .2s ease-out, transform .2s ease-out;
+}
+
+.otp-slot:nth-child(2) { --i: 1; }
+.otp-slot:nth-child(3) { --i: 2; }
+.otp-slot:nth-child(4) { --i: 3; }
+.otp-slot:nth-child(5) { --i: 4; }
+.otp-slot:nth-child(6) { --i: 5; }
+
+.otp-slot.is-filled { border-color: var(--c-6b5f54); }
+
+.otp-slot.is-active {
+    border-color: var(--otp-accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--otp-accent) 22%, transparent);
+}
+
+/* Blinking caret in the box that receives the next digit. */
+.otp-slot.is-active:not(.is-filled)::after {
+    content: "";
+    width: 2px;
+    height: 26px;
+    border-radius: 1px;
+    background: var(--otp-accent);
+    animation: otp-caret 1s steps(1) infinite;
+}
+
+.otp-digit { display: inline-block; }
+.otp-slot.is-popped .otp-digit { animation: otp-pop .22s ease-out; }
+
+/* Checking the code: a wave runs across the boxes. */
+.otp-field[data-state="verifying"] .otp-slot {
+    border-color: var(--otp-accent);
+    animation: otp-wave .9s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 90ms);
+}
+
+.otp-field[data-state="success"] .otp-slot {
+    border-color: var(--otp-success);
+    background: var(--otp-success-soft);
+    color: var(--otp-success);
+    animation: otp-confirm .36s ease-out both;
+    animation-delay: calc(var(--i) * 55ms);
+}
+
+.otp-field[data-state="error"] .otp-slot {
+    border-color: var(--otp-danger);
+    background: var(--otp-danger-soft);
+    color: var(--otp-danger);
+}
+
+.otp-field[data-state="error"] .otp-slots { animation: otp-shake .42s ease-out; }
+.otp-field.is-clearing .otp-digit { opacity: 0; transform: scale(.6); transition: opacity .18s ease-out, transform .18s ease-out; }
+
+.otp-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 1.4em;
+    margin-top: 10px;
+    font-size: .82rem;
+    line-height: 1.5;
+    color: var(--c-6b5f54);
+}
+
+.otp-status:empty { display: none; }
+.otp-status[data-tone="success"] { color: var(--c-2d7d46); font-weight: 600; animation: otp-fade-in .28s ease-out; }
+.otp-status[data-tone="error"] { color: var(--c-a52b23); animation: otp-fade-in .2s ease-out; }
+
+.otp-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; }
+
+.otp-paste {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 36px;
+    padding: 6px 12px;
+    border: 1px solid var(--c-ece4db);
+    border-radius: 999px;
+    background: var(--c-ffffff);
+    color: var(--c-1a1714);
+    font: inherit;
+    font-size: .78rem;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.otp-paste:hover { border-color: var(--c-b28b6f); }
+.otp-paste:focus-visible { outline: 2px solid var(--c-b28b6f); outline-offset: 2px; }
+.otp-paste:disabled { opacity: .55; cursor: default; }
+
+.otp-spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: otp-spin .7s linear infinite;
+    display: inline-block;
+    vertical-align: -2px;
+    margin-right: 8px;
+}
+
+#verify-button.is-success { background: var(--c-2d7d46); border-color: var(--c-2d7d46); opacity: 1; }
+
+@keyframes otp-caret { 50% { opacity: 0; } }
+@keyframes otp-pop { 0% { opacity: 0; transform: translateY(6px) scale(.55); } 70% { opacity: 1; transform: translateY(0) scale(1.12); } 100% { transform: scale(1); } }
+@keyframes otp-wave { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-5px); } }
+@keyframes otp-confirm { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+@keyframes otp-shake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-8px); } 40% { transform: translateX(7px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(3px); } }
+@keyframes otp-fade-in { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+@keyframes otp-spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 380px) {
+    .otp-field.is-enhanced .otp-slots { gap: 7px; }
+    .otp-slot { height: 54px; font-size: 1.4rem; }
+}
+
+/* Colours still change state; only the movement is dropped. */
+@media (prefers-reduced-motion: reduce) {
+    .otp-slot, .otp-slot.is-popped .otp-digit, .otp-field .otp-slots, .otp-status, .otp-field.is-clearing .otp-digit { animation: none !important; transition: none !important; }
+    .otp-slot.is-active:not(.is-filled)::after { animation: none; }
+    .otp-spinner { animation-duration: 1.6s; }
+}

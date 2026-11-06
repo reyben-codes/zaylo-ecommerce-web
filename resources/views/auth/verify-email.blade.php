@@ -30,8 +30,17 @@
                 @csrf
                 <div class="form-group">
                     <label for="otp">Email verification code</label>
-                    <input class="otp-input" id="otp" name="otp" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" placeholder="000000" required aria-describedby="otp-note{{ $errors->has('otp') ? ' verification-error' : '' }}" @if($errors->has('otp')) aria-invalid="true" @endif>
-                    <p class="field-note" id="otp-note">Your code expires after 5 minutes. You can paste all six digits here.</p>
+                    <div class="otp-field" data-otp-field data-state="idle">
+                        <input class="otp-input" id="otp" name="otp" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" placeholder="000000" required autofocus aria-describedby="otp-status otp-note{{ $errors->has('otp') ? ' verification-error' : '' }}" @if($errors->has('otp')) aria-invalid="true" @endif>
+                        <div class="otp-slots" aria-hidden="true">
+                            @for($i = 0; $i < 6; $i++)<span class="otp-slot"><span class="otp-digit"></span></span>@endfor
+                        </div>
+                    </div>
+                    <p class="otp-status" id="otp-status" role="status" aria-live="polite"></p>
+                    <div class="otp-tools">
+                        <button type="button" class="otp-paste" data-otp-paste hidden><i class="fa-regular fa-clipboard" aria-hidden="true"></i> Paste code</button>
+                    </div>
+                    <p class="field-note" id="otp-note">Your code expires after 5 minutes. It checks itself once all six digits are in — type, paste, or pick the code your phone suggests.</p>
                 </div>
                 @if($pending)
                     <p class="field-note">Your account is created once you enter this code. Until then nothing is saved, and unfinished sign-ups are removed after 24 hours.</p>
@@ -62,20 +71,10 @@
 </main>
 @endsection
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/email-verification.css') }}?v={{ filemtime(public_path('css/email-verification.css')) }}">
+@endpush
+
 @push('scripts')
-<script>
-(() => {
-    const form = document.getElementById('verificationForm');
-    const button = document.getElementById('verify-button');
-    const label = button.textContent;
-    form.addEventListener('submit', () => {
-        button.disabled = true;
-        button.textContent = 'Verifying…';
-    });
-    window.addEventListener('pageshow', () => {
-        button.disabled = false;
-        button.textContent = label;
-    });
-})();
-</script>
+<script src="{{ asset('js/email-verification.js') }}?v={{ filemtime(public_path('js/email-verification.js')) }}" defer></script>
 @endpush

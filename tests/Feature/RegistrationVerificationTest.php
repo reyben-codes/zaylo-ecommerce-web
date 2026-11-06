@@ -311,6 +311,31 @@ class RegistrationVerificationTest extends TestCase
         $this->get('/email/verify/1/legacy-link')->assertNotFound();
     }
 
+    public function test_the_code_page_verifies_in_the_background_and_returns_where_to_go(): void
+    {
+        Notification::fake();
+        $this->post(route('register'), $this->registration())->assertRedirect(route('verification.notice'));
+        $this->get(route('verification.notice'))->assertOk()
+            ->assertSee('autocomplete="one-time-code"', false)->assertSee('data-otp-field', false)->assertSee('js/email-verification.js', false);
+        $code = $this->signUpCode('shopper@example.com');
+        $wrong = $code === '000000' ? '111111' : '000000';
+
+        $this->postJson(route('verification.verify'), ['otp' => $wrong])->assertStatus(422)->assertJsonValidationErrors('otp');
+        $this->postJson(route('verification.verify'), ['otp' => '12a'])->assertStatus(422)
+            ->assertJsonPath('errors.otp.0', 'Enter the six-digit code from your email.');
+        $this->assertGuest();
+
+        $this->postJson(route('verification.verify'), ['otp' => $code])->assertOk()->assertExactJson(['redirect' => route('buyer.dashboard')]);
+        $this->assertAuthenticatedAs(User::where('email', 'shopper@example.com')->firstOrFail());
+        // The flash message is kept for the page the browser opens next.
+        $this->get(route('buyer.dashboard'))->assertOk()->assertSee('Email verified successfully.');
+    }
+
+    public function test_the_background_check_reports_an_ended_sign_up(): void
+    {
+        $this->postJson(route('verification.verify'), ['otp' => '123456'])->assertStatus(409)->assertJsonPath('redirect', route('login'));
+    }
+
     public function test_notification_contains_the_code_and_expiry_in_a_mail_message(): void
     {
         $user = User::factory()->make();
@@ -320,6 +345,7 @@ class RegistrationVerificationTest extends TestCase
         $this->assertContains('012345', $mail->introLines);
         $this->assertStringContainsString('5 minutes', implode(' ', $mail->introLines));
         $this->assertNull($mail->actionUrl);
+        $this->assertStringStartsWith('012345 ', $mail->subject);
     }
 
     private function registration(string $role = 'buyer'): array
