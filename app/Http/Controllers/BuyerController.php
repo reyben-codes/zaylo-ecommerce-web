@@ -430,6 +430,8 @@ class BuyerController extends Controller
 
         return view('buyer.checkout', [
             'identityVerified' => $request->user()->isIdentityVerified(),
+            // An approved ID is only needed for products the seller marked 18+.
+            'identityItems' => $this->checkoutService->itemsNeedingIdentity($request->user(), $items),
             'identityStatus' => Schema::hasTable('identity_verifications') ? $request->user()->latestIdentityVerification()->value('status') : null,
             'items' => $items,
             'subtotal' => $subtotal,
@@ -523,8 +525,6 @@ class BuyerController extends Controller
 
     public function checkout(Request $request)
     {
-        $this->checkoutService->ensureCanOrder($request->user());
-
         $validated = $request->validate([
             'address_id' => ['required', 'integer', Rule::exists('addresses', 'id')->where('user_id', $request->user()->id)],
             'notes' => 'nullable|string|max:500',

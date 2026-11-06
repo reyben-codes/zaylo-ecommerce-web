@@ -95,6 +95,8 @@ class MobilePayload
             'price' => (float) $product->price,
             'original_price' => $product->original_price === null ? null : (float) $product->original_price,
             'badge' => $product->badge,
+            // Marked 18+ by its seller: ordering it needs an approved ID.
+            'adult_only' => $product->is_adult_only,
             'image_url' => self::imageUrl($product->image_url ?: $product->images->first()?->path),
             'has_options' => (int) ($product->active_variants_count ?? 0) > 1,
             'saved' => $saved,

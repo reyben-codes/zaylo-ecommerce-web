@@ -57,6 +57,8 @@
                                                 @if($product->review_note)<span class="seller-cell-note">{{ Str::limit($product->review_note, 120) }}</span>@endif
                                             @endif
                                             @unless($product->is_active)<span class="case-pill case-pill--rejected">Hidden</span>@endunless
+                                            {{-- Marked 18+ by the seller: buyers need an approved ID to order it. --}}
+                                            @if($product->is_adult_only)<span class="case-pill case-pill--rejected"><i class="fas fa-id-card" aria-hidden="true"></i> 18+ (ID needed to order)</span>@endif
                                         </div>
                                     </div>
                                 </td>

@@ -15,7 +15,7 @@ import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 import 'package:zaylo_mobile/utils/formatters.dart';
 
 /// ID verification, as in the website's Profile Settings: buyers upload a
-/// government ID, and an administrator approves it before they can order.
+/// government ID, and an administrator approves it before they can order products marked 18+.
 class IdentityScreen extends StatefulWidget {
   const IdentityScreen({super.key});
 
@@ -145,13 +145,13 @@ class _StatusCard extends StatelessWidget {
           Icons.verified_outlined,
           ZayloColors.success,
           'ID verified',
-          'You can place orders. Thank you for helping keep ZAYLO safe.',
+          'You can order products marked 18+. Thank you for helping keep ZAYLO safe.',
         ),
       IdentityStatus(enabled: false) => (
           Icons.info_outline,
           ZayloColors.info,
           'ID checks are not active yet',
-          'You can place orders without uploading an ID for now.',
+          'You can order without uploading an ID for now.',
         ),
       IdentityStatus(pending: true) => (
           Icons.hourglass_top_rounded,
@@ -172,7 +172,7 @@ class _StatusCard extends StatelessWidget {
           Icons.badge_outlined,
           ZayloColors.ink,
           'ID not verified yet',
-          'Upload a government ID once. After an administrator approves it, you can place orders.',
+          'You can shop without an ID. Upload a government ID once to order products their sellers marked 18+.',
         ),
     };
     return SectionCard(

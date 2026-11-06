@@ -134,6 +134,18 @@
                         </select>
                         <p class="seller-field__help" id="productGenderHelp">Kids items use kids' sizes for Standard sizes. "Kids (boys or girls)" shows under both Girls and Boys.</p>
                     </div>
+                    @if(\App\Models\Product::supportsAdultFlag())
+                        {{-- Sellers decide which products are for adults; only those need the buyer's approved ID. --}}
+                        <div class="seller-field seller-field--full">
+                            <input type="hidden" name="is_adult" value="0">
+                            <label class="product-form__adult">
+                                <input type="checkbox" name="is_adult" value="1" aria-describedby="productAdultHelp"
+                                       @checked((string) old('is_adult', $product?->is_adult_only ? '1' : '0') === '1')>
+                                <span><i class="fas fa-id-card" aria-hidden="true"></i> 18+ product (for adults only)</span>
+                            </label>
+                            <p class="seller-field__help" id="productAdultHelp">Tick this if only adults may buy it. Buyers see an 18+ badge and need an approved ID to order it; everything else can be ordered without an ID. Changing this sends the product for review.</p>
+                        </div>
+                    @endif
                     <div class="seller-field">
                         <label for="productBadge">Badge</label>
                         <select id="productBadge" name="badge">

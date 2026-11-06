@@ -38,6 +38,7 @@
     </div>
     <div class="shop-card__body">
         @include('partials.category-tags', ['href' => fn ($key) => route('products.index', ['category' => $key])])
+        @include('partials.adult-badge')
         <{{ $heading }} class="shop-card__name"><a href="{{ $url }}">{{ $product->name }}</a></{{ $heading }}>
         @include('partials.product-card-description')
         @isset($unitsSold)

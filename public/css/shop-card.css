@@ -202,3 +202,30 @@
     .shop-card:hover,
     .shop-card:hover .shop-card__photo img { transform: none; }
 }
+
+/* Products their seller marked 18+ (partials/adult-badge): on cards and the product page. */
+.adult-badge {
+    display: inline-flex;
+    gap: 5px;
+    align-items: center;
+    width: max-content;
+    padding: 2px 8px;
+    border: 1px solid var(--c-f5c6c6);
+    border-radius: 999px;
+    background: var(--c-fdf2f2);
+    color: var(--c-a52b23);
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .02em;
+}
+
+.adult-note {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin: 6px 0 14px;
+    color: var(--c-6b5f54);
+    font-size: .85rem;
+    line-height: 1.5;
+}

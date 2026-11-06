@@ -105,6 +105,7 @@ class ProductCard extends StatelessWidget {
                   ),
                 ),
               ),
+              if (product.adultOnly) const Positioned(top: 10, left: 10, child: AdultOnlyBadge()),
               if (product.isSoldOut) const Center(child: SoldOutLabel()),
               if (badge != null) Positioned(left: 10, bottom: 10, child: _Pill(child: Text(badge))),
               if (product.rating != null)
@@ -288,6 +289,47 @@ class PriceLine extends StatelessWidget {
                 fontSize: size * .78, decoration: TextDecoration.lineThrough, color: ZayloColors.taupe)),
     ]);
   }
+}
+
+/// "18+" on a product its seller marked for adults only.
+class AdultOnlyBadge extends StatelessWidget {
+  const AdultOnlyBadge({super.key});
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        label: 'For adults only',
+        excludeSemantics: true,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: ZayloColors.dangerSoft,
+            border: Border.all(color: ZayloColors.dangerBorder),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(Icons.badge_outlined, size: 12, color: ZayloColors.dangerText),
+              const SizedBox(width: 4),
+              Text('18+', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: ZayloColors.dangerText)),
+            ]),
+          ),
+        ),
+      );
+}
+
+/// The product page's note for an 18+ product: ordering it needs an approved ID.
+class AdultOnlyNote extends StatelessWidget {
+  const AdultOnlyNote({super.key});
+
+  @override
+  Widget build(BuildContext context) => Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const AdultOnlyBadge(),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text("For adults only. You'll need an approved ID to order it.",
+              style: TextStyle(fontSize: 12.5, color: ZayloColors.muted)),
+        ),
+      ]);
 }
 
 class ProductBadge extends StatelessWidget {

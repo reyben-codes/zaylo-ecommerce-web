@@ -109,6 +109,7 @@ class CheckoutQuote {
     this.deliveryFrom,
     this.deliveryTo,
     this.identityVerified = true,
+    this.identityRequiredFor = const [],
     this.couriers = const [],
   });
 
@@ -119,8 +120,12 @@ class CheckoutQuote {
   final DateTime? deliveryFrom;
   final DateTime? deliveryTo;
 
-  /// False until an administrator approves the buyer's ID; orders are refused until then.
+  /// False when the selected items include 18+ products and the buyer's ID is not approved yet; such orders are
+  /// refused until it is. Other products need no ID.
   final bool identityVerified;
+
+  /// The 18+ products that need the approved ID.
+  final List<String> identityRequiredFor;
 
   /// Courier trucks to choose from; the first is the default.
   final List<CourierOption> couriers;
@@ -139,6 +144,7 @@ class CheckoutQuote {
       deliveryFrom: parseDate(delivery?['from']),
       deliveryTo: parseDate(delivery?['to']),
       identityVerified: json['identity_verified'] as bool? ?? true,
+      identityRequiredFor: (json['identity_required_for'] as List<dynamic>? ?? const []).map((name) => '$name').toList(),
       couriers: (json['couriers'] as List<dynamic>? ?? const [])
           .map((item) => CourierOption.fromJson(item as Map<String, dynamic>))
           .toList(),

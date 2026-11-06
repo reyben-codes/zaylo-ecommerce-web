@@ -1804,11 +1804,11 @@ void main() {
       expect(find.byType(LoginScreen), findsOneWidget);
     });
 
-    testWidgets('checkout asks for an approved ID before placing an order', (tester) async {
+    testWidgets('checkout asks for an approved ID before ordering 18+ items', (tester) async {
       await pumpApp(tester, token: 'stored-token', api: FakeApi(cartIds: [11], identityVerified: false));
       await open(tester, const CheckoutScreen(cartItemIds: [11]));
 
-      expect(find.text('Verify your ID to place orders'), findsOneWidget);
+      expect(find.text('18+ items need an approved ID'), findsOneWidget);
       expect(find.text('VERIFY MY ID'), findsOneWidget);
       final placeOrder = find.ancestor(of: find.text('PLACE ORDER'), matching: find.byType(FilledButton));
       expect(tester.widget<FilledButton>(placeOrder).onPressed, isNull);
@@ -1818,7 +1818,7 @@ void main() {
       await pumpApp(tester, token: 'stored-token', api: FakeApi(cartIds: [11]));
       await open(tester, const CheckoutScreen(cartItemIds: [11]));
 
-      expect(find.text('Verify your ID to place orders'), findsNothing);
+      expect(find.text('18+ items need an approved ID'), findsNothing);
       final placeOrder = find.ancestor(of: find.text('PLACE ORDER'), matching: find.byType(FilledButton));
       expect(tester.widget<FilledButton>(placeOrder).onPressed, isNotNull);
     });

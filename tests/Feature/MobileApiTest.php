@@ -96,9 +96,13 @@ class MobileApiTest extends TestCase
         $this->withToken($token)->postJson('/api/mobile/wishlist/'.$product->slug)->assertOk()->assertJson(['saved' => true]);
         $this->withToken($token)->getJson('/api/mobile/home')->assertOk()->assertJsonPath('new_arrivals.0.saved', true);
 
-        // Ordering needs an approved ID, exactly as on the website.
+        // Without an ID, ordinary products can be ordered; 18+ ones need an approved ID, exactly as on the website.
         $this->withToken($token)->postJson('/api/mobile/checkout/quote', ['cart_item_ids' => [$item]])->assertOk()
-            ->assertJson(['identity_verified' => false, 'totals' => ['subtotal' => 900, 'shipping' => 120]]);
+            ->assertJson(['identity_verified' => true, 'identity_required_for' => [], 'totals' => ['subtotal' => 900, 'shipping' => 120]]);
+        $product->update(['is_adult' => true]);
+        $this->getJson('/api/mobile/products/'.$product->slug)->assertOk()->assertJsonPath('product.adult_only', true);
+        $this->withToken($token)->postJson('/api/mobile/checkout/quote', ['cart_item_ids' => [$item]])->assertOk()
+            ->assertJson(['identity_verified' => false, 'identity_required_for' => ['Rattan Basket']]);
         $address = $buyer->addresses()->create($this->savedAddressData());
         $this->withToken($token)->postJson('/api/mobile/checkout', [
             'address_id' => $address->id, 'idempotency_key' => (string) str()->uuid(), 'cart_item_ids' => [$item],

@@ -65,12 +65,30 @@ class CheckoutService
         return Payment::where('idempotency_key', 'like', $idempotencyKey.'%')->exists();
     }
 
-    /** Buyers need an approved ID before they can order. */
-    public function ensureCanOrder(User $buyer): void
+    /**
+     * The items a buyer may not order yet: products the seller marked 18+, while the buyer has no approved ID.
+     * Everything else can be ordered without an ID.
+     *
+     * @param  Collection<int, CartItem>  $items  with product loaded
+     * @return Collection<int, CartItem>
+     */
+    public function itemsNeedingIdentity(User $buyer, Collection $items): Collection
     {
-        if (! $buyer->isIdentityVerified()) {
+        if ($buyer->isIdentityVerified()) {
+            return collect();
+        }
+
+        return $items->filter(fn (CartItem $item) => (bool) $item->product?->is_adult_only)->values();
+    }
+
+    /** @param  Collection<int, CartItem>  $items  with product loaded */
+    public function ensureCanOrder(User $buyer, Collection $items): void
+    {
+        $restricted = $this->itemsNeedingIdentity($buyer, $items);
+        if ($restricted->isNotEmpty()) {
             throw ValidationException::withMessages([
-                'identity' => 'Your ID needs to be approved before you can place an order. Upload it in Profile Settings.',
+                'identity' => 'Some items are for adults (18+): '.$restricted->pluck('product.name')->unique()->implode(', ')
+                    .'. Your ID needs to be approved before you can order them. Upload it in Profile Settings, or leave them out of this order.',
             ]);
         }
     }
@@ -83,7 +101,6 @@ class CheckoutService
      */
     public function place(User $buyer, array $selectedIds, array $input, string $voucherCode): Collection
     {
-        $this->ensureCanOrder($buyer);
         $paymentMethod = $input['payment_method'] ?? 'cod';
 
         return DB::transaction(function () use ($buyer, $selectedIds, $input, $voucherCode, $paymentMethod) {
@@ -93,6 +110,7 @@ class CheckoutService
             if ($itemsToOrder->isEmpty() || $itemsToOrder->count() !== count($selectedIds)) {
                 throw ValidationException::withMessages(['cart' => 'Your cart changed. Review your selection and try again.']);
             }
+            $this->ensureCanOrder($buyer, $itemsToOrder);
             $voucher = $this->voucher($voucherCode, lock: true);
             $address = Address::where('user_id', $buyer->id)->whereKey($input['address_id'])->firstOrFail();
             if (! $address->isStructured()) {

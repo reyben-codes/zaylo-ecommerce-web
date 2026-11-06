@@ -33,7 +33,7 @@ return [
     'buyer' => [
         [
             'q' => 'How do I place an order?',
-            'a' => 'Add products to your cart, open the cart, pick the items to buy and check out. Choose a saved address, a courier and Cash on Delivery or GCash. Your ID must be approved first (Profile Settings → ID verification).',
+            'a' => 'Add products to your cart, open the cart, pick the items to buy and check out. Choose a saved address, a courier and Cash on Delivery or GCash. No ID is needed, except for products the seller marked 18+: those need an approved ID first (Profile Settings → ID verification).',
             'keywords' => ['order', 'buy', 'checkout', 'purchase', 'cart', 'place order'],
             'link' => ['route' => 'buyer.cart', 'label' => 'Open my cart'],
         ],

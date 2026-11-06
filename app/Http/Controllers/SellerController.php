@@ -178,7 +178,7 @@ class SellerController extends Controller
 
             // What buyers read or see changed (or a rejected listing was fixed): an admin checks it again.
             // Price, stock, sales and visibility changes stay live.
-            $contentChanged = $product->wasChanged(['name', 'description', 'gender', 'image_url', 'custom_tags'])
+            $contentChanged = $product->wasChanged(['name', 'description', 'gender', 'image_url', 'custom_tags', 'is_adult'])
                 || $request->hasFile('image') || $request->hasFile('photos')
                 || $product->fresh()->category_keys != $categoriesBefore;
             if (Product::usesReview() && ! $product->is_archived && ($product->is_rejected || ($contentChanged && ! $product->is_pending_review))) {
@@ -1249,6 +1249,11 @@ class SellerController extends Controller
         unset($data['photos']);
         if ($request->has('custom_tags')) {
             $data['custom_tags'] = $this->customTags($data['custom_tags'] ?? []);
+        }
+        // The seller marks 18+ products; buyers then need an approved ID to order them. A form without the box leaves it alone.
+        if ($request->has('is_adult') && Product::supportsAdultFlag()) {
+            $request->validate(['is_adult' => 'boolean']);
+            $data['is_adult'] = $request->boolean('is_adult');
         }
         $categories = array_values(array_unique($data['categories'] ?? []));
         if ($categories === []) {

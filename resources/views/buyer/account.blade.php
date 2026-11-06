@@ -51,7 +51,7 @@
                 @if($identityVerified)
                     <span class="status-pill"><i class="fas fa-circle-check"></i> Verified buyer</span>
                 @else
-                    <a class="status-pill status-pill--warning" href="#identity-verification"><i class="fas fa-id-card"></i> ID not verified yet</a>
+                    <a class="status-pill" href="#identity-verification"><i class="far fa-id-card"></i> ID not verified (only for 18+ items)</a>
                 @endif
             </div>
             <div class="settings-photo">@include('partials.profile-photo', ['user' => $user])</div>
@@ -136,7 +136,7 @@
                     <div>
                         <span class="eyebrow">Verification</span>
                         <h2>ID verification</h2>
-                        <p>We check a government-issued ID once before your first order to keep ZAYLO safe for buyers and sellers.</p>
+                        <p>You can shop without an ID. We only check a government-issued ID once before you order a product its seller marked 18+ (for adults only).</p>
                     </div>
                     @if($identityVerified)
                         <span class="status-pill identity-status identity-status--approved"><i class="fas fa-circle-check"></i> Approved</span>
@@ -150,7 +150,7 @@
                 </div>
 
                 @if($identityVerified)
-                    <p class="identity-message">Your ID is verified. You can check out anytime.</p>
+                    <p class="identity-message">Your ID is verified. You can order products marked 18+.</p>
                 @elseif($submission?->status === 'pending')
                     <p class="identity-message">We received your {{ $submission->id_type_label }} on {{ $submission->updated_at->timezone('Asia/Manila')->format('M j, Y g:i A') }}. An administrator will review it soon. You can keep shopping and adding to your cart meanwhile. Uploaded the wrong file? Send a new one below.</p>
                 @elseif($submission?->status === 'rejected')

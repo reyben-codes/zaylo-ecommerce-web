@@ -431,7 +431,7 @@ class AdminController extends Controller
         $name = $verification->user?->name ?? 'The buyer';
 
         return back()->with('status', $data['decision'] === 'approve'
-            ? "{$name}'s ID is approved. They can now check out."
+            ? "{$name}'s ID is approved. They can now order 18+ products."
             : "{$name}'s ID was rejected. They'll see your reason and can upload again.");
     }
 

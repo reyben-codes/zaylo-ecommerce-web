@@ -122,8 +122,10 @@ class MobileShoppingController extends Controller
             'couriers' => collect(Order::COURIERS)->map(fn (array $courier, string $key) => [
                 'key' => $key, 'name' => $courier['title'], 'description' => $courier['description'],
             ])->values(),
-            // Orders need an approved ID; the app can say so before the buyer taps Place order.
-            'identity_verified' => $request->user()->isIdentityVerified(),
+            // Only 18+ products need an approved ID. identity_verified stays "may order these items" so older apps,
+            // which disable Place order when it is false, only block orders that hold 18+ products.
+            'identity_verified' => ($adultItems = $this->checkout->itemsNeedingIdentity($request->user(), $items))->isEmpty(),
+            'identity_required_for' => $adultItems->pluck('product.name')->unique()->values(),
             'estimated_delivery' => [
                 'from' => now()->addWeekdays(2)->toDateString(),
                 'to' => now()->addWeekdays(4)->toDateString(),

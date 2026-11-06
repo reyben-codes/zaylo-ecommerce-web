@@ -1187,3 +1187,35 @@ button.product-form__remove:focus-visible {
 .product-form__sections-manage {
     margin-top: 14px;
 }
+
+/* "18+ product" checkbox on the product form; turns red-tinted when ticked so it is hard to miss. */
+.product-form__adult {
+    display: inline-flex;
+    gap: 10px;
+    align-items: center;
+    padding: 10px 14px;
+    border: 1px solid var(--c-e8e0d7);
+    border-radius: 8px;
+    color: var(--c-4f453c);
+    font-size: .82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color .2s ease-out, background-color .2s ease-out, color .2s ease-out;
+}
+
+.product-form__adult input {
+    width: 17px;
+    height: 17px;
+    accent-color: var(--c-a52b23);
+}
+
+.product-form__adult:has(input:checked) {
+    border-color: var(--c-a52b23);
+    background: var(--c-fdf2f2);
+    color: var(--c-a52b23);
+}
+
+.product-form__adult:has(input:focus-visible) {
+    outline: 2px solid var(--c-b28b6f);
+    outline-offset: 2px;
+}

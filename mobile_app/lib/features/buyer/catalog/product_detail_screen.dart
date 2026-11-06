@@ -252,6 +252,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           ]),
                           const SizedBox(height: 7),
                           Text(product.name, style: Theme.of(context).textTheme.headlineSmall),
+                          if (product.adultOnly) ...[
+                            const SizedBox(height: 8),
+                            const AdultOnlyNote(),
+                          ],
                           const SizedBox(height: 10),
                           PriceLine(product: product, size: 20, price: _variant?.price),
                           if (product.discountPercent != null && _variant == null)

@@ -207,7 +207,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               padding: const EdgeInsets.all(ZayloSpace.page),
               children: [
                 if (!quote.identityVerified) ...[
-                  _IdentityRequired(onVerify: _verifyIdentity),
+                  _IdentityRequired(products: quote.identityRequiredFor, onVerify: _verifyIdentity),
                   const SizedBox(height: 18),
                 ],
                 _section('Delivery address', _addressSection(quote)),
@@ -539,9 +539,11 @@ class _PaymentOption extends StatelessWidget {
       );
 }
 
+/// Shown when the selected items include 18+ products and the buyer's ID is not approved yet.
 class _IdentityRequired extends StatelessWidget {
-  const _IdentityRequired({required this.onVerify});
+  const _IdentityRequired({required this.products, required this.onVerify});
 
+  final List<String> products;
   final VoidCallback onVerify;
 
   @override
@@ -551,13 +553,15 @@ class _IdentityRequired extends StatelessWidget {
             Icon(Icons.badge_outlined, color: ZayloColors.warning),
             const SizedBox(width: 10),
             Expanded(
-              child: Text('Verify your ID to place orders',
+              child: Text('18+ items need an approved ID',
                   style: TextStyle(fontWeight: FontWeight.w800, color: ZayloColors.ink)),
             ),
           ]),
           const SizedBox(height: 6),
-          const Text('An administrator approves your government ID once. Your cart is kept while you wait.',
-              style: TextStyle(fontSize: 13)),
+          Text(
+              '${products.isEmpty ? 'Some items are' : '${products.join(', ')} ${products.length == 1 ? 'is' : 'are'}'} for adults only. '
+              'Upload a government ID once to order 18+ items, or go back to your cart and leave them out of this order.',
+              style: const TextStyle(fontSize: 13)),
           const SizedBox(height: 12),
           OutlinedButton(onPressed: onVerify, style: secondaryButtonStyle, child: const Text('VERIFY MY ID')),
         ]),

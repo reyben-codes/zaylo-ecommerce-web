@@ -69,6 +69,9 @@
         <div class="category-tags--detail">@include('partials.category-tags', ['href' => fn ($key) => route('products.index', ['category' => $key])])</div>
         @if($product->gender_label)<p class="product-category">{{ $product->gender_label }}</p>@endif
         <h1>{{ $product->name }}</h1>
+        @if($product->is_adult_only)
+            <p class="adult-note">@include('partials.adult-badge') This product is for adults only. You'll need an approved ID to order it{{ auth()->user()?->isIdentityVerified() ? ', and yours is approved' : '' }}.</p>
+        @endif
         <p class="detail-price" aria-live="polite"><span data-sale-price>₱{{ number_format($displayPrice, 2) }}</span>
             <del class="sale-price-original" data-sale-regular @if($displayPrice >= $displayRegular) hidden @endif>₱{{ number_format($displayRegular, 2) }}</del>
             <span class="sale-price-saving" data-sale-saving @if($displayPrice >= $displayRegular) hidden @endif>{{ $displayRegular > 0 ? round((1 - $displayPrice / $displayRegular) * 100) : 0 }}% off</span>

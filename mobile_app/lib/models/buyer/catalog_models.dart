@@ -48,6 +48,7 @@ class Product {
     this.category,
     this.originalPrice,
     this.badge,
+    this.adultOnly = false,
     this.imageUrl,
     this.description,
     this.hasOptions = false,
@@ -70,6 +71,9 @@ class Product {
   final double price;
   final double? originalPrice;
   final String? badge;
+
+  /// Marked 18+ by its seller: ordering it needs an approved ID.
+  final bool adultOnly;
   final String? imageUrl;
   final String? description;
   final bool hasOptions;
@@ -112,6 +116,7 @@ class Product {
         price: (json['price'] as num).toDouble(),
         originalPrice: (json['original_price'] as num?)?.toDouble(),
         badge: json['badge'] as String?,
+        adultOnly: json['adult_only'] as bool? ?? false,
         imageUrl: json['image_url'] as String?,
         description: json['description'] as String?,
         hasOptions: json['has_options'] as bool? ?? false,

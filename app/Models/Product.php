@@ -47,9 +47,10 @@ class Product extends Model
         'sale_is_flash', 'flash_quantity', 'flash_sold',
         'archived_at',
         'custom_tags',
+        'is_adult',
     ];
 
-    protected $casts = ['is_active' => 'boolean', 'sale_value' => 'decimal:2', 'sale_starts_at' => 'datetime', 'sale_ends_at' => 'datetime', 'sale_variant_id' => 'integer', 'sale_is_flash' => 'boolean', 'flash_quantity' => 'integer', 'flash_sold' => 'integer', 'archived_at' => 'datetime', 'reviewed_at' => 'datetime', 'custom_tags' => 'array'];
+    protected $casts = ['is_active' => 'boolean', 'sale_value' => 'decimal:2', 'sale_starts_at' => 'datetime', 'sale_ends_at' => 'datetime', 'sale_variant_id' => 'integer', 'sale_is_flash' => 'boolean', 'flash_quantity' => 'integer', 'flash_sold' => 'integer', 'archived_at' => 'datetime', 'reviewed_at' => 'datetime', 'custom_tags' => 'array', 'is_adult' => 'boolean'];
 
     protected static function booted(): void
     {
@@ -275,6 +276,20 @@ class Product extends Model
     public function orderItems(): HasMany
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    /** Whether products can be marked 18+ yet (false until the is_adult migration has run). */
+    public static function supportsAdultFlag(): bool
+    {
+        static $supported;
+
+        return $supported ??= Schema::hasColumn('products', 'is_adult');
+    }
+
+    /** Marked 18+ by its seller: buyers need an approved ID to order it. */
+    public function getIsAdultOnlyAttribute(): bool
+    {
+        return (bool) ($this->attributes['is_adult'] ?? false);
     }
 
     /** The seller's own shop sections this product is shown under on their shop page. */
