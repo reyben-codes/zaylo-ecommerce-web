@@ -43,6 +43,27 @@ class AuthModalTest extends TestCase
         }
     }
 
+    public function test_sign_up_starts_by_choosing_the_account_type(): void
+    {
+        $choice = $this->withHeader(AuthModal::HEADER, '1')->get(route('register'))->assertOk()
+            ->assertSee('data-auth-panel="register-choice"', false)
+            ->assertSeeInOrder(['Buyer', '3 steps', 'Ready right away', 'Seller', '6 steps', 'Admin approval', 'Rider', '7 steps', 'Partner approval', 'Logistics partner', 'SEC, BIR and business permit'])
+            ->assertDontSee('name="first_name"', false);
+        foreach (['buyer', 'seller', 'courier', 'logistics'] as $role) {
+            $this->assertStringContainsString('href="'.e(route('register', ['role' => $role])).'"', $choice->getContent());
+        }
+
+        // A card's link opens that form, with a way back to the cards.
+        $this->withHeader(AuthModal::HEADER, '1')->get(route('register', ['role' => 'seller']))->assertOk()
+            ->assertSee('data-auth-panel="register"', false)->assertSee('Signing up as <strong>Seller</strong>', false)
+            ->assertSee('href="'.route('register').'" class="role-switch"', false);
+
+        // An unknown role shows the cards; a form that came back with errors shows the form again.
+        $this->get(route('register', ['role' => 'admin']))->assertOk()->assertSee('data-auth-panel="register-choice"', false);
+        $this->from(route('register', ['role' => 'buyer']))->post(route('register'), ['role' => 'buyer'])->assertSessionHasErrors();
+        $this->get(route('register'))->assertOk()->assertSee('data-auth-panel="register"', false)->assertSee('Signing up as <strong>Buyer</strong>', false);
+    }
+
     public function test_the_modal_fetches_just_the_panel(): void
     {
         $panel = $this->withHeader(AuthModal::HEADER, '1')->get(route('register', ['role' => 'seller']))->assertOk()

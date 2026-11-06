@@ -68,7 +68,7 @@ class RegistrationRulesTest extends TestCase
         $this->signUp($this->registration(['email' => 'adult@example.com', 'date_of_birth' => today()->subYears(18)->toDateString()]));
         $this->assertDatabaseHas('users', ['email' => 'adult@example.com']);
 
-        $this->get(route('register'))->assertSee('max="'.today()->subYears(18)->toDateString().'"', false);
+        $this->get(route('register', ['role' => 'buyer']))->assertSee('max="'.today()->subYears(18)->toDateString().'"', false);
     }
 
     public function test_passwords_need_a_number(): void
@@ -84,7 +84,7 @@ class RegistrationRulesTest extends TestCase
         $this->post(route('register'), $data)->assertSessionHasErrors(['terms' => 'Please accept the Terms of Service and Privacy Policy to continue.']);
         $this->assertDatabaseMissing('users', ['email' => $data['email']]);
 
-        $this->get(route('register'))->assertSee('name="terms"', false)
+        $this->get(route('register', ['role' => 'buyer']))->assertSee('name="terms"', false)
             ->assertSee(route('policies.show', 'terms'), false)->assertSee(route('policies.show', 'privacy'), false);
         $this->get(route('terms'))->assertOk()->assertSee('Terms of Service');
     }

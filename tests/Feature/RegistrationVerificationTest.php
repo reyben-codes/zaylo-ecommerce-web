@@ -21,11 +21,12 @@ class RegistrationVerificationTest extends TestCase
     public function test_registration_hides_account_type_and_preserves_partner_signup(): void
     {
         foreach (['buyer', 'seller', 'courier'] as $role) {
-            $parameters = $role === 'buyer' ? [] : ['role' => $role];
-            $this->get(route('register', $parameters))
+            // The role comes from the account-type card chosen before the form, never a dropdown on it.
+            $this->get(route('register', ['role' => $role]))
                 ->assertOk()
                 ->assertDontSee('name="role" id="role"', false)
-                ->assertDontSee('Account type')
+                ->assertDontSee('<select name="role"', false)
+                ->assertSee('Change account type')
                 ->assertSee('type="hidden" name="role" id="selectedRole" value="'.$role.'"', false)
                 // Buyers and riders must be 18 or older, so both give their birthday.
                 ->when(
@@ -38,7 +39,7 @@ class RegistrationVerificationTest extends TestCase
 
     public function test_registration_has_the_requested_step_order(): void
     {
-        $response = $this->get(route('register'))->assertOk()->assertSeeInOrder([
+        $response = $this->get(route('register', ['role' => 'buyer']))->assertOk()->assertSeeInOrder([
             'Your personal details', 'Your sign-in details', 'Send verification code',
         ])->assertDontSee('name="address"', false)
             ->assertDontSee('Continue to address');

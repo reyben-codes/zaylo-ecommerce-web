@@ -4,7 +4,6 @@
 @php
     $requestedRole = old('role', request('role', 'buyer'));
     $selectedRole = in_array($requestedRole, ['buyer', 'seller', 'courier', 'logistics'], true) ? $requestedRole : 'buyer';
-    $isPartner = $selectedRole !== 'buyer';
     $logisticsPartners ??= collect();
 
     $roleCopy = [
@@ -37,7 +36,13 @@
 
 <div class="auth-panel auth-panel--register" data-auth-panel="register" data-tagline="{{ implode('|', $roleCopy['tagline']) }}">
     <header class="auth-panel__header">
-        <span class="auth-panel__label">{{ $isPartner ? 'ZAYLO PARTNERS' : 'JOIN ZAYLO' }}</span>
+        @php $chosen = \App\Support\SignUpRoles::all()[$selectedRole]; @endphp
+        {{-- Back to the account-type cards; anything typed here is left behind. --}}
+        <a href="{{ route('register') }}" class="role-switch" aria-label="Signing up as {{ $chosen['name'] }}. Change account type">
+            <span class="role-switch__icon" aria-hidden="true"><i class="fas {{ $chosen['icon'] }}"></i></span>
+            <span>Signing up as <strong>{{ $chosen['name'] }}</strong></span>
+            <span class="role-switch__change" aria-hidden="true">Change</span>
+        </a>
         <h2 class="auth-panel__title" id="auth-modal-title" tabindex="-1">{{ $roleCopy['title'] }}</h2>
         <p class="auth-panel__subtitle">{{ $roleCopy['subtitle'] }}</p>
     </header>
@@ -176,11 +181,5 @@
 
     <footer class="auth-panel__footer">
         <p>Already have an account? <a href="{{ route(['seller' => 'seller.login', 'logistics' => 'logistics.login'][$selectedRole] ?? 'login') }}">Sign in</a></p>
-        <div class="partner-links">
-            @if($isPartner)<a href="{{ route('register') }}">Create new account</a>@endif
-            @if($selectedRole !== 'seller')<a href="{{ route('register', ['role' => 'seller']) }}">Sell on ZAYLO</a>@endif
-            @if($selectedRole !== 'courier')<a href="{{ route('register', ['role' => 'courier']) }}">Become a rider</a>@endif
-            @if($selectedRole !== 'logistics')<a href="{{ route('register', ['role' => 'logistics']) }}">Become a logistics partner</a>@endif
-        </div>
     </footer>
 </div>

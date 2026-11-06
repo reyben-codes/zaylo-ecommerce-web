@@ -24,6 +24,7 @@ use App\Services\LogisticsApplicationService;
 use App\Services\PendingRegistrationService;
 use App\Services\SellerApplicationService;
 use App\Support\AuthModal;
+use App\Support\SignUpRoles;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -167,6 +168,12 @@ class AuthController extends Controller
 
     public function showRegister(Request $request)
     {
+        // Sign-up starts by choosing the account type, unless a link already names one or a sent form came back with errors.
+        $role = $request->query('role', $request->old('role'));
+        if (! array_key_exists((string) $role, SignUpRoles::all()) && ! $request->session()->has('errors')) {
+            return AuthModal::respond($request, 'register-choice', [], 'ZAYLO · Create new account');
+        }
+
         return AuthModal::respond($request, 'register', [
             'logisticsPartners' => Schema::hasTable('logistics_providers')
                 ? LogisticsProvider::acceptingRiders()->get(['id', 'name', 'service_area'])
