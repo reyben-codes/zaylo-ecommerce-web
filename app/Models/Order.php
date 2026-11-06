@@ -24,6 +24,7 @@ class Order extends Model
         'total', 'currency', 'recipient_name', 'phone', 'notes', 'placed_at', 'completed_at', 'delivered_at', 'shipping_discount',
         'buyer_id', 'reference', 'total_minor', 'payment_method', 'payment_status',
         'shipping_address', 'note', 'voucher_code', 'shipping_discount_minor', 'courier_choice', 'logistics_provider_id', 'shipping_zone',
+        'delivery_latitude', 'delivery_longitude',
     ];
 
     public function courierName(): string

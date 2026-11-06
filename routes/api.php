@@ -91,6 +91,8 @@ Route::prefix('mobile')->name('mobile.')->middleware('throttle:60,1')->group(fun
             Route::post('/deliveries/scan', [MobileRiderDashboardController::class, 'scan'])->middleware('throttle:30,1,mobile-rider-scan')->name('deliveries.scan');
             Route::post('/returns/scan', [MobileRiderDashboardController::class, 'scanReturn'])->middleware('throttle:30,1,mobile-rider-return-scan')->name('returns.scan');
             // Scanning the logistics hub's attendance QR code times the rider in, and again times them out.
+            // The open app reports the rider's location while a parcel is out for delivery.
+            Route::post('/location', [MobileRiderDashboardController::class, 'location'])->middleware('throttle:20,1,mobile-rider-location')->name('location');
             Route::post('/attendance/scan', [MobileRiderDashboardController::class, 'scanAttendance'])->middleware('throttle:20,1,mobile-rider-attendance')->name('attendance.scan');
             Route::post('/deliveries/{shipment}/claim', [MobileRiderDashboardController::class, 'claim'])->name('deliveries.claim');
             // The rider answers each assignment from the logistics partner: accept it, or decline it with a reason.
@@ -146,6 +148,8 @@ Route::prefix('mobile')->name('mobile.')->middleware('throttle:60,1')->group(fun
             Route::post('/orders/{order}/cancel', [MobileOrderController::class, 'cancel'])->name('orders.cancel');
             Route::post('/orders/{order}/received', [MobileOrderController::class, 'received'])->middleware('throttle:20,1,mobile-order-received')->name('orders.received');
             Route::get('/orders/{order}/delivery-photo', [MobileOrderController::class, 'deliveryPhoto'])->name('orders.delivery-photo');
+            // The parcel on a map: the buyer's pin, and the rider while it is out for delivery.
+            Route::get('/orders/{order}/tracking', [MobileOrderController::class, 'tracking'])->middleware('throttle:30,1,mobile-order-tracking')->name('orders.tracking');
             Route::get('/orders/{order}/chat', [MobileDeliveryChatController::class, 'buyerShow'])->name('orders.chat');
             Route::post('/orders/{order}/chat', [MobileDeliveryChatController::class, 'buyerSend'])->middleware('throttle:20,1,mobile-delivery-chat')->name('orders.chat.send');
             Route::get('/orders/{order}/chat/{message}/{kind}', [MobileDeliveryChatController::class, 'buyerMedia'])->whereIn('kind', ['photo', 'video'])->name('orders.chat.media');

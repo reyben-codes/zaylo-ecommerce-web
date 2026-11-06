@@ -22,6 +22,8 @@ import 'package:zaylo_mobile/components/chat/delivery_chat.dart';
 import 'package:zaylo_mobile/components/chat/typing_dots.dart';
 import 'package:zaylo_mobile/components/complaints.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
+import 'package:zaylo_mobile/components/map/map_pin_screen.dart';
+import 'package:zaylo_mobile/components/map/zaylo_map.dart';
 import 'package:zaylo_mobile/components/policies.dart';
 import 'package:zaylo_mobile/components/zay_avatar.dart';
 import 'package:zaylo_mobile/features/buyer/checkout/checkout_screen.dart';
@@ -29,12 +31,15 @@ import 'package:zaylo_mobile/features/buyer/orders/order_detail_screen.dart';
 import 'package:zaylo_mobile/features/buyer/home/widgets/home_header.dart';
 import 'package:zaylo_mobile/features/buyer/messages/seller_chat_screen.dart';
 import 'package:zaylo_mobile/features/buyer/messages/seller_inbox_screen.dart';
+import 'package:zaylo_mobile/features/buyer/orders/order_tracking_screen.dart';
 import 'package:zaylo_mobile/features/buyer/shop/followed_shops_screen.dart';
 import 'package:zaylo_mobile/features/buyer/shop/shop_screen.dart';
+import 'package:zaylo_mobile/features/rider/dashboard/rider_location_reporter.dart';
 import 'package:zaylo_mobile/features/rider/dashboard/widgets/rider_dashboard_widgets.dart';
 import 'package:zaylo_mobile/features/rider/history/rider_history_tab.dart';
 import 'package:zaylo_mobile/features/rider/wallet/rider_wallet_screen.dart';
 import 'package:zaylo_mobile/models/auth_models.dart';
+import 'package:zaylo_mobile/models/buyer/address_models.dart';
 import 'package:zaylo_mobile/models/chat_media.dart';
 import 'package:zaylo_mobile/features/buyer/catalog/product_card.dart';
 import 'package:zaylo_mobile/models/buyer/account_models.dart';
@@ -43,7 +48,6 @@ import 'package:zaylo_mobile/models/buyer/catalog_models.dart';
 import 'package:zaylo_mobile/models/buyer/order_models.dart';
 import 'package:zaylo_mobile/models/buyer/seller_chat_models.dart';
 import 'package:zaylo_mobile/models/buyer/shop_models.dart';
-import 'package:zaylo_mobile/models/location.dart';
 import 'package:zaylo_mobile/models/rider/rider_activity_models.dart';
 import 'package:zaylo_mobile/models/rider/rider_dashboard_models.dart';
 import 'package:zaylo_mobile/models/rider/rider_models.dart';
@@ -705,6 +709,12 @@ class FakeRiderApi extends RiderApi {
         ],
       });
 
+  /// Locations the app shared while a parcel was out for delivery.
+  final reportedLocations = <(double, double)>[];
+
+  @override
+  Future<void> reportLocation(double latitude, double longitude) async => reportedLocations.add((latitude, longitude));
+
   /// Wallet money the rider can withdraw, and the withdrawals asked for.
   double walletBalance = 120;
   final withdrawals = <({double amount, String number, String name})>[];
@@ -794,6 +804,8 @@ Future<void> pumpApp(WidgetTester tester,
 }
 
 void main() {
+  // Widget tests cannot download map tiles; the maps still lay out their markers.
+  ZayloMap.showTiles = false;
   group('app updates', () {
     test('a newer published version is told apart from the installed one', () {
       const info = AppVersionInfo(latestVersion: '1.0.10', downloadUrl: 'https://example.test/zaylo.apk');
@@ -2525,5 +2537,104 @@ void main() {
     await tester.pump(const Duration(seconds: 3));
     await tester.pumpAndSettle();
     expect(find.text('Added to your cart.'), findsNothing);
+  });
+
+  group('maps', () {
+    setUp(() => DeviceLocation.current = ({bool ask = true}) async => const LatLng(14.2116, 121.1653));
+    tearDown(() => DeviceLocation.current = ({bool ask = true}) async => throw const LocationUnavailable('Not in tests'));
+
+    test('addresses carry their pin to and from the API', () {
+      final address = Address.fromJson({
+        'id': 1, 'label': 'Home', 'recipient_name': 'Maria', 'phone': '0917', 'line1': '12 Rizal St.', 'formatted': '',
+        'is_default': true, 'is_structured': true, 'pin': {'latitude': 14.2116, 'longitude': 121.1653},
+      });
+      expect(address.pin, const MapPoint(14.2116, 121.1653));
+      const input = AddressInput(
+        label: 'Home', recipientName: 'Maria', phone: '0917', regionCode: '040000000', cityCode: '043404000',
+        barangayCode: '043404001', line1: '12 Rizal St.', postalCode: '4027', pin: MapPoint(14.2116, 121.1653),
+      );
+      expect(input.toJson(), containsPair('latitude', 14.2116));
+      // A removed pin is sent as null so the server clears it.
+      expect(const AddressInput(label: 'Home', recipientName: 'M', phone: '0', regionCode: '1', cityCode: '2', barangayCode: '3',
+              line1: 'x', postalCode: '4000')
+          .toJson(), containsPair('latitude', null));
+    });
+
+    testWidgets('buyers pin their door with their current location', (tester) async {
+      ({MapPoint? point})? result;
+      await tester.pumpWidget(MaterialApp(
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () async => result = await Navigator.of(context)
+                .push<({MapPoint? point})>(MaterialPageRoute(builder: (_) => const MapPinScreen())),
+            child: const Text('Open'),
+          ),
+        ),
+      ));
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      expect(find.text('SAVE WITHOUT A PIN'), findsOneWidget);
+
+      await tester.tap(find.text('Use my location'));
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.location_on), findsOneWidget, reason: 'the delivery pin');
+      await tester.tap(find.text('SAVE PIN'));
+      await tester.pumpAndSettle();
+      expect(result?.point, const MapPoint(14.2116, 121.1653));
+    });
+
+    testWidgets('buyers follow the rider on the tracking map', (tester) async {
+      await pumpApp(tester, token: 'stored-token');
+      tester.state<NavigatorState>(find.byType(Navigator).first).push(MaterialPageRoute(
+        builder: (_) => OrderTrackingScreen(
+          orderId: 5,
+          orderNumber: 'ZAY-TRACK',
+          initial: ParcelTracking.fromJson({
+            'stage': 'out_for_delivery', 'stage_label': 'Out for delivery',
+            'message': 'Your rider is on the way. The map updates every 15 seconds.',
+            'destination': {'latitude': 14.2116, 'longitude': 121.1653},
+            'rider': {'latitude': 14.2201, 'longitude': 121.1588, 'updated_at': DateTime.now().toIso8601String()},
+            'refresh_seconds': 15,
+          }),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Track ZAY-TRACK'), findsOneWidget);
+      expect(find.text('Your rider is on the way. The map updates every 15 seconds.'), findsOneWidget);
+      expect(find.textContaining('Rider location updated'), findsOneWidget);
+      expect(find.byIcon(Icons.location_on), findsOneWidget, reason: 'the delivery pin');
+      expect(find.byIcon(Icons.two_wheeler), findsOneWidget, reason: 'the rider');
+      expect(ParcelTracking.fromJson({'stage': 'delivered', 'stage_label': 'Delivered', 'message': ''}).isTrackable, isFalse);
+    });
+
+    testWidgets('the rider app shares its location only while a parcel is out for delivery', (tester) async {
+      final api = FakeRiderApi();
+      final reporter = RiderLocationReporter(api: api);
+      addTearDown(reporter.dispose);
+      RiderDashboard dashboard(String status, {int? seconds = 15}) => RiderDashboard.fromJson({
+            'active': [{'id': 1, 'tracking_number': 'TRK-1', 'status': status, 'status_label': status}],
+            'location_report_seconds': seconds,
+          });
+
+      reporter.follow(dashboard('assigned'));
+      await tester.pump();
+      expect(reporter.isSharing, isFalse);
+
+      reporter.follow(dashboard('out_for_delivery'));
+      await tester.pump();
+      expect(reporter.isSharing, isTrue);
+      expect(api.reportedLocations, [(14.2116, 121.1653)], reason: 'reports right away');
+      await tester.pump(const Duration(seconds: 15));
+      expect(api.reportedLocations, hasLength(2), reason: 'then every 15 seconds');
+
+      // Delivered, or a server without tracking: sharing stops.
+      reporter.follow(dashboard('delivered'));
+      expect(reporter.isSharing, isFalse);
+      reporter.follow(dashboard('out_for_delivery', seconds: null));
+      expect(reporter.isSharing, isFalse);
+      await tester.pump(const Duration(seconds: 30));
+      expect(api.reportedLocations, hasLength(2));
+    });
   });
 }

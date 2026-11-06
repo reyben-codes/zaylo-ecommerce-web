@@ -160,6 +160,10 @@ class RiderApi extends ApiClient {
 
   Future<RiderEarnings> earnings() async => RiderEarnings.fromJson(await send('GET', '/mobile/rider/earnings'));
 
+  /// Shares where the rider is while a parcel is out for delivery, so the buyer can follow it on a map.
+  Future<void> reportLocation(double latitude, double longitude) =>
+      send('POST', '/mobile/rider/location', body: {'latitude': latitude, 'longitude': longitude});
+
   Future<RiderWallet> wallet() async => RiderWallet.fromJson(await send('GET', '/mobile/rider/wallet'));
 
   /// Asks for [amount] to be sent to GCash. Returns the confirmation and the updated wallet.

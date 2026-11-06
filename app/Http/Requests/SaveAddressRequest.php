@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Services\ParcelTracking;
 use App\Services\PsgcService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -30,6 +31,14 @@ class SaveAddressRequest extends FormRequest
             'label' => ['required', Rule::in(['Home', 'Work', 'School', 'Other'])],
             'is_default' => 'sometimes|boolean',
             'return_to' => ['nullable', Rule::in(['checkout'])],
+        ] + ParcelTracking::pinRules();
+    }
+
+    public function messages(): array
+    {
+        return [
+            'latitude.between' => 'Pin a spot in the Philippines.',
+            'longitude.between' => 'Pin a spot in the Philippines.',
         ];
     }
 
@@ -39,6 +48,11 @@ class SaveAddressRequest extends FormRequest
         $data['province_code'] = $data['province_code'] ?? null;
         $data['line2'] = $data['line2'] ?? null;
         $data['is_default'] = $this->boolean('is_default');
+        if (! ParcelTracking::pinsAddresses()) {
+            unset($data['latitude'], $data['longitude']);
+        } elseif (array_key_exists('latitude', $data)) {
+            $data = array_replace($data, ParcelTracking::point($data['latitude'], $data['longitude']) ?? ['latitude' => null, 'longitude' => null]);
+        }
 
         return $data + $psgc->addressNames($data) + ['country_code' => 'PH'];
     }

@@ -188,6 +188,9 @@
                 <p class="order-tracking"><i class="fas fa-truck" aria-hidden="true"></i>
                     Shipment: {{ str($order->shipment->status)->replace('_', ' ')->title() }}
                     <span>Tracking no. {{ $order->shipment->tracking_number }}</span>
+                    @if(in_array($order->status, ['ready_for_pickup', 'assigned', 'picked_up', 'in_transit', 'out_for_delivery'], true))
+                        <a class="text-button" href="{{ route('buyer.orders.track', $order) }}"><i class="fas fa-map-location-dot" aria-hidden="true"></i> Track on map</a>
+                    @endif
                 </p>
             @endif
 

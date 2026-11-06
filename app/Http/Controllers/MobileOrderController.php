@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Services\CheckoutService;
 use App\Services\OrderReceipts;
+use App\Services\ParcelTracking;
 use App\Services\ProductReviews;
 use App\Support\MobilePayload;
 use App\Support\OrderParties;
@@ -56,6 +57,14 @@ class MobileOrderController extends Controller
         $order->refresh();
 
         return response()->json(['order' => $this->detailed($order)]);
+    }
+
+    /** The tracking map, polled while the buyer has it open. */
+    public function tracking(Request $request, Order $order, ParcelTracking $tracking): JsonResponse
+    {
+        abort_unless(OrderParties::for($order)['buyer'] === (int) $request->user()->id, 404);
+
+        return response()->json(['tracking' => $tracking->forBuyer($order)]);
     }
 
     public function cancel(Request $request, Order $order, CheckoutService $checkout): JsonResponse

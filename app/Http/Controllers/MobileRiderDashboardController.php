@@ -9,6 +9,7 @@ use App\Models\Shipment;
 use App\Models\User;
 use App\Services\ActivityLogger;
 use App\Services\ChatPhotos;
+use App\Services\ParcelTracking;
 use App\Services\ReturnPickups;
 use App\Services\RiderAttendanceClock;
 use App\Services\RiderDeliveries;
@@ -123,6 +124,8 @@ class MobileRiderDashboardController extends Controller
             'recent' => $completed->sortByDesc(fn (Shipment $s) => RiderDeliveries::deliveredAt($s))->take(5)
                 ->map(fn (Shipment $shipment) => $this->shipmentPayload($shipment))->values(),
             'note' => 'Your logistics partner assigns deliveries to you at the hub. Accept or decline each one.',
+            // While a parcel is out for delivery, the open app reports the rider's location this often.
+            'location_report_seconds' => ParcelTracking::tracksRiders() ? ParcelTracking::REPORT_SECONDS : null,
             'reasons' => self::reasons(),
         ]);
     }
@@ -223,6 +226,20 @@ class MobileRiderDashboardController extends Controller
             'last_7_days' => $days->values(),
             'note' => 'You earn ₱'.number_format(RiderWallet::COMMISSION, 2).' for every parcel you deliver. It goes to your wallet, where you can withdraw it to GCash.',
         ]);
+    }
+
+    /**
+     * Where the rider is, sent every few seconds while the app is open and a parcel is out for delivery, so the buyer
+     * can follow it on a map.
+     */
+    public function location(Request $request, ParcelTracking $tracking): JsonResponse
+    {
+        $data = $request->validate([
+            'latitude' => ['required', 'numeric', 'between:-90,90'],
+            'longitude' => ['required', 'numeric', 'between:-180,180'],
+        ]);
+
+        return response()->json(['updated' => $tracking->report($request->user(), (float) $data['latitude'], (float) $data['longitude'])]);
     }
 
     /** Riders no longer claim parcels: the logistics partner assigns them. Kept so older app builds get a clear answer. */
@@ -423,6 +440,8 @@ class MobileRiderDashboardController extends Controller
             'recipient_name' => $parcel['recipient'] === '—' ? null : $parcel['recipient'],
             'recipient_phone' => $parcel['phone'] ?? (is_array($order?->shipping_address) ? data_get($order->shipping_address, 'phone') : null),
             'notes' => $order?->notes ?? $order?->note,
+            // The exact spot the buyer pinned, for the rider's map and directions.
+            'destination' => ParcelTracking::destination($order),
             'item_count' => (int) $items->sum('quantity'),
             'items' => $items->map(fn ($item) => ['name' => $item->product_name, 'quantity' => (int) $item->quantity])->values(),
             // Riders collect assigned parcels from their logistics partner's hub.

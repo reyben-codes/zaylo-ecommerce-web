@@ -11,6 +11,7 @@ use App\Models\Voucher;
 use App\Models\Wishlist;
 use App\Services\CartService;
 use App\Services\CheckoutService;
+use App\Services\ParcelTracking;
 use App\Services\ShippingRates;
 use App\Services\OrderReceipts;
 use App\Support\MobilePayload;
@@ -352,6 +353,21 @@ class BuyerController extends Controller
             ->withQueryString();
 
         return view('buyer.orders', compact('orders', 'filter', 'counts'));
+    }
+
+    /** The parcel on a map: the buyer's pin, and the rider moving towards it while it is out for delivery. */
+    public function trackOrder(Order $order, ParcelTracking $tracking)
+    {
+        abort_unless(OrderParties::for($order)['buyer'] === (int) auth()->id(), 404);
+
+        return view('buyer.track-order', ['order' => $order, 'tracking' => $tracking->forBuyer($order)]);
+    }
+
+    public function orderTracking(Order $order, ParcelTracking $tracking)
+    {
+        abort_unless(OrderParties::for($order)['buyer'] === (int) auth()->id(), 404);
+
+        return response()->json(['tracking' => $tracking->forBuyer($order)]);
     }
 
     public function cancelOrder(Order $order)

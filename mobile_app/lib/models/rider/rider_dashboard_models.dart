@@ -2,6 +2,7 @@
 library;
 
 import 'package:zaylo_mobile/components/address/ph_address_section.dart';
+import 'package:zaylo_mobile/models/map_point.dart';
 import 'package:zaylo_mobile/models/rider/rider_activity_models.dart';
 import 'package:zaylo_mobile/models/support_models.dart';
 
@@ -297,6 +298,7 @@ class RiderDelivery {
     this.deliveredAt,
     this.items = const [],
     this.pickup,
+    this.destination,
     this.chatOpen = false,
     this.actions = const [],
     this.unreadMessages = 0,
@@ -333,6 +335,9 @@ class RiderDelivery {
   final DateTime? deliveredAt;
   final List<RiderDeliveryItem> items;
   final RiderPickup? pickup;
+
+  /// The exact spot the buyer pinned; null when the order has no pin.
+  final MapPoint? destination;
 
   /// The rider can message the buyer: the delivery is theirs and in progress.
   final bool chatOpen;
@@ -390,6 +395,7 @@ class RiderDelivery {
         pickup: json['pickup'] is Map<String, dynamic>
             ? RiderPickup.fromJson(json['pickup'] as Map<String, dynamic>)
             : null,
+        destination: MapPoint.fromJson(json['destination']),
         chatOpen: json['chat_open'] as bool? ?? false,
         actions: (json['actions'] as List<dynamic>? ?? const [])
             .map((item) => RiderDeliveryAction.fromJson(item as Map<String, dynamic>))
@@ -571,6 +577,7 @@ class RiderDashboard {
     this.announcements = const [],
     this.announcementPopups = const [],
     this.reasons = const RiderReasons(),
+    this.locationReportSeconds,
   });
 
   final RiderProfile rider;
@@ -598,6 +605,10 @@ class RiderDashboard {
   /// Reasons for declining an assignment or reporting a failed attempt.
   final RiderReasons reasons;
 
+  /// How often the open app shares the rider's location while a parcel is out for delivery; null when the server
+  /// does not track riders.
+  final int? locationReportSeconds;
+
   /// New assignments waiting for the rider's answer, then the ones in progress.
   List<RiderDelivery> get newAssignments => active.where((delivery) => delivery.needsAcceptance).toList();
   List<RiderDelivery> get inProgress => active.where((delivery) => !delivery.needsAcceptance).toList();
@@ -620,5 +631,6 @@ class RiderDashboard {
         announcements: Announcement.listFrom(json['announcements']),
         announcementPopups: Announcement.listFrom(json['announcement_popups']),
         reasons: RiderReasons.fromJson(json['reasons'] as Map<String, dynamic>?),
+        locationReportSeconds: json['location_report_seconds'] as int?,
       );
 }

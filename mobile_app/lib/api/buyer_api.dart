@@ -188,6 +188,9 @@ class BuyerApi extends ApiClient {
   Future<Order> order(int id) async =>
       Order.fromJson((await send('GET', '/mobile/orders/$id'))['order'] as Map<String, dynamic>);
 
+  Future<ParcelTracking> orderTracking(int id) async =>
+      ParcelTracking.fromJson((await send('GET', '/mobile/orders/$id/tracking'))['tracking'] as Map<String, dynamic>);
+
   Future<Order> cancelOrder(int id) async =>
       Order.fromJson((await send('POST', '/mobile/orders/$id/cancel'))['order'] as Map<String, dynamic>);
 

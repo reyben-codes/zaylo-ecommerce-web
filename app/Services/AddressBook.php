@@ -23,6 +23,11 @@ class AddressBook
                 $user->addresses()->when($current->exists, fn ($query) => $query->where('id', '!=', $current->id))
                     ->update(['is_default' => false]);
             }
+            // A pin left out (older apps) is kept, unless the address moved to another barangay.
+            if (ParcelTracking::pinsAddresses() && ! array_key_exists('latitude', $data)
+                && $current->exists && $current->barangay_code !== ($data['barangay_code'] ?? $current->barangay_code)) {
+                $data += ['latitude' => null, 'longitude' => null];
+            }
             $current->fill($data);
             $current->user_id = $user->id;
             $current->is_default = $makeDefault;

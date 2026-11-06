@@ -203,7 +203,7 @@ class CheckoutService
                     'payment_method' => $paymentMethod, 'recipient_name' => $address->recipient_name,
                     'phone' => $address->phone, 'shipping_address' => $address->formatted(),
                     'notes' => $input['notes'] ?? null, 'placed_at' => now(),
-                ] + (Schema::hasColumn('orders', 'courier_choice')
+                ] + ParcelTracking::orderPin($address) + (Schema::hasColumn('orders', 'courier_choice')
                     // Only once the 2026_10_26 migration has added the column.
                     ? ['courier_choice' => $input['courier_choice'] ?? Order::DEFAULT_COURIER]
                     : []) + (self::choosesPartner()

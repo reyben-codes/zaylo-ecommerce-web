@@ -7,6 +7,7 @@ import 'package:zaylo_mobile/components/announcement_popups.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
 import 'package:zaylo_mobile/features/rider/dashboard/rider_delivery_list_screen.dart';
 import 'package:zaylo_mobile/features/rider/dashboard/rider_earnings_screen.dart';
+import 'package:zaylo_mobile/features/rider/dashboard/rider_location_reporter.dart';
 import 'package:zaylo_mobile/features/rider/dashboard/rider_reports_screen.dart';
 import 'package:zaylo_mobile/features/rider/dashboard/rider_scan_screen.dart';
 import 'package:zaylo_mobile/features/rider/dashboard/widgets/rider_dashboard_widgets.dart';
@@ -33,7 +34,8 @@ class RiderDashboardTab extends StatefulWidget {
 }
 
 class RiderDashboardTabState extends State<RiderDashboardTab> with RiderDeliveryActions {
-  late Future<RiderDashboard> _dashboard = widget.api.dashboard();
+  late final _reporter = RiderLocationReporter(api: widget.api);
+  late Future<RiderDashboard> _dashboard = _loadDashboard();
   bool _attendanceBusy = false;
 
   /// The period the earnings card shows; kept while the app is open.
@@ -43,8 +45,21 @@ class RiderDashboardTabState extends State<RiderDashboardTab> with RiderDelivery
   RiderApi get riderApi => widget.api;
 
   @override
+  void dispose() {
+    _reporter.dispose();
+    super.dispose();
+  }
+
+  /// Loads the dashboard and shares the rider's location while a parcel is out for delivery.
+  Future<RiderDashboard> _loadDashboard() async {
+    final dashboard = await widget.api.dashboard();
+    _reporter.follow(dashboard);
+    return dashboard;
+  }
+
+  @override
   Future<void> reloadDeliveries() async {
-    final dashboard = widget.api.dashboard();
+    final dashboard = _loadDashboard();
     setState(() {
       _dashboard = dashboard;
     });

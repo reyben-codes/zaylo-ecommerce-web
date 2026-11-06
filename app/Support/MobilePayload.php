@@ -12,6 +12,7 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\User;
 use App\Services\OrderReceipts;
+use App\Services\ParcelTracking;
 use App\Services\ProductReviews;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -217,6 +218,8 @@ class MobilePayload
                 'auto_confirm_at' => OrderReceipts::autoConfirmAt($order)?->toIso8601String(),
                 'delivery_photo_url' => $shipment?->delivery_proof_path ? route('mobile.orders.delivery-photo', $order) : null,
                 'rider_chat' => self::riderChat($order),
+                // Where the buyer pinned the delivery, and where the rider is while it is out for delivery.
+                'tracking' => app(ParcelTracking::class)->forBuyer($order),
                 'complaint' => self::complaint($order),
                 'delivered_at' => $order->deliveredAt()?->toIso8601String(),
                 'return_deadline' => $order->returnDeadline()?->toIso8601String(),
@@ -313,6 +316,7 @@ class MobilePayload
             'is_default' => (bool) $address->is_default,
             'is_structured' => $address->isStructured(),
             'formatted' => $address->formatted(),
+            'pin' => ParcelTracking::addressPin($address),
         ];
     }
 

@@ -123,6 +123,9 @@ Route::middleware(['auth', 'active', 'verified', 'role:buyer', 'nocache'])->pref
     Route::post('/products/{product}/review', [\App\Http\Controllers\ProductReviewController::class, 'storeForProduct'])->middleware('throttle:10,1')->name('products.review');
     Route::post('/orders/{order}/cancel', [BuyerController::class, 'cancelOrder'])->name('orders.cancel');
     Route::post('/orders/{order}/received', [BuyerController::class, 'confirmReceived'])->middleware('throttle:20,1')->name('orders.received');
+    // The parcel on a map, and what the map polls while it is open.
+    Route::get('/orders/{order}/track', [BuyerController::class, 'trackOrder'])->name('orders.track');
+    Route::get('/orders/{order}/tracking', [BuyerController::class, 'orderTracking'])->middleware('throttle:30,1')->name('orders.tracking');
     Route::get('/cart', [BuyerController::class, 'cart'])->name('cart');
     Route::post('/cart/selection', [BuyerController::class, 'cartSelection'])->name('cart.selection');
     Route::post('/cart/{product}', [BuyerController::class, 'addToCart'])->name('cart.add');

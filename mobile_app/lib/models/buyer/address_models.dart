@@ -1,3 +1,5 @@
+import 'package:zaylo_mobile/models/map_point.dart';
+
 export 'package:zaylo_mobile/models/location.dart';
 
 class Address {
@@ -20,6 +22,7 @@ class Address {
     this.regionName,
     this.regionCode,
     this.postalCode,
+    this.pin,
   });
 
   final int id;
@@ -43,6 +46,9 @@ class Address {
   /// False for older addresses saved before PSGC locations; checkout requires true.
   final bool isStructured;
 
+  /// The exact spot the buyer pinned on the map, which the rider sees.
+  final MapPoint? pin;
+
   factory Address.fromJson(Map<String, dynamic> json) => Address(
         id: (json['id'] as num).toInt(),
         label: json['label'] as String? ?? 'Home',
@@ -62,6 +68,7 @@ class Address {
         formatted: json['formatted'] as String? ?? '',
         isDefault: json['is_default'] as bool? ?? false,
         isStructured: json['is_structured'] as bool? ?? false,
+        pin: MapPoint.fromJson(json['pin']),
       );
 }
 
@@ -78,6 +85,7 @@ class AddressInput {
     this.provinceCode,
     this.line2,
     this.isDefault = false,
+    this.pin,
   });
 
   final String label;
@@ -92,6 +100,9 @@ class AddressInput {
   final String postalCode;
   final bool isDefault;
 
+  /// Sent as null when the buyer removed the pin.
+  final MapPoint? pin;
+
   Map<String, dynamic> toJson() => {
         'label': label,
         'recipient_name': recipientName,
@@ -104,6 +115,8 @@ class AddressInput {
         if (line2 != null && line2!.isNotEmpty) 'line2': line2,
         'postal_code': postalCode,
         'is_default': isDefault,
+        'latitude': pin?.latitude,
+        'longitude': pin?.longitude,
       };
 }
 

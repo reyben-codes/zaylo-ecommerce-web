@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 
 import 'package:zaylo_mobile/api/rider_api.dart';
+import 'package:zaylo_mobile/components/buttons.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
 import 'package:zaylo_mobile/components/layout.dart';
+import 'package:zaylo_mobile/components/map/zaylo_map.dart';
 import 'package:zaylo_mobile/features/rider/dashboard/widgets/rider_dashboard_widgets.dart';
 import 'package:zaylo_mobile/features/rider/dashboard/widgets/rider_delivery_actions.dart';
 import 'package:zaylo_mobile/models/rider/rider_dashboard_models.dart';
@@ -75,6 +78,8 @@ class _RiderDeliveryDetailScreenState extends State<RiderDeliveryDetailScreen>
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
                 children: [
                   RiderDeliveryCard(delivery: shown),
+                  if (shown.destination case final destination? when shown.status != 'delivered')
+                    _DestinationMap(destination: destination, recipient: shown.recipientName),
                   if (delivery != null && (delivery.canAddDeliveryPhoto || delivery.hasDeliveryPhoto))
                     Padding(
                       padding: const EdgeInsets.only(top: 12),
@@ -113,6 +118,104 @@ class _RiderDeliveryDetailScreenState extends State<RiderDeliveryDetailScreen>
               ),
             );
           },
+        ),
+      );
+}
+
+/// Where the buyer pinned the delivery, with directions in Google Maps and the rider's own position on request.
+class _DestinationMap extends StatefulWidget {
+  const _DestinationMap({required this.destination, this.recipient});
+
+  final MapPoint destination;
+  final String? recipient;
+
+  @override
+  State<_DestinationMap> createState() => _DestinationMapState();
+}
+
+class _DestinationMapState extends State<_DestinationMap> {
+  final _map = MapController();
+  LatLng? _me;
+  bool _locating = false;
+
+  Future<void> _showMe() async {
+    setState(() => _locating = true);
+    try {
+      final here = await DeviceLocation.current();
+      if (!mounted) return;
+      setState(() => _me = here);
+      _map.fitCamera(CameraFit.bounds(
+        bounds: LatLngBounds.fromPoints([here, widget.destination.latLng]),
+        padding: const EdgeInsets.all(40),
+        maxZoom: 17,
+      ));
+    } on LocationUnavailable catch (error) {
+      if (mounted) showMessage(context, error.message);
+    } on Exception {
+      if (mounted) showMessage(context, 'Could not get your location.');
+    } finally {
+      if (mounted) setState(() => _locating = false);
+    }
+  }
+
+  Future<void> _directions() async {
+    if (!await openDirections(widget.destination) && mounted) {
+      showMessage(context, 'Could not open directions. Install Google Maps or a browser.');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(top: 12),
+        child: SectionCard(
+          padding: EdgeInsets.zero,
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+              child: SizedBox(
+                height: 220,
+                child: ZayloMap(
+                  controller: _map,
+                  center: widget.destination.latLng,
+                  zoom: 16,
+                  markers: [
+                    mapMarker(widget.destination.latLng, MapPinKind.home),
+                    if (_me != null) mapMarker(_me!, MapPinKind.me),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(
+                  widget.recipient == null ? 'Pinned delivery spot' : "${widget.recipient}'s pinned delivery spot",
+                  style: TextStyle(fontWeight: FontWeight.w700, color: ZayloColors.ink),
+                ),
+                const SizedBox(height: 10),
+                Row(children: [
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: _directions,
+                      icon: const Icon(Icons.directions),
+                      label: const Text('DIRECTIONS'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: secondaryButtonStyle,
+                      onPressed: _locating ? null : _showMe,
+                      icon: _locating
+                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                          : const Icon(Icons.my_location),
+                      label: const Text('WHERE AM I'),
+                    ),
+                  ),
+                ]),
+              ]),
+            ),
+          ]),
         ),
       );
 }

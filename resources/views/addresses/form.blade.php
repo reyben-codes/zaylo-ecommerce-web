@@ -40,6 +40,21 @@
         <button class="text-button" type="button" data-location-retry hidden>Retry loading locations</button>
         <label>House / Unit / Street<input name="line1" autocomplete="address-line1" maxlength="255" value="{{ old('line1', $address->line1) }}" required></label>
         <label>Additional address details <span>(optional)</span><input name="line2" autocomplete="address-line2" maxlength="255" value="{{ old('line2', $address->line2) }}" placeholder="Building, floor, landmark, etc."></label>
+        @if(\App\Services\ParcelTracking::pinsAddresses())
+            <fieldset class="map-pin" data-map-pin>
+                <legend>Exact location <span>(optional)</span></legend>
+                <p>Pin your door on the map so the rider finds you. Tap the map, drag the pin, or use your current location.</p>
+                <div class="zaylo-map" data-map role="application" aria-label="Map for pinning the exact location"></div>
+                <div class="map-pin__actions">
+                    <button class="text-button" type="button" data-map-locate><i class="fas fa-location-crosshairs" aria-hidden="true"></i> Use my current location</button>
+                    <button class="text-button" type="button" data-map-clear><i class="fas fa-xmark" aria-hidden="true"></i> Remove pin</button>
+                </div>
+                <p role="status" aria-live="polite" data-map-status></p>
+                <input type="hidden" name="latitude" value="{{ old('latitude', $address->latitude) }}">
+                <input type="hidden" name="longitude" value="{{ old('longitude', $address->longitude) }}">
+                <noscript><p>Turn on JavaScript to pin your location on the map.</p></noscript>
+            </fieldset>
+        @endif
         <label>Postal code<input name="postal_code" inputmode="numeric" autocomplete="postal-code" pattern="[0-9]{4}" maxlength="4" value="{{ old('postal_code', $address->postal_code) }}" required><span>Enter the four-digit postal code. PSGC does not supply postal codes.</span></label>
         @php($typeIcons = ['Home' => 'fa-house', 'Work' => 'fa-briefcase', 'School' => 'fa-graduation-cap', 'Other' => 'fa-location-dot'])
         <fieldset class="address-type-picker">
@@ -66,3 +81,7 @@
 </div>
 @endsection
 @push('scripts')<script src="{{ asset('js/address-selector.js') }}" defer></script>@endpush
+@if(\App\Services\ParcelTracking::pinsAddresses())
+    @include('partials.leaflet-assets')
+    @push('scripts')<script src="{{ asset('js/map-pin.js') }}?v={{ filemtime(public_path('js/map-pin.js')) }}" defer></script>@endpush
+@endif

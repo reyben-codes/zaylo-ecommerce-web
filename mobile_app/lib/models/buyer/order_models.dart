@@ -1,4 +1,50 @@
 import 'package:zaylo_mobile/models/json_parsing.dart';
+import 'package:zaylo_mobile/models/map_point.dart';
+
+/// Where the rider was when their app last reported, while the parcel is out for delivery.
+class RiderPosition {
+  const RiderPosition({required this.point, this.updatedAt});
+
+  final MapPoint point;
+  final DateTime? updatedAt;
+
+  static RiderPosition? fromJson(Object? json) => switch (MapPoint.fromJson(json)) {
+        final point? => RiderPosition(point: point, updatedAt: parseDate((json as Map<String, dynamic>)['updated_at'])),
+        null => null,
+      };
+}
+
+/// GET /mobile/orders/{id}/tracking: the buyer's delivery pin and, while the parcel is out for delivery, the rider.
+class ParcelTracking {
+  const ParcelTracking({
+    required this.stageLabel,
+    required this.message,
+    this.stage,
+    this.destination,
+    this.rider,
+    this.refreshSeconds = 15,
+  });
+
+  /// The parcel's step (e.g. out_for_delivery, delivered); null before the seller ships it.
+  final String? stage;
+  final String stageLabel;
+  final String message;
+  final MapPoint? destination;
+  final RiderPosition? rider;
+  final int refreshSeconds;
+
+  /// Whether the map is worth opening: the parcel is on its way and not delivered yet.
+  bool get isTrackable => stage != null && !const {'delivered', 'returned', 'cancelled'}.contains(stage);
+
+  factory ParcelTracking.fromJson(Map<String, dynamic> json) => ParcelTracking(
+        stage: json['stage'] as String?,
+        stageLabel: json['stage_label'] as String? ?? 'Preparing your order',
+        message: json['message'] as String? ?? '',
+        destination: MapPoint.fromJson(json['destination']),
+        rider: RiderPosition.fromJson(json['rider']),
+        refreshSeconds: json['refresh_seconds'] as int? ?? 15,
+      );
+}
 
 class OrderItem {
   const OrderItem({
@@ -83,6 +129,7 @@ class Order {
     this.deliveryPhotoUrl,
     this.history = const [],
     this.riderChat,
+    this.tracking,
     this.complaint,
     this.canComplain = false,
     this.canReturn = false,
@@ -127,6 +174,9 @@ class Order {
 
   /// Present once a rider has accepted the delivery.
   final RiderChatSummary? riderChat;
+
+  /// The parcel on a map; only on the detailed order.
+  final ParcelTracking? tracking;
 
   /// The complaint filed about this order, or whether one can be filed.
   final OrderComplaint? complaint;
@@ -176,6 +226,9 @@ class Order {
             .toList(),
         riderChat: json['rider_chat'] is Map<String, dynamic>
             ? RiderChatSummary.fromJson(json['rider_chat'] as Map<String, dynamic>)
+            : null,
+        tracking: json['tracking'] is Map<String, dynamic>
+            ? ParcelTracking.fromJson(json['tracking'] as Map<String, dynamic>)
             : null,
         complaint: json['complaint'] is Map<String, dynamic>
             ? OrderComplaint.fromJson(json['complaint'] as Map<String, dynamic>)

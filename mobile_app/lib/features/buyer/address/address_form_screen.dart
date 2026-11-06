@@ -8,6 +8,8 @@ import 'package:zaylo_mobile/components/buttons.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
 import 'package:zaylo_mobile/components/form_fields.dart';
 import 'package:zaylo_mobile/components/layout.dart';
+import 'package:zaylo_mobile/components/map/map_pin_screen.dart';
+import 'package:zaylo_mobile/components/map/zaylo_map.dart';
 import 'package:zaylo_mobile/models/buyer/address_models.dart';
 import 'package:zaylo_mobile/state/app_state.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
@@ -34,6 +36,14 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
   late final _postal = TextEditingController(text: widget.address?.postalCode);
   late String _label = widget.address?.label ?? 'Home';
   late bool _isDefault = widget.address?.isDefault ?? false;
+  late MapPoint? _pin = widget.address?.pin;
+
+  Future<void> _pinOnMap() async {
+    final result = await Navigator.of(context).push<({MapPoint? point})>(
+      MaterialPageRoute(builder: (_) => MapPinScreen(initial: _pin)),
+    );
+    if (result != null && mounted) setState(() => _pin = result.point);
+  }
 
   List<Location> _regions = [];
   List<Location> _provinces = [];
@@ -166,6 +176,7 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
           line2: _line2.text.trim(),
           postalCode: _postal.text.trim(),
           isDefault: _isDefault,
+          pin: _pin,
         ),
         id: widget.address?.id,
       );
@@ -296,6 +307,26 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
                 decoration: zayloInputDecoration('e.g. Unit 4B, near the chapel', errorText: _fieldErrors['line2'])
                     .copyWith(counterText: ''),
               ),
+              const SizedBox(height: 16),
+              const FieldLabel('Exact location (optional)'),
+              SectionCard(
+                padding: EdgeInsets.zero,
+                child: ListTile(
+                  leading: Icon(_pin == null ? Icons.add_location_alt_outlined : Icons.location_on, color: ZayloColors.ink),
+                  title: Text(_pin == null ? 'Pin your door on the map' : 'Pinned on the map',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: ZayloColors.ink)),
+                  subtitle: Text(_pin == null
+                      ? 'Helps the rider find you, and lets you track your parcel'
+                      : '${_pin!.latitude.toStringAsFixed(5)}, ${_pin!.longitude.toStringAsFixed(5)}'),
+                  trailing: Text(_pin == null ? 'Pin' : 'Change', style: const TextStyle(fontWeight: FontWeight.w700)),
+                  onTap: _pinOnMap,
+                ),
+              ),
+              if (_fieldErrors['latitude'] case final error?)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(error, style: TextStyle(fontSize: 12, color: ZayloColors.danger)),
+                ),
               const SizedBox(height: 16),
               const FieldLabel('Postal code'),
               TextFormField(

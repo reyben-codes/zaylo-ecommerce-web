@@ -19,10 +19,12 @@ class Shipment extends Model
         'status', 'fee_minor', 'cod_amount_minor', 'cod_collected', 'attempts',
         'pickup_confirmed_at', 'pickup_scheduled_for', 'sorted_at', 'sort_area',
         'delivery_proof_path', 'handover_confirmed_at',
+        'rider_latitude', 'rider_longitude', 'rider_located_at',
     ];
 
     protected $casts = [
         'cod_collected' => 'boolean', 'picked_up_at' => 'datetime', 'delivered_at' => 'datetime',
+        'rider_located_at' => 'datetime',
         'pickup_confirmed_at' => 'datetime', 'pickup_scheduled_for' => 'date', 'sorted_at' => 'datetime',
         'handover_confirmed_at' => 'datetime',
     ];

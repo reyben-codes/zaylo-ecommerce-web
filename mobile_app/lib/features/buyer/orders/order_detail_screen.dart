@@ -9,6 +9,7 @@ import 'package:zaylo_mobile/components/feedback.dart';
 import 'package:zaylo_mobile/components/layout.dart';
 import 'package:zaylo_mobile/components/star_rating.dart';
 import 'package:zaylo_mobile/features/buyer/orders/complaint_form_screen.dart';
+import 'package:zaylo_mobile/features/buyer/orders/order_tracking_screen.dart';
 import 'package:zaylo_mobile/features/buyer/orders/review_form_screen.dart';
 import 'package:zaylo_mobile/features/buyer/orders/status_pill.dart';
 import 'package:zaylo_mobile/features/buyer/widgets/shop_actions.dart';
@@ -195,6 +196,21 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                         if (order.trackingNumber != null) ...[
                           const SizedBox(height: 6),
                           Text('Tracking number: ${order.trackingNumber}', style: const TextStyle(fontSize: 12)),
+                        ],
+                        if (order.tracking case final tracking? when tracking.isTrackable) ...[
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              style: secondaryButtonStyle,
+                              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                                builder: (_) => OrderTrackingScreen(
+                                    orderId: order.id, orderNumber: order.orderNumber, initial: tracking),
+                              )),
+                              icon: const Icon(Icons.map_outlined),
+                              label: const Text('TRACK ON MAP'),
+                            ),
+                          ),
                         ],
                         if (order.history.isNotEmpty) ...[
                           const SizedBox(height: 14),

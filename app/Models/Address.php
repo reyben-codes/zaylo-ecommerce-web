@@ -11,9 +11,11 @@ class Address extends Model
         'user_id', 'label', 'recipient', 'recipient_name', 'phone', 'line1', 'line2',
         'barangay', 'city', 'province', 'postal_code', 'country_code', 'is_default',
         'region_code', 'region_name', 'province_code', 'city_municipality_code', 'barangay_code',
+        // The exact spot the buyer pinned on the map (App\Services\ParcelTracking).
+        'latitude', 'longitude',
     ];
 
-    protected $casts = ['is_default' => 'boolean'];
+    protected $casts = ['is_default' => 'boolean', 'latitude' => 'float', 'longitude' => 'float'];
 
     public function user()
     {
