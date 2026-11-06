@@ -191,7 +191,22 @@
         // Field helpers (names, phone numbers, addresses, documents, the email code) set themselves up first.
         body.dispatchEvent(new CustomEvent('zaylo:content', { bubbles: true }));
         panel.querySelectorAll('[data-auth-wizard]').forEach(setupWizard);
+        showSignUpLength(panel);
         focusPanel();
+    }
+
+    // The email code step's bar matches the length of the sign-up that led to it (3 for buyers, up to 7 for partners).
+    function showSignUpLength(panel) {
+        const bar = panel.matches('[data-auth-panel="verify"]') && panel.querySelector('.auth-wizard__bar');
+        if (!bar) return;
+        let total = 0;
+        try { total = Number(sessionStorage.getItem('zaylo-sign-up-steps')) || 0; } catch { total = 0; }
+        if (total < 2) return;
+        bar.replaceChildren(...Array.from({ length: total }, (_, position) => {
+            const item = document.createElement('li');
+            item.className = position === total - 1 ? 'is-current' : 'is-done';
+            return item;
+        }));
     }
 
     function focusPanel() {
@@ -249,7 +264,14 @@
             back.hidden = index === 0;
             next.hidden = last;
             submit.hidden = !last;
-            next.textContent = `Continue to ${(active[index + 1]?.dataset.stepTitle || 'next step').replace(/^Your /, '').toLowerCase()}`;
+            // Phones show just "Continue" (CSS), wider screens name the next step.
+            const upcoming = (active[index + 1]?.dataset.stepTitle || 'next step').replace(/^Your /, '').toLowerCase();
+            next.innerHTML = '<span class="auth-wizard__next-long"></span><span class="auth-wizard__next-short">Continue</span>';
+            next.firstChild.textContent = `Continue to ${upcoming}`;
+            next.setAttribute('aria-label', `Continue to ${upcoming}`);
+            // The partner notice is read on the first step; later steps keep the room for the form.
+            panel.classList.toggle('is-past-first-step', index > 0);
+            try { sessionStorage.setItem('zaylo-sign-up-steps', String(total)); } catch { /* private mode */ }
 
             if (direction) body.scrollTo({ top: 0, behavior: reduceMotion.matches ? 'auto' : 'smooth' });
             if (focus && direction) title.focus({ preventScroll: true });
