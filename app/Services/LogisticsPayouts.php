@@ -14,8 +14,9 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * What ZAYLO owes logistics partners: for every parcel a partner delivered, PARTNER_SHARE of its shipping fee goes
- * to the partner company and the rest stays with ZAYLO. The admin pays partners in batches (LogisticsPayout); a
- * partner with several branches is paid as one company and pays its branches itself.
+ * to the partner company and the rest stays with ZAYLO. The rider's commission for the parcel (RiderWallet) is part of
+ * the partner's share: the partner sends it to the rider when they withdraw. The admin pays partners in batches
+ * (LogisticsPayout); a partner with several branches is paid as one company and pays its branches itself.
  */
 class LogisticsPayouts
 {
@@ -36,7 +37,7 @@ class LogisticsPayouts
      * Every delivered parcel with a partner, newest first.
      *
      * @return Collection<int, array{shipment_id:int, tracking:string, provider_id:int, provider:string, delivered_at:?Carbon,
-     *     fee:float, partner:float, zaylo:float, payout_id:?int}>
+     *     fee:float, partner:float, rider:float, zaylo:float, payout_id:?int}>
      */
     public function rows(?LogisticsProvider $provider = null): Collection
     {
@@ -49,7 +50,7 @@ class LogisticsPayouts
             ->sortByDesc(fn (array $row) => $row['delivered_at']?->getTimestamp() ?? 0)->values();
     }
 
-    /** Totals over rows: shipping fees, each side's share, and what is paid and still owed to partners. */
+    /** Totals over rows: shipping fees, each side's share, rider commissions, and what is paid and still owed to partners. */
     public function summary(Collection $rows): array
     {
         $unpaid = $rows->whereNull('payout_id');
@@ -58,6 +59,7 @@ class LogisticsPayouts
             'parcels' => $rows->count(),
             'fees' => round($rows->sum('fee'), 2),
             'partner' => round($rows->sum('partner'), 2),
+            'rider' => round($rows->sum('rider'), 2),
             'zaylo' => round($rows->sum('zaylo'), 2),
             'paid' => round($rows->whereNotNull('payout_id')->sum('partner'), 2),
             'owed' => round($unpaid->sum('partner'), 2),
@@ -95,6 +97,9 @@ class LogisticsPayouts
                 'shipping_fees' => round($rows->sum('fee'), 2),
                 'amount' => round($rows->sum('partner'), 2),
                 'partner_share' => self::PARTNER_SHARE,
+            ] + (Schema::hasColumn('logistics_payouts', 'rider_commissions') ? [
+                'rider_commissions' => round($rows->sum('rider'), 2),
+            ] : []) + [
                 'reference' => filled($reference) ? trim($reference) : null,
                 'paid_by' => $admin->id,
                 'paid_at' => now(),
@@ -122,7 +127,10 @@ class LogisticsPayouts
     private function row(Shipment $shipment): array
     {
         $fee = self::feeOf($shipment);
-        $partner = round($fee * self::PARTNER_SHARE, 2);
+        $share = round($fee * self::PARTNER_SHARE, 2);
+        // The rider's commission is paid out of the partner's share.
+        $rider = RiderWallet::ready() ? round((float) ($shipment->riderCommission?->amount ?? 0), 2) : 0.0;
+        $partner = $share;
 
         return [
             'shipment_id' => $shipment->id,
@@ -132,7 +140,8 @@ class LogisticsPayouts
             'delivered_at' => RiderDeliveries::deliveredAt($shipment),
             'fee' => $fee,
             'partner' => $partner,
-            'zaylo' => round($fee - $partner, 2),
+            'rider' => $rider,
+            'zaylo' => round($fee - $share, 2),
             'payout_id' => $shipment->logistics_payout_id ? (int) $shipment->logistics_payout_id : null,
         ];
     }
@@ -150,6 +159,7 @@ class LogisticsPayouts
         return array_values(array_filter([
             Schema::hasColumn('shipments', 'order_id') ? 'order' : null,
             Schema::hasColumn('shipments', 'seller_order_id') ? 'sellerOrder' : null,
+            RiderWallet::ready() ? 'riderCommission' : null,
         ]));
     }
 }

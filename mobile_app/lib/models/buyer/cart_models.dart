@@ -100,6 +100,48 @@ class CourierOption {
       );
 }
 
+/// What one logistics partner charges per seller to one saved address.
+class ShippingRate {
+  const ShippingRate({required this.fee, required this.label, this.zone});
+
+  final double fee;
+
+  /// How far the address is from the partner's hub, e.g. "Same province".
+  final String label;
+  final String? zone;
+
+  factory ShippingRate.fromJson(Map<String, dynamic> json) => ShippingRate(
+        fee: parseMoney(json['fee']),
+        label: json['label'] as String? ?? 'Standard rate',
+        zone: json['zone'] as String?,
+      );
+}
+
+/// A logistics partner the buyer can pick at checkout. The shipping fee depends on how far the delivery address is
+/// from the partner's hub, so each partner lists its fee to every saved address.
+class LogisticsPartnerOption {
+  const LogisticsPartnerOption({required this.id, required this.name, this.hub = '', this.rates = const {}});
+
+  final int id;
+  final String name;
+
+  /// Where the partner's hub is, e.g. "City of Bacoor, Cavite".
+  final String hub;
+
+  /// Keyed by address id.
+  final Map<int, ShippingRate> rates;
+
+  factory LogisticsPartnerOption.fromJson(Map<String, dynamic> json) => LogisticsPartnerOption(
+        id: json['id'] as int,
+        name: json['name'] as String,
+        hub: json['hub'] as String? ?? '',
+        rates: {
+          for (final MapEntry(:key, :value) in (json['rates'] as Map<String, dynamic>? ?? const {}).entries)
+            if (int.tryParse(key) case final id?) id: ShippingRate.fromJson(value as Map<String, dynamic>),
+        },
+      );
+}
+
 class CheckoutQuote {
   const CheckoutQuote({
     required this.items,
@@ -111,6 +153,9 @@ class CheckoutQuote {
     this.identityVerified = true,
     this.identityRequiredFor = const [],
     this.couriers = const [],
+    this.logisticsPartners = const [],
+    this.defaultPartnerId,
+    this.sellerCount = 1,
   });
 
   final List<CartItem> items;
@@ -130,6 +175,29 @@ class CheckoutQuote {
   /// Courier trucks to choose from; the first is the default.
   final List<CourierOption> couriers;
 
+  /// Partners to choose from, with their fees; empty when the server charges a flat fee.
+  final List<LogisticsPartnerOption> logisticsPartners;
+
+  /// The partner nearest the first usable address, which [totals] were priced with.
+  final int? defaultPartnerId;
+
+  /// Shipping is charged once per seller.
+  final int sellerCount;
+
+  /// The totals with [partnerId] delivering to [addressId], or the server's [totals] when that pair has no rate.
+  CheckoutTotals totalsFor(int? partnerId, int? addressId) {
+    final rate = logisticsPartners.where((partner) => partner.id == partnerId).firstOrNull?.rates[addressId];
+    if (rate == null) return totals;
+    final shipping = rate.fee * sellerCount;
+    final discount = totals.shippingDiscount > 0 ? shipping : 0.0;
+    return CheckoutTotals(
+      subtotal: totals.subtotal,
+      shipping: shipping,
+      shippingDiscount: discount,
+      total: totals.subtotal + shipping - discount,
+    );
+  }
+
   factory CheckoutQuote.fromJson(Map<String, dynamic> json) {
     final delivery = json['estimated_delivery'] as Map<String, dynamic>?;
     return CheckoutQuote(
@@ -148,6 +216,11 @@ class CheckoutQuote {
       couriers: (json['couriers'] as List<dynamic>? ?? const [])
           .map((item) => CourierOption.fromJson(item as Map<String, dynamic>))
           .toList(),
+      logisticsPartners: (json['logistics_partners'] as List<dynamic>? ?? const [])
+          .map((item) => LogisticsPartnerOption.fromJson(item as Map<String, dynamic>))
+          .toList(),
+      defaultPartnerId: json['default_logistics_provider_id'] as int?,
+      sellerCount: json['seller_count'] as int? ?? 1,
     );
   }
 }

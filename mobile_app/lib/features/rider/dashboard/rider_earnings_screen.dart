@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 
 import 'package:zaylo_mobile/api/rider_api.dart';
+import 'package:zaylo_mobile/components/buttons.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
 import 'package:zaylo_mobile/components/layout.dart';
+import 'package:zaylo_mobile/features/rider/wallet/rider_wallet_screen.dart';
 import 'package:zaylo_mobile/models/rider/rider_activity_models.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 import 'package:zaylo_mobile/utils/formatters.dart';
 
-/// Earnings from delivery fees: today, this week, this month, all time, and
-/// a day-by-day view of the last 7 days. Opened from the Home tab's earnings card.
+/// Earnings from commissions on delivered parcels: today, this week, this month, all time, and a day-by-day view
+/// of the last 7 days, with a way into the wallet. Opened from the Home tab's earnings card.
 class RiderEarningsScreen extends StatefulWidget {
   const RiderEarningsScreen({super.key, required this.api, this.onOpenHistory});
 
@@ -69,6 +71,15 @@ class _RiderEarningsScreenState extends State<RiderEarningsScreen> {
                       Text('${today.deliveries} deliver${today.deliveries == 1 ? 'y' : 'ies'} completed',
                           style: TextStyle(color: ZayloColors.white)),
                     ]),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => RiderWalletScreen(api: widget.api),
+                    )),
+                    style: secondaryButtonStyle,
+                    icon: const Icon(Icons.account_balance_wallet_outlined),
+                    label: const Text('WALLET & GCASH WITHDRAWALS'),
                   ),
                   const SizedBox(height: 16),
                   for (final period in [RiderPeriod.week, RiderPeriod.month, RiderPeriod.all])

@@ -163,6 +163,7 @@ class BuyerApi extends ApiClient {
     required String paymentMethod,
     required String idempotencyKey,
     String? courierChoice,
+    int? logisticsProviderId,
     String? voucherCode,
     String? notes,
   }) async {
@@ -172,6 +173,7 @@ class BuyerApi extends ApiClient {
       'payment_method': paymentMethod,
       'idempotency_key': idempotencyKey,
       if (courierChoice != null) 'courier_choice': courierChoice,
+      if (logisticsProviderId != null) 'logistics_provider_id': logisticsProviderId,
       if (voucherCode != null && voucherCode.isNotEmpty) 'voucher_code': voucherCode,
       if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
     });

@@ -7,6 +7,7 @@ use App\Services\ShipmentWorkflow;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
@@ -67,6 +68,12 @@ class Shipment extends Model
     public function rider(): BelongsTo
     {
         return $this->belongsTo(Rider::class);
+    }
+
+    /** What the rider earned for delivering this parcel (App\Services\RiderWallet). */
+    public function riderCommission(): HasOne
+    {
+        return $this->hasOne(RiderCommission::class);
     }
 
     public function events(): HasMany

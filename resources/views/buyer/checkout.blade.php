@@ -5,6 +5,13 @@
     $usableAddresses = $addresses->filter(fn ($address) => $address->isStructured());
     $selectedAddress = old('address_id', session('selected_address_id', $usableAddresses->first()?->id));
     $addressTypes = ['Home' => 'fa-house', 'Work' => 'fa-briefcase', 'School' => 'fa-graduation-cap', 'Other' => 'fa-location-dot'];
+    // The partner the buyer picked, or the one with the lowest fee to the chosen address.
+    $rateTo = fn ($partner) => $partner['rates'][(int) $selectedAddress] ?? null;
+    $selectedPartner = $shippingTable->firstWhere('id', (int) old('logistics_provider_id'))
+        ?? $shippingTable->sortBy(fn ($partner) => $rateTo($partner)['fee'] ?? $standardFee)->first();
+    $perSeller = $selectedPartner ? ($rateTo($selectedPartner)['fee'] ?? $standardFee) : $standardFee;
+    $shipping = $perSeller * $sellerCount;
+    $shippingDiscount = $voucher ? $shipping : 0;
 @endphp
 
 <div class="page-hero"><div class="page-hero-inner"><i class="fas fa-credit-card" aria-hidden="true"></i><div><h1>Checkout</h1><p>Review your order and delivery details before placing it.</p></div></div></div>
@@ -92,9 +99,36 @@
                 <label class="checkout-notes-label">Delivery notes <span>(optional)</span><textarea name="notes" rows="3" maxlength="500" placeholder="Instructions for the seller or courier">{{ old('notes') }}</textarea></label>
             </section>
 
+            @if($shippingTable->isNotEmpty())
+                <section class="checkout-section-card" aria-labelledby="checkout-partner-title">
+                    <div class="checkout-section-heading">
+                        <span class="checkout-step">3</span>
+                        <div>
+                            <h2 id="checkout-partner-title">Logistics partner</h2>
+                            <p>The shipping fee depends on how far your address is from the partner's hub.</p>
+                        </div>
+                    </div>
+                    <fieldset class="payment-method-options courier-options">
+                        <legend class="sr-only">Choose a logistics partner</legend>
+                        @foreach($shippingTable as $partner)
+                            @php($partnerChecked = $selectedPartner && $selectedPartner['id'] === $partner['id'])
+                            @php($rate = $rateTo($partner))
+                            <label class="payment-method-option {{ $partnerChecked ? 'selected' : '' }}">
+                                <input type="radio" name="logistics_provider_id" value="{{ $partner['id'] }}" @checked($partnerChecked) data-shipping-rates="{{ json_encode($partner['rates']) }}">
+                                <span class="payment-method-option-icon"><i class="fas fa-warehouse" aria-hidden="true"></i></span>
+                                <span class="payment-method-option-content">
+                                    <span class="payment-method-option-title">{{ $partner['name'] }}</span>
+                                    <span class="payment-method-option-description">@if($partner['hub'])Hub: {{ $partner['hub'] }} · @endif<span data-shipping-rate>&#8369;{{ number_format($rate['fee'] ?? $standardFee, 2) }} per seller · {{ $rate['label'] ?? 'Standard rate' }}</span></span>
+                                </span>
+                            </label>
+                        @endforeach
+                    </fieldset>
+                </section>
+            @endif
+
             <section class="checkout-section-card" aria-labelledby="checkout-courier-title">
                 <div class="checkout-section-heading">
-                    <span class="checkout-step">3</span>
+                    <span class="checkout-step">{{ $shippingTable->isNotEmpty() ? 4 : 3 }}</span>
                     <div>
                         <h2 id="checkout-courier-title">Delivery courier truck</h2>
                         <p>Choose which courier truck will pick up from the seller and deliver to your home with parcel scanning.</p>
@@ -117,7 +151,7 @@
             </section>
 
             <section class="checkout-section-card" aria-labelledby="checkout-payment-title">
-                <div class="checkout-section-heading"><span class="checkout-step">4</span><div><h2 id="checkout-payment-title">Payment method</h2><p>Choose how you would like to pay.</p></div></div>
+                <div class="checkout-section-heading"><span class="checkout-step">{{ $shippingTable->isNotEmpty() ? 5 : 4 }}</span><div><h2 id="checkout-payment-title">Payment method</h2><p>Choose how you would like to pay.</p></div></div>
                 <fieldset class="payment-method-options"><legend class="sr-only">Payment method</legend>
                     <label class="payment-method-option {{ old('payment_method', 'cod') === 'cod' ? 'selected' : '' }}"><input type="radio" name="payment_method" value="cod" @checked(old('payment_method', 'cod') === 'cod')><span class="payment-method-option-icon"><i class="fas fa-money-bill-wave" aria-hidden="true"></i></span><span class="payment-method-option-content"><span class="payment-method-option-title">Cash on Delivery</span><span class="payment-method-option-description">Pay when your order arrives</span></span></label>
                     <label class="payment-method-option {{ old('payment_method') === 'gcash' ? 'selected' : '' }}"><input type="radio" name="payment_method" value="gcash" @checked(old('payment_method') === 'gcash')><span class="payment-method-option-icon"><i class="fas fa-mobile-alt" aria-hidden="true"></i></span><span class="payment-method-option-content"><span class="payment-method-option-title">GCash</span><span class="payment-method-option-description">Manual payment, pending confirmation</span></span></label>
@@ -125,12 +159,12 @@
             </section>
         </div>
 
-        <aside class="checkout-card checkout-order-summary">
+        <aside class="checkout-card checkout-order-summary" data-checkout-summary data-subtotal="{{ $subtotal }}" data-sellers="{{ $sellerCount }}" data-standard-fee="{{ $standardFee }}" data-free-shipping="{{ $voucher ? 1 : 0 }}">
             <h2>Order summary</h2>
             <p class="summary-row"><span>Products ({{ $items->sum('quantity') }})</span><strong>&#8369;{{ number_format($subtotal, 2) }}</strong></p>
-            <p class="summary-row"><span>Shipping ({{ $items->pluck('product.seller_id')->unique()->count() }} seller(s))</span><strong>&#8369;{{ number_format($shipping, 2) }}</strong></p>
-            @if($shippingDiscount > 0)<p class="summary-row checkout-discount"><span>Free shipping voucher</span><strong>−&#8369;{{ number_format($shippingDiscount, 2) }}</strong></p>@endif
-            <p class="summary-row checkout-total"><span>Total to pay</span><strong>&#8369;{{ number_format($subtotal + $shipping - $shippingDiscount, 2) }}</strong></p>
+            <p class="summary-row"><span>Shipping ({{ $sellerCount }} seller(s))</span><strong data-summary-shipping>&#8369;{{ number_format($shipping, 2) }}</strong></p>
+            @if($voucher)<p class="summary-row checkout-discount"><span>Free shipping voucher</span><strong data-summary-discount>−&#8369;{{ number_format($shippingDiscount, 2) }}</strong></p>@endif
+            <p class="summary-row checkout-total"><span>Total to pay</span><strong data-summary-total>&#8369;{{ number_format($subtotal + $shipping - $shippingDiscount, 2) }}</strong></p>
             <p class="checkout-summary-note">Your final total is recalculated when you place the order if prices or stock have changed.</p>
             <button class="market-button" type="submit" @disabled($usableAddresses->isEmpty() || $identityItems->isNotEmpty())>Place order</button>
             @if($identityItems->isNotEmpty())<p class="checkout-summary-note">18+ items need an approved ID before you can order them.</p>@endif
@@ -141,7 +175,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    ['payment_method', 'courier_choice'].forEach(name => {
+    ['payment_method', 'courier_choice', 'logistics_provider_id'].forEach(name => {
         document.querySelectorAll(`input[name="${name}"]`).forEach(radio => {
             radio.addEventListener('change', () => {
                 radio.closest('fieldset').querySelectorAll('.payment-method-option').forEach(option => {
@@ -152,4 +186,5 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 </script>
+<script src="{{ asset('js/checkout-shipping.js') }}?v={{ filemtime(public_path('js/checkout-shipping.js')) }}" defer></script>
 @endsection

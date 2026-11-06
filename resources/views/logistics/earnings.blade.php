@@ -11,7 +11,7 @@
         <div>
             <p class="seller-eyebrow">{{ $provider->name }}</p>
             <h1>Earnings</h1>
-            <p>You earn {{ $percent }}% of the shipping fee of every parcel your riders deliver, including free-shipping orders (ZAYLO covers the voucher). ZAYLO pays your company, and you pay your riders and branches.</p>
+            <p>You earn {{ $percent }}% of the shipping fee of every parcel your riders deliver, including free-shipping orders (ZAYLO covers the voucher). Your rider's commission of &#8369;{{ number_format($riderCommission, 2) }} per delivered parcel is part of it: it goes to the rider's wallet, and you send it to them by GCash when they withdraw (see Rider withdrawals). ZAYLO pays your company, and you pay your branches.</p>
         </div>
     </section>
 
@@ -19,7 +19,7 @@
         <div class="seller-stat">
             <span class="seller-stat__label"><i class="fas fa-wallet" aria-hidden="true"></i> Earned</span>
             <strong class="seller-stat__value">&#8369;{{ number_format($summary['partner'], 2) }}</strong>
-            <span class="seller-stat__note">{{ number_format($summary['parcels']) }} delivered {{ Str::plural('parcel', $summary['parcels']) }}</span>
+            <span class="seller-stat__note">{{ number_format($summary['parcels']) }} delivered {{ Str::plural('parcel', $summary['parcels']) }}, including &#8369;{{ number_format($summary['rider'], 2) }} rider commissions</span>
         </div>
         <div class="seller-stat">
             <span class="seller-stat__label"><i class="fas fa-circle-check" aria-hidden="true"></i> Paid</span>
@@ -64,7 +64,7 @@
         <header class="seller-panel__header"><div><h2>Delivered parcels</h2><p>The latest 100 parcels and what you earn from each.</p></div></header>
         <div class="seller-table-wrap">
             <table class="seller-table workspace-table admin-money">
-                <thead><tr><th>Parcel</th><th>Delivered</th><th>Shipping fee</th><th>Your {{ $percent }}%</th><th>Status</th></tr></thead>
+                <thead><tr><th>Parcel</th><th>Delivered</th><th>Shipping fee</th><th>Your {{ $percent }}%</th><th>Rider commission</th><th>Status</th></tr></thead>
                 <tbody>
                     @forelse($parcels as $parcel)
                         <tr>
@@ -72,6 +72,7 @@
                             <td>{{ $parcel['delivered_at']?->timezone('Asia/Manila')->format('M j, Y g:i A') ?? '—' }}</td>
                             <td>&#8369;{{ number_format($parcel['fee'], 2) }}</td>
                             <td>&#8369;{{ number_format($parcel['partner'], 2) }}</td>
+                            <td>&#8369;{{ number_format($parcel['rider'], 2) }}</td>
                             <td>
                                 @if($parcel['payout_id'])
                                     <span class="commission-state commission-state--settled">Paid</span>
@@ -81,7 +82,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="5"><p class="admin-empty-inline">No delivered parcels yet.</p></td></tr>
+                        <tr><td colspan="6"><p class="admin-empty-inline">No delivered parcels yet.</p></td></tr>
                     @endforelse
                 </tbody>
             </table>

@@ -13,6 +13,7 @@ use App\Models\ProductVariant;
 use App\Models\SellerOrder;
 use App\Models\SellerProfile;
 use App\Models\Shipment;
+use App\Services\CheckoutService;
 use App\Services\LogisticsMessenger;
 use App\Services\OrderReceipts;
 use App\Services\SellerApplicationService;
@@ -289,7 +290,7 @@ class SellerController extends Controller
         ], [
             'status.in' => 'The rider updates this parcel from here on.',
         ]);
-        $partner = $data['status'] === 'ready_for_pickup' ? $this->chosenPartner($request) : null;
+        $partner = $data['status'] === 'ready_for_pickup' ? $this->chosenPartner($request, $order) : null;
 
         DB::transaction(function () use ($order, $data, $partner) {
             $locked = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
@@ -398,14 +399,19 @@ class SellerController extends Controller
     }
 
     /**
-     * The partner picked on "Ready to ship". With a single partner the choice is made for the seller; with none
-     * the request is left open and the first partner to confirm it takes it.
+     * The partner picked on "Ready to ship": the one the buyer picked at checkout, whose distance set the shipping
+     * fee, while it still takes parcels. Otherwise the seller picks; with a single partner the choice is made for the
+     * seller, and with none the request is left open and the first partner to confirm it takes it.
      */
-    private function chosenPartner(Request $request): ?LogisticsProvider
+    private function chosenPartner(Request $request, Order $order): ?LogisticsProvider
     {
         $partners = $this->pickupPartners();
         if ($partners->isEmpty()) {
             return null;
+        }
+        $buyerPick = CheckoutService::choosesPartner() ? $partners->firstWhere('id', (int) $order->logistics_provider_id) : null;
+        if ($buyerPick) {
+            return $buyerPick;
         }
         $chosen = $request->input('logistics_provider_id') ?? ($partners->count() === 1 ? $partners->first()->id : null);
         $partner = $partners->firstWhere('id', (int) $chosen);

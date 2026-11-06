@@ -84,6 +84,24 @@ class PickupPartnerTest extends TestCase
         $this->actingAs($seller)->get(route('seller.orders'))->assertSee('Collected')->assertSee('by Agila Logistics');
     }
 
+    public function test_the_partner_the_buyer_picked_at_checkout_collects_the_parcel(): void
+    {
+        $this->addPartnerColumn();
+        $this->partner('Express Delivery');
+        [, $agila] = $this->partner('Agila Logistics');
+        $seller = $this->seller();
+        $order = $this->order($this->buyer(), $seller, 'processing');
+        $order->forceFill(['logistics_provider_id' => $agila->id])->save();
+
+        $this->actingAs($seller)->get(route('seller.orders'))->assertOk()
+            ->assertSee('Buyer chose Agila Logistics')->assertDontSee('<select id="partner-'.$order->id.'"', false);
+        // The buyer's pick wins over another partner sent with the request.
+        $this->patch(route('seller.orders.status', $order), ['status' => 'ready_for_pickup', 'logistics_provider_id' => 999])
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('status', 'Pickup requested from Agila Logistics. Print the waybill and attach it to the parcel.');
+        $this->assertSame($agila->id, (int) $order->fresh()->shipment->logistics_provider_id);
+    }
+
     public function test_a_single_partner_is_chosen_for_the_seller_and_open_requests_go_to_the_first_to_confirm(): void
     {
         $this->addPartnerColumn();

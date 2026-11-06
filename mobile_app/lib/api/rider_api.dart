@@ -10,6 +10,7 @@ import 'package:zaylo_mobile/models/chat_media.dart';
 import 'package:zaylo_mobile/models/rider/rider_activity_models.dart';
 import 'package:zaylo_mobile/models/rider/rider_dashboard_models.dart';
 import 'package:zaylo_mobile/models/rider/rider_models.dart';
+import 'package:zaylo_mobile/models/rider/rider_wallet_models.dart';
 
 /// Rider endpoints. A rider token lives on its own [RiderApi], separate from
 /// the buyer session in AppState, so signing in as a rider never signs the
@@ -158,6 +159,15 @@ class RiderApi extends ApiClient {
           body: body, clientId: clientId, attachment: attachment))['message'] as Map<String, dynamic>);
 
   Future<RiderEarnings> earnings() async => RiderEarnings.fromJson(await send('GET', '/mobile/rider/earnings'));
+
+  Future<RiderWallet> wallet() async => RiderWallet.fromJson(await send('GET', '/mobile/rider/wallet'));
+
+  /// Asks for [amount] to be sent to GCash. Returns the confirmation and the updated wallet.
+  Future<(String, RiderWallet)> withdraw({required double amount, required String gcashNumber, required String gcashName}) async {
+    final data = await send('POST', '/mobile/rider/wallet/withdrawals',
+        body: {'amount': amount, 'gcash_number': gcashNumber, 'gcash_name': gcashName});
+    return (data['message'] as String? ?? 'Withdrawal requested.', RiderWallet.fromJson(data));
+  }
 
   // ------------------------------------------------------- Account settings
 

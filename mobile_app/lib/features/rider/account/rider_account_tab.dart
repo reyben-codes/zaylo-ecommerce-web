@@ -13,6 +13,7 @@ import 'package:zaylo_mobile/components/theme_toggle.dart';
 import 'package:zaylo_mobile/features/rider/account/rider_address_screen.dart';
 import 'package:zaylo_mobile/features/rider/account/rider_change_password_screen.dart';
 import 'package:zaylo_mobile/features/rider/dashboard/widgets/rider_dashboard_widgets.dart';
+import 'package:zaylo_mobile/features/rider/wallet/rider_wallet_screen.dart';
 import 'package:zaylo_mobile/models/rider/rider_dashboard_models.dart';
 import 'package:zaylo_mobile/models/rider/rider_models.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
@@ -194,6 +195,19 @@ class _RiderAccountTabState extends State<RiderAccountTab> {
                     ),
                     _Row(icon: Icons.mail_outline, label: 'Email', value: rider.email),
                   ]),
+                ),
+                const _Heading('Wallet'),
+                SectionCard(
+                  padding: EdgeInsets.zero,
+                  child: _Row(
+                    icon: Icons.account_balance_wallet_outlined,
+                    label: 'Wallet',
+                    value: 'Your commissions and GCash withdrawals',
+                    action: 'Open',
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => RiderWalletScreen(api: widget.api),
+                    )),
+                  ),
                 ),
                 const _Heading('Security'),
                 SectionCard(

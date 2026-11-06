@@ -10,6 +10,7 @@ use App\Models\SellerOrder;
 use App\Models\Shipment;
 use App\Models\User;
 use App\Services\LogisticsPayouts;
+use App\Services\RiderWallet;
 use App\Services\ShipmentWorkflow;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -59,7 +60,7 @@ class LogisticsPayoutTest extends TestCase
 
         $payouts = app(LogisticsPayouts::class);
         $summary = $payouts->summary($payouts->rows());
-        $this->assertSame(['parcels' => 3, 'fees' => 360.0, 'partner' => 288.0, 'zaylo' => 72.0, 'paid' => 0.0, 'owed' => 288.0, 'unpaidParcels' => 3], $summary);
+        $this->assertSame(['parcels' => 3, 'fees' => 360.0, 'partner' => 288.0, 'rider' => 0.0, 'zaylo' => 72.0, 'paid' => 0.0, 'owed' => 288.0, 'unpaidParcels' => 3], $summary);
 
         $this->actingAs($admin)->get(route('admin.logistics-payouts'))->assertOk()
             ->assertSee('Express Delivery')->assertSee('₱192.00')->assertSee('Mark as paid');
@@ -78,6 +79,28 @@ class LogisticsPayoutTest extends TestCase
         // The partner sees its own earnings and payouts.
         $this->actingAs($owner)->get(route('logistics.earnings'))->assertOk()
             ->assertSee('GCASH-123')->assertSee('ZX-1')->assertDontSee('SW-1')->assertSee('&#8369;192.00', false);
+    }
+
+    public function test_the_riders_commission_is_part_of_the_partners_share(): void
+    {
+        [$owner, $express] = $this->partner('Express Delivery');
+        $rider = User::factory()->create(['role' => 'rider', 'status' => 'active']);
+        app(RiderWallet::class)->credit($this->parcel('ZX-1', $express), $rider);
+        $this->parcel('ZX-2', $express); // delivered before rider wallets: no commission
+        $admin = User::factory()->create(['role' => 'admin', 'status' => 'active']);
+
+        // ₱120 fees: ZAYLO keeps ₱24 each and pays the partner ₱96 each, which includes the rider's ₱15 on the first.
+        $payouts = app(LogisticsPayouts::class);
+        $this->assertSame(
+            ['fees' => 240.0, 'partner' => 192.0, 'rider' => 15.0, 'zaylo' => 48.0, 'owed' => 192.0],
+            array_intersect_key($payouts->summary($payouts->rows()), array_flip(['fees', 'partner', 'rider', 'zaylo', 'owed'])),
+        );
+
+        $this->actingAs($admin)->get(route('admin.logistics-payouts'))->assertOk()->assertSee('Rider commissions')->assertSee('&#8369;15.00', false);
+        $this->post(route('admin.logistics-payouts.pay', $express))->assertSessionHas('status', 'Recorded a payout of ₱192.00 to Express Delivery for 2 delivered parcels.');
+        $this->assertSame([192.0, 15.0], [LogisticsPayout::sole()->amount, LogisticsPayout::sole()->rider_commissions]);
+
+        $this->actingAs($owner)->get(route('logistics.earnings'))->assertOk()->assertSee('Rider commission')->assertSee('&#8369;96.00', false);
     }
 
     public function test_only_admins_record_payouts(): void

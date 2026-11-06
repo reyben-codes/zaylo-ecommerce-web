@@ -112,7 +112,7 @@ class MobileRiderDashboardTest extends TestCase
             ->assertJsonPath('announcements.0.title', 'Rider meeting');
     }
 
-    public function test_rider_delivers_a_parcel_and_earns_the_delivery_fee(): void
+    public function test_rider_delivers_a_parcel_and_earns_the_commission(): void
     {
         $rider = $this->rider();
         $shipmentId = $this->parcel('assigned', $rider);
@@ -133,10 +133,10 @@ class MobileRiderDashboardTest extends TestCase
 
         $this->getJson('/api/mobile/rider/dashboard')
             ->assertJsonPath('stats.completed', 1)
-            ->assertJsonPath('stats.earnings_today', 49)
+            ->assertJsonPath('stats.earnings_today', 15)
             ->assertJsonPath('stats.earnings.today.deliveries', 1)
-            ->assertJsonPath('stats.earnings.week.earnings', 49)
-            ->assertJsonPath('stats.earnings.all.earnings', 49)
+            ->assertJsonPath('stats.earnings.week.earnings', 15)
+            ->assertJsonPath('stats.earnings.all.earnings', 15)
             ->assertJsonCount(1, 'recent')
             ->assertJsonPath('recent.0.chat_open', false);
         // The rider does not finish the order: it waits for the buyer to confirm they received it.

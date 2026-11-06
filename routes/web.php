@@ -31,6 +31,7 @@ use App\Http\Controllers\LogisticsChatController;
 use App\Http\Controllers\LogisticsController;
 use App\Http\Controllers\LogisticsOperationsController;
 use App\Http\Controllers\LogisticsPayoutController;
+use App\Http\Controllers\RiderWithdrawalController;
 use App\Http\Controllers\SellerApplicationController;
 use App\Http\Controllers\SellerController;
 use App\Http\Controllers\SellerShopSectionController;
@@ -353,6 +354,10 @@ Route::middleware(['auth', 'active', 'verified', 'role:logistics', 'nocache'])->
     Route::get('/monitoring', [LogisticsOperationsController::class, 'monitoring'])->name('monitoring');
     Route::get('/reports', [LogisticsOperationsController::class, 'reports'])->name('reports');
     Route::get('/earnings', [LogisticsPayoutController::class, 'partner'])->name('earnings');
+    // Riders' GCash withdrawals from their wallets: the partner sends the money, then records the reference.
+    Route::get('/rider-withdrawals', [RiderWithdrawalController::class, 'index'])->name('rider-withdrawals');
+    Route::post('/rider-withdrawals/{withdrawal}/pay', [RiderWithdrawalController::class, 'pay'])->middleware('throttle:30,1')->name('rider-withdrawals.pay');
+    Route::post('/rider-withdrawals/{withdrawal}/reject', [RiderWithdrawalController::class, 'reject'])->middleware('throttle:30,1')->name('rider-withdrawals.reject');
     Route::get('/reports/export', [LogisticsOperationsController::class, 'exportReport'])->name('reports.export');
     Route::get('/activity', [ActivityLogController::class, 'logistics'])->name('activity');
     Route::get('/parcels/{shipment}/waybill', [WaybillController::class, 'logistics'])->middleware('throttle:120,1')->name('parcels.waybill');

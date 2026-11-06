@@ -23,7 +23,7 @@ class Order extends Model
         'order_number', 'user_id', 'seller_id', 'status', 'subtotal', 'shipping_fee',
         'total', 'currency', 'recipient_name', 'phone', 'notes', 'placed_at', 'completed_at', 'delivered_at', 'shipping_discount',
         'buyer_id', 'reference', 'total_minor', 'payment_method', 'payment_status',
-        'shipping_address', 'note', 'voucher_code', 'shipping_discount_minor', 'courier_choice',
+        'shipping_address', 'note', 'voucher_code', 'shipping_discount_minor', 'courier_choice', 'logistics_provider_id', 'shipping_zone',
     ];
 
     public function courierName(): string
@@ -53,6 +53,12 @@ class Order extends Model
     public function seller()
     {
         return $this->belongsTo(User::class, 'seller_id');
+    }
+
+    /** The logistics partner the buyer picked at checkout; it collects the parcel and sets the shipping fee. */
+    public function logisticsProvider(): BelongsTo
+    {
+        return $this->belongsTo(LogisticsProvider::class);
     }
 
     public function payment()

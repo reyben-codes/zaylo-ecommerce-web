@@ -12,6 +12,7 @@ use App\Services\ChatPhotos;
 use App\Services\ReturnPickups;
 use App\Services\RiderAttendanceClock;
 use App\Services\RiderDeliveries;
+use App\Services\RiderWallet;
 use App\Services\ShipmentWorkflow;
 use App\Support\MobilePayload;
 use App\Support\ParcelView;
@@ -178,7 +179,7 @@ class MobileRiderDashboardController extends Controller
         return response()->json(['period' => $period] + $this->deliveries->report($request->user(), $this->since($period), self::TIMEZONE));
     }
 
-    /** Delivered parcels, newest first, 20 per page, with the count and fees for the period. */
+    /** Delivered parcels, newest first, 20 per page, with the count and commissions for the period. */
     public function history(Request $request): JsonResponse
     {
         $data = $request->validate([
@@ -199,7 +200,7 @@ class MobileRiderDashboardController extends Controller
         ]);
     }
 
-    /** Delivery-fee totals for today, this week, this month, all time, and the last 7 days. */
+    /** Commission totals for today, this week, this month, all time, and the last 7 days. */
     public function earnings(Request $request): JsonResponse
     {
         $rider = $request->user();
@@ -220,7 +221,7 @@ class MobileRiderDashboardController extends Controller
         return response()->json([
             'periods' => $this->periodTotals($completed),
             'last_7_days' => $days->values(),
-            'note' => 'Earnings show the delivery fee of each parcel you delivered. Your logistics partner sets how riders are paid.',
+            'note' => 'You earn ₱'.number_format(RiderWallet::COMMISSION, 2).' for every parcel you deliver. It goes to your wallet, where you can withdraw it to GCash.',
         ]);
     }
 
@@ -320,7 +321,7 @@ class MobileRiderDashboardController extends Controller
         };
     }
 
-    /** Deliveries and delivery fees for today, this week, this month and all time. */
+    /** Deliveries and commissions for today, this week, this month and all time. */
     private function periodTotals(Collection $completed): Collection
     {
         return collect(self::PERIODS)->mapWithKeys(function (string $period) use ($completed) {
@@ -331,9 +332,10 @@ class MobileRiderDashboardController extends Controller
         });
     }
 
+    /** What the rider earned for these parcels: the commission each one credited to the wallet. */
     private function fees(Collection $shipments): float
     {
-        return round($shipments->sum(fn (Shipment $s) => RiderDeliveries::amounts($s)['delivery_fee']), 2);
+        return RiderWallet::ready() ? round($shipments->sum(fn (Shipment $s) => (float) ($s->riderCommission?->amount ?? 0)), 2) : 0.0;
     }
 
     /** What each delivery card needs, on whichever schema this database uses. */
@@ -347,6 +349,7 @@ class MobileRiderDashboardController extends Controller
             Schema::hasColumn('shipments', 'seller_order_id') ? 'sellerOrder.items' : null,
             Schema::hasColumn('shipments', 'logistics_provider_id') ? 'provider' : null,
             RiderDeliveries::tracksDecisions() ? 'riderLogs' : null,
+            RiderWallet::ready() ? 'riderCommission' : null,
         ]));
     }
 

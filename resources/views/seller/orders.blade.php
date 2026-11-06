@@ -123,7 +123,12 @@
                                             @csrf
                                             @method('PATCH')
                                             <input type="hidden" name="status" value="{{ $nextAction['status'] }}">
-                                            @if($nextAction['status'] === 'ready_for_pickup' && $partners->count() > 1)
+                                            {{-- The buyer picked the partner at checkout; its distance set the shipping fee they paid. --}}
+                                            @php($buyerPartner = $order->logistics_provider_id ? $partners->firstWhere('id', (int) $order->logistics_provider_id) : null)
+                                            @if($nextAction['status'] === 'ready_for_pickup' && $buyerPartner)
+                                                <input type="hidden" name="logistics_provider_id" value="{{ $buyerPartner->id }}">
+                                                <span class="seller-cell-note">Buyer chose {{ $buyerPartner->name }}</span>
+                                            @elseif($nextAction['status'] === 'ready_for_pickup' && $partners->count() > 1)
                                                 <label class="sr-only" for="partner-{{ $order->id }}">Logistics partner for order {{ $order->order_number }}</label>
                                                 <select id="partner-{{ $order->id }}" name="logistics_provider_id" class="order-partner" required>
                                                     @foreach($partners as $partner)
@@ -134,7 +139,7 @@
                                                 <input type="hidden" name="logistics_provider_id" value="{{ $partners->first()->id }}">
                                             @endif
                                             <button type="submit" class="seller-button seller-button--small"
-                                                    @if($nextAction['status'] === 'ready_for_pickup' && $partners->count() === 1) aria-label="Ready to ship: request pickup from {{ $partners->first()->name }}" @endif>
+                                                    @if($nextAction['status'] === 'ready_for_pickup' && ($buyerPartner || $partners->count() === 1)) aria-label="Ready to ship: request pickup from {{ ($buyerPartner ?? $partners->first())->name }}" @endif>
                                                 <i class="fas {{ $nextAction['icon'] }}" aria-hidden="true"></i> {{ $nextAction['label'] }}
                                             </button>
                                         </form>
