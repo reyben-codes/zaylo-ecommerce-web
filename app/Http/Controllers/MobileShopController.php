@@ -30,6 +30,9 @@ class MobileShopController extends Controller
         return response()->json(['shop' => MobilePayload::shop($shop, $request->user('mobile')) + [
             'categories' => collect($shop->categoryCounts())
                 ->map(fn (array $category, string $key) => ['id' => $key] + $category)->values(),
+            // The seller's own sections, in the seller's order (only shown, non-empty ones).
+            'sections' => $shop->sections()
+                ->map(fn ($section) => ['id' => $section->id, 'name' => $section->name, 'count' => $section->product_count])->values(),
         ]]);
     }
 
@@ -41,12 +44,15 @@ class MobileShopController extends Controller
             'search' => ['nullable', 'string', 'max:100'],
             'category' => ['nullable', Rule::in(array_keys(config('marketplace.categories')))],
             'sort' => ['nullable', Rule::in([...array_keys(Shop::SORTS), ...array_keys(Shop::RANKINGS)])],
+            'section' => ['nullable', 'integer'],
         ]);
+        // An unknown, hidden or empty section shows the whole shop, as on the website.
+        $section = $shop->section(isset($validated['section']) ? (int) $validated['section'] : null);
         $user = $request->user('mobile');
         $savedIds = $user ? array_flip($user->wishlistItems()->pluck('product_id')->all()) : [];
 
         return response()->json([
-            'products' => $shop->listing(trim((string) ($validated['search'] ?? '')) ?: null, $validated['category'] ?? null, $validated['sort'] ?? 'newest')
+            'products' => $shop->listing(trim((string) ($validated['search'] ?? '')) ?: null, $validated['category'] ?? null, $validated['sort'] ?? 'newest', $section)
                 ->paginate(20)->through(fn (Product $product) => MobilePayload::product($product, saved: isset($savedIds[$product->id]))),
         ]);
     }

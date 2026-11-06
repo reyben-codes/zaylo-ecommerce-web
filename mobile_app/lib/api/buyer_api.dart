@@ -64,10 +64,12 @@ class BuyerApi extends ApiClient {
 
   Future<Shop> shop(int id) async => Shop.fromJson((await send('GET', '/mobile/shops/$id'))['shop'] as Map<String, dynamic>);
 
-  Future<ProductPage> shopProducts(int shopId, {String? search, String? category, String? sort, int page = 1}) async {
+  Future<ProductPage> shopProducts(int shopId,
+      {String? search, String? category, int? section, String? sort, int page = 1}) async {
     final data = await send('GET', '/mobile/shops/$shopId/products', query: {
       if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
       if (category != null) 'category': category,
+      if (section != null) 'section': '$section',
       if (sort != null) 'sort': sort,
       'page': '$page',
     });

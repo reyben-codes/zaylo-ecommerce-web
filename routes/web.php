@@ -33,6 +33,7 @@ use App\Http\Controllers\LogisticsOperationsController;
 use App\Http\Controllers\LogisticsPayoutController;
 use App\Http\Controllers\SellerApplicationController;
 use App\Http\Controllers\SellerController;
+use App\Http\Controllers\SellerShopSectionController;
 use App\Http\Controllers\SellerReturnController;
 use App\Http\Controllers\ShopController;
 use App\Http\Controllers\ShopCoverController;
@@ -154,6 +155,12 @@ Route::middleware(['auth', 'active', 'verified', 'role:seller', 'nocache'])->pre
     Route::get('/products', [SellerController::class, 'products'])->name('products');
     Route::post('/products', [SellerController::class, 'storeProduct'])->name('products.store');
     Route::get('/products/create', [SellerController::class, 'createProduct'])->name('products.create');
+    // Shop sections: the seller's own tabs on their shop page (SellerShopSectionController).
+    Route::get('/products/sections', [SellerShopSectionController::class, 'index'])->name('products.sections');
+    Route::post('/products/sections', [SellerShopSectionController::class, 'store'])->middleware('throttle:30,1')->name('products.sections.store');
+    Route::put('/products/sections/{section}', [SellerShopSectionController::class, 'update'])->whereNumber('section')->name('products.sections.update');
+    Route::patch('/products/sections/{section}/move', [SellerShopSectionController::class, 'move'])->whereNumber('section')->name('products.sections.move');
+    Route::delete('/products/sections/{section}', [SellerShopSectionController::class, 'destroy'])->whereNumber('section')->name('products.sections.destroy');
     Route::get('/products/{product}/edit', [SellerController::class, 'editProduct'])->name('products.edit');
     Route::patch('/products/{product}/stock', [SellerController::class, 'updateStock'])->name('products.stock');
     Route::put('/products/{product}/sale', [ProductSaleController::class, 'update'])->name('products.sale');

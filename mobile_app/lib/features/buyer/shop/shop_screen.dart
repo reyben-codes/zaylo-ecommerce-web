@@ -61,6 +61,9 @@ class _ShopScreenState extends State<ShopScreen> {
   String _ranking = 'highest_rated';
   ShopCategory? _category;
 
+  /// One of the seller's own sections; null shows all products.
+  ShopSection? _section;
+
   final List<Product> _products = [];
   int _page = 0;
   bool _hasMore = true;
@@ -129,6 +132,7 @@ class _ShopScreenState extends State<ShopScreen> {
             widget.shopId,
             search: ranked ? null : _lastSearch,
             category: ranked ? null : _category?.id,
+            section: ranked ? null : _section?.id,
             sort: ranked ? _ranking : _sort,
             page: _page + 1,
           );
@@ -162,6 +166,12 @@ class _ShopScreenState extends State<ShopScreen> {
     if (!mounted || (search == _lastSearch && _tab == _ShopTab.products)) return;
     _lastSearch = search;
     _tab = _ShopTab.products;
+    _reload();
+  }
+
+  void _chooseSection(ShopSection? section) {
+    if (section?.id == _section?.id) return;
+    _section = section;
     _reload();
   }
 
@@ -274,6 +284,7 @@ class _ShopScreenState extends State<ShopScreen> {
 
   List<Widget> _tabContent(Shop shop) => switch (_tab) {
         _ShopTab.products => [
+            if (shop.sections.isNotEmpty) SliverToBoxAdapter(child: _sectionChips(shop)),
             SliverToBoxAdapter(child: _productsBar()),
             if (_products.isNotEmpty)
               SliverPadding(
@@ -347,6 +358,42 @@ class _ShopScreenState extends State<ShopScreen> {
           label: Text(_productSorts[_sort]!),
         ),
       ]),
+    );
+  }
+
+  /// The seller's own sections as one scrolling row of chips, "All" first.
+  Widget _sectionChips(Shop shop) {
+    Widget chip(String label, int count, ShopSection? section) {
+      final selected = _section?.id == section?.id;
+      return Padding(
+        padding: const EdgeInsets.only(right: 8),
+        child: ChoiceChip(
+          label: Text('$label  $count'),
+          selected: selected,
+          showCheckmark: false,
+          selectedColor: ZayloColors.ink,
+          backgroundColor: ZayloColors.white,
+          side: BorderSide(color: selected ? ZayloColors.ink : ZayloColors.line),
+          labelStyle: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: selected ? ZayloColors.white : ZayloColors.ink,
+          ),
+          onSelected: (_) => _chooseSection(section),
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 52,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(ZayloSpace.page, 10, ZayloSpace.page - 8, 2),
+        children: [
+          chip('All', shop.productCount, null),
+          for (final section in shop.sections) chip(section.name, section.count, section),
+        ],
+      ),
     );
   }
 

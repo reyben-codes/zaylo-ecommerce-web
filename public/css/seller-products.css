@@ -1182,3 +1182,8 @@ button.product-form__remove:focus-visible {
     background: var(--c-f8f5f1);
     color: var(--zaylo-muted);
 }
+
+/* Link under the shop section checkboxes on the product form. */
+.product-form__sections-manage {
+    margin-top: 14px;
+}

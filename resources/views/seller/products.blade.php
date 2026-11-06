@@ -26,6 +26,11 @@
         <a href="{{ route('seller.products', ['view' => 'archived']) }}" class="product-tab{{ $filters['view'] === 'archived' ? ' is-active' : '' }}" @if($filters['view'] === 'archived') aria-current="page" @endif>
             <i class="fas fa-box-archive" aria-hidden="true"></i> Archived <span>{{ $counts['archived'] }}</span>
         </a>
+        @isset($sectionCount)
+            <a href="{{ route('seller.products.sections') }}" class="product-tab">
+                <i class="fas fa-layer-group" aria-hidden="true"></i> Shop sections <span>{{ $sectionCount }}</span>
+            </a>
+        @endisset
     </nav>
 
     @if($filters['view'] === 'archived')

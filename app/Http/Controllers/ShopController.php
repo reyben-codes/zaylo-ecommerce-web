@@ -25,14 +25,20 @@ class ShopController extends Controller
             'category' => ['nullable', Rule::in(array_keys(config('marketplace.categories')))],
             'sort' => ['nullable', Rule::in(array_keys(Shop::SORTS))],
             'rank' => ['nullable', Rule::in(array_keys(Shop::RANKINGS))],
-        ]) + ['tab' => null, 'q' => null, 'category' => null, 'sort' => null, 'rank' => null];
+            'section' => ['nullable', 'integer'],
+        ]) + ['tab' => null, 'q' => null, 'category' => null, 'sort' => null, 'rank' => null, 'section' => null];
         $filters['q'] = trim((string) $filters['q']) ?: null;
         $filters['tab'] ??= 'products';
         $filters['sort'] ??= 'newest';
         $filters['rank'] ??= 'highest_rated';
 
+        // The seller's own sections, shown as chips on the Products tab; a hidden, empty or unknown one shows everything.
+        $sections = $shop->sections();
+        $section = $filters['section'] ? $sections->firstWhere('id', (int) $filters['section']) : null;
+        $filters['section'] = $section?->id;
+
         $products = match ($filters['tab']) {
-            'products' => $shop->listing($filters['q'], $filters['category'], $filters['sort'])->paginate(12),
+            'products' => $shop->listing($filters['q'], $filters['category'], $filters['sort'], $section)->paginate(12),
             'reviews' => $shop->listing(null, null, $filters['rank'])->paginate(12),
             default => null,
         };
@@ -45,6 +51,8 @@ class ShopController extends Controller
             'sorts' => Shop::SORTS,
             'rankings' => Shop::RANKINGS,
             'categories' => $shop->categoryCounts(),
+            'sections' => $sections,
+            'section' => $section,
             'productCount' => $shop->products()->count(),
             'followers' => $shop->followerCount(),
             'following' => $shop->isFollowedBy($request->user()),

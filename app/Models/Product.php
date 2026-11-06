@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Schema;
@@ -274,6 +275,12 @@ class Product extends Model
     public function orderItems(): HasMany
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    /** The seller's own shop sections this product is shown under on their shop page. */
+    public function shopSections(): BelongsToMany
+    {
+        return $this->belongsToMany(ShopSection::class)->withTimestamps();
     }
 
     /** Extra categories this product is also listed under, besides its main category. */

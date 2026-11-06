@@ -9,6 +9,7 @@ use App\Models\ProductReview;
 use App\Models\Seller;
 use App\Models\SellerApplication;
 use App\Models\ShopFollow;
+use App\Models\ShopSection;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
@@ -121,7 +122,7 @@ class Shop
      * The shop's products with what cards need, filtered and ordered by one of SORTS or RANKINGS. Products without
      * reviews come last in both rating orders; units_sold counts the same way as soldCount().
      */
-    public function listing(?string $search, ?string $category, string $sort): Builder
+    public function listing(?string $search, ?string $category, string $sort, ?ShopSection $section = null): Builder
     {
         $query = $this->products()->withReviewSummary()->with(Product::usesLegacySchema() ? ['images', 'additionalCategories'] : ['images', 'additionalCategories', 'defaultVariant', 'category'])
             ->withCount(['variants as active_variants_count' => fn ($variant) => $variant->where('is_active', true)])
@@ -136,6 +137,9 @@ class Shop
         }
         if ($category) {
             $query->inCategories([$category]);
+        }
+        if ($section) {
+            $query->whereIn('products.id', DB::table('product_shop_section')->where('shop_section_id', $section->id)->select('product_id'));
         }
         $unrated = 'NOT EXISTS (SELECT 1 FROM product_reviews WHERE product_reviews.product_id = products.id)';
         match ($sort) {
@@ -223,6 +227,29 @@ class Shop
      *
      * @return array<string, array{label: string, count: int}>
      */
+    /**
+     * The seller's own sections buyers can browse: shown, and holding at least one product buyers can see, in the
+     * seller's order, each with product_count.
+     *
+     * @return Collection<int, ShopSection>
+     */
+    public function sections(): Collection
+    {
+        if (! ShopSection::available()) {
+            return collect();
+        }
+
+        return ShopSection::forShop($this->id)->where('is_visible', true)
+            ->withCount(['products as product_count' => fn (Builder $products) => $products->visibleToBuyers()->notArchived()])
+            ->get()->filter(fn (ShopSection $section) => $section->product_count > 0)->values();
+    }
+
+    /** One section buyers can browse, or null when it is hidden, empty or another shop's. */
+    public function section(?int $id): ?ShopSection
+    {
+        return $id ? $this->sections()->firstWhere('id', $id) : null;
+    }
+
     public function categoryCounts(): array
     {
         $counts = $this->products()->with(Product::usesLegacySchema() ? ['additionalCategories'] : ['category', 'additionalCategories'])

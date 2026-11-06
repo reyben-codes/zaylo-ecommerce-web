@@ -13,7 +13,22 @@ class ShopCategory {
       );
 }
 
-/// A seller's public shop. [categories] only comes with GET /mobile/shops/{id}.
+/// One of the seller's own groupings on their shop page, such as "New Arrivals".
+class ShopSection {
+  const ShopSection({required this.id, required this.name, required this.count});
+
+  final int id;
+  final String name;
+  final int count;
+
+  factory ShopSection.fromJson(Map<String, dynamic> json) => ShopSection(
+        id: (json['id'] as num).toInt(),
+        name: json['name'] as String,
+        count: (json['count'] as num?)?.toInt() ?? 0,
+      );
+}
+
+/// A seller's public shop. [categories] and [sections] only come with GET /mobile/shops/{id}.
 class Shop {
   const Shop({
     required this.id,
@@ -29,6 +44,7 @@ class Shop {
     this.sold = 0,
     this.following = false,
     this.categories = const [],
+    this.sections = const [],
   });
 
   final int id;
@@ -48,6 +64,9 @@ class Shop {
   final int sold;
   final bool following;
   final List<ShopCategory> categories;
+
+  /// The seller's own sections, in their order; empty when they made none.
+  final List<ShopSection> sections;
 
   /// Up to two letters for a shop without a photo.
   String get initials {
@@ -70,6 +89,7 @@ class Shop {
         sold: sold,
         following: following ?? this.following,
         categories: categories,
+        sections: sections,
       );
 
   factory Shop.fromJson(Map<String, dynamic> json) => Shop(
@@ -87,6 +107,9 @@ class Shop {
         following: json['following'] as bool? ?? false,
         categories: (json['categories'] as List<dynamic>? ?? const [])
             .map((item) => ShopCategory.fromJson(item as Map<String, dynamic>))
+            .toList(),
+        sections: (json['sections'] as List<dynamic>? ?? const [])
+            .map((item) => ShopSection.fromJson(item as Map<String, dynamic>))
             .toList(),
       );
 }

@@ -119,11 +119,24 @@
     </nav>
 
     @if($tab === 'products')
+        @php
+            // Chips for the seller's own sections; each keeps the chosen sort.
+            $sectionUrl = fn (?int $id) => $shop->url().'?'.http_build_query(array_filter(['section' => $id, 'sort' => $filters['sort'] !== 'newest' ? $filters['sort'] : null])).'#shop-content';
+        @endphp
         <section class="shop-products" aria-labelledby="shop-products-heading">
+            @if($sections->isNotEmpty())
+                <nav class="shop-rankings shop-section-chips" aria-label="{{ $shop->name }} sections">
+                    <a href="{{ $sectionUrl(null) }}" @class(['shop-ranking', 'is-active' => ! $section]) @unless($section) aria-current="true" @endunless>All <span>{{ number_format($productCount) }}</span></a>
+                    @foreach($sections as $item)
+                        <a href="{{ $sectionUrl($item->id) }}" @class(['shop-ranking', 'is-active' => $section?->id === $item->id]) @if($section?->id === $item->id) aria-current="true" @endif>{{ $item->name }} <span>{{ number_format($item->product_count) }}</span></a>
+                    @endforeach
+                </nav>
+            @endif
             <div class="shop-products__head">
-                <h2 id="shop-products-heading">Products <span>{{ number_format($products->total()) }}{{ $filtered ? ' found' : '' }}</span></h2>
+                <h2 id="shop-products-heading">{{ $section?->name ?? 'Products' }} <span>{{ number_format($products->total()) }}{{ $filtered ? ' found' : '' }}</span></h2>
                 <form method="GET" action="{{ $shop->url() }}#shop-content" class="shop-filters" aria-label="Filter products">
                     @if($filters['q'])<input type="hidden" name="q" value="{{ $filters['q'] }}">@endif
+                    @if($section)<input type="hidden" name="section" value="{{ $section->id }}">@endif
                     @if(count($categories) > 1 || $filters['category'])
                         <label>
                             <span class="sr-only">Category</span>
@@ -145,7 +158,7 @@
                     </label>
                     <button type="submit" class="market-button">Apply</button>
                     @if($filtered)
-                        <a href="{{ $shop->url() }}#shop-content" class="shop-filters__reset">Clear</a>
+                        <a href="{{ $sectionUrl($section?->id) }}" class="shop-filters__reset">Clear</a>
                     @endif
                 </form>
             </div>

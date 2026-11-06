@@ -7,6 +7,7 @@ use App\Models\LogisticsProvider;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\ShopSection;
 use App\Models\ProductReview;
 use App\Models\ProductVariant;
 use App\Models\SellerOrder;
@@ -132,15 +133,19 @@ class SellerController extends Controller
             $request->merge(['price' => min(array_column($options, 'price')), 'stock' => array_sum(array_column($options, 'stock'))]);
         }
         $data = $this->validatedProduct($request);
+        $sections = $this->chosenShopSections($request);
         $data = $this->storeProductImage($request, $data);
         $extraCategories = Arr::pull($data, 'additional_categories') ?? [];
-        $product = DB::transaction(function () use ($data, $options, $request, $extraCategories) {
+        $product = DB::transaction(function () use ($data, $options, $request, $extraCategories, $sections) {
             $product = Product::create($data + ['seller_id' => $this->shopId(), 'is_active' => $request->boolean('is_active', true)]);
             // Buyers only see it once an admin approves it.
             $product->submitForReview();
             $product->syncAdditionalCategories($extraCategories);
             $this->saveExtraPhotos($request, $product);
             $this->createProductOptions($product, $options);
+            if ($sections !== null) {
+                $product->shopSections()->sync($sections);
+            }
 
             return $product;
         });
@@ -157,12 +162,17 @@ class SellerController extends Controller
     {
         $this->authorize('update', $product);
         $data = $this->validatedProduct($request, $product);
+        $sections = $this->chosenShopSections($request);
         $data = $this->storeProductImage($request, $data, $product);
         $extraCategories = Arr::pull($data, 'additional_categories') ?? [];
         $removePhotos = array_map('intval', Arr::pull($data, 'remove_photos') ?? []);
         $categoriesBefore = $product->category_keys;
-        $resubmitted = DB::transaction(function () use ($product, $data, $request, $extraCategories, $removePhotos, $categoriesBefore) {
+        $resubmitted = DB::transaction(function () use ($product, $data, $request, $extraCategories, $removePhotos, $categoriesBefore, $sections) {
             $product->update($data + ['is_active' => ! $product->is_archived && $request->boolean('is_active')]);
+            // Shop sections only arrange the seller's own shop page, so they never send the product back for review.
+            if ($sections !== null) {
+                $product->shopSections()->sync($sections);
+            }
             $product->syncAdditionalCategories($extraCategories);
             $this->saveExtraPhotos($request, $product, $removePhotos);
 
@@ -447,6 +457,7 @@ class SellerController extends Controller
             'storeName' => $this->storeName(),
             'total' => $filters['view'] === 'archived' ? (clone $mine)->archived()->count() : (clone $mine)->notArchived()->count(),
             'counts' => ['active' => (clone $mine)->notArchived()->count(), 'archived' => (clone $mine)->archived()->count()],
+            'sectionCount' => ShopSection::available() ? ShopSection::where('shop_id', $this->shopId())->count() : null,
         ]);
     }
 
@@ -455,6 +466,8 @@ class SellerController extends Controller
         return view('seller.product-form', [
             'product' => null,
             'legacy' => Product::usesLegacySchema(),
+            'shopSections' => $this->shopSections(),
+            'chosenSections' => [],
         ]);
     }
 
@@ -467,6 +480,8 @@ class SellerController extends Controller
             'product' => $product,
             'legacy' => Product::usesLegacySchema(),
             'stockState' => $this->stockState($product),
+            'shopSections' => $this->shopSections(),
+            'chosenSections' => ShopSection::available() ? $product->shopSections()->pluck('shop_sections.id')->all() : [],
         ]);
     }
 
@@ -903,6 +918,29 @@ class SellerController extends Controller
     /**
      * The id stored in products.seller_id, which checkout also copies into orders.seller_id.
      */
+    /** The seller's shop sections for the product form, in shop order (empty before the migration). */
+    private function shopSections(): \Illuminate\Support\Collection
+    {
+        return ShopSection::available() ? ShopSection::forShop($this->shopId())->get() : collect();
+    }
+
+    /**
+     * Section ids ticked on the product form, all from this seller's shop; null when the form had no sections list,
+     * so saving such a form leaves the product's sections alone.
+     */
+    private function chosenShopSections(Request $request): ?array
+    {
+        if (! ShopSection::available() || ! $request->boolean('shop_sections_submitted')) {
+            return null;
+        }
+        $ids = $request->validate([
+            'shop_sections' => ['nullable', 'array'],
+            'shop_sections.*' => ['integer', Rule::exists('shop_sections', 'id')->where('shop_id', $this->shopId())],
+        ], ['shop_sections.*.exists' => 'Choose sections from your own shop.'])['shop_sections'] ?? [];
+
+        return array_values(array_unique(array_map('intval', $ids)));
+    }
+
     private function shopId(): int
     {
         return Product::usesLegacySchema() ? (int) auth()->id() : (int) auth()->user()->sellerShop()->id;

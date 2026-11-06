@@ -132,6 +132,38 @@
     color: var(--c-ffffff);
 }
 
+/* The seller's own shop sections on the Products tab: one scrolling row of chips. */
+.shop-section-chips {
+    flex-wrap: nowrap;
+    margin: 0 0 18px;
+    padding-bottom: 4px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+}
+
+.shop-section-chips .shop-ranking {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    transition: border-color .2s ease-out, background-color .2s ease-out, color .2s ease-out;
+}
+
+.shop-section-chips .shop-ranking:not(.is-active):hover {
+    border-color: var(--c-1a1714);
+    color: var(--c-1a1714);
+}
+
+.shop-section-chips .shop-ranking span {
+    margin-left: 3px;
+    font-weight: 500;
+    opacity: .7;
+}
+
+.shop-section-chips .shop-ranking:focus-visible {
+    outline: 2px solid var(--c-b28b6f);
+    outline-offset: 2px;
+}
+
 .shop-ranked {
     display: grid;
     grid-template-columns: 56px minmax(0, 1fr) auto auto;

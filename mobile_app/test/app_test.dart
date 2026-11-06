@@ -279,7 +279,8 @@ class FakeApi extends BuyerApi {
   Future<Shop> shop(int id) async => Shop.fromJson(shopJson(following: followsShop));
 
   @override
-  Future<ProductPage> shopProducts(int shopId, {String? search, String? category, String? sort, int page = 1}) async {
+  Future<ProductPage> shopProducts(int shopId,
+      {String? search, String? category, int? section, String? sort, int page = 1}) async {
     lastShopSearch = search;
     lastShopCategory = category;
     lastShopSort = sort;

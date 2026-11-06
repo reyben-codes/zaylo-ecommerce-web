@@ -236,6 +236,38 @@
                 </div>
             </section>
 
+            @if(isset($shopSections) && \App\Models\ShopSection::available())
+                @php $tickedSections = array_map('intval', (array) old('shop_sections', $chosenSections ?? [])); @endphp
+                <section class="seller-panel" aria-labelledby="sections-heading">
+                    <header class="seller-panel__header">
+                        <div>
+                            <h2 id="sections-heading">Shop sections</h2>
+                            <p>Your own tabs on your shop page. Optional, and they don't change where buyers find it in the marketplace.</p>
+                        </div>
+                    </header>
+                    <div class="seller-panel__body">
+                        @if($shopSections->isEmpty())
+                            <p class="seller-field__help">You have no shop sections yet. <a href="{{ route('seller.products.sections') }}" class="seller-link">Create sections</a> like New Arrivals or Bundle Deals to group products on your shop page.</p>
+                        @else
+                            <input type="hidden" name="shop_sections_submitted" value="1">
+                            <fieldset class="seller-field seller-field--full product-form__categories">
+                                <legend class="sr-only">Show this product in</legend>
+                                <div class="product-form__category-options">
+                                    @foreach($shopSections as $section)
+                                        <label class="product-form__category-option">
+                                            <input type="checkbox" name="shop_sections[]" value="{{ $section->id }}" @checked(in_array($section->id, $tickedSections, true))>
+                                            <span>{{ $section->name }}@unless($section->is_visible) <small>(hidden)</small>@endunless</span>
+                                        </label>
+                                    @endforeach
+                                </div>
+                                @if($errors->has('shop_sections.*'))<p class="seller-field__error">{{ $errors->first('shop_sections.*') }}</p>@endif
+                            </fieldset>
+                            <p class="seller-field__help product-form__sections-manage"><a href="{{ route('seller.products.sections') }}" class="seller-link">Manage shop sections</a></p>
+                        @endif
+                    </div>
+                </section>
+            @endif
+
             <section class="seller-panel" aria-labelledby="visibility-heading">
                 <header class="seller-panel__header"><div><h2 id="visibility-heading">Visibility</h2></div></header>
                 <div class="seller-panel__body">
