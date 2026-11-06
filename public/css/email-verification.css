@@ -85,7 +85,10 @@
     animation: otp-caret 1s steps(1) infinite;
 }
 
+/* Digit and caret share the one grid cell, so the empty digit can't push the caret off-centre. */
+.otp-digit, .otp-slot::after { grid-area: 1 / 1; }
 .otp-digit { display: inline-block; }
+.otp-slot:not(.is-filled) .otp-digit { display: none; }
 .otp-slot.is-popped .otp-digit { animation: otp-pop .22s ease-out; }
 
 /* Checking the code: a wave runs across the boxes. */
