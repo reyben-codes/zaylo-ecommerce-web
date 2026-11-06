@@ -8,6 +8,7 @@ use App\Models\Dispute;
 use App\Models\IdentityVerification;
 use App\Models\Message;
 use App\Models\Product;
+use App\Models\RiderWithdrawal;
 use App\Models\SupportMessage;
 use App\Models\User;
 use App\Support\Shop;
@@ -101,6 +102,7 @@ class SidebarCounts
             'assignments' => [$awaitingRider, 'waiting for a rider'],
             'returns' => [$activeReturns, 'in progress'],
             'riders' => [$provider->riders()->where('status', 'pending')->count(), 'to review'],
+            'withdrawals' => [RiderWallet::ready() ? RiderWithdrawal::where('logistics_provider_id', $provider->id)->where('status', RiderWithdrawal::PENDING)->count() : 0, 'to send'],
             'messages' => [$this->logisticsChat->unreadCount($owner), 'unread'],
         ];
     }

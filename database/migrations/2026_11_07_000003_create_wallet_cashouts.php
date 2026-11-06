@@ -5,8 +5,9 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Riders and logistics partners turn their wallet credits into GCash. The transfer is simulated (no GCash API
- * account), so each cash-out is recorded with a demo reference and the wallet balance goes down by its amount.
+ * Logistics partners turn their wallet credits into GCash (riders withdraw through rider_withdrawals instead). The
+ * transfer is simulated (no GCash API account), so each cash-out is recorded with a demo reference and the wallet
+ * balance goes down by its amount.
  */
 return new class extends Migration
 {

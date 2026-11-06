@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-/** Wallet credits a rider or logistics partner sent to GCash (simulated; see App\Services\Wallet). */
+/** Wallet credits a logistics partner sent to GCash (simulated; see App\Services\Wallet). */
 class WalletCashout extends Model
 {
     protected $fillable = ['user_id', 'amount', 'gcash_number', 'gcash_name', 'reference', 'status'];

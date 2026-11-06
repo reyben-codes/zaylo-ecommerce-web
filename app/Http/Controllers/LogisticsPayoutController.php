@@ -6,6 +6,7 @@ use App\Models\LogisticsPayout;
 use App\Models\LogisticsProvider;
 use App\Services\LogisticsPayouts;
 use App\Services\Wallet;
+use App\Services\RiderWallet;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 
@@ -24,6 +25,7 @@ class LogisticsPayoutController extends Controller
         return view('admin.logistics-payouts', [
             'ready' => LogisticsPayouts::ready(),
             'percent' => LogisticsPayouts::partnerPercent(),
+            'riderCommission' => RiderWallet::COMMISSION,
             'summary' => $this->payouts->summary($rows),
             'byProvider' => $this->payouts->byProvider($rows),
             'history' => $this->history(),
@@ -50,6 +52,7 @@ class LogisticsPayoutController extends Controller
             'provider' => $provider,
             'ready' => LogisticsPayouts::ready(),
             'percent' => LogisticsPayouts::partnerPercent(),
+            'riderCommission' => RiderWallet::COMMISSION,
             'summary' => $this->payouts->summary($rows),
             'parcels' => $rows->take(100),
             'history' => $this->history($provider),

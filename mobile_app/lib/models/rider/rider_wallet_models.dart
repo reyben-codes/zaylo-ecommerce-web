@@ -1,95 +1,125 @@
-/// The rider's wallet: delivery fees earned, cashed out to GCash, and what is
-/// left. Cash-outs are simulated on the server (no real money moves yet).
-class RiderWallet {
-  const RiderWallet({
-    required this.available,
-    required this.balance,
-    required this.credits,
-    required this.cashedOut,
-    required this.minimum,
-    required this.maximum,
-    required this.history,
-    this.source,
-    this.demoNote,
-  });
+/// The rider wallet from GET /mobile/rider/wallet.
+library;
 
-  factory RiderWallet.fromJson(Map<String, dynamic> json) => RiderWallet(
-        available: json['available'] as bool? ?? false,
-        balance: (json['balance'] as num? ?? 0).toDouble(),
-        credits: (json['credits'] as num? ?? 0).toDouble(),
-        cashedOut: (json['cashed_out'] as num? ?? 0).toDouble(),
-        minimum: (json['minimum'] as num? ?? 100).toDouble(),
-        maximum: (json['maximum'] as num? ?? 50000).toDouble(),
-        source: json['source'] as String?,
-        demoNote: json['demo_note'] as String?,
-        history: [
-          for (final row in json['history'] as List? ?? const [])
-            if (row is Map<String, dynamic>) WalletCashout.fromJson(row),
-        ],
-      );
+import 'package:zaylo_mobile/models/json_parsing.dart';
 
-  /// False until the server's database has the wallet table.
-  final bool available;
-  final double balance;
-  final double credits;
-  final double cashedOut;
-  final double minimum;
-  final double maximum;
-  final String? source;
-  final String? demoNote;
-  final List<WalletCashout> history;
+/// The commission one delivered parcel earned.
+class RiderCommissionEntry {
+  const RiderCommissionEntry({required this.id, required this.amount, this.trackingNumber, this.createdAt});
 
-  bool get canCashOut => available && balance >= minimum;
+  final int id;
+  final double amount;
+  final String? trackingNumber;
+  final DateTime? createdAt;
 
-  /// The most the rider can send right now.
-  double get limit => balance < maximum ? balance : maximum;
-
-  RiderWallet copyWith({double? balance, double? cashedOut, List<WalletCashout>? history}) => RiderWallet(
-        available: available,
-        balance: balance ?? this.balance,
-        credits: credits,
-        cashedOut: cashedOut ?? this.cashedOut,
-        minimum: minimum,
-        maximum: maximum,
-        source: source,
-        demoNote: demoNote,
-        history: history ?? this.history,
+  factory RiderCommissionEntry.fromJson(Map<String, dynamic> json) => RiderCommissionEntry(
+        id: json['id'] as int,
+        amount: parseMoney(json['amount']),
+        trackingNumber: json['tracking_number'] as String?,
+        createdAt: parseDate(json['created_at']),
       );
 }
 
-class WalletCashout {
-  const WalletCashout({
+/// A request to send wallet money to GCash; the rider's logistics partner sends it.
+class RiderWithdrawalEntry {
+  const RiderWithdrawalEntry({
     required this.id,
     required this.amount,
     required this.gcashNumber,
     required this.gcashName,
-    required this.reference,
+    required this.status,
+    required this.statusLabel,
+    this.reference,
+    this.rejectionReason,
     this.createdAt,
   });
-
-  factory WalletCashout.fromJson(Map<String, dynamic> json) => WalletCashout(
-        id: json['id'] as int? ?? 0,
-        amount: (json['amount'] as num? ?? 0).toDouble(),
-        gcashNumber: json['gcash_number'] as String? ?? '',
-        gcashName: json['gcash_name'] as String? ?? '',
-        reference: json['reference'] as String? ?? '',
-        createdAt: DateTime.tryParse(json['created_at'] as String? ?? '')?.toLocal(),
-      );
 
   final int id;
   final double amount;
 
-  /// Masked by the server, e.g. `0917 ••• 4567`.
+  /// Formatted, e.g. "0917 123 4567".
   final String gcashNumber;
   final String gcashName;
-  final String reference;
+
+  /// pending, paid or rejected.
+  final String status;
+  final String statusLabel;
+
+  /// The GCash reference number, once sent.
+  final String? reference;
+  final String? rejectionReason;
   final DateTime? createdAt;
+
+  factory RiderWithdrawalEntry.fromJson(Map<String, dynamic> json) => RiderWithdrawalEntry(
+        id: json['id'] as int,
+        amount: parseMoney(json['amount']),
+        gcashNumber: json['gcash_number'] as String? ?? '',
+        gcashName: json['gcash_name'] as String? ?? '',
+        status: json['status'] as String? ?? 'pending',
+        statusLabel: json['status_label'] as String? ?? 'Processing',
+        reference: json['reference'] as String?,
+        rejectionReason: json['rejection_reason'] as String?,
+        createdAt: parseDate(json['created_at']),
+      );
 }
 
-/// The server's answer to a cash-out: its message, and the wallet after it.
-class WalletCashoutResult {
-  const WalletCashoutResult({required this.message, required this.wallet});
+class RiderWallet {
+  const RiderWallet({
+    required this.balance,
+    required this.earned,
+    required this.pending,
+    required this.withdrawn,
+    required this.parcels,
+    required this.commissionPerParcel,
+    required this.minWithdrawal,
+    this.gcashNumber,
+    this.gcashName,
+    this.commissions = const [],
+    this.withdrawals = const [],
+    this.note,
+  });
 
-  final String message;
-  final RiderWallet wallet;
+  /// What the rider can withdraw now.
+  final double balance;
+  final double earned;
+
+  /// Requested and waiting to be sent.
+  final double pending;
+
+  /// Already sent to GCash.
+  final double withdrawn;
+  final int parcels;
+  final double commissionPerParcel;
+  final double minWithdrawal;
+
+  /// The GCash account used last, to fill in the next request.
+  final String? gcashNumber;
+  final String? gcashName;
+  final List<RiderCommissionEntry> commissions;
+  final List<RiderWithdrawalEntry> withdrawals;
+  final String? note;
+
+  bool get canWithdraw => balance >= minWithdrawal;
+
+  factory RiderWallet.fromJson(Map<String, dynamic> json) {
+    final gcash = json['gcash'] as Map<String, dynamic>?;
+    return RiderWallet(
+      balance: parseMoney(json['balance']),
+      earned: parseMoney(json['earned']),
+      pending: parseMoney(json['pending']),
+      withdrawn: parseMoney(json['withdrawn']),
+      parcels: json['parcels'] as int? ?? 0,
+      commissionPerParcel: parseMoney(json['commission_per_parcel']),
+      minWithdrawal: parseMoney(json['min_withdrawal']),
+      gcashNumber: gcash?['number'] as String?,
+      gcashName: gcash?['name'] as String?,
+      commissions: (json['commissions'] as List<dynamic>? ?? const [])
+          .map((item) => RiderCommissionEntry.fromJson(item as Map<String, dynamic>))
+          .toList(),
+      withdrawals: (json['withdrawals'] as List<dynamic>? ?? const [])
+          .map((item) => RiderWithdrawalEntry.fromJson(item as Map<String, dynamic>))
+          .toList(),
+      note: json['note'] as String?,
+    );
+  }
 }

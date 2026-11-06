@@ -10,10 +10,10 @@ class ChatHeadState extends ChangeNotifier {
   int? _conversationId;
   String? _partnerName;
 
-  /// Dragged onto the dismiss target; tapping Chatbot in the sidebar menu brings it back.
+  /// Dragged onto the dismiss target; Undo on the message, or opening Help bot in Account, brings it back.
   bool get dismissed => _dismissed;
 
-  /// Explicitly summoned from the sidebar menu.
+  /// Explicitly brought back after being dismissed.
   bool get summoned => _summoned;
 
   /// Screens where the floating bot steps aside (Messages, open chats, the rider app).

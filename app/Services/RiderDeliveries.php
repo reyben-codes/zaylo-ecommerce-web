@@ -10,6 +10,7 @@ use App\Notifications\ParcelDeliveryUpdate;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
@@ -94,6 +95,7 @@ class RiderDeliveries
         private readonly ShipmentWorkflow $workflow,
         private readonly LogisticsMessenger $messenger,
         private readonly ChatPhotos $photos,
+        private readonly RiderWallet $wallet,
     ) {}
 
     /** The tracking number printed on the waybill and encoded in its barcode and QR code. */
@@ -294,7 +296,13 @@ class RiderDeliveries
             throw ValidationException::withMessages(['reason' => 'Choose why the parcel could not be delivered.']);
         }
         $failure = $to === 'failed' ? self::failureSummary($reason, $note) : null;
-        $this->workflow->advance($shipment, $to, $rider, $failure ? 'Delivery attempt failed: '.$failure.'.' : null);
+        // Delivering credits the rider's wallet in the same transaction, so a delivered parcel always pays the rider.
+        DB::transaction(function () use ($shipment, $to, $rider, $failure) {
+            $this->workflow->advance($shipment, $to, $rider, $failure ? 'Delivery attempt failed: '.$failure.'.' : null);
+            if ($to === 'delivered') {
+                $this->wallet->credit($shipment, $rider);
+            }
+        });
         $shipment = $shipment->fresh();
 
         $this->log($shipment, $rider, $to, $failure ? $reason : null, $failure ? $note : null);

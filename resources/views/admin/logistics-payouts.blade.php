@@ -11,7 +11,7 @@
         <div>
             <p class="seller-eyebrow">Finance</p>
             <h1>Logistics payouts</h1>
-            <p>Each logistics partner earns {{ $percent }}% of the shipping fee of every parcel it delivers; ZAYLO keeps {{ 100 - $percent }}%. Free-shipping vouchers are covered by ZAYLO, so partners are still paid the full fee's share. A partner with branches is paid as one company and pays its branches itself.</p>
+            <p>Each logistics partner earns {{ $percent }}% of the shipping fee of every parcel it delivers; ZAYLO keeps {{ 100 - $percent }}%. Free-shipping vouchers are covered by ZAYLO, so partners are still paid the full fee's share. The rider's commission of &#8369;{{ number_format($riderCommission, 2) }} per delivered parcel is part of the partner's share: the partner sends it to the rider when they withdraw. A partner with branches is paid as one company and pays its branches itself.</p>
         </div>
     </section>
 
@@ -36,7 +36,7 @@
         <div class="seller-stat">
             <span class="seller-stat__label"><i class="fas fa-circle-check" aria-hidden="true"></i> Paid to partners</span>
             <strong class="seller-stat__value">&#8369;{{ number_format($summary['paid'], 2) }}</strong>
-            <span class="seller-stat__note">Of &#8369;{{ number_format($summary['partner'], 2) }} earned</span>
+            <span class="seller-stat__note">Of &#8369;{{ number_format($summary['partner'], 2) }} earned, including &#8369;{{ number_format($summary['rider'], 2) }} rider commissions</span>
         </div>
         <div class="seller-stat">
             <span class="seller-stat__label"><i class="fas fa-hourglass-half" aria-hidden="true"></i> Owed to partners</span>
@@ -49,7 +49,7 @@
         <header class="seller-panel__header"><div><h2>By partner</h2><p>Pay a partner after sending them the money; every delivered parcel not paid yet is included.</p></div></header>
         <div class="seller-table-wrap">
             <table class="seller-table workspace-table admin-money">
-                <thead><tr><th>Partner</th><th>Delivered</th><th>Shipping fees</th><th>Partner {{ $percent }}%</th><th>ZAYLO {{ 100 - $percent }}%</th><th>Paid</th><th>Owed</th><th><span class="sr-only">Pay</span></th></tr></thead>
+                <thead><tr><th>Partner</th><th>Delivered</th><th>Shipping fees</th><th>Partner {{ $percent }}%</th><th>Rider commissions</th><th>ZAYLO {{ 100 - $percent }}%</th><th>Paid</th><th>Owed</th><th><span class="sr-only">Pay</span></th></tr></thead>
                 <tbody>
                     @forelse($byProvider as $partner)
                         <tr>
@@ -57,6 +57,7 @@
                             <td>{{ number_format($partner['parcels']) }}</td>
                             <td>&#8369;{{ number_format($partner['fees'], 2) }}</td>
                             <td>&#8369;{{ number_format($partner['partner'], 2) }}</td>
+                            <td>&#8369;{{ number_format($partner['rider'], 2) }}</td>
                             <td>&#8369;{{ number_format($partner['zaylo'], 2) }}</td>
                             <td>&#8369;{{ number_format($partner['paid'], 2) }}</td>
                             <td><strong>&#8369;{{ number_format($partner['owed'], 2) }}</strong>@if($partner['unpaidParcels'])<span class="seller-cell-note">{{ $partner['unpaidParcels'] }} {{ Str::plural('parcel', $partner['unpaidParcels']) }}</span>@endif</td>
@@ -76,7 +77,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="8"><p class="admin-empty-inline">No delivered parcels yet.</p></td></tr>
+                        <tr><td colspan="9"><p class="admin-empty-inline">No delivered parcels yet.</p></td></tr>
                     @endforelse
                 </tbody>
             </table>

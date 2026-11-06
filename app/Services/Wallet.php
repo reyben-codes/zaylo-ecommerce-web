@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\LogisticsPayout;
-use App\Models\Shipment;
 use App\Models\User;
 use App\Models\WalletCashout;
 use Illuminate\Support\Collection;
@@ -13,11 +12,12 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Wallet credits for riders and logistics partners, and cashing them out to GCash.
+ * Logistics partners' wallet, and cashing it out to GCash. (Riders have their own wallet: App\Services\RiderWallet.)
  *
- * Riders earn the delivery fee of every parcel they delivered; partners are credited each payout ZAYLO records for
- * them. Credits minus what was already cashed out is the balance. The GCash transfer is a stand-in for the real
- * GCash API (which needs a merchant account): it is recorded at once with a demo reference and no money moves.
+ * Each payout ZAYLO records for a partner credits the partner's own share of it, that is, the payout less its riders'
+ * commissions, which the partner sends to its riders when they withdraw. Credits minus what was already cashed out is
+ * the balance. The GCash transfer is a stand-in for the real GCash API (which needs a merchant account): it is
+ * recorded at once with a demo reference and no money moves.
  */
 class Wallet
 {
@@ -25,17 +25,15 @@ class Wallet
 
     public const MAXIMUM = 50000;
 
-    public function __construct(private readonly RiderDeliveries $deliveries) {}
-
     public static function ready(): bool
     {
         return Schema::hasTable('wallet_cashouts');
     }
 
-    /** Riders (and couriers on older accounts) and logistics partners have a wallet. */
+    /** Logistics partners with a company have this wallet. */
     public static function supports(?User $user): bool
     {
-        return $user !== null && ($user->hasRole('rider') || $user->hasRole('courier') || ($user->hasRole('logistics') && $user->logisticsProvider));
+        return $user !== null && $user->hasRole('logistics') && $user->logisticsProvider !== null;
     }
 
     /** @return array{credits: float, cashed_out: float, balance: float, source: string} */
@@ -48,9 +46,7 @@ class Wallet
             'credits' => $credits,
             'cashed_out' => $cashedOut,
             'balance' => max(0.0, round($credits - $cashedOut, 2)),
-            'source' => $user->hasRole('logistics')
-                ? 'Payouts ZAYLO recorded for your company'
-                : 'Delivery fees of the parcels you delivered',
+            'source' => "Your company's share of each payout ZAYLO records (after your riders' commissions)",
         ];
     }
 
@@ -107,21 +103,14 @@ class Wallet
 
     private function credits(User $user): float
     {
-        if ($user->hasRole('logistics')) {
-            $provider = $user->logisticsProvider;
-
-            return $provider && Schema::hasTable('logistics_payouts')
-                ? round((float) LogisticsPayout::where('logistics_provider_id', $provider->id)->sum('amount'), 2)
-                : 0.0;
+        $provider = $user->logisticsProvider;
+        if (! $provider || ! Schema::hasTable('logistics_payouts')) {
+            return 0.0;
         }
+        $payouts = LogisticsPayout::where('logistics_provider_id', $provider->id);
+        $riders = Schema::hasColumn('logistics_payouts', 'rider_commissions') ? (float) (clone $payouts)->sum('rider_commissions') : 0.0;
 
-        $relations = array_values(array_filter([
-            Schema::hasColumn('shipments', 'order_id') ? 'order' : null,
-            Schema::hasColumn('shipments', 'seller_order_id') ? 'sellerOrder.order' : null,
-        ]));
-
-        return round($this->deliveries->completed($user)->with($relations)->get()
-            ->sum(fn (Shipment $shipment) => RiderDeliveries::amounts($shipment)['delivery_fee']), 2);
+        return max(0.0, round((float) $payouts->sum('amount') - $riders, 2));
     }
 
     private function reference(): string

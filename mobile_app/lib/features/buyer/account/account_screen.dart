@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:zaylo_mobile/api/api_exception.dart';
+import 'package:zaylo_mobile/components/app_update.dart';
 import 'package:zaylo_mobile/components/buttons.dart';
 import 'package:zaylo_mobile/components/complaints.dart';
 import 'package:zaylo_mobile/components/help_bot.dart';
@@ -18,7 +19,6 @@ import 'package:zaylo_mobile/features/buyer/messages/seller_inbox_screen.dart';
 import 'package:zaylo_mobile/features/buyer/orders/orders_screen.dart';
 import 'package:zaylo_mobile/features/buyer/widgets/shop_actions.dart';
 import 'package:zaylo_mobile/features/buyer/widgets/signed_out_prompt.dart';
-import 'package:zaylo_mobile/features/buyer/widgets/tab_header.dart';
 import 'package:zaylo_mobile/state/app_state.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 
@@ -105,15 +105,12 @@ class _AccountScreenState extends State<AccountScreen> {
     if (user == null) {
       return const SignedOutPrompt(
         icon: Icons.person_outline,
-        heading: 'Account',
-        eyebrow: 'Your ZAYLO',
         title: 'Welcome to ZAYLO',
         message: 'Sign in to track orders, manage addresses and update your profile.',
       );
     }
     return Scaffold(
-      appBar: const TabHeader(eyebrow: 'Your ZAYLO', title: 'Account'),
-      body: ListView(
+      body: SafeArea(bottom: false, child: ListView(
         padding: EdgeInsets.fromLTRB(ZayloSpace.page, ZayloSpace.page, ZayloSpace.page, ZayloSpace.page + MediaQuery.paddingOf(context).bottom),
         children: [
           SectionCard(
@@ -227,6 +224,11 @@ class _AccountScreenState extends State<AccountScreen> {
                   api: state.api,
                   emptyMessage: 'Report a problem from an order’s details and follow the case here.',
                 )),
+              ),
+              _MenuTile(
+                icon: Icons.auto_awesome_outlined,
+                label: 'Patch notes',
+                onTap: () => showPatchNotesDialog(context),
                 last: true,
               ),
             ]),
@@ -247,7 +249,7 @@ class _AccountScreenState extends State<AccountScreen> {
                 style: TextStyle(fontSize: 11, color: ZayloColors.taupe)),
           ),
         ],
-      ),
+      )),
     );
   }
 }

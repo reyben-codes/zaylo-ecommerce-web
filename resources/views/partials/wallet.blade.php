@@ -1,5 +1,5 @@
 {{--
-    Wallet credits and cash-outs to GCash, for riders (Earnings) and logistics partners (Logistics Center > Earnings).
+    Logistics partners' wallet credits and cash-outs to GCash (Logistics Center > Earnings).
     Expects $wallet (App\Services\Wallet::summary), $cashouts and $cashOutRoute. The transfer is simulated.
 --}}
 @php
@@ -10,7 +10,7 @@
     <header class="wallet-panel__header">
         <div>
             <h2 id="wallet-title"><i class="fas fa-wallet" aria-hidden="true"></i> Wallet</h2>
-            <p>{{ $wallet['source'] }} are added to your wallet. Cash them out to GCash anytime.</p>
+            <p>{{ $wallet['source'] }} goes into your wallet. Cash them out to GCash anytime.</p>
         </div>
         <span class="wallet-demo"><i class="fas fa-flask" aria-hidden="true"></i> Demo GCash: no real money is sent</span>
     </header>

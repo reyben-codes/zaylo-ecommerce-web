@@ -2,20 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import 'package:zaylo_mobile/auth/buyer/login_screen.dart';
-import 'package:zaylo_mobile/auth/buyer/registration_screen.dart';
-import 'package:zaylo_mobile/auth/rider/rider_login_screen.dart';
 import 'package:zaylo_mobile/components/announcement_banner.dart';
 import 'package:zaylo_mobile/components/announcement_popups.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
 import 'package:zaylo_mobile/features/buyer/catalog/product_card.dart';
 import 'package:zaylo_mobile/features/buyer/catalog/product_catalog_screen.dart';
-import 'package:zaylo_mobile/features/buyer/catalog/search_field.dart';
 import 'package:zaylo_mobile/features/buyer/home/widgets/home_header.dart';
-import 'package:zaylo_mobile/features/buyer/home/widgets/home_menu_drawer.dart';
 import 'package:zaylo_mobile/features/buyer/home/widgets/home_sections.dart';
-import 'package:zaylo_mobile/features/buyer/messages/seller_inbox_screen.dart';
-import 'package:zaylo_mobile/features/buyer/orders/orders_screen.dart';
 import 'package:zaylo_mobile/models/buyer/catalog_models.dart';
 import 'package:zaylo_mobile/navigation/floating_nav_bar.dart';
 import 'package:zaylo_mobile/state/app_state.dart';
@@ -70,39 +63,9 @@ class _StorefrontScreenState extends State<StorefrontScreen> {
     ));
   }
 
-  void _push(Widget screen) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
-
   @override
   Widget build(BuildContext context) {
-    final state = AppScope.of(context);
     return Scaffold(
-      drawer: HomeMenuDrawer(
-        signedIn: state.signedIn,
-        onCatalog: (category, title) {
-          Navigator.pop(context);
-          _openCatalog(category: category, title: title);
-        },
-        onOrders: () {
-          Navigator.pop(context);
-          state.signedIn ? _push(const OrdersScreen()) : _push(const LoginScreen());
-        },
-        onMessages: () {
-          Navigator.pop(context);
-          state.signedIn ? _push(const SellerInboxScreen()) : _push(const LoginScreen());
-        },
-        onSignIn: () {
-          Navigator.pop(context);
-          _push(const LoginScreen());
-        },
-        onRegister: () {
-          Navigator.pop(context);
-          _push(const RegistrationScreen());
-        },
-        onRiderLogin: () {
-          Navigator.pop(context);
-          _push(const RiderLoginScreen());
-        },
-      ),
       // No bottom inset: the page scrolls behind the floating nav bar.
       body: SafeArea(
         bottom: false,
@@ -131,13 +94,7 @@ class _StorefrontScreenState extends State<StorefrontScreen> {
                           physics: const AlwaysScrollableScrollPhysics(),
                           slivers: [
                             SliverToBoxAdapter(child: AnnouncementPopups(announcements: data.announcementPopups)),
-                            const SliverToBoxAdapter(child: SizedBox(height: HomeTopBar.height)),
-                            SliverToBoxAdapter(
-                              child: Padding(
-                                padding: const EdgeInsets.fromLTRB(ZayloSpace.page, 0, ZayloSpace.page, 18),
-                                child: SearchField(onTap: () => _openCatalog(focusSearch: true)),
-                              ),
-                            ),
+                            const SliverToBoxAdapter(child: SizedBox(height: HomeTopBar.height + 6)),
                             if (data.announcements.isNotEmpty)
                               SliverToBoxAdapter(
                                 child: AnnouncementBanner(
@@ -194,7 +151,7 @@ class _StorefrontScreenState extends State<StorefrontScreen> {
                       right: 0,
                       child: AutoHideTopBar(
                         visibility: _topBarVisibility,
-                        child: const HomeTopBar(),
+                        child: HomeTopBar(onSearch: () => _openCatalog(focusSearch: true)),
                       ),
                     ),
                   ]);

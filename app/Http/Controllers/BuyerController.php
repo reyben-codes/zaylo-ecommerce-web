@@ -11,6 +11,7 @@ use App\Models\Voucher;
 use App\Models\Wishlist;
 use App\Services\CartService;
 use App\Services\CheckoutService;
+use App\Services\ShippingRates;
 use App\Services\OrderReceipts;
 use App\Support\MobilePayload;
 use App\Support\OrderParties;
@@ -26,8 +27,6 @@ use Illuminate\Validation\ValidationException;
 class BuyerController extends Controller
 {
     use UpdatesAccountSettings;
-
-    private const SHIPPING_PER_SELLER = CheckoutService::SHIPPING_PER_SELLER;
 
     public function __construct(private readonly CartService $carts, private readonly CheckoutService $checkoutService)
     {
@@ -426,7 +425,10 @@ class BuyerController extends Controller
         }
 
         $subtotal = $items->sum(fn (CartItem $item) => $item->unitPrice() * $item->quantity);
-        $shipping = $items->pluck('product.seller_id')->unique()->count() * self::SHIPPING_PER_SELLER;
+        $sellerCount = $items->pluck('product.seller_id')->unique()->count();
+        $addresses = $request->user()->addresses()->orderByDesc('is_default')->orderBy('id')->get();
+        // Each partner's fee to each address, so the page can recalculate as the buyer changes either one.
+        $shippingTable = ShippingRates::table($this->checkoutService->partners(), $addresses->filter(fn ($address) => $address->isStructured()));
 
         return view('buyer.checkout', [
             'identityVerified' => $request->user()->isIdentityVerified(),
@@ -435,10 +437,11 @@ class BuyerController extends Controller
             'identityStatus' => Schema::hasTable('identity_verifications') ? $request->user()->latestIdentityVerification()->value('status') : null,
             'items' => $items,
             'subtotal' => $subtotal,
-            'shipping' => $shipping,
-            'shippingDiscount' => $voucher ? $shipping : 0,
+            'sellerCount' => $sellerCount,
+            'shippingTable' => $shippingTable,
+            'standardFee' => ShippingRates::STANDARD_FEE,
             'voucher' => $voucher,
-            'addresses' => $request->user()->addresses()->orderByDesc('is_default')->orderBy('id')->get(),
+            'addresses' => $addresses,
             'estimatedShipStart' => now()->addWeekdays(2),
             'estimatedShipEnd' => now()->addWeekdays(4),
         ]);
@@ -534,6 +537,7 @@ class BuyerController extends Controller
             'cart_item_ids.*' => ['required', 'integer', 'distinct'],
             'voucher_code' => ['nullable', 'string', 'max:50'],
             'courier_choice' => ['nullable', 'string', Rule::in(array_keys(Order::COURIERS))],
+            'logistics_provider_id' => ['nullable', 'integer'],
             'quoted_unit_prices' => ['nullable', 'array'],
             'quoted_unit_prices.*' => ['required', 'numeric', 'min:0', 'decimal:0,2'],
         ]);

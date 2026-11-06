@@ -9,7 +9,6 @@ import 'package:zaylo_mobile/components/warehouse_note.dart';
 import 'package:zaylo_mobile/features/buyer/checkout/checkout_screen.dart';
 import 'package:zaylo_mobile/features/buyer/widgets/shop_actions.dart';
 import 'package:zaylo_mobile/features/buyer/widgets/signed_out_prompt.dart';
-import 'package:zaylo_mobile/features/buyer/widgets/tab_header.dart';
 import 'package:zaylo_mobile/models/buyer/cart_models.dart';
 import 'package:zaylo_mobile/state/app_state.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
@@ -121,8 +120,6 @@ class _BagScreenState extends State<BagScreen> {
     if (!state.signedIn) {
       return const SignedOutPrompt(
         iconWidget: CartIcon(size: 34),
-        heading: 'Cart',
-        eyebrow: 'Ready for checkout',
         title: 'Your cart',
         message: 'Sign in to add products to your cart and check out.',
       );
@@ -136,7 +133,6 @@ class _BagScreenState extends State<BagScreen> {
     final selectedTotal = selected.fold<double>(0, (sum, item) => sum + item.lineTotal);
 
     return Scaffold(
-      appBar: TabHeader(eyebrow: 'Ready for checkout', title: 'Cart', count: cart.count),
       bottomNavigationBar: cart.items.isEmpty
           ? null
           : Container(
@@ -170,7 +166,7 @@ class _BagScreenState extends State<BagScreen> {
                 ]),
               ),
             ),
-      body: cart.items.isEmpty
+      body: SafeArea(bottom: false, child: cart.items.isEmpty
           ? (_error != null
               ? LoadError(error: _error, onRetry: _refresh, title: 'Could not load your cart')
               : _loading
@@ -238,7 +234,7 @@ class _BagScreenState extends State<BagScreen> {
                   ],
                 ],
               ),
-            ),
+            )),
     );
   }
 

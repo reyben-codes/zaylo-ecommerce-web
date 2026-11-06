@@ -160,14 +160,13 @@ class RiderApi extends ApiClient {
 
   Future<RiderEarnings> earnings() async => RiderEarnings.fromJson(await send('GET', '/mobile/rider/earnings'));
 
-  /// Wallet credits (delivery fees), cash-outs so far, and the limits.
   Future<RiderWallet> wallet() async => RiderWallet.fromJson(await send('GET', '/mobile/rider/wallet'));
 
-  /// Sends [amount] from the wallet to a GCash number. Simulated on the server: no real money moves.
-  Future<WalletCashoutResult> cashOut({required double amount, required String gcashNumber, required String gcashName}) async {
-    final data = await send('POST', '/mobile/rider/wallet/cash-out',
-        body: {'amount': amount.toStringAsFixed(2), 'gcash_number': gcashNumber, 'gcash_name': gcashName});
-    return WalletCashoutResult(message: data['message'] as String? ?? 'Cash-out sent.', wallet: RiderWallet.fromJson(data));
+  /// Asks for [amount] to be sent to GCash. Returns the confirmation and the updated wallet.
+  Future<(String, RiderWallet)> withdraw({required double amount, required String gcashNumber, required String gcashName}) async {
+    final data = await send('POST', '/mobile/rider/wallet/withdrawals',
+        body: {'amount': amount, 'gcash_number': gcashNumber, 'gcash_name': gcashName});
+    return (data['message'] as String? ?? 'Withdrawal requested.', RiderWallet.fromJson(data));
   }
 
   // ------------------------------------------------------- Account settings

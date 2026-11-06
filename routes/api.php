@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\WalletController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\FaqController;
 use App\Http\Controllers\MobileAccountController;
@@ -15,6 +14,7 @@ use App\Http\Controllers\MobileRiderAccountController;
 use App\Http\Controllers\MobileRiderAuthenticationController;
 use App\Http\Controllers\MobileRiderDashboardController;
 use App\Http\Controllers\MobileRiderSupportController;
+use App\Http\Controllers\MobileRiderWalletController;
 use App\Http\Controllers\MobileShopController;
 use App\Http\Controllers\MobileShoppingController;
 use App\Http\Controllers\MobileStorefrontController;
@@ -106,9 +106,9 @@ Route::prefix('mobile')->name('mobile.')->middleware('throttle:60,1')->group(fun
             Route::get('/deliveries/{shipment}/chat/{message}/{kind}', [MobileDeliveryChatController::class, 'riderMedia'])->whereIn('kind', ['photo', 'video'])->name('deliveries.chat.media');
             Route::get('/history', [MobileRiderDashboardController::class, 'history'])->name('history');
             Route::get('/earnings', [MobileRiderDashboardController::class, 'earnings'])->name('earnings');
-            // Wallet credits (delivery fees) cashed out to GCash; the transfer is simulated.
-            Route::get('/wallet', [WalletController::class, 'show'])->name('wallet');
-            Route::post('/wallet/cash-out', [WalletController::class, 'mobileCashOut'])->middleware('throttle:10,1,mobile-wallet')->name('wallet.cash-out');
+            // The rider's wallet: a commission per delivered parcel, withdrawn to GCash.
+            Route::get('/wallet', [MobileRiderWalletController::class, 'show'])->name('wallet');
+            Route::post('/wallet/withdrawals', [MobileRiderWalletController::class, 'withdraw'])->middleware('throttle:10,1,mobile-rider-withdraw')->name('wallet.withdraw');
             Route::get('/reports', [MobileRiderDashboardController::class, 'reports'])->name('reports');
 
             Route::patch('/account/phone', [MobileRiderAccountController::class, 'updatePhone'])->name('account.phone');

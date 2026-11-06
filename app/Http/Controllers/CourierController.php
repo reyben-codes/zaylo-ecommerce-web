@@ -93,15 +93,10 @@ class CourierController extends Controller
             : 'Delivery status updated.');
     }
 
-    public function earnings(\App\Services\Wallet $wallet)
+    public function earnings()
     {
         $shipments = Shipment::where('courier_id', auth()->id())->where('status', 'delivered')->with('order')->latest()->get();
-
-        return view('courier.earnings', [
-            'shipments' => $shipments,
-            'wallet' => $wallet->summary(auth()->user()),
-            'cashouts' => $wallet->history(auth()->user()),
-        ]);
+        return view('courier.earnings', compact('shipments'));
     }
 
     public function history() { return $this->deliveries(); }

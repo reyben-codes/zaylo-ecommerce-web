@@ -5,10 +5,12 @@ namespace App\Services;
 use App\Models\Address;
 use App\Models\Cart;
 use App\Models\CartItem;
+use App\Models\LogisticsProvider;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\Shipment;
 use App\Models\User;
 use App\Models\Voucher;
 use Illuminate\Support\Collection;
@@ -20,10 +22,46 @@ use Illuminate\Validation\ValidationException;
 /**
  * Placing and cancelling orders, shared by the web storefront (BuyerController) and the mobile API,
  * so pricing (including scheduled sales), stock locking, the ID check and voucher use stay identical.
+ * Shipping is charged per seller, by the distance from the hub of the logistics partner the buyer picks to the
+ * delivery address (ShippingRates).
  */
 class CheckoutService
 {
-    public const SHIPPING_PER_SELLER = 120.00;
+    /** The fee without a partner or a located address; older app builds show it. */
+    public const SHIPPING_PER_SELLER = ShippingRates::STANDARD_FEE;
+
+    /** Whether orders record the buyer's logistics partner (after the 2026_11_07_000002 migration). */
+    public static function choosesPartner(): bool
+    {
+        return Shipment::tracksProvider() && Schema::hasColumn('orders', 'logistics_provider_id');
+    }
+
+    /** @return Collection<int, LogisticsProvider> partners a buyer can pick at checkout */
+    public function partners(): Collection
+    {
+        return self::choosesPartner() ? LogisticsProvider::acceptingParcels()->get() : collect();
+    }
+
+    /**
+     * The partner for an order: the buyer's pick, or the nearest one to the address when none was sent (older app
+     * builds). Null when no partner takes parcels, and the flat fee applies.
+     */
+    public function partnerFor(mixed $partnerId, ?Address $address): ?LogisticsProvider
+    {
+        $partners = $this->partners();
+        if ($partners->isEmpty()) {
+            return null;
+        }
+        if (blank($partnerId)) {
+            return $address ? ShippingRates::nearest($partners, $address) : $partners->first();
+        }
+        $partner = $partners->firstWhere('id', (int) $partnerId);
+        if (! $partner) {
+            throw ValidationException::withMessages(['logistics_provider_id' => 'That logistics partner is not taking parcels right now. Choose another one.']);
+        }
+
+        return $partner;
+    }
 
     public function normalizeVoucherCode(?string $code): string
     {
@@ -46,10 +84,12 @@ class CheckoutService
     }
 
     /** @param Collection<int, CartItem> $items with product and variant loaded */
-    public function quote(Collection $items, ?Voucher $voucher): array
+    public function quote(Collection $items, ?Voucher $voucher, ?Address $address = null, ?LogisticsProvider $partner = null): array
     {
+        $zone = ShippingRates::zone($partner, $address);
+        $perSeller = ShippingRates::fee($zone);
         $subtotal = $items->sum(fn (CartItem $item) => $item->unitPrice() * $item->quantity);
-        $shipping = $items->pluck('product.seller_id')->unique()->count() * self::SHIPPING_PER_SELLER;
+        $shipping = $items->pluck('product.seller_id')->unique()->count() * $perSeller;
         $shippingDiscount = $voucher ? $shipping : 0;
 
         return [
@@ -57,6 +97,8 @@ class CheckoutService
             'shipping' => (float) $shipping,
             'shipping_discount' => (float) $shippingDiscount,
             'total' => (float) ($subtotal + $shipping - $shippingDiscount),
+            'shipping_per_seller' => $perSeller,
+            'shipping_zone' => $zone,
         ];
     }
 
@@ -116,6 +158,9 @@ class CheckoutService
             if (! $address->isStructured()) {
                 throw ValidationException::withMessages(['address_id' => 'Please edit this saved address and select its Philippine locations before checkout.']);
             }
+            $partner = $this->partnerFor($input['logistics_provider_id'] ?? null, $address);
+            $zone = ShippingRates::zone($partner, $address);
+            $perSeller = ShippingRates::fee($zone);
 
             $orders = collect();
             foreach ($itemsToOrder->groupBy(fn ($item) => $item->product->seller_id ?? 0) as $sellerId => $items) {
@@ -148,8 +193,8 @@ class CheckoutService
                 }
 
                 $subtotal = $prepared->sum(fn ($row) => $row['unitPrice'] * $row['item']->quantity);
-                $shippingDiscount = $voucher ? self::SHIPPING_PER_SELLER : 0;
-                $shippingFee = self::SHIPPING_PER_SELLER - $shippingDiscount;
+                $shippingDiscount = $voucher ? $perSeller : 0;
+                $shippingFee = $perSeller - $shippingDiscount;
                 $order = Order::create([
                     'order_number' => 'ZAY-'.now()->format('ymd').'-'.Str::upper(Str::random(8)),
                     'user_id' => $buyer->id, 'seller_id' => $sellerId ?: null, 'status' => 'placed',
@@ -161,6 +206,8 @@ class CheckoutService
                 ] + (Schema::hasColumn('orders', 'courier_choice')
                     // Only once the 2026_10_26 migration has added the column.
                     ? ['courier_choice' => $input['courier_choice'] ?? Order::DEFAULT_COURIER]
+                    : []) + (self::choosesPartner()
+                    ? ['logistics_provider_id' => $partner?->id, 'shipping_zone' => $zone]
                     : []));
 
                 foreach ($prepared as $row) {

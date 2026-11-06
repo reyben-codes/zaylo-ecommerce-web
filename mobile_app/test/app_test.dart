@@ -33,6 +33,7 @@ import 'package:zaylo_mobile/features/buyer/shop/followed_shops_screen.dart';
 import 'package:zaylo_mobile/features/buyer/shop/shop_screen.dart';
 import 'package:zaylo_mobile/features/rider/dashboard/widgets/rider_dashboard_widgets.dart';
 import 'package:zaylo_mobile/features/rider/history/rider_history_tab.dart';
+import 'package:zaylo_mobile/features/rider/wallet/rider_wallet_screen.dart';
 import 'package:zaylo_mobile/models/auth_models.dart';
 import 'package:zaylo_mobile/models/chat_media.dart';
 import 'package:zaylo_mobile/features/buyer/catalog/product_card.dart';
@@ -46,6 +47,7 @@ import 'package:zaylo_mobile/models/location.dart';
 import 'package:zaylo_mobile/models/rider/rider_activity_models.dart';
 import 'package:zaylo_mobile/models/rider/rider_dashboard_models.dart';
 import 'package:zaylo_mobile/models/rider/rider_models.dart';
+import 'package:zaylo_mobile/models/rider/rider_wallet_models.dart';
 import 'package:zaylo_mobile/models/support_models.dart';
 import 'package:zaylo_mobile/navigation/rider_shell.dart';
 import 'package:zaylo_mobile/state/app_state.dart';
@@ -365,6 +367,32 @@ class FakeGoogleIdTokenSource implements GoogleIdTokenSource {
   Future<void> signOut() async => signOuts++;
 }
 
+/// Checkout with two logistics partners: one near the buyer's address and one across the islands.
+class PartnerCheckoutApi extends FakeApi {
+  PartnerCheckoutApi() : super(cartIds: const [11]);
+
+  int? placedPartnerId;
+
+  @override
+  Future<CheckoutQuote> quote(List<int> cartItemIds, {String? voucherCode}) async {
+    final base = await super.quote(cartItemIds, voucherCode: voucherCode);
+    return CheckoutQuote(
+      items: base.items,
+      totals: const CheckoutTotals(subtotal: 499, shipping: 60, shippingDiscount: 0, total: 559),
+      addresses: base.addresses,
+      sellerCount: 1,
+      defaultPartnerId: 1,
+      logisticsPartners: [
+        for (final json in [
+          {'id': 2, 'name': 'Cebu Couriers', 'hub': 'Cebu City, Cebu', 'rates': {'1': {'fee': 200, 'label': 'Another island group', 'zone': 'other_island_group'}}},
+          {'id': 1, 'name': 'Laguna Express', 'hub': 'Calamba, Laguna', 'rates': {'1': {'fee': 60, 'label': 'Same city or municipality', 'zone': 'same_city'}}},
+        ])
+          LogisticsPartnerOption.fromJson(json),
+      ],
+    );
+  }
+}
+
 /// Rider API that answers from memory, in the shape MobileRiderDashboardController returns.
 class FakeRiderApi extends RiderApi {
   FakeRiderApi({TokenStore? tokens}) : super(baseUrl: 'http://fake.test/api', tokens: tokens ?? MemoryTokenStore());
@@ -677,6 +705,41 @@ class FakeRiderApi extends RiderApi {
         ],
       });
 
+  /// Wallet money the rider can withdraw, and the withdrawals asked for.
+  double walletBalance = 120;
+  final withdrawals = <({double amount, String number, String name})>[];
+
+  Map<String, dynamic> walletJson() => {
+        'balance': walletBalance,
+        'earned': 120,
+        'pending': withdrawals.fold<double>(0, (sum, w) => sum + w.amount),
+        'withdrawn': 0,
+        'parcels': 8,
+        'commission_per_parcel': 15,
+        'min_withdrawal': 100,
+        'gcash': null,
+        'commissions': [
+          {'id': 1, 'amount': 15, 'tracking_number': 'TRK-ABC123', 'created_at': '2026-11-06T10:00:00+08:00'},
+        ],
+        'withdrawals': [
+          for (final (index, w) in withdrawals.indexed)
+            {
+              'id': index + 1, 'amount': w.amount, 'gcash_number': '0917 123 4567', 'gcash_name': w.name,
+              'status': 'pending', 'status_label': 'Processing',
+            },
+        ],
+      };
+
+  @override
+  Future<RiderWallet> wallet() async => RiderWallet.fromJson(walletJson());
+
+  @override
+  Future<(String, RiderWallet)> withdraw({required double amount, required String gcashNumber, required String gcashName}) async {
+    withdrawals.add((amount: amount, number: gcashNumber, name: gcashName));
+    walletBalance -= amount;
+    return ('Withdrawal requested.', RiderWallet.fromJson(walletJson()));
+  }
+
   // PSGC lookups: one path down to a barangay, like the real API's shape.
   @override
   Future<List<Location>> regions() async => const [Location(code: '040000000', name: 'CALABARZON')];
@@ -838,9 +901,9 @@ void main() {
       expect(find.text('See what updates were added to ZAYLO'), findsNothing);
       expect(await store.readSeenVersion(), '1.0.5');
 
-      // Can also be opened anytime from the sidebar menu.
-      await pumpApp(tester);
-      await tester.tap(find.byTooltip('Menu'));
+      // Can also be opened anytime from Account > Help.
+      await pumpApp(tester, token: 'stored-token');
+      await tester.tap(find.text('Account'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Patch notes'));
       await tester.pumpAndSettle();
@@ -950,7 +1013,7 @@ void main() {
     tester.view.physicalSize = const Size(400, 800);
     await tester.pumpAndSettle();
     double topBarOffset() => tester
-        .widget<AnimatedSlide>(find.ancestor(of: find.byTooltip('Menu'), matching: find.byType(AnimatedSlide)))
+        .widget<AnimatedSlide>(find.ancestor(of: find.byType(HomeTopBar), matching: find.byType(AnimatedSlide)))
         .offset
         .dy;
     expect(topBarOffset(), 0);
@@ -970,22 +1033,22 @@ void main() {
   testWidgets('theme toggle switches to dark mode, persists, and returns to the system setting', (tester) async {
     addTearDown(() => ZayloColors.use(Brightness.light));
     final store = MemoryThemeModeStore();
-    await pumpApp(tester, theme: ThemeController(store: store));
+    await pumpApp(tester, token: 'stored-token', theme: ThemeController(store: store));
     Color background() => tester.widget<Scaffold>(find.byType(Scaffold).first).backgroundColor ??
         Theme.of(tester.element(find.byType(Scaffold).first)).scaffoldBackgroundColor;
     expect(background(), ZayloPalette.light.cream);
 
-    await tester.tap(find.byTooltip('Switch to dark mode'));
+    await tester.tap(find.text('Account'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Dark mode'));
     await tester.pumpAndSettle();
 
     expect(ZayloColors.isDark, isTrue);
     expect(background(), ZayloPalette.dark.cream);
     expect(await store.read(), ThemeMode.dark);
 
-    // The menu has the labelled toggle. The test platform reports light, so
-    // switching back follows the system again, as on the web.
-    await tester.tap(find.byTooltip('Menu'));
-    await tester.pumpAndSettle();
+    // The test platform reports light, so switching back follows the system
+    // again, as on the web.
     await tester.tap(find.text('Light mode'));
     await tester.pumpAndSettle();
     expect(ZayloColors.isDark, isFalse);
@@ -993,7 +1056,43 @@ void main() {
     expect(await store.read(), ThemeMode.system);
   });
 
-  testWidgets('menu opens the rider login screen', (tester) async {
+  testWidgets('riders withdraw their commissions to GCash from the wallet', (tester) async {
+    final api = FakeRiderApi();
+    await tester.pumpWidget(MaterialApp(home: RiderWalletScreen(api: api)));
+    await tester.pumpAndSettle();
+
+    expect(find.text('₱120.00'), findsWidgets);
+    expect(find.text('₱15.00 for every parcel you deliver'), findsOneWidget);
+    expect(find.text('TRK-ABC123'), findsOneWidget);
+
+    await tester.tap(find.text('WITHDRAW TO GCASH'));
+    await tester.pumpAndSettle();
+    expect(find.text('Withdraw to GCash'), findsOneWidget);
+    await tester.tap(find.text('REQUEST WITHDRAWAL'));
+    await tester.pump();
+    expect(find.text('Enter your 11-digit GCash number starting with 09.'), findsOneWidget);
+    expect(api.withdrawals, isEmpty);
+
+    await tester.enterText(find.widgetWithText(TextFormField, '120.00'), '99');
+    await tester.enterText(find.widgetWithText(TextFormField, '09XXXXXXXXX'), '09171234567');
+    await tester.enterText(find.widgetWithText(TextFormField, 'e.g. Juan Dela Cruz'), 'Juan Dela Cruz');
+    await tester.tap(find.text('REQUEST WITHDRAWAL'));
+    await tester.pump();
+    expect(find.text('The minimum withdrawal is ₱100.00.'), findsOneWidget);
+
+    await tester.enterText(find.widgetWithText(TextFormField, '99'), '100');
+    await tester.tap(find.text('REQUEST WITHDRAWAL'));
+    // Not pumpAndSettle: the message's countdown bar would run until it closes.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(api.withdrawals.single, (amount: 100.0, number: '09171234567', name: 'Juan Dela Cruz'));
+    expect(find.text('Withdrawal requested.'), findsOneWidget);
+    expect(find.text('₱20.00'), findsOneWidget, reason: 'balance after the request');
+    expect(find.text('Processing'), findsWidgets);
+    expect(find.text('You can withdraw once you have ₱100.00 or more.'), findsOneWidget);
+  });
+
+  testWidgets('home has no menu, and the sign-in screen opens the rider login screen', (tester) async {
     // Widget tests answer every HTTP request with 400, so the masthead's
     // network photo fails to load. That is expected here; anything else is not.
     final reportError = FlutterError.onError;
@@ -1002,9 +1101,12 @@ void main() {
     };
     addTearDown(() => FlutterError.onError = reportError);
     await pumpApp(tester);
+    expect(find.byTooltip('Menu'), findsNothing);
+    expect(find.byType(Drawer), findsNothing);
 
-    await tester.tap(find.byTooltip('Menu'));
+    await tester.tap(find.descendant(of: find.byType(HomeTopBar), matching: find.byTooltip('Messages')));
     await tester.pumpAndSettle();
+    expect(find.byType(LoginScreen), findsOneWidget);
     await tester.tap(find.text('Login as a Rider'));
     await tester.pumpAndSettle();
 
@@ -1632,7 +1734,7 @@ void main() {
       expect(bubble(), findsOneWidget);
     });
 
-    testWidgets('dragging it onto the close target hides it until Chatbot is tapped in the sidebar', (tester) async {
+    testWidgets('dragging it onto the close target hides it until Undo is tapped', (tester) async {
       await pumpApp(tester, token: 'stored-token');
       final start = tester.getCenter(bubble());
       // The close target sits at the bottom centre while dragging.
@@ -1656,15 +1758,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(bubble(), findsNothing);
 
-      // Opening the sidebar menu and tapping Chatbot (below the theme toggle) brings it back.
-      await tester.tap(find.byTooltip('Menu'));
-      await tester.pumpAndSettle();
-      expect(
-        tester.getTopLeft(find.text('Dark mode')).dy,
-        lessThan(tester.getTopLeft(find.text('Chatbot')).dy),
-        reason: 'Chatbot button sits below the light/dark mode toggle in the sidebar',
-      );
-      await tester.tap(find.text('Chatbot'));
+      // Undo on the message brings it back.
+      await tester.tap(find.text('UNDO'));
       await tester.pumpAndSettle();
       expect(bubble(), findsOneWidget);
     });
@@ -1821,6 +1916,20 @@ void main() {
       expect(find.text('18+ items need an approved ID'), findsNothing);
       final placeOrder = find.ancestor(of: find.text('PLACE ORDER'), matching: find.byType(FilledButton));
       expect(tester.widget<FilledButton>(placeOrder).onPressed, isNotNull);
+    });
+
+    testWidgets('checkout picks the nearest logistics partner and the fee follows the buyer\'s pick', (tester) async {
+      await pumpApp(tester, token: 'stored-token', api: PartnerCheckoutApi());
+      await open(tester, const CheckoutScreen(cartItemIds: [11]));
+
+      expect(find.text('Laguna Express'), findsOneWidget);
+      expect(find.text('Hub: Calamba, Laguna · ₱60.00 per seller · Same city or municipality'), findsOneWidget);
+      expect(find.text('₱559.00'), findsWidgets, reason: 'the nearest partner is chosen, though the server listed it second');
+
+      await tester.tap(find.text('Cebu Couriers'));
+      await tester.pump();
+      expect(find.text('₱200.00'), findsOneWidget, reason: 'shipping in the summary');
+      expect(find.text('₱699.00'), findsWidgets);
     });
 
     testWidgets('delivered orders offer reviews and reporting a problem', (tester) async {

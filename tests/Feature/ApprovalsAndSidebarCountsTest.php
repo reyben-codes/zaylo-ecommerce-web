@@ -83,7 +83,7 @@ class ApprovalsAndSidebarCountsTest extends TestCase
         $this->getJson(route('logistics.updates'))->assertOk()
             ->assertJsonPath('badges.riders', 1)
             ->assertJsonPath('badges.pickups', 0)
-            ->assertJsonStructure(['badges' => ['notifications', 'pickups', 'incoming', 'sorting', 'assignments', 'returns', 'riders', 'messages']]);
+            ->assertJsonStructure(['badges' => ['notifications', 'pickups', 'incoming', 'sorting', 'assignments', 'returns', 'riders', 'withdrawals', 'messages']]);
 
         // Each portal reads only its own counts.
         $this->actingAs($seller)->getJson(route('logistics.updates'))->assertForbidden();

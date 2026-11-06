@@ -5,6 +5,7 @@ import 'package:zaylo_mobile/auth/buyer/finish_sign_in.dart';
 import 'package:zaylo_mobile/auth/buyer/registration_screen.dart';
 import 'package:zaylo_mobile/auth/buyer/verify_email_screen.dart';
 import 'package:zaylo_mobile/auth/forgot_password_screen.dart';
+import 'package:zaylo_mobile/auth/rider/rider_login_screen.dart';
 import 'package:zaylo_mobile/auth/widgets/auth_layout.dart';
 import 'package:zaylo_mobile/auth/widgets/google_sign_in_button.dart';
 import 'package:zaylo_mobile/components/buttons.dart';
@@ -115,6 +116,17 @@ class _LoginScreenState extends State<LoginScreen> {
           ]),
         ),
         GoogleSignInSection(onError: (message) => setState(() => _error = message)),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          height: 50,
+          child: OutlinedButton.icon(
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RiderLoginScreen())),
+            style: secondaryButtonStyle,
+            icon: const Icon(Icons.two_wheeler_outlined),
+            label: const Text('Login as a Rider'),
+          ),
+        ),
         const SizedBox(height: 27),
         Center(
           child: TextButton(

@@ -220,7 +220,9 @@ class _ChatHeadOverlayState extends State<ChatHeadOverlay> with TickerProviderSt
       _app.chatHead.dismiss();
       showMessage(
         widget.navigatorKey.currentContext ?? context,
-        'Chat bubble hidden. Tap Chatbot in the menu to bring it back.',
+        'Chat bubble hidden. Open Help bot in Account to bring it back.',
+        actionLabel: 'UNDO',
+        onAction: _app.chatHead.restore,
       );
       return;
     }

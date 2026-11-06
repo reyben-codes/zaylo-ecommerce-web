@@ -4,49 +4,33 @@ import 'package:flutter/material.dart';
 
 import 'package:zaylo_mobile/auth/buyer/login_screen.dart';
 import 'package:zaylo_mobile/components/layout.dart';
-import 'package:zaylo_mobile/components/theme_toggle.dart';
 import 'package:zaylo_mobile/features/buyer/account/notification_bell_button.dart';
+import 'package:zaylo_mobile/features/buyer/catalog/search_field.dart';
 import 'package:zaylo_mobile/features/buyer/messages/seller_inbox_screen.dart';
 import 'package:zaylo_mobile/state/app_state.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 
+/// The Home top bar: the search box, then messages and notifications. The theme toggle is in Account > Settings.
 class HomeTopBar extends StatelessWidget {
-  const HomeTopBar({super.key});
+  const HomeTopBar({super.key, required this.onSearch});
+
+  /// Opens the catalog with its search box focused.
+  final VoidCallback onSearch;
 
   /// The bar floats over the page, which reserves this much space for it.
   static const height = 70.0;
-
-  /// Narrower than this, the centred logo leaves too little room for three icons on the right, so the theme
-  /// toggle stays in Account > Settings only.
-  static const _roomyWidth = 400.0;
 
   @override
   Widget build(BuildContext context) => Container(
         height: height,
         color: ZayloColors.cream,
-        padding: const EdgeInsets.fromLTRB(ZayloSpace.page, 10, ZayloSpace.page, 12),
-        // Equal-width sides keep the logo centred.
+        padding: const EdgeInsets.fromLTRB(ZayloSpace.page, 10, ZayloSpace.page - 8, 12),
         child: Row(children: [
-          Expanded(
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: IconButton(
-                tooltip: 'Menu',
-                onPressed: () => Scaffold.of(context).openDrawer(),
-                icon: const Icon(Icons.menu_rounded),
-              ),
-            ),
-          ),
-          Image.asset(ZayloAssets.logo,
-              height: 38, fit: BoxFit.contain, color: ZayloAssets.logoTint, colorBlendMode: BlendMode.srcIn),
-          Expanded(
-            child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-              if (MediaQuery.sizeOf(context).width >= _roomyWidth) const ThemeToggleButton(),
-              // Messages with sellers (the floating chat head opens them too); the bag is in the bottom nav bar.
-              const _MessagesButton(),
-              const NotificationBellButton(),
-            ]),
-          ),
+          Expanded(child: SearchField(onTap: onSearch)),
+          const SizedBox(width: 4),
+          // Messages with sellers (the floating chat head opens them too); the bag is in the bottom nav bar.
+          const _MessagesButton(),
+          const NotificationBellButton(),
         ]),
       );
 }

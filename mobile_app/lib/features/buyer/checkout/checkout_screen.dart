@@ -40,10 +40,25 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   int? _addressId;
   String _payment = 'cod';
   String? _courier;
+
+  /// The partner the buyer tapped; until then, the nearest one to the chosen address.
+  int? _pickedPartnerId;
   bool _quoting = false;
   bool _placing = false;
 
   BuyerApi get _api => AppScope.read(context).api;
+
+  /// The partner delivering the order: the buyer's pick, or the one with the lowest fee to the chosen address.
+  int? _partnerId(CheckoutQuote quote) {
+    final partners = quote.logisticsPartners;
+    if (partners.any((partner) => partner.id == _pickedPartnerId)) return _pickedPartnerId;
+    if (partners.isEmpty) return null;
+    final byFee = [...partners]
+      ..sort((a, b) => (a.rates[_addressId]?.fee ?? double.infinity).compareTo(b.rates[_addressId]?.fee ?? double.infinity));
+    return byFee.first.id;
+  }
+
+  CheckoutTotals _totals(CheckoutQuote quote) => quote.totalsFor(_partnerId(quote), _addressId);
 
   @override
   void initState() {
@@ -145,6 +160,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         addressId: addressId,
         paymentMethod: _payment,
         courierChoice: _courier,
+        logisticsProviderId: _quote == null ? null : _partnerId(_quote!),
         idempotencyKey: _idempotencyKey,
         voucherCode: _appliedVoucher,
         notes: _notes.text,
@@ -184,7 +200,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   Expanded(
                     child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text('Total', style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
-                      Text(peso(quote.totals.total),
+                      Text(peso(_totals(quote).total),
                           style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: ZayloColors.ink)),
                     ]),
                   ),
@@ -214,6 +230,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 const SizedBox(height: 18),
                 _section('Items (${quote.items.fold<int>(0, (sum, item) => sum + item.quantity)})', _itemsSection(quote)),
                 const SizedBox(height: 18),
+                if (quote.logisticsPartners.isNotEmpty) ...[
+                  _section('Logistics partner', _partnerSection(quote)),
+                  const SizedBox(height: 18),
+                ],
                 if (quote.couriers.isNotEmpty) ...[
                   _section('Delivery courier truck', _courierSection(quote)),
                   const SizedBox(height: 18),
@@ -345,6 +365,31 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
+  Widget _partnerSection(CheckoutQuote quote) {
+    final chosen = _partnerId(quote);
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text("The shipping fee depends on how far your address is from the partner's hub.",
+          style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
+      const SizedBox(height: 10),
+      for (final (index, partner) in quote.logisticsPartners.indexed) ...[
+        if (index > 0) const SizedBox(height: 10),
+        _PaymentOption(
+          icon: Icons.warehouse_outlined,
+          title: partner.name,
+          subtitle: [
+            if (partner.hub.isNotEmpty) 'Hub: ${partner.hub}',
+            switch (partner.rates[_addressId]) {
+              final rate? => '${peso(rate.fee)} per seller · ${rate.label}',
+              null => 'Choose an address to see the fee',
+            },
+          ].join(' · '),
+          selected: chosen == partner.id,
+          onTap: () => setState(() => _pickedPartnerId = partner.id),
+        ),
+      ],
+    ]);
+  }
+
   Widget _courierSection(CheckoutQuote quote) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('Choose which courier truck picks up from the seller and delivers to your home with parcel scanning.',
             style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
@@ -421,18 +466,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     ]);
   }
 
-  Widget _summarySection(CheckoutQuote quote) => SectionCard(
+  Widget _summarySection(CheckoutQuote quote) {
+    final totals = _totals(quote);
+    return SectionCard(
         child: Column(children: [
-          SummaryRow('Subtotal', peso(quote.totals.subtotal)),
-          SummaryRow('Shipping', peso(quote.totals.shipping)),
-          if (quote.totals.shippingDiscount > 0)
-            SummaryRow('Shipping voucher', '-${peso(quote.totals.shippingDiscount)}',
+          SummaryRow('Subtotal', peso(totals.subtotal)),
+          SummaryRow(quote.sellerCount > 1 ? 'Shipping (${quote.sellerCount} sellers)' : 'Shipping', peso(totals.shipping)),
+          if (totals.shippingDiscount > 0)
+            SummaryRow('Shipping voucher', '-${peso(totals.shippingDiscount)}',
                 valueColor: ZayloColors.success),
           Divider(color: ZayloColors.line, height: 20),
-          SummaryRow('Total', peso(quote.totals.total), emphasize: true),
+          SummaryRow('Total', peso(totals.total), emphasize: true),
           if (_quoting) Padding(padding: EdgeInsets.only(top: 8), child: LinearProgressIndicator(color: ZayloColors.ink)),
         ]),
       );
+  }
 }
 
 class _AddressOption extends StatelessWidget {

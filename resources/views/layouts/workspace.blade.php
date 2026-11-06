@@ -57,6 +57,7 @@
                 ['route' => 'support', 'label' => 'ZAYLO support', 'icon' => 'fa-life-ring'],
                 ['route' => 'logistics.reports', 'label' => 'Reports', 'icon' => 'fa-chart-column'],
                 ['route' => 'logistics.earnings', 'label' => 'Earnings', 'icon' => 'fa-wallet'],
+                ['route' => 'logistics.rider-withdrawals', 'label' => 'Rider withdrawals', 'icon' => 'fa-money-bill-transfer', 'count' => 'withdrawals'],
                 ['route' => 'logistics.activity', 'label' => 'Activity log', 'icon' => 'fa-clock-rotate-left'],
                 ['route' => 'logistics.account', 'label' => 'Account', 'icon' => 'fa-user'],
             ],

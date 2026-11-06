@@ -33,6 +33,7 @@ use App\Http\Controllers\LogisticsChatController;
 use App\Http\Controllers\LogisticsController;
 use App\Http\Controllers\LogisticsOperationsController;
 use App\Http\Controllers\LogisticsPayoutController;
+use App\Http\Controllers\RiderWithdrawalController;
 use App\Http\Controllers\SellerApplicationController;
 use App\Http\Controllers\SellerController;
 use App\Http\Controllers\SellerShopSectionController;
@@ -217,7 +218,6 @@ Route::middleware(['auth', 'active', 'verified', 'role:courier', 'nocache'])->pr
     Route::get('/deliveries/{shipment}/waybill', [WaybillController::class, 'rider'])->middleware('throttle:60,1')->name('deliveries.waybill');
     Route::get('/deliveries/{shipment}/waybill/print', [WaybillController::class, 'riderPrint'])->middleware('throttle:60,1')->name('deliveries.waybill.print');
     Route::get('/earnings', [CourierController::class, 'earnings'])->name('earnings');
-    Route::post('/wallet/cash-out', [WalletController::class, 'cashOut'])->middleware('throttle:10,1')->name('wallet.cash-out');
     Route::get('/history', [CourierController::class, 'history'])->name('history');
     Route::get('/activity', [ActivityLogController::class, 'courier'])->name('activity');
     Route::get('/account', [CourierController::class, 'account'])->name('account');
@@ -360,6 +360,10 @@ Route::middleware(['auth', 'active', 'verified', 'role:logistics', 'nocache'])->
     Route::get('/reports', [LogisticsOperationsController::class, 'reports'])->name('reports');
     Route::get('/earnings', [LogisticsPayoutController::class, 'partner'])->name('earnings');
     Route::post('/wallet/cash-out', [WalletController::class, 'cashOut'])->middleware('throttle:10,1')->name('wallet.cash-out');
+    // Riders' GCash withdrawals from their wallets: the partner sends the money, then records the reference.
+    Route::get('/rider-withdrawals', [RiderWithdrawalController::class, 'index'])->name('rider-withdrawals');
+    Route::post('/rider-withdrawals/{withdrawal}/pay', [RiderWithdrawalController::class, 'pay'])->middleware('throttle:30,1')->name('rider-withdrawals.pay');
+    Route::post('/rider-withdrawals/{withdrawal}/reject', [RiderWithdrawalController::class, 'reject'])->middleware('throttle:30,1')->name('rider-withdrawals.reject');
     Route::get('/reports/export', [LogisticsOperationsController::class, 'exportReport'])->name('reports.export');
     Route::get('/activity', [ActivityLogController::class, 'logistics'])->name('activity');
     Route::get('/parcels/{shipment}/waybill', [WaybillController::class, 'logistics'])->middleware('throttle:120,1')->name('parcels.waybill');
