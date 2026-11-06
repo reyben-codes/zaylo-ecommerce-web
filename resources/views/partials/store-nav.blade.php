@@ -1,4 +1,7 @@
+{{-- Home is the shopper's dashboard for signed-in buyers and the home page for everyone else; the logo is not a link. --}}
+@php $homeRoute = auth()->user()?->role === 'buyer' ? 'buyer.dashboard' : 'home'; @endphp
 <nav class="nav-links" aria-label="Store navigation">
+    <a href="{{ route($homeRoute) }}" class="{{ request()->routeIs($homeRoute) ? 'active-link' : '' }}" @if(request()->routeIs($homeRoute)) aria-current="page" @endif>Home</a>
     <a href="{{ route('products.index') }}" class="{{ request()->routeIs('products.index') && ! request('category') && ! request('gender') ? 'active-link' : '' }}">Shop All</a>
     <div class="category-menu" data-category-menu>
         <button type="button" class="category-menu__toggle {{ request('category') ? 'active-link' : '' }}" aria-expanded="false" aria-controls="category-menu-panel" data-category-menu-toggle>

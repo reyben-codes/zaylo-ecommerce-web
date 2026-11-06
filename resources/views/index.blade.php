@@ -32,9 +32,9 @@
             <span aria-hidden="true"></span>
             <span aria-hidden="true"></span>
         </button>
-        <a href="{{ route(auth()->user()?->role === 'buyer' ? 'buyer.dashboard' : 'home') }}" class="logo">
+        <span class="logo">
             <img class="home-brand-logo" src="{{ asset('images/ZAYLO_LOGO_DARK.png') }}" alt="ZAYLO">
-        </a>
+        </span>
         <div class="nav-actions">
             <form class="search-wrapper" method="GET" action="{{ route('products.index') }}" role="search" data-live-search>
                 <span class="search-icon">⌕</span>
