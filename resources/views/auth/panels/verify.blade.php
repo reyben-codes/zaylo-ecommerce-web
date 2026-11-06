@@ -1,6 +1,6 @@
 {{-- Last sign-up step, shown in the sign-in modal: the six-digit email code. Code entry lives in
      public/js/email-verification.js; Resend reloads this panel through public/js/auth-modal.js. --}}
-<div class="auth-panel" data-auth-panel="verify" data-tagline="Driven by passion.|Defined by your origin">
+<div class="auth-panel" data-auth-panel="verify">
     <header class="auth-panel__header">
         <span class="auth-panel__label">ONE LAST STEP</span>
         <h2 class="auth-panel__title" id="auth-modal-title" tabindex="-1">Verify your email</h2>

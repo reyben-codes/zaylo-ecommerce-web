@@ -4,7 +4,7 @@
     $roles = \App\Support\SignUpRoles::all();
 @endphp
 
-<div class="auth-panel" data-auth-panel="register-choice" data-tagline="Driven by passion.|Defined by your origin">
+<div class="auth-panel" data-auth-panel="register-choice">
     <header class="auth-panel__header">
         <span class="auth-panel__label">JOIN ZAYLO</span>
         <h2 class="auth-panel__title" id="auth-modal-title" tabindex="-1">Create new account</h2>

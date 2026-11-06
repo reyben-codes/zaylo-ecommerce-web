@@ -1,5 +1,5 @@
 {{-- Forgot-password panel, shown in the sign-in modal. The reset link in the email opens its own page. --}}
-<div class="auth-panel" data-auth-panel="forgot-password" data-tagline="Driven by passion.|Defined by your origin">
+<div class="auth-panel" data-auth-panel="forgot-password">
     <header class="auth-panel__header">
         <span class="auth-panel__label">ZAYLO ACCOUNT</span>
         <h2 class="auth-panel__title" id="auth-modal-title" tabindex="-1">Forgot your password?</h2>

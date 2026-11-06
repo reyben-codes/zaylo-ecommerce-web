@@ -10,7 +10,6 @@
     const root = document.documentElement;
     const body = dialog.querySelector('[data-auth-body]');
     const loading = dialog.querySelector('[data-auth-loading]');
-    const tagline = dialog.querySelector('[data-auth-tagline]');
     const closeLink = dialog.querySelector('[data-auth-close]');
     const paths = JSON.parse(dialog.dataset.paths || '[]');
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -178,7 +177,6 @@
         const panel = body.querySelector('[data-auth-panel]');
         if (!panel) return;
 
-        setTagline(...(panel.dataset.tagline || '').split('|'));
         panel.querySelectorAll('[data-return-to]').forEach((input) => { input.value = returnPath; });
         setupPortalCards(panel);
 
@@ -187,14 +185,6 @@
         panel.querySelectorAll('[data-auth-wizard]').forEach(setupWizard);
         showSignUpLength(panel);
         focusPanel();
-    }
-
-    function setTagline(first, second = '') {
-        const lines = tagline?.querySelectorAll('p') || [];
-        if (!first || !lines[0] || lines[0].textContent === first) return;
-        lines[0].textContent = first;
-        lines[1].textContent = second;
-        animate(tagline, 'is-changing');
     }
 
     // Sign-in role cards: switch the form to another account type in place, keeping the typed email and password.
@@ -233,7 +223,6 @@
             }
             // Messages about the previous role no longer apply.
             clearErrors(form);
-            setTagline(...portal.tagline);
             animate(header, 'is-switching');
             status.textContent = `Signing in as ${portal.name}.`;
 

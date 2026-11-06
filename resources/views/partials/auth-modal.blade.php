@@ -4,15 +4,10 @@
      without JavaScript. Styles: partials/auth-modal-styles. --}}
 @php $authModal ??= null; @endphp
 @if($authModal || ! auth()->check() || ! auth()->user()->hasVerifiedEmail())
-    @php $tagline = ['Driven by passion.', 'Defined by your origin']; @endphp
     <dialog class="auth-modal" id="auth-modal" aria-labelledby="auth-modal-title" data-auth-modal
             data-paths="{{ json_encode(\App\Support\AuthModal::paths()) }}"
             @if($authModal) open data-initial-url="{{ request()->getRequestUri() }}" @endif>
         <div class="auth-modal__frame">
-            <aside class="auth-modal__art" aria-hidden="true">
-                <img src="{{ asset('images/ZAYLO_LOGO_LIGHT.png') }}" alt="" data-theme-fixed>
-                <div class="auth-modal__tagline" data-auth-tagline><p>{{ $tagline[0] }}</p><p>{{ $tagline[1] }}</p></div>
-            </aside>
             <div class="auth-modal__main">
                 <a href="{{ route('home') }}" class="auth-modal__close" data-auth-close aria-label="Close"><i class="fa-solid fa-xmark" aria-hidden="true"></i></a>
                 <div class="auth-modal__body" data-auth-body>

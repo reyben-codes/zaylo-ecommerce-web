@@ -8,22 +8,22 @@
 
     $roleCopy = [
         'buyer' => [
-            'title' => 'Create new account', 'tagline' => ['Driven by passion.', 'Defined by your origin'],
+            'title' => 'Create new account',
             'subtitle' => 'Save your favorites, track your orders, and discover everyday finds in one place.',
             'note' => null,
         ],
         'seller' => [
-            'title' => 'Sell on ZAYLO', 'tagline' => ['Build your business.', 'Grow with ZAYLO'],
+            'title' => 'Sell on ZAYLO',
             'subtitle' => 'Create your account to apply as a seller on ZAYLO.',
             'note' => 'Seller accounts require email verification and administrator approval before you can start selling.',
         ],
         'courier' => [
-            'title' => 'Become a rider', 'tagline' => ['Deliver with confidence.', 'Ride with ZAYLO'],
+            'title' => 'Become a rider',
             'subtitle' => "Apply to deliver for one of ZAYLO's logistics partners.",
             'note' => 'The logistics partner you choose reviews your application. You can sign in and accept deliveries once they approve you.',
         ],
         'logistics' => [
-            'title' => 'Become a logistics partner', 'tagline' => ['Deliver with confidence.', 'Move with ZAYLO'],
+            'title' => 'Become a logistics partner',
             'subtitle' => 'Register your delivery company and manage your own riders on ZAYLO.',
             'note' => 'Logistics partner accounts require email verification and administrator approval. Once approved, riders can apply to your company.',
         ],
@@ -34,7 +34,7 @@
     $hasUploads = in_array($selectedRole, ['seller', 'courier', 'logistics'], true);
 @endphp
 
-<div class="auth-panel auth-panel--register" data-auth-panel="register" data-tagline="{{ implode('|', $roleCopy['tagline']) }}">
+<div class="auth-panel auth-panel--register" data-auth-panel="register">
     <header class="auth-panel__header">
         @php $chosen = \App\Support\SignUpRoles::all()[$selectedRole]; @endphp
         {{-- Back to the account-type cards; anything typed here is left behind. --}}

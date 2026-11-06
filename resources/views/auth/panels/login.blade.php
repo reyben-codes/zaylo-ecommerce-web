@@ -6,7 +6,7 @@
     $portals = [
         'shop' => [
             'name' => 'Buyer', 'icon' => 'fa-bag-shopping', 'url' => route('login'),
-            'tagline' => ['Driven by passion.', 'Defined by your origin'], 'label' => 'ZAYLO ACCOUNT', 'heading' => 'Welcome Back',
+            'label' => 'ZAYLO ACCOUNT', 'heading' => 'Welcome Back',
             'subtitle' => 'Sign in to track orders, save favorites, and shop your everyday essentials.',
             'action' => route('login'), 'button' => 'Sign In',
             'google' => route('google.redirect'),
@@ -14,7 +14,7 @@
         ],
         'seller' => [
             'name' => 'Seller', 'icon' => 'fa-store', 'url' => route('seller.login'),
-            'tagline' => ['Build your business.', 'Grow with ZAYLO'], 'label' => 'ZAYLO SELLER CENTER', 'heading' => 'Welcome, Seller',
+            'label' => 'ZAYLO SELLER CENTER', 'heading' => 'Welcome, Seller',
             'subtitle' => 'Sign in to manage products, inventory, orders, and sales.',
             'action' => route('seller.login.submit'), 'button' => 'Enter Seller Center',
             'google' => route('google.redirect', ['role' => 'seller']),
@@ -22,7 +22,7 @@
         ],
         'logistics' => [
             'name' => 'Logistics', 'icon' => 'fa-truck-fast', 'url' => route('logistics.login'),
-            'tagline' => ['Deliver with confidence.', 'Move with ZAYLO'], 'label' => 'ZAYLO LOGISTICS CENTER', 'heading' => 'Welcome, Partner',
+            'label' => 'ZAYLO LOGISTICS CENTER', 'heading' => 'Welcome, Partner',
             'subtitle' => 'Sign in to review rider applications and manage your delivery team.',
             'action' => route('logistics.login.submit'), 'button' => 'Enter Logistics Center',
             'google' => null,
@@ -30,7 +30,7 @@
         ],
         'admin' => [
             'name' => 'Admin', 'icon' => 'fa-user-shield', 'url' => route('admin.login'),
-            'tagline' => ['Keep the marketplace running.', 'Lead with ZAYLO'], 'label' => 'ZAYLO ADMIN CENTER', 'heading' => 'Welcome, Admin',
+            'label' => 'ZAYLO ADMIN CENTER', 'heading' => 'Welcome, Admin',
             'subtitle' => 'Sign in to review applications and manage marketplace accounts.',
             'action' => route('admin.login.submit'), 'button' => 'Enter Admin Center',
             'google' => null,
@@ -40,7 +40,7 @@
     $copy = $portals[$portal];
 @endphp
 
-<div class="auth-panel" data-auth-panel="login" data-tagline="{{ implode('|', $copy['tagline']) }}">
+<div class="auth-panel" data-auth-panel="login">
     <nav class="portal-cards" aria-labelledby="portal-cards-label">
         <p class="portal-cards__label" id="portal-cards-label">Sign in as</p>
         <div class="portal-cards__grid">
