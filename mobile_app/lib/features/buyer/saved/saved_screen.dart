@@ -7,7 +7,6 @@ import 'package:zaylo_mobile/features/buyer/catalog/product_card.dart';
 import 'package:zaylo_mobile/features/buyer/shop/followed_shops_screen.dart';
 import 'package:zaylo_mobile/features/buyer/widgets/shop_actions.dart';
 import 'package:zaylo_mobile/features/buyer/widgets/signed_out_prompt.dart';
-import 'package:zaylo_mobile/features/buyer/widgets/tab_header.dart';
 import 'package:zaylo_mobile/models/buyer/catalog_models.dart';
 import 'package:zaylo_mobile/state/app_state.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
@@ -60,8 +59,6 @@ class _SavedScreenState extends State<SavedScreen> {
     if (!state.signedIn) {
       return const SignedOutPrompt(
         icon: Icons.favorite_border,
-        heading: 'Saved',
-        eyebrow: 'Your favorites',
         title: 'Saved items',
         message: 'Sign in to save products you love and find them on any device.',
       );
@@ -69,8 +66,7 @@ class _SavedScreenState extends State<SavedScreen> {
     // Hide items unsaved elsewhere without waiting for the reload.
     final products = _products?.where(state.isSaved).toList();
     return Scaffold(
-      appBar: TabHeader(eyebrow: 'Your favorites', title: 'Saved', count: products?.length),
-      body: Column(children: [
+      body: SafeArea(bottom: false, child: Column(children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(ZayloSpace.page, 10, ZayloSpace.page, 0),
           child: SizedBox(
@@ -108,7 +104,7 @@ class _SavedScreenState extends State<SavedScreen> {
                       ),
                     ),
         ),
-      ]),
+      ])),
     );
   }
 }
