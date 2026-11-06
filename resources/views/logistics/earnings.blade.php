@@ -4,6 +4,7 @@
 
 @push('styles')
     <link rel="stylesheet" href="{{ asset('css/admin-modules.css') }}?v={{ filemtime(public_path('css/admin-modules.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/wallet.css') }}?v={{ filemtime(public_path('css/wallet.css')) }}">
 @endpush
 
 @section('content')
@@ -37,6 +38,8 @@
             <span class="seller-stat__note">ZAYLO keeps {{ 100 - $percent }}%</span>
         </div>
     </section>
+
+    @include('partials.wallet', ['cashOutRoute' => 'logistics.wallet.cash-out'])
 
     <section class="seller-panel">
         <header class="seller-panel__header"><div><h2>Payouts</h2><p>Payments ZAYLO has sent you.</p></div></header>

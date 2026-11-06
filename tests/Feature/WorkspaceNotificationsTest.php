@@ -39,7 +39,8 @@ class WorkspaceNotificationsTest extends TestCase
 
         $this->post(route('admin.notifications.read-all'))->assertRedirect(route('admin.notifications'));
         $this->get(route('admin.notifications'))->assertViewHas('unreadCount', 0);
-        $this->get(route('admin.dashboard'))->assertDontSee('seller-sidebar__badge', false);
+        // The unread badge is hidden (kept in the page so live updates can show it again).
+        $this->get(route('admin.dashboard'))->assertSee('data-sidebar-count="notifications" data-sidebar-count-label="unread"  hidden', false);
         $this->post(route('admin.notifications.open'), ['key' => 'nothing:1'])->assertNotFound();
     }
 
@@ -113,7 +114,8 @@ class WorkspaceNotificationsTest extends TestCase
             ->assertSee('Your account was approved')
             ->assertSee('New rider application')->assertSee('Pedro Rider applied to deliver for you.');
         $this->post(route('logistics.notifications.read-all'))->assertRedirect(route('logistics.notifications'));
-        $this->get(route('logistics.dashboard'))->assertDontSee('seller-sidebar__badge', false);
+        $this->get(route('logistics.dashboard'))->assertSee('data-sidebar-count="notifications" data-sidebar-count-label="unread"  hidden', false)
+            ->assertSee('data-sidebar-count="riders" data-sidebar-count-label="to review" >1', false);
     }
 
     public function test_buyers_are_told_when_their_id_is_approved_or_rejected(): void

@@ -1,6 +1,6 @@
 @extends('layouts.workspace', ['workspace' => 'admin'])
 
-@section('title', 'Compliance')
+@section('title', $route === 'admin.compliance' ? 'Compliance' : 'Product approvals')
 
 @push('styles')
     <link rel="stylesheet" href="{{ asset('css/admin-modules.css') }}?v={{ filemtime(public_path('css/admin-modules.css')) }}">
@@ -10,21 +10,27 @@
 @section('content')
     <section class="seller-page-heading">
         <div>
-            <p class="seller-eyebrow">Marketplace</p>
-            <h1>Seller compliance</h1>
-            <p>New and edited listings wait under Pending review until you approve them; buyers cannot see them before. Products are also flagged when they are outside the seller's registered category or mention prohibited items. Warn the seller, hide the product, or suspend the seller. Every decision is emailed to the seller.</p>
+            @if($route === 'admin.compliance')
+                <p class="seller-eyebrow">Marketplace</p>
+                <h1>Seller compliance</h1>
+                <p>Live products are flagged when they are outside the seller's registered category or mention prohibited items. Warn the seller, hide the product, or suspend the seller. Every decision is emailed to the seller. New and edited listings are approved under <a href="{{ route('admin.product-approvals') }}" class="workspace-link">Product approvals</a>.</p>
+            @else
+                <p class="seller-eyebrow">Approvals</p>
+                <h1>Product approvals</h1>
+                <p>New and edited listings wait here until you approve them; buyers cannot see them before. Rejected listings stay here with your reason until the seller fixes them. Every decision is emailed to the seller. Seller and logistics sign-ups are under <a href="{{ route('admin.registrations') }}" class="workspace-link">Account approvals</a>.</p>
+            @endif
         </div>
     </section>
 
     <section class="seller-panel">
-        <nav class="workspace-tabs" aria-label="Compliance views">
-            @foreach(['pending' => 'Pending review', 'flagged' => 'Flagged', 'all' => 'All products', 'hidden' => 'Hidden', 'rejected' => 'Rejected', 'warnings' => 'Warnings issued'] as $key => $label)
-                <a href="{{ route('admin.compliance', array_filter(['view' => $key === $defaultView ? null : $key, 'search' => $search])) }}" class="workspace-tab{{ $view === $key ? ' is-active' : '' }}" @if($view === $key) aria-current="true" @endif>{{ $label }} <span>{{ $counts[$key] }}</span></a>
+        <nav class="workspace-tabs" aria-label="{{ $route === 'admin.compliance' ? 'Compliance' : 'Product approval' }} views">
+            @foreach($tabs as $key => $label)
+                <a href="{{ route($route, array_filter(['view' => $key === $defaultView ? null : $key, 'search' => $search])) }}" class="workspace-tab{{ $view === $key ? ' is-active' : '' }}" @if($view === $key) aria-current="true" @endif>{{ $label }} <span>{{ $counts[$key] }}</span></a>
             @endforeach
         </nav>
 
         @if($view !== 'warnings')
-            <form method="GET" action="{{ route('admin.compliance') }}" class="seller-filter-bar" role="search">
+            <form method="GET" action="{{ route($route) }}" class="seller-filter-bar" role="search">
                 @if($view !== $defaultView)<input type="hidden" name="view" value="{{ $view }}">@endif
                 <div class="seller-field seller-field--search">
                     <label class="seller-field__label" for="product-search">Product name</label>

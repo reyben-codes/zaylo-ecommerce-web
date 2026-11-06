@@ -150,7 +150,7 @@ class AdminController extends Controller
             $add(IdentityVerification::where('status', 'pending')->count(), 'buyer IDs to check', route('admin.identity'), 'fa-id-card');
         }
         if (Product::usesReview() && Schema::hasTable('compliance_warnings')) {
-            $add(Product::where('review_status', Product::REVIEW_PENDING)->notArchived()->count(), 'product listings to approve', route('admin.compliance', ['view' => 'pending']), 'fa-box-open');
+            $add(Product::where('review_status', Product::REVIEW_PENDING)->notArchived()->count(), 'product listings to approve', route('admin.product-approvals'), 'fa-box-open');
         }
         $unrecorded = app(MarketplaceLedger::class)->rows()->where('commission_status', 'unrecorded')->count();
         $add($unrecorded, 'completed orders without a recorded commission', route('admin.commissions', ['state' => 'unrecorded']), 'fa-percent');

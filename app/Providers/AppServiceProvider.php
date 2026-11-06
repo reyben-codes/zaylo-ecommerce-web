@@ -7,7 +7,7 @@ use App\Models\MobileToken;
 use App\Models\User;
 use App\Services\ActivityLogger;
 use App\Services\BuyerNotificationFeed;
-use App\Services\SellerQueues;
+use App\Services\SidebarCounts;
 use App\Services\WorkspaceNotificationFeed;
 use App\Support\SnapshotSchemaBuilder;
 use Illuminate\Auth\Events\Failed;
@@ -69,13 +69,12 @@ class AppServiceProvider extends ServiceProvider
             ]);
         });
 
+        // What waits in each sidebar section (orders to prepare, approvals, parcels to sort, unread chats...).
         View::composer('partials.seller-sidebar', function ($view) {
-            $seller = auth()->user();
-            $queues = app(SellerQueues::class);
-            $view->with([
-                'sidebarOrdersToPrepare' => $seller ? $queues->ordersToPrepare($seller) : 0,
-                'sidebarReturnsToHandle' => $seller ? $queues->returnsNeedingAction($seller) : 0,
-            ]);
+            $view->with('sidebarCounts', app(SidebarCounts::class)->for(auth()->user(), 'seller'));
+        });
+        View::composer('layouts.workspace', function ($view) {
+            $view->with('sidebarCounts', app(SidebarCounts::class)->for(auth()->user(), $view->getData()['workspace'] ?? 'admin'));
         });
 
         View::composer('partials.buyer-nav-icons', function ($view) {

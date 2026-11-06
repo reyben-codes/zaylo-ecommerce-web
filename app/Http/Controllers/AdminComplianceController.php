@@ -23,13 +23,37 @@ use Illuminate\Validation\Rule;
  */
 class AdminComplianceController extends Controller
 {
+    /** Tabs on each page: product approvals (listings waiting for a decision) are kept apart from compliance checks. */
+    public const PAGES = [
+        'admin.product-approvals' => ['pending' => 'Pending review', 'rejected' => 'Rejected'],
+        'admin.compliance' => ['flagged' => 'Flagged', 'all' => 'All products', 'hidden' => 'Hidden', 'warnings' => 'Warnings issued'],
+    ];
+
+    /** New and edited listings waiting for an admin, and rejected ones waiting for the seller to fix them. */
+    public function approvals(Request $request)
+    {
+        return $this->page($request, 'admin.product-approvals');
+    }
+
     public function index(Request $request)
     {
+        // Older links (notifications, bookmarks) to the review queue open the Product approvals page.
+        $view = $request->query('view');
+        if (is_string($view) && array_key_exists($view, self::PAGES['admin.product-approvals'])) {
+            return redirect()->route('admin.product-approvals', array_filter(['view' => $view, 'search' => $request->query('search')]));
+        }
+
+        return $this->page($request, 'admin.compliance');
+    }
+
+    private function page(Request $request, string $route)
+    {
+        $tabs = self::PAGES[$route];
         if (! Schema::hasTable('compliance_warnings')) {
-            return view('admin.setup-needed', ['title' => 'Seller compliance']);
+            return view('admin.setup-needed', ['title' => $route === 'admin.compliance' ? 'Seller compliance' : 'Product approvals']);
         }
         $filters = $request->validate([
-            'view' => ['nullable', Rule::in(['pending', 'flagged', 'all', 'hidden', 'rejected', 'warnings'])],
+            'view' => ['nullable', Rule::in(array_keys($tabs))],
             'search' => ['nullable', 'string', 'max:100'],
         ]);
         $search = trim($filters['search'] ?? '');
@@ -44,12 +68,13 @@ class AdminComplianceController extends Controller
             'rejected' => fn ($row) => $row['product']->is_rejected,
         ];
         $counts = array_map(fn ($test) => $products->filter($test)->count(), $groups) + ['warnings' => ComplianceWarning::count()];
-        // Open on the queue while listings are waiting; otherwise on what was flagged.
-        $default = $counts['pending'] > 0 ? 'pending' : 'flagged';
+        $default = array_key_first($tabs);
         $view = $filters['view'] ?? $default;
         $listed = $view === 'warnings' ? collect() : $products->filter($groups[$view]);
 
         return view('admin.compliance', [
+            'route' => $route,
+            'tabs' => $tabs,
             'view' => $view,
             'defaultView' => $default,
             'search' => $search,

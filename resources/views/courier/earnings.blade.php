@@ -2,6 +2,10 @@
 
 @section('title', 'ZAYLO · Earnings')
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/wallet.css') }}?v={{ filemtime(public_path('css/wallet.css')) }}">
+@endpush
+
 @section('nav-links')
 <div class="nav-links">
     <a href="{{ route('courier.dashboard') }}" class="{{ request()->routeIs('courier.dashboard') ? 'active-link' : '' }}">Dashboard</a>
@@ -40,6 +44,7 @@
         <div class="metric-card"><span>Cash collected</span><strong>&#8369;{{ number_format($shipments->sum($collected), 2) }}</strong></div>
         <div class="metric-card"><span>Collected this month</span><strong>&#8369;{{ number_format($thisMonth->sum($collected), 2) }}</strong></div>
     </div>
+    @include('partials.wallet', ['cashOutRoute' => 'courier.wallet.cash-out'])
     <h2 class="section-heading">Completed deliveries</h2>
     @if($shipments->isEmpty())
         <p class="empty-note">No completed deliveries yet.</p>

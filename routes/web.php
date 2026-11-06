@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\WalletController;
+use App\Http\Controllers\WorkspaceUpdatesController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\AdminComplianceController;
@@ -215,6 +217,7 @@ Route::middleware(['auth', 'active', 'verified', 'role:courier', 'nocache'])->pr
     Route::get('/deliveries/{shipment}/waybill', [WaybillController::class, 'rider'])->middleware('throttle:60,1')->name('deliveries.waybill');
     Route::get('/deliveries/{shipment}/waybill/print', [WaybillController::class, 'riderPrint'])->middleware('throttle:60,1')->name('deliveries.waybill.print');
     Route::get('/earnings', [CourierController::class, 'earnings'])->name('earnings');
+    Route::post('/wallet/cash-out', [WalletController::class, 'cashOut'])->middleware('throttle:10,1')->name('wallet.cash-out');
     Route::get('/history', [CourierController::class, 'history'])->name('history');
     Route::get('/activity', [ActivityLogController::class, 'courier'])->name('activity');
     Route::get('/account', [CourierController::class, 'account'])->name('account');
@@ -227,6 +230,7 @@ Route::middleware(['auth', 'active', 'verified', 'role:sorting_center', 'nocache
 });
 
 Route::middleware(['auth', 'active', 'verified', 'role:admin', 'nocache'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/updates', [WorkspaceUpdatesController::class, 'admin'])->middleware('throttle:60,1')->name('updates');
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
     Route::get('/notifications', [WorkspaceNotificationController::class, 'index'])->name('notifications');
     Route::post('/notifications/open', [WorkspaceNotificationController::class, 'open'])->name('notifications.open');
@@ -257,6 +261,7 @@ Route::middleware(['auth', 'active', 'verified', 'role:admin', 'nocache'])->pref
     Route::post('/disputes/{dispute}/messages', [AdminDisputeController::class, 'reply'])->middleware('throttle:30,1')->name('disputes.reply');
 
     Route::get('/compliance', [AdminComplianceController::class, 'index'])->name('compliance');
+    Route::get('/product-approvals', [AdminComplianceController::class, 'approvals'])->name('product-approvals');
     Route::post('/compliance/products/{product}/warnings', [AdminComplianceController::class, 'warn'])->middleware('throttle:30,1')->name('compliance.warn');
     Route::patch('/compliance/products/{product}/visibility', [AdminComplianceController::class, 'toggle'])->name('compliance.toggle');
     Route::patch('/compliance/products/{product}/review', [AdminComplianceController::class, 'review'])->middleware('throttle:60,1')->name('compliance.review');
@@ -329,6 +334,7 @@ Route::middleware(['auth', 'verified', 'role:logistics', 'nocache'])->prefix('lo
 });
 
 Route::middleware(['auth', 'active', 'verified', 'role:logistics', 'nocache'])->prefix('logistics')->name('logistics.')->group(function () {
+    Route::get('/updates', [WorkspaceUpdatesController::class, 'logistics'])->middleware('throttle:60,1')->name('updates');
     Route::get('/dashboard', [LogisticsController::class, 'dashboard'])->name('dashboard');
     Route::get('/notifications', [WorkspaceNotificationController::class, 'index'])->name('notifications');
     Route::post('/notifications/open', [WorkspaceNotificationController::class, 'open'])->name('notifications.open');
@@ -353,6 +359,7 @@ Route::middleware(['auth', 'active', 'verified', 'role:logistics', 'nocache'])->
     Route::get('/monitoring', [LogisticsOperationsController::class, 'monitoring'])->name('monitoring');
     Route::get('/reports', [LogisticsOperationsController::class, 'reports'])->name('reports');
     Route::get('/earnings', [LogisticsPayoutController::class, 'partner'])->name('earnings');
+    Route::post('/wallet/cash-out', [WalletController::class, 'cashOut'])->middleware('throttle:10,1')->name('wallet.cash-out');
     Route::get('/reports/export', [LogisticsOperationsController::class, 'exportReport'])->name('reports.export');
     Route::get('/activity', [ActivityLogController::class, 'logistics'])->name('activity');
     Route::get('/parcels/{shipment}/waybill', [WaybillController::class, 'logistics'])->middleware('throttle:120,1')->name('parcels.waybill');

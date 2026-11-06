@@ -19,7 +19,7 @@ use App\Services\SellerApplicationService;
 use App\Services\SellerQueues;
 use App\Services\SellerRankings;
 use App\Services\ShipmentWorkflow;
-use App\Services\WorkspaceNotificationFeed;
+use App\Services\SidebarCounts;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -270,7 +270,7 @@ class SellerController extends Controller
         }
 
         $orders = $baseQuery
-            ->with(['buyer', 'items', 'payment', Shipment::tracksProvider() ? 'shipment.provider' : 'shipment', 'statusHistory' => fn ($query) => $query->oldest()])
+            ->with(['buyer', 'items.product.images', 'payment', Shipment::tracksProvider() ? 'shipment.provider' : 'shipment', 'statusHistory' => fn ($query) => $query->oldest()])
             ->when($filter !== 'all', fn ($query) => $query->whereIn('status', self::ORDER_STATUS_GROUPS[$filter]))
             ->latest('placed_at')
             ->paginate(12)
@@ -337,17 +337,13 @@ class SellerController extends Controller
     }
 
     /** What open Seller Center pages poll: a signature that changes with any order, parcel or return, and the badges. */
-    public function updates(SellerQueues $queues, WorkspaceNotificationFeed $feed)
+    public function updates(SellerQueues $queues, SidebarCounts $counts)
     {
         $seller = auth()->user();
 
         return response()->json([
             'signature' => $queues->signature($seller),
-            'badges' => [
-                'orders' => $queues->ordersToPrepare($seller),
-                'returns' => $queues->returnsNeedingAction($seller),
-                'notifications' => $feed->unreadCount($seller),
-            ],
+            'badges' => $counts->totals($seller, 'seller'),
         ]);
     }
 

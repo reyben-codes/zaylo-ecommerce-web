@@ -93,7 +93,7 @@ class WorkspaceNotificationFeed
             Product::where('review_status', Product::REVIEW_PENDING)->notArchived()->latest('updated_at')->limit(self::LIMIT)->get(['id', 'name', 'updated_at'])
                 ->each(fn (Product $product) => $items->push($this->item(
                     'listing:'.$product->id.':'.$product->updated_at?->timestamp, 'product', 'fa-box-open', 'Listing to approve',
-                    $product->name.' is waiting for review.', route('admin.compliance', ['view' => 'pending']), 'Review listing', $product->updated_at,
+                    $product->name.' is waiting for review.', route('admin.product-approvals'), 'Review listing', $product->updated_at,
                 )));
         }
 
@@ -273,6 +273,7 @@ class WorkspaceNotificationFeed
         return match ($log->event) {
             'admin.users.status' => $log->subject_id && User::whereKey($log->subject_id)->exists() ? route('admin.users.show', $log->subject_id) : route('admin.users'),
             'admin.identity.review' => route('admin.identity'),
+            'admin.compliance.review' => route('admin.product-approvals'),
             default => route('admin.compliance'),
         };
     }

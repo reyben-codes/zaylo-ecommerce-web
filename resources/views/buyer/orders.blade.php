@@ -3,6 +3,7 @@
 @section('title', 'My Orders · ZAYLO')
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/product-reviews.css') }}?v={{ filemtime(public_path('css/product-reviews.css')) }}">
+<link rel="stylesheet" href="{{ asset('css/order-items.css') }}?v={{ filemtime(public_path('css/order-items.css')) }}">
 @endpush
 
 @section('content')
@@ -169,12 +170,9 @@
                 </div>
             </details>
 
-            <div class="order-items">
+            <div class="order-items" role="group" aria-label="Products in this order">
                 @foreach($order->items as $item)
-                    <div class="summary-row">
-                        <span>{{ $item->quantity }} &times; {{ $item->product_name }}</span>
-                        <span>&#8369;{{ number_format($item->line_total, 2) }}</span>
-                    </div>
+                    @include('partials.order-item', ['item' => $item])
                     @if($item->review)
                         <p class="review-meta">Your rating: {{ $item->review->rating }}/5 ★ · Review submitted</p>
                     @elseif(in_array($order->status, ['delivered', 'completed'], true) && $item->product_id)
@@ -196,12 +194,14 @@
             <footer>
                 <strong>Total: &#8369;{{ number_format($order->total, 2) }}</strong>
                 <span>{{ strtoupper($order->payment_method) }} · Payment {{ str($order->payment?->status ?? 'pending')->replace('_', ' ')->title() }}</span>
-                @if(in_array($order->status, ['placed', 'confirmed'], true))
+                @if(in_array($order->status, \App\Services\CheckoutService::BUYER_CANCELLABLE, true))
                     <form method="POST" action="{{ route('buyer.orders.cancel', $order) }}"
                           data-confirm="Cancel order {{ $order->order_number }}? This cannot be undone." data-confirm-title="Cancel order?" data-confirm-button="Cancel order" data-confirm-tone="danger">
                         @csrf
                         <button class="text-button danger" type="submit">Cancel order</button>
                     </form>
+                @elseif($order->status === 'confirmed')
+                    <span class="order-cancel-note"><i class="fas fa-lock" aria-hidden="true"></i> The seller confirmed this order, so it can no longer be cancelled.</span>
                 @endif
                 @if($order->relationLoaded('disputes'))
                     @php $complaint = $order->disputes->first(); @endphp

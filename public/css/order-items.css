@@ -1,0 +1,140 @@
+/* Checked-out products in an order (partials/order-item): photo, name linked to the product, option, quantity and total.
+   Used on the buyer's My Orders and the seller's Order fulfillment pages; colors come from theme.css (light and dark). */
+.order-items {
+    display: grid;
+    gap: 10px;
+}
+
+.order-item {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    padding: 8px 0;
+}
+
+.order-item + .order-item {
+    border-top: 1px solid var(--c-eee8e2);
+}
+
+.order-item__photo {
+    display: grid;
+    width: 56px;
+    height: 56px;
+    overflow: hidden;
+    place-items: center;
+    border: 1px solid var(--c-eee8e2);
+    border-radius: 8px;
+    background: var(--c-f5f0ea);
+    color: var(--c-a17455);
+}
+
+.order-item__photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+a.order-item__photo:hover img {
+    transform: scale(1.04);
+    transition: transform .2s ease-out;
+}
+
+.order-item__info {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+}
+
+.order-item__name {
+    overflow: hidden;
+    color: var(--c-1a1714);
+    font-size: .87rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+a.order-item__name {
+    text-decoration: none;
+}
+
+a.order-item__name:hover {
+    color: var(--c-79573f);
+    text-decoration: underline;
+}
+
+a.order-item__name:focus-visible {
+    outline: 2px solid var(--c-a17455);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+.order-item__meta {
+    color: var(--c-74685e);
+    font-size: .78rem;
+}
+
+.order-item__total {
+    color: var(--c-1a1714);
+    font-size: .85rem;
+    white-space: nowrap;
+}
+
+/* In the seller's table cell: smaller photos, and the name may wrap. */
+.order-items--compact {
+    gap: 6px;
+    min-width: 220px;
+}
+
+.order-items--compact .order-item {
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    gap: 10px;
+    padding: 4px 0;
+}
+
+.order-items--compact .order-item__photo {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+}
+
+.order-items--compact .order-item__name {
+    font-size: .8rem;
+    white-space: normal;
+}
+
+.order-items--compact .order-item__meta,
+.order-items--compact .order-item__total {
+    font-size: .74rem;
+}
+
+/* The buyer's order: shown in place of Cancel once the seller confirmed it. */
+.order-cancel-note {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    color: var(--c-74685e);
+    font-size: .8rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    a.order-item__photo:hover img {
+        transform: none;
+    }
+}
+
+@media (max-width: 640px) {
+    .order-item {
+        grid-template-columns: 48px minmax(0, 1fr);
+    }
+
+    .order-item__photo {
+        width: 48px;
+        height: 48px;
+    }
+
+    .order-item__total {
+        grid-column: 2;
+    }
+}

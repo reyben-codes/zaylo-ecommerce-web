@@ -181,7 +181,7 @@ class MobilePayload
             'status' => $order->status,
             'status_label' => Str::headline($order->status),
             'status_message' => self::STATUS_MESSAGES[$order->status] ?? 'Your order status was updated.',
-            'can_cancel' => in_array($order->status, ['placed', 'confirmed'], true),
+            'can_cancel' => in_array($order->status, \App\Services\CheckoutService::BUYER_CANCELLABLE, true),
             'can_confirm_receipt' => $order->status === 'delivered',
             'subtotal' => (float) $order->subtotal,
             'shipping_fee' => (float) $order->shipping_fee,

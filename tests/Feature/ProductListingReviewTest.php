@@ -46,8 +46,8 @@ class ProductListingReviewTest extends TestCase
         $this->getJson('/api/mobile/products/'.$product->slug)->assertNotFound();
         $this->getJson('/api/mobile/products?search=Linen')->assertOk()->assertJsonMissing(['name' => 'Linen Shirt']);
 
-        // The admin sees it in the queue (opened by default while listings wait) and on the dashboard.
-        $this->actingAs($this->admin)->get(route('admin.compliance'))->assertOk()
+        // The admin sees it under Product approvals (kept apart from account approvals) and on the dashboard.
+        $this->actingAs($this->admin)->get(route('admin.product-approvals'))->assertOk()
             ->assertSee('Linen Shirt')->assertSee('Pending review')->assertSee(route('admin.compliance.review', $product), false);
         $this->get(route('admin.dashboard'))->assertOk()->assertSee('product listings to approve');
         $this->get(route('products.show', $product))->assertOk()->assertSee('waiting for an admin to approve it');
@@ -76,7 +76,7 @@ class ProductListingReviewTest extends TestCase
             ->assertSessionHasNoErrors();
         $this->assertTrue($product->fresh()->is_rejected);
         Notification::assertSentTo($this->seller, ProductReviewed::class, fn ($mail) => $mail->toMail($this->seller)->subject === 'Your product "Replica Watch" was not approved');
-        $this->get(route('admin.compliance', ['view' => 'rejected']))->assertSee('Replica Watch')->assertSee('Replicas of branded watches are not allowed.');
+        $this->get(route('admin.product-approvals', ['view' => 'rejected']))->assertSee('Replica Watch')->assertSee('Replicas of branded watches are not allowed.');
 
         $this->actingAs($this->seller)->get(route('seller.products.edit', $product))
             ->assertSee('Reason: Replicas of branded watches are not allowed.');

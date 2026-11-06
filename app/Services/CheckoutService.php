@@ -194,15 +194,23 @@ class CheckoutService
         });
     }
 
-    /** Cancels a buyer's order while it is still placed or confirmed, putting the stock back. */
+    /** Buyers can cancel only while the order waits for the seller; once the seller confirms it, it is being prepared. */
+    public const BUYER_CANCELLABLE = ['placed'];
+
+    /**
+     * Cancels a buyer's order while the seller has not confirmed it yet, putting the stock back. The status is read
+     * again under a row lock, so a page opened before the seller confirmed cannot cancel it afterwards.
+     */
     public function cancel(Order $order, User $buyer): void
     {
         abort_unless($order->user_id === $buyer->id, 403);
 
         DB::transaction(function () use ($order, $buyer) {
             $lockedOrder = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
-            if (! in_array($lockedOrder->status, ['placed', 'confirmed'], true)) {
-                throw ValidationException::withMessages(['order' => 'This order can no longer be cancelled.']);
+            if (! in_array($lockedOrder->status, self::BUYER_CANCELLABLE, true)) {
+                throw ValidationException::withMessages(['order' => $lockedOrder->status === 'cancelled'
+                    ? "Order {$lockedOrder->order_number} is already cancelled."
+                    : "The seller already confirmed order {$lockedOrder->order_number}, so it can no longer be cancelled. Message the seller if something is wrong."]);
             }
             $lockedOrder->load(['items', 'shipment', 'payment']);
             foreach ($lockedOrder->items as $item) {

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:zaylo_mobile/api/rider_api.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
 import 'package:zaylo_mobile/components/layout.dart';
+import 'package:zaylo_mobile/features/rider/dashboard/rider_wallet_card.dart';
 import 'package:zaylo_mobile/models/rider/rider_activity_models.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 import 'package:zaylo_mobile/utils/formatters.dart';
@@ -24,10 +25,14 @@ class RiderEarningsScreen extends StatefulWidget {
 class _RiderEarningsScreenState extends State<RiderEarningsScreen> {
   late Future<RiderEarnings> _earnings = widget.api.earnings();
 
+  /// A new key on pull-to-refresh rebuilds the wallet card, which loads the balance again.
+  Key _walletKey = UniqueKey();
+
   Future<void> _reload() async {
     final earnings = widget.api.earnings();
     setState(() {
       _earnings = earnings;
+      _walletKey = UniqueKey();
     });
     try {
       await earnings;
@@ -70,6 +75,8 @@ class _RiderEarningsScreenState extends State<RiderEarningsScreen> {
                           style: TextStyle(color: ZayloColors.white)),
                     ]),
                   ),
+                  const SizedBox(height: 16),
+                  RiderWalletCard(key: _walletKey, api: widget.api),
                   const SizedBox(height: 16),
                   for (final period in [RiderPeriod.week, RiderPeriod.month, RiderPeriod.all])
                     Padding(

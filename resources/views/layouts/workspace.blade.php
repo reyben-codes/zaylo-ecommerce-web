@@ -11,22 +11,24 @@
             'icon' => 'fa-shield-halved',
             'nav' => [
                 ['route' => 'admin.dashboard', 'label' => 'Dashboard', 'icon' => 'fa-home'],
-                ['route' => 'admin.notifications', 'label' => 'Notifications', 'icon' => 'fa-bell', 'badge' => true],
+                ['route' => 'admin.notifications', 'label' => 'Notifications', 'icon' => 'fa-bell', 'count' => 'notifications'],
+                ['heading' => 'Approvals'],
+                ['route' => 'admin.registrations', 'label' => 'Account approvals', 'icon' => 'fa-user-check', 'count' => 'account_approvals'],
+                ['route' => 'admin.product-approvals', 'label' => 'Product approvals', 'icon' => 'fa-box-open', 'count' => 'product_approvals'],
+                ['route' => 'admin.identity', 'label' => 'ID checks', 'icon' => 'fa-id-card', 'count' => 'identity'],
                 ['heading' => 'Accounts'],
-                ['route' => 'admin.registrations', 'label' => 'Approvals', 'icon' => 'fa-user-check'],
-                ['route' => 'admin.identity', 'label' => 'ID checks', 'icon' => 'fa-id-card'],
                 ['route' => 'admin.users', 'label' => 'Users', 'icon' => 'fa-users'],
                 ['route' => 'admin.logistics', 'label' => 'Logistics', 'icon' => 'fa-truck-fast'],
                 ['heading' => 'Marketplace'],
                 ['route' => 'admin.compliance', 'label' => 'Compliance', 'icon' => 'fa-shield-halved'],
-                ['route' => 'admin.disputes', 'label' => 'Disputes', 'icon' => 'fa-scale-balanced'],
+                ['route' => 'admin.disputes', 'label' => 'Disputes', 'icon' => 'fa-scale-balanced', 'count' => 'disputes'],
                 ['route' => 'admin.commissions', 'label' => 'Commission', 'icon' => 'fa-percent'],
                 ['route' => 'admin.logistics-payouts', 'label' => 'Logistics payouts', 'icon' => 'fa-money-bill-transfer'],
                 ['route' => 'admin.reports', 'label' => 'Reports', 'icon' => 'fa-chart-column'],
                 ['heading' => 'Platform'],
                 ['route' => 'admin.settings', 'label' => 'Settings', 'icon' => 'fa-sliders'],
                 ['route' => 'admin.activity', 'label' => 'Activity log', 'icon' => 'fa-clock-rotate-left'],
-                ['route' => 'admin.chat', 'label' => 'Messages', 'icon' => 'fa-comments'],
+                ['route' => 'admin.chat', 'label' => 'Messages', 'icon' => 'fa-comments', 'count' => 'chat'],
                 ['route' => 'admin.account', 'label' => 'Account', 'icon' => 'fa-user'],
             ],
         ],
@@ -38,20 +40,20 @@
             'icon' => 'fa-truck-fast',
             'nav' => [
                 ['route' => 'logistics.dashboard', 'label' => 'Dashboard', 'icon' => 'fa-home'],
-                ['route' => 'logistics.notifications', 'label' => 'Notifications', 'icon' => 'fa-bell', 'badge' => true],
+                ['route' => 'logistics.notifications', 'label' => 'Notifications', 'icon' => 'fa-bell', 'count' => 'notifications'],
                 ['heading' => 'Sorting center'],
-                ['route' => 'logistics.pickups', 'label' => 'Pickups', 'icon' => 'fa-box-open'],
-                ['route' => 'logistics.incoming', 'label' => 'Incoming', 'icon' => 'fa-arrow-down'],
-                ['route' => 'logistics.sorting', 'label' => 'Sorting', 'icon' => 'fa-layer-group'],
+                ['route' => 'logistics.pickups', 'label' => 'Pickups', 'icon' => 'fa-box-open', 'count' => 'pickups'],
+                ['route' => 'logistics.incoming', 'label' => 'Incoming', 'icon' => 'fa-arrow-down', 'count' => 'incoming'],
+                ['route' => 'logistics.sorting', 'label' => 'Sorting', 'icon' => 'fa-layer-group', 'count' => 'sorting'],
                 ['route' => 'logistics.scan', 'label' => 'Scan parcel', 'icon' => 'fa-barcode'],
-                ['route' => 'logistics.assignments', 'label' => 'Assign riders', 'icon' => 'fa-people-arrows'],
+                ['route' => 'logistics.assignments', 'label' => 'Assign riders', 'icon' => 'fa-people-arrows', 'count' => 'assignments'],
                 ['route' => 'logistics.deliveries', 'label' => 'Deliveries', 'icon' => 'fa-route'],
-                ['route' => 'logistics.returns', 'label' => 'Returns', 'icon' => 'fa-rotate-left'],
+                ['route' => 'logistics.returns', 'label' => 'Returns', 'icon' => 'fa-rotate-left', 'count' => 'returns'],
                 ['route' => 'logistics.monitoring', 'label' => 'Monitoring', 'icon' => 'fa-satellite-dish'],
                 ['heading' => 'Team'],
-                ['route' => 'logistics.riders', 'label' => 'Riders', 'icon' => 'fa-motorcycle'],
+                ['route' => 'logistics.riders', 'label' => 'Riders', 'icon' => 'fa-motorcycle', 'count' => 'riders'],
                 ['route' => 'logistics.attendance', 'label' => 'Attendance', 'icon' => 'fa-user-clock'],
-                ['route' => 'logistics.messages', 'label' => 'Messages', 'icon' => 'fa-comments'],
+                ['route' => 'logistics.messages', 'label' => 'Messages', 'icon' => 'fa-comments', 'count' => 'messages'],
                 ['route' => 'support', 'label' => 'ZAYLO support', 'icon' => 'fa-life-ring'],
                 ['route' => 'logistics.reports', 'label' => 'Reports', 'icon' => 'fa-chart-column'],
                 ['route' => 'logistics.earnings', 'label' => 'Earnings', 'icon' => 'fa-wallet'],
@@ -81,7 +83,7 @@
     <link rel="stylesheet" href="{{ asset('css/confirm-dialog.css') }}?v={{ filemtime(public_path('css/confirm-dialog.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/print.css') }}?v={{ filemtime(public_path('css/print.css')) }}" media="print">
 </head>
-<body class="seller-workspace workspace-{{ $workspace }}">
+<body class="seller-workspace workspace-{{ $workspace }}" @if($viewer?->isActive()) data-seller-updates-url="{{ route($workspace.'.updates') }}" @endif>
     <header class="seller-site-header">
         <div class="seller-site-header__shop">
             <i class="fa-solid {{ $portal['icon'] }}" aria-hidden="true"></i>
@@ -124,9 +126,7 @@
                     <a href="{{ route($item['route']) }}" class="seller-sidebar__link{{ $active ? ' is-active' : '' }}" @if($active) aria-current="page" @endif>
                         <i class="fas {{ $item['icon'] }}" aria-hidden="true"></i>
                         <span>{{ $item['label'] }}</span>
-                        @if(! empty($item['badge']) && $sidebarUnreadNotifications > 0)
-                            <span class="seller-sidebar__badge">{{ $sidebarUnreadNotifications > 99 ? '99+' : $sidebarUnreadNotifications }}<span class="sr-only"> unread</span></span>
-                        @endif
+                        @include('partials.sidebar-count', ['key' => $item['count'] ?? null])
                     </a>
                 @endforeach
                 <div class="seller-sidebar__divider" aria-hidden="true"></div>
@@ -150,6 +150,7 @@
     <script src="{{ asset('js/notifications.js') }}?v={{ filemtime(public_path('js/notifications.js')) }}" defer></script>
     <script src="{{ asset('js/smooth-disclosure.js') }}?v={{ filemtime(public_path('js/smooth-disclosure.js')) }}" defer></script>
     <script src="{{ asset('js/seller-workspace.js') }}?v={{ filemtime(public_path('js/seller-workspace.js')) }}" defer></script>
+    <script src="{{ asset('js/seller-live-updates.js') }}?v={{ filemtime(public_path('js/seller-live-updates.js')) }}" defer></script>
     @stack('scripts')
     <script src="{{ asset('js/confirm-dialog.js') }}?v={{ filemtime(public_path('js/confirm-dialog.js')) }}" defer></script>
     <script src="{{ asset('js/print.js') }}?v={{ filemtime(public_path('js/print.js')) }}" defer></script>

@@ -61,7 +61,7 @@ return [
         ],
         [
             'q' => 'Can I cancel my order?',
-            'a' => 'Yes, while it is still Placed or Confirmed: open the order in My orders and cancel it. Once the seller is preparing it, it can no longer be cancelled.',
+            'a' => 'Yes, until the seller confirms it: open the order in My orders and cancel it while it is still Placed. Once the seller confirms the order, it can no longer be cancelled; message the seller if something is wrong.',
             'keywords' => ['cancel', 'cancellation', 'change order'],
             'link' => ['route' => 'buyer.orders', 'label' => 'Open My orders'],
         ],

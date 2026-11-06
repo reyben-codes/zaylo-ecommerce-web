@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\LogisticsPayout;
 use App\Models\LogisticsProvider;
 use App\Services\LogisticsPayouts;
+use App\Services\Wallet;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 
@@ -39,7 +40,7 @@ class LogisticsPayoutController extends Controller
             : "{$provider->name} has no unpaid delivered parcels.");
     }
 
-    public function partner(Request $request)
+    public function partner(Request $request, Wallet $wallet)
     {
         $provider = $request->user()->logisticsProvider;
         abort_unless($provider, 404, 'No logistics company is linked to this account.');
@@ -52,6 +53,8 @@ class LogisticsPayoutController extends Controller
             'summary' => $this->payouts->summary($rows),
             'parcels' => $rows->take(100),
             'history' => $this->history($provider),
+            'wallet' => $wallet->summary($request->user()),
+            'cashouts' => $wallet->history($request->user()),
         ]);
     }
 

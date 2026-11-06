@@ -5,6 +5,7 @@
 
 @push('styles')
     <link rel="stylesheet" href="{{ asset('css/seller-orders.css') }}?v={{ filemtime(public_path('css/seller-orders.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/order-items.css') }}?v={{ filemtime(public_path('css/order-items.css')) }}">
 @endpush
 
 @section('content')
@@ -103,10 +104,11 @@
                                 <span class="seller-cell-note">{{ $order->recipient_name }}</span>
                             </td>
                             <td>
-                                <strong>{{ $itemNames->first() ?? 'Order items' }}</strong>
-                                @if($order->items->count() > 1)
-                                    <span class="seller-cell-note">+ {{ $order->items->count() - 1 }} more</span>
-                                @endif
+                                <div class="order-items order-items--compact" role="group" aria-label="Products in order {{ $order->order_number }}">
+                                    @foreach($order->items as $item)
+                                        @include('partials.order-item', ['item' => $item])
+                                    @endforeach
+                                </div>
                             </td>
                             <td><strong>&#8369;{{ number_format($order->total, 2) }}</strong></td>
                             <td>
@@ -182,12 +184,6 @@
                                             @if($order->shipment?->handover_confirmed_at)
                                                 <p>You confirmed the handover: {{ $order->shipment->handover_confirmed_at->timezone('Asia/Manila')->format('M j, Y · g:i A') }}</p>
                                             @endif
-                                            <strong>Items</strong>
-                                            <ul>
-                                                @foreach($order->items as $item)
-                                                    <li><span>{{ $item->product_name }} × {{ $item->quantity }}</span><span>&#8369;{{ number_format($item->line_total, 2) }}</span></li>
-                                                @endforeach
-                                            </ul>
                                             <strong>Status history</strong>
                                             <ol>
                                                 @forelse($order->statusHistory as $history)
