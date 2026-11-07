@@ -31,13 +31,22 @@ class Vouchers
     public function create(array $data): Voucher
     {
         $voucher = DB::transaction(function () use ($data) {
+            if (! empty($data['seller_id'])) {
+                $target = $this->targetShops((int) $data['seller_id'])->first();
+                if ($target) {
+                    $data['seller_id'] = $target['id'];
+                }
+            }
             $voucher = Voucher::create($data + [
                 'funded_by' => $data['type'] === 'free_shipping' ? 'zaylo' : 'seller',
                 'is_active' => true,
                 'used_count' => 0,
             ]);
             if ($voucher->needsOptIn()) {
-                foreach ($this->shops() as $shop) {
+                $shops = $voucher->seller_id
+                    ? $this->targetShops((int) $voucher->seller_id)
+                    : $this->shops();
+                foreach ($shops as $shop) {
                     VoucherSeller::create(['voucher_id' => $voucher->id, 'seller_id' => $shop['id'], 'status' => VoucherSeller::PENDING]);
                 }
             }
@@ -46,7 +55,10 @@ class Vouchers
         });
 
         if ($voucher->needsOptIn()) {
-            foreach ($this->shops() as $shop) {
+            $shops = $voucher->seller_id
+                ? $this->targetShops((int) $voucher->seller_id)
+                : $this->shops();
+            foreach ($shops as $shop) {
                 try {
                     $shop['owner']->notify(new VoucherInvitation($voucher));
                 } catch (\Throwable $error) {
@@ -59,6 +71,29 @@ class Vouchers
         return $voucher;
     }
 
+    /** A seller creates a voucher for their own shop; it is immediately accepted. */
+    public function createForSeller(array $data, int $shopId, User $owner): Voucher
+    {
+        return DB::transaction(function () use ($data, $shopId, $owner) {
+            $voucher = Voucher::create($data + [
+                'seller_id' => $shopId,
+                'created_by' => $owner->id,
+                'funded_by' => 'seller',
+                'is_active' => true,
+                'used_count' => 0,
+            ]);
+
+            VoucherSeller::create([
+                'voucher_id' => $voucher->id,
+                'seller_id' => $shopId,
+                'status' => VoucherSeller::ACCEPTED,
+                'responded_at' => now(),
+            ]);
+
+            return $voucher;
+        });
+    }
+
     /** The shop joins (the voucher applies to its items, and it pays the discount) or declines (it is left out). */
     public function respond(Voucher $voucher, int $shopId, bool $join): VoucherSeller
     {
@@ -68,7 +103,7 @@ class Vouchers
         return $row;
     }
 
-    /** @return Collection<int, VoucherSeller> the shop's invitations, newest first */
+    /** @return Collection<int, VoucherSeller> the shop's invitations from platform/admin, newest first */
     public function invitationsFor(User $seller): Collection
     {
         $shopId = Shop::idForSeller($seller);
@@ -76,7 +111,28 @@ class Vouchers
             return collect();
         }
 
-        return VoucherSeller::with('voucher')->where('seller_id', $shopId)->latest('id')->get();
+        return VoucherSeller::with('voucher')
+            ->where('seller_id', $shopId)
+            ->whereHas('voucher', function ($q) use ($seller) {
+                $q->whereNull('created_by')
+                    ->orWhere('created_by', '!=', $seller->id);
+            })
+            ->latest('id')
+            ->get();
+    }
+
+    /** @return Collection<int, Voucher> vouchers created by this seller for their own shop */
+    public function shopVouchersFor(User $seller): Collection
+    {
+        $shopId = Shop::idForSeller($seller);
+        if (! self::ready() || ! $shopId) {
+            return collect();
+        }
+
+        return Voucher::where('seller_id', $shopId)
+            ->where('created_by', $seller->id)
+            ->latest('id')
+            ->get();
     }
 
     public function pendingCount(User $seller): int
@@ -85,8 +141,42 @@ class Vouchers
 
         return self::ready() && $shopId
             ? VoucherSeller::where('seller_id', $shopId)->where('status', VoucherSeller::PENDING)
-                ->whereHas('voucher', fn ($q) => $q->where('is_active', true))->count()
+                ->whereHas('voucher', fn ($q) => $q->where('is_active', true)->where(function ($sub) use ($seller) {
+                    $sub->whereNull('created_by')->orWhere('created_by', '!=', $seller->id);
+                }))->count()
             : 0;
+    }
+
+    public function shopName(int $shopId): string
+    {
+        return Shop::find($shopId)?->name ?? 'Shop #'.$shopId;
+    }
+
+    /** Target shops for a specific seller_id. */
+    public function targetShops(int $shopId): Collection
+    {
+        $match = $this->shops()->firstWhere('id', $shopId);
+        if ($match) {
+            return collect([$match]);
+        }
+
+        $shop = Shop::find($shopId);
+        if ($shop && $shop->owner) {
+            return collect([['id' => $shop->id, 'name' => $shop->name, 'owner' => $shop->owner]]);
+        }
+
+        $user = User::find($shopId);
+        if ($user && $user->hasRole('seller')) {
+            $userShopId = Shop::idForSeller($user);
+            if ($userShopId && $userShopId !== $shopId) {
+                return $this->targetShops($userShopId);
+            }
+            $shopModel = $user->sellerShop();
+
+            return collect([['id' => (int) $shopModel->id, 'name' => $shopModel->name, 'owner' => $user]]);
+        }
+
+        return collect();
     }
 
     /** @return array<int, int> shop ids that joined */
@@ -137,16 +227,24 @@ class Vouchers
             ->filter()->all();
     }
 
-    /** Every open shop with its owner, to invite. */
-    private function shops(): Collection
+    /** Every open shop with its owner and name. */
+    public function shops(): Collection
     {
         if (Product::usesLegacySchema()) {
             return User::where('role', 'seller')->where('status', 'active')->get()
-                ->map(fn (User $owner) => ['id' => (int) $owner->id, 'owner' => $owner]);
+                ->map(fn (User $owner) => [
+                    'id' => (int) $owner->id,
+                    'name' => $owner->sellerStoreName(),
+                    'owner' => $owner,
+                ]);
         }
 
         return Seller::with('owner')->where('status', 'approved')->get()
             ->filter(fn (Seller $shop) => $shop->owner)
-            ->map(fn (Seller $shop) => ['id' => (int) $shop->id, 'owner' => $shop->owner])->values();
+            ->map(fn (Seller $shop) => [
+                'id' => (int) $shop->id,
+                'name' => $shop->name,
+                'owner' => $shop->owner,
+            ])->values();
     }
 }

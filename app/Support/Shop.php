@@ -98,7 +98,8 @@ class Shop
             return $seller->id;
         }
 
-        return Seller::where('user_id', $seller->id)->oldest('id')->value('id');
+        return Seller::where('user_id', $seller->id)->oldest('id')->value('id')
+            ?? ($seller->hasRole('seller') ? $seller->sellerShop()->id : null);
     }
 
     public function url(): string

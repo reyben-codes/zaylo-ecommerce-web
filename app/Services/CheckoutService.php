@@ -86,15 +86,44 @@ class CheckoutService
 
     /**
      * A discount voucher works only on shops that joined it (and that reach its minimum spend); free shipping works on
-     * every shop. Refuses a voucher that would take nothing off this cart.
+     * every shop (or only the specified shop if targeted). Refuses a voucher that would take nothing off this cart.
      */
     public function ensureVoucherApplies(?Voucher $voucher, Collection $items): void
     {
-        if (! $voucher || $voucher->isFreeShipping() || app(Vouchers::class)->cartDiscounts($voucher, $items)) {
+        if (! $voucher) {
             return;
         }
-        $joined = app(Vouchers::class)->joinedShops($voucher);
         $inCart = $items->pluck('product.seller_id')->map(fn ($id) => (int) $id)->unique();
+        if ($voucher->isFreeShipping()) {
+            if ($voucher->seller_id && ! $inCart->contains((int) $voucher->seller_id)) {
+                $shopName = app(Vouchers::class)->shopName((int) $voucher->seller_id);
+                throw ValidationException::withMessages([
+                    'voucher_code' => "This voucher only applies to items from {$shopName}.",
+                ]);
+            }
+
+            return;
+        }
+
+        if (app(Vouchers::class)->cartDiscounts($voucher, $items)) {
+            return;
+        }
+
+        $joined = app(Vouchers::class)->joinedShops($voucher);
+        if ($voucher->seller_id) {
+            $shopName = app(Vouchers::class)->shopName((int) $voucher->seller_id);
+            if (! $inCart->contains((int) $voucher->seller_id)) {
+                throw ValidationException::withMessages([
+                    'voucher_code' => "This voucher only applies to items from {$shopName}.",
+                ]);
+            }
+            if ($voucher->min_spend) {
+                throw ValidationException::withMessages([
+                    'voucher_code' => 'Spend at least ₱'.number_format((float) $voucher->min_spend, 2)." at {$shopName} to use this voucher.",
+                ]);
+            }
+        }
+
         throw ValidationException::withMessages(['voucher_code' => $inCart->intersect($joined)->isEmpty()
             ? 'None of the shops in your order joined this voucher.'
             : 'Spend at least ₱'.number_format((float) $voucher->min_spend, 2).' at a shop that joined to use this voucher.']);
@@ -108,7 +137,14 @@ class CheckoutService
         $subtotal = $items->sum(fn (CartItem $item) => $item->unitPrice() * $item->quantity);
         $shipping = $items->pluck('product.seller_id')->unique()->count() * $perSeller;
         // Free shipping is ZAYLO's; a discount voucher comes off the items of shops that joined it, paid by them.
-        $shippingDiscount = $voucher?->isFreeShipping() ? $shipping : 0;
+        if ($voucher?->isFreeShipping()) {
+            $sellerIdsInCart = $items->pluck('product.seller_id')->map(fn ($id) => (int) $id)->unique();
+            $shippingDiscount = $voucher->seller_id
+                ? ($sellerIdsInCart->contains((int) $voucher->seller_id) ? $perSeller : 0)
+                : $shipping;
+        } else {
+            $shippingDiscount = 0;
+        }
         $voucherDiscount = round(array_sum(app(Vouchers::class)->cartDiscounts($voucher, $items)), 2);
 
         return [
@@ -218,7 +254,8 @@ class CheckoutService
                 }
 
                 $subtotal = $prepared->sum(fn ($row) => $row['unitPrice'] * $row['item']->quantity);
-                $shippingDiscount = $voucher?->isFreeShipping() ? $perSeller : 0;
+                $isFreeShipping = $voucher?->isFreeShipping() && (! $voucher->seller_id || (int) $sellerId === (int) $voucher->seller_id);
+                $shippingDiscount = $isFreeShipping ? $perSeller : 0;
                 $shippingFee = $perSeller - $shippingDiscount;
                 // The shop pays a discount voucher it joined; nothing comes off shops that did not join.
                 $voucherDiscount = app(Vouchers::class)->discountFor($voucher, (int) $sellerId, (float) $subtotal, $joinedShops);

@@ -200,6 +200,9 @@ Route::middleware(['auth', 'active', 'verified', 'role:seller', 'nocache'])->pre
     Route::patch('/account/store', [SellerController::class, 'updateStore'])->name('account.store');
     Route::patch('/account/gcash', [GcashPaymentController::class, 'account'])->name('account.gcash');
     Route::get('/vouchers', [VoucherController::class, 'seller'])->name('vouchers');
+    Route::post('/vouchers', [VoucherController::class, 'storeSeller'])->middleware('throttle:30,1')->name('vouchers.store');
+    Route::patch('/vouchers/{voucher}/toggle', [VoucherController::class, 'toggleSeller'])->name('vouchers.toggle');
+    Route::delete('/vouchers/{voucher}', [VoucherController::class, 'destroySeller'])->name('vouchers.destroy');
     Route::get('/settlement', [SettlementController::class, 'seller'])->name('settlement');
     Route::patch('/vouchers/{voucher}', [VoucherController::class, 'respond'])->middleware('throttle:30,1')->name('vouchers.respond');
         Route::post('/account/cover', [ShopCoverController::class, 'update'])->middleware('throttle:10,1')->name('account.cover.update');

@@ -87,4 +87,119 @@ class SellerVoucherTest extends TestCase
         Notification::assertNothingSent();
         $this->assertSame(0.0, $vouchers->discountFor($free, $shop, 1000));
     }
+
+    public function test_admin_can_target_voucher_to_a_specific_seller(): void
+    {
+        Notification::fake();
+        $admin = User::factory()->create(['role' => 'admin', 'status' => 'active']);
+        $sellerA = User::factory()->create(['role' => 'seller', 'status' => 'active', 'name' => 'Artisan Pottery']);
+        $shopA = $sellerA->sellerShop();
+        $sellerB = User::factory()->create(['role' => 'seller', 'status' => 'active', 'name' => 'Boutique Crafts']);
+        $sellerB->sellerShop();
+
+        $this->actingAs($admin)->post(route('admin.vouchers.store'), [
+            'code' => 'ARTISAN15',
+            'name' => 'Exclusive for Artisan',
+            'target_type' => 'specific',
+            'target_seller_id' => $shopA->id,
+            'type' => 'percent',
+            'value' => 15,
+            'min_spend' => 200,
+        ])->assertSessionHasNoErrors()->assertSessionHas('status', fn ($status) => str_contains($status, 'was created for'));
+
+        $voucher = Voucher::where('code', 'ARTISAN15')->firstOrFail();
+        $this->assertSame((int) $shopA->id, (int) $voucher->seller_id);
+        $this->assertSame(1, VoucherSeller::where('voucher_id', $voucher->id)->count());
+        $this->assertSame((int) $shopA->id, (int) VoucherSeller::where('voucher_id', $voucher->id)->value('seller_id'));
+
+        Notification::assertSentTo($sellerA, VoucherInvitation::class);
+        Notification::assertNotSentTo($sellerB, VoucherInvitation::class);
+
+        $this->actingAs($admin)->get(route('admin.vouchers'))
+            ->assertOk()
+            ->assertSee('Specific:');
+    }
+
+    public function test_seller_can_create_and_manage_own_shop_voucher(): void
+    {
+        $seller = User::factory()->create(['role' => 'seller', 'status' => 'active', 'name' => 'Sole Seller']);
+        $otherSeller = User::factory()->create(['role' => 'seller', 'status' => 'active', 'name' => 'Other Seller']);
+
+        // Seller creates their own shop voucher.
+        $this->actingAs($seller)->post(route('seller.vouchers.store'), [
+            'code' => 'SOLE20',
+            'name' => '20% off Sole Goods',
+            'type' => 'percent',
+            'value' => 20,
+            'min_spend' => 300,
+            'max_discount' => 100,
+        ])->assertSessionHasNoErrors();
+
+        $voucher = Voucher::where('code', 'SOLE20')->firstOrFail();
+        $this->assertSame((int) $seller->id, (int) $voucher->seller_id);
+        $this->assertSame((int) $seller->id, (int) $voucher->created_by);
+        $this->assertSame('seller', $voucher->funded_by);
+        $this->assertTrue($voucher->is_active);
+
+        // VoucherSeller row is automatically accepted.
+        $pivot = VoucherSeller::where('voucher_id', $voucher->id)->firstOrFail();
+        $this->assertSame(VoucherSeller::ACCEPTED, $pivot->status);
+
+        // Shows in "My shop vouchers" and not in platform invitations.
+        $this->get(route('seller.vouchers'))->assertOk()
+            ->assertSee('My shop vouchers')
+            ->assertSee('SOLE20')
+            ->assertSee('Create shop voucher');
+
+        // Seller can pause (toggle) voucher.
+        $this->patch(route('seller.vouchers.toggle', $voucher))->assertSessionHasNoErrors();
+        $this->assertFalse($voucher->fresh()->is_active);
+
+        // Other seller cannot toggle or delete it.
+        $this->actingAs($otherSeller)->patch(route('seller.vouchers.toggle', $voucher))->assertForbidden();
+        $this->actingAs($otherSeller)->delete(route('seller.vouchers.destroy', $voucher))->assertForbidden();
+
+        // Original seller deletes it.
+        $this->actingAs($seller)->delete(route('seller.vouchers.destroy', $voucher))->assertSessionHasNoErrors();
+        $this->assertDatabaseMissing('vouchers', ['id' => $voucher->id]);
+    }
+
+    public function test_buyer_checkout_with_seller_voucher_applies_only_to_that_seller(): void
+    {
+        $sellerA = User::factory()->create(['role' => 'seller', 'status' => 'active', 'name' => 'Bakery Delight']);
+        $sellerB = User::factory()->create(['role' => 'seller', 'status' => 'active', 'name' => 'Coffee Bean']);
+
+        $bread = Product::create(['seller_id' => $sellerA->id, 'name' => 'Sourdough Bread', 'category' => 'storage_bins', 'price' => 500, 'stock' => 10, 'is_active' => true]);
+        $coffee = Product::create(['seller_id' => $sellerB->id, 'name' => 'Cold Brew', 'category' => 'storage_bins', 'price' => 300, 'stock' => 10, 'is_active' => true]);
+
+        // Seller A creates a 20% voucher.
+        $this->actingAs($sellerA)->post(route('seller.vouchers.store'), [
+            'code' => 'BAKERY20',
+            'type' => 'percent',
+            'value' => 20,
+            'min_spend' => 400,
+        ])->assertSessionHasNoErrors();
+        $voucher = Voucher::where('code', 'BAKERY20')->firstOrFail();
+
+        $buyer = User::factory()->create(['role' => 'buyer', 'status' => 'active']);
+        $buyer->addresses()->create($this->savedAddressData(['is_default' => true]));
+
+        // Cart with items from both sellers: only Seller A's items get the 20% discount (20% of ₱500 = ₱100).
+        $this->actingAs($buyer)->post(route('buyer.cart.add', $bread), ['quantity' => 1]);
+        $this->post(route('buyer.cart.add', $coffee), ['quantity' => 1]);
+        $items = $buyer->cart()->first()->items()->with('product')->get();
+
+        $discounts = app(Vouchers::class)->cartDiscounts($voucher, $items);
+        $this->assertSame([(int) $sellerA->id => 100.0], $discounts);
+
+        // Cart with ONLY Seller B's items should be refused with a clear message.
+        $this->signInMobile($buyer);
+        $coffeeItem = $items->firstWhere('product.id', $coffee->id);
+        $response = $this->postJson('/api/mobile/checkout/quote', [
+            'cart_item_ids' => [$coffeeItem->id],
+            'voucher_code' => 'BAKERY20',
+        ]);
+        $response->assertUnprocessable();
+        $this->assertStringContainsString('only applies to items from', $response->json('errors.voucher_code.0'));
+    }
 }

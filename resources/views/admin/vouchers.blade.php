@@ -29,6 +29,25 @@
                 <input id="voucher-name" name="name" value="{{ old('name') }}" maxlength="80" placeholder="e.g. Payday Sale">
             </div>
             <div class="seller-field">
+                <label for="voucher-target">Target shops</label>
+                <select id="voucher-target" name="target_type">
+                    <option value="all" @selected(old('target_type', 'all') === 'all')>All shops (platform-wide invitation)</option>
+                    <option value="specific" @selected(old('target_type') === 'specific')>Specific shop</option>
+                </select>
+            </div>
+            <div class="seller-field" id="target-seller-wrap" @if(old('target_type', 'all') !== 'specific') style="display: none;" @endif>
+                <label for="voucher-target-seller">Shop to invite</label>
+                <select id="voucher-target-seller" name="target_seller_id" @error('target_seller_id') aria-invalid="true" @enderror>
+                    <option value="">Select a shop...</option>
+                    @foreach($shops as $shop)
+                        <option value="{{ $shop['id'] }}" @selected((string) old('target_seller_id') === (string) $shop['id'])>
+                            {{ $shop['name'] }} (Owner: {{ $shop['owner']->email ?? $shop['owner']->name }})
+                        </option>
+                    @endforeach
+                </select>
+                @error('target_seller_id')<p class="seller-field__error">{{ $message }}</p>@enderror
+            </div>
+            <div class="seller-field">
                 <label for="voucher-type">Type</label>
                 <select id="voucher-type" name="type" required>
                     @foreach($types as $key => $label)
@@ -72,7 +91,7 @@
         <header class="seller-panel__header"><div><h2>All vouchers</h2></div></header>
         <div class="seller-table-wrap">
             <table class="seller-table workspace-table">
-                <thead><tr><th>Voucher</th><th>Offer</th><th>Paid by</th><th>Shops</th><th>Used</th><th><span class="sr-only">Actions</span></th></tr></thead>
+                <thead><tr><th>Voucher</th><th>Offer</th><th>Paid by</th><th>Target</th><th>Shops</th><th>Used</th><th><span class="sr-only">Actions</span></th></tr></thead>
                 <tbody>
                     @forelse($vouchers as $voucher)
                         <tr>
@@ -80,6 +99,13 @@
                                 <span class="seller-cell-note">{{ $voucher->is_active ? ($voucher->isAvailable() ? 'Running' : 'Scheduled or ended') : 'Off' }}@if($voucher->expires_at) · ends {{ $voucher->expires_at->timezone('Asia/Manila')->format('M j, Y') }}@endif</span></td>
                             <td>{{ $voucher->describe() }}</td>
                             <td>{{ $voucher->isFreeShipping() ? 'ZAYLO' : 'Shops that join' }}</td>
+                            <td>
+                                @if($voucher->seller_id)
+                                    <span class="seller-cell-note"><strong>Specific:</strong> {{ app(\App\Services\Vouchers::class)->shopName($voucher->seller_id) }}</span>
+                                @else
+                                    <span>All shops</span>
+                                @endif
+                            </td>
                             <td>
                                 @if($voucher->isFreeShipping())
                                     All shops
@@ -97,7 +123,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="6"><p class="admin-empty-inline">No vouchers yet.</p></td></tr>
+                        <tr><td colspan="7"><p class="admin-empty-inline">No vouchers yet.</p></td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -105,3 +131,7 @@
         @if($vouchers->hasPages())<div class="seller-pagination">{{ $vouchers->links() }}</div>@endif
     </section>
 @endsection
+
+@push('scripts')
+    <script src="{{ asset('js/voucher-admin.js') }}?v={{ filemtime(public_path('js/voucher-admin.js')) }}" defer></script>
+@endpush

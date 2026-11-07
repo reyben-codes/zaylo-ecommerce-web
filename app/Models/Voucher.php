@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -19,7 +20,7 @@ class Voucher extends Model
 
     protected $fillable = [
         'code', 'type', 'is_active', 'starts_at', 'expires_at', 'usage_limit', 'used_count',
-        'name', 'value', 'min_spend', 'max_discount', 'funded_by',
+        'name', 'value', 'min_spend', 'max_discount', 'funded_by', 'seller_id', 'created_by',
     ];
 
     protected $casts = [
@@ -29,11 +30,23 @@ class Voucher extends Model
         'value' => 'float',
         'min_spend' => 'float',
         'max_discount' => 'float',
+        'seller_id' => 'integer',
+        'created_by' => 'integer',
     ];
 
     public function sellers(): HasMany
     {
         return $this->hasMany(VoucherSeller::class);
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function isShopSpecific(): bool
+    {
+        return $this->seller_id !== null;
     }
 
     public function isAvailable(): bool
