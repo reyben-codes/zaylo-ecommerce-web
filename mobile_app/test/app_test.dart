@@ -1351,6 +1351,55 @@ void main() {
     expect(api.updates, ['1:out_for_delivery', '2:failed:buyer_unavailable']);
   });
 
+  testWidgets('rider Home explains and asks for location, then shows a banner until it is allowed', (tester) async {
+    var access = LocationAccess.needsPermission;
+    final asked = <bool>[];
+    DeviceLocation.access = ({bool ask = false}) async {
+      asked.add(ask);
+      if (ask) access = LocationAccess.blocked; // the rider tapped "Don't allow" in the system prompt
+      return access;
+    };
+    var openedSettings = 0;
+    DeviceLocation.openAppSettings = () async {
+      openedSettings++;
+      return true;
+    };
+    addTearDown(() {
+      DeviceLocation.access = ({bool ask = false}) async => throw const LocationUnavailable('Not in tests');
+      DeviceLocation.openAppSettings = () async => false;
+    });
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(400, 3000);
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(MaterialApp(home: RiderShell(api: FakeRiderApi())));
+    await tester.pumpAndSettle();
+
+    // Asked once, with the reason first; the system prompt only comes after "Continue".
+    expect(find.text('Allow ZAYLO to use your location'), findsOneWidget);
+    expect(find.textContaining('so your hub can give you parcels near you'), findsOneWidget);
+    expect(asked, everyElement(isFalse), reason: 'no system prompt before the explanation');
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+    expect(asked.where((ask) => ask), hasLength(1));
+
+    // Refused: Home keeps a banner, and its button leads to the app's settings.
+    expect(find.text('Location not allowed'), findsOneWidget);
+    await tester.tap(find.text('ALLOW'));
+    await tester.pumpAndSettle();
+    expect(find.text('Allow location in Settings'), findsOneWidget);
+    await tester.tap(find.text('Open settings'));
+    await tester.pumpAndSettle();
+    expect(openedSettings, 1);
+
+    // Allowed in settings: coming back to the app clears the banner.
+    access = LocationAccess.granted;
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+    expect(find.text('Location not allowed'), findsNothing);
+  });
+
   testWidgets("rider Home shows today's attendance and scans the hub code to time out", (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(320, 4000);

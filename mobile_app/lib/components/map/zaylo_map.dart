@@ -126,9 +126,42 @@ class LocationUnavailable implements Exception {
 }
 
 /// The phone's current location. Tests replace [current].
+/// Whether the app can read the phone's location right now.
+enum LocationAccess {
+  granted,
+
+  /// Not allowed yet; the system prompt can still be shown.
+  needsPermission,
+
+  /// Refused for good ("Don't allow" / "Don't ask again"): only the phone's settings can change it.
+  blocked,
+
+  /// The phone's location (GPS) is switched off.
+  serviceOff,
+}
+
 class DeviceLocation {
   /// With [ask] false, a missing permission is not requested again (so a background reporter never nags).
   static Future<LatLng> Function({bool ask}) current = _current;
+
+  /// Where location stands; with [ask] true, shows the system permission prompt when it still can.
+  /// Replaceable in tests (the plugin is not available there).
+  static Future<LocationAccess> Function({bool ask}) access = _access;
+
+  /// Opens the app's page in the phone's settings, or the phone's location settings.
+  static Future<bool> Function() openAppSettings = Geolocator.openAppSettings;
+  static Future<bool> Function() openLocationSettings = Geolocator.openLocationSettings;
+
+  static Future<LocationAccess> _access({bool ask = false}) async {
+    if (!await Geolocator.isLocationServiceEnabled()) return LocationAccess.serviceOff;
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied && ask) permission = await Geolocator.requestPermission();
+    return switch (permission) {
+      LocationPermission.denied => LocationAccess.needsPermission,
+      LocationPermission.deniedForever => LocationAccess.blocked,
+      _ => LocationAccess.granted,
+    };
+  }
 
   static Future<LatLng> _current({bool ask = true}) async {
     if (!await Geolocator.isLocationServiceEnabled()) {

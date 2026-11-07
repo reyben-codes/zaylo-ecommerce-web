@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'package:zaylo_mobile/api/api_exception.dart';
@@ -5,8 +7,10 @@ import 'package:zaylo_mobile/api/rider_api.dart';
 import 'package:zaylo_mobile/components/announcement_banner.dart';
 import 'package:zaylo_mobile/components/announcement_popups.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
+import 'package:zaylo_mobile/components/map/zaylo_map.dart' show LocationAccess;
 import 'package:zaylo_mobile/features/rider/dashboard/rider_delivery_list_screen.dart';
 import 'package:zaylo_mobile/features/rider/dashboard/rider_earnings_screen.dart';
+import 'package:zaylo_mobile/features/rider/dashboard/rider_location_access.dart';
 import 'package:zaylo_mobile/features/rider/dashboard/rider_location_reporter.dart';
 import 'package:zaylo_mobile/features/rider/dashboard/rider_reports_screen.dart';
 import 'package:zaylo_mobile/features/rider/dashboard/rider_scan_screen.dart';
@@ -44,8 +48,42 @@ class RiderDashboardTabState extends State<RiderDashboardTab> with RiderDelivery
   @override
   RiderApi get riderApi => widget.api;
 
+  /// Where the phone's location stands; Home shows a banner until riders can be seen on the map.
+  LocationAccess? _location;
+  late final _lifecycle = AppLifecycleListener(onResume: _checkLocation);
+
+  /// Asked once per app session, so riders are not nagged every time Home opens.
+  static bool _askedThisSession = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _lifecycle; // starts listening, to pick up changes made in the phone's settings
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _checkLocation();
+      if (!mounted || _askedThisSession || _location == null || _location == LocationAccess.granted) return;
+      _askedThisSession = true;
+      await _fixLocation();
+    });
+  }
+
+  Future<void> _checkLocation() async {
+    final status = await riderLocationStatus();
+    if (mounted) setState(() => _location = status);
+  }
+
+  /// Explains why, then shows the system prompt or opens the right settings page.
+  Future<void> _fixLocation() async {
+    final status = await askRiderLocation(context);
+    if (!mounted) return;
+    setState(() => _location = status);
+    // Now allowed: start sharing straight away if the rider is on shift or delivering.
+    if (status == LocationAccess.granted) unawaited(reloadDeliveries());
+  }
+
   @override
   void dispose() {
+    _lifecycle.dispose();
     _reporter.dispose();
     super.dispose();
   }
@@ -125,6 +163,10 @@ class RiderDashboardTabState extends State<RiderDashboardTab> with RiderDelivery
         padding: EdgeInsets.fromLTRB(20, 8, 20, 32 + MediaQuery.paddingOf(context).bottom),
         children: [
           RiderGreetingCard(rider: data.rider),
+          if (_location != null && _location != LocationAccess.granted) ...[
+            const SizedBox(height: 12),
+            RiderLocationBanner(status: _location!, onFix: _fixLocation),
+          ],
           AnnouncementPopups(announcements: data.announcementPopups),
           if (data.announcements.isNotEmpty) ...[
             const SizedBox(height: 12),
