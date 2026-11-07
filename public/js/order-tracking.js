@@ -1,6 +1,8 @@
 // Order tracking map: the buyer's pin and, while the parcel is out for delivery, the rider's last reported position.
 // It refreshes as often as the server says while the page is visible, and stops once the parcel is delivered.
-(() => {
+// Starts after every deferred script has run (DOMContentLoaded), so Leaflet and zaylo-map.js are loaded whatever order
+// the page lists the scripts in.
+document.addEventListener('DOMContentLoaded', () => {
     const root = document.querySelector('[data-order-tracking]');
     if (!root || !window.L || !window.ZayloMap) {
         return;
@@ -88,4 +90,4 @@
         }
     });
     start();
-})();
+});

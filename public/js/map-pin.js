@@ -1,6 +1,8 @@
 // Address form: the buyer pins the exact spot of the address by tapping the map, dragging the pin, or using the
 // device's location. The pin is saved in the hidden latitude and longitude fields; removing it clears them.
-(() => {
+// Starts after every deferred script has run (DOMContentLoaded), so Leaflet and zaylo-map.js are loaded whatever order
+// the page lists the scripts in.
+document.addEventListener('DOMContentLoaded', () => {
     const root = document.querySelector('[data-map-pin]');
     if (!root || !window.L || !window.ZayloMap) {
         return;
@@ -64,4 +66,4 @@
         clear.hidden = true;
         say('Tap the map to drop a pin on your door.');
     }
-})();
+});
