@@ -687,7 +687,13 @@ class FakeRiderApi extends RiderApi {
   final historyRequests = <RiderPeriod>[];
 
   @override
-  Future<RiderHistoryPage> history({RiderPeriod period = RiderPeriod.all, int page = 1}) async {
+  Future<RiderHistoryPage> history({
+    RiderPeriod period = RiderPeriod.all,
+    int page = 1,
+    DateTime? from,
+    DateTime? to,
+    String? search,
+  }) async {
     historyRequests.add(period);
     return RiderHistoryPage.fromJson({
       'summary': {'deliveries': 1, 'earnings': 49},
@@ -2631,7 +2637,7 @@ void main() {
       expect(find.text('Your rider is on the way. The map updates every 15 seconds.'), findsOneWidget);
       expect(find.textContaining('Rider location updated'), findsOneWidget);
       expect(find.byIcon(Icons.location_on), findsOneWidget, reason: 'the delivery pin');
-      expect(find.byIcon(Icons.two_wheeler), findsOneWidget, reason: 'the rider');
+      expect(find.image(const AssetImage('assets/images/map_rider.png')), findsOneWidget, reason: 'the rider, shown with the ZAYLO favicon');
       expect(ParcelTracking.fromJson({'stage': 'delivered', 'stage_label': 'Delivered', 'message': ''}).isTrackable, isFalse);
     });
 

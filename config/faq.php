@@ -50,7 +50,7 @@ return [
         ],
         [
             'q' => 'How do I pay?',
-            'a' => 'Choose Cash on Delivery (pay the rider when the parcel arrives) or GCash at checkout.',
+            'a' => "Choose Cash on Delivery (pay the rider when the parcel arrives) or GCash at checkout. With GCash, send each seller's amount to the GCash number shown, then enter the 13-digit reference number from your receipt (at checkout or later in My orders). The seller confirms your order once they find the payment; unpaid GCash orders are cancelled after 24 hours.",
             'keywords' => ['pay', 'payment', 'gcash', 'cod', 'cash on delivery', 'cash'],
         ],
         [

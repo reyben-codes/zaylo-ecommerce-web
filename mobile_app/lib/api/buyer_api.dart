@@ -166,6 +166,7 @@ class BuyerApi extends ApiClient {
     int? logisticsProviderId,
     String? voucherCode,
     String? notes,
+    Map<int, String> gcashReferences = const {},
   }) async {
     final data = await send('POST', '/mobile/checkout', body: {
       'cart_item_ids': cartItemIds,
@@ -176,6 +177,7 @@ class BuyerApi extends ApiClient {
       if (logisticsProviderId != null) 'logistics_provider_id': logisticsProviderId,
       if (voucherCode != null && voucherCode.isNotEmpty) 'voucher_code': voucherCode,
       if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
+      if (gcashReferences.isNotEmpty) 'gcash_references': {for (final entry in gcashReferences.entries) '${entry.key}': entry.value},
     });
     return (data['orders'] as List<dynamic>).map((item) => Order.fromJson(item as Map<String, dynamic>)).toList();
   }
@@ -191,8 +193,20 @@ class BuyerApi extends ApiClient {
   Future<ParcelTracking> orderTracking(int id) async =>
       ParcelTracking.fromJson((await send('GET', '/mobile/orders/$id/tracking'))['tracking'] as Map<String, dynamic>);
 
-  Future<Order> cancelOrder(int id) async =>
-      Order.fromJson((await send('POST', '/mobile/orders/$id/cancel'))['order'] as Map<String, dynamic>);
+  /// Cancels order [id] with one of the listed [reason] keys; "other" needs a [note].
+  Future<Order> cancelOrder(int id, {required String reason, String? note}) async => Order.fromJson((await send(
+          'POST', '/mobile/orders/$id/cancel',
+          body: {'reason': reason, if (note != null && note.trim().isNotEmpty) 'note': note.trim()}))['order']
+      as Map<String, dynamic>);
+
+  /// Sends the GCash reference number for order [id]; the seller checks it before confirming the order.
+  Future<String> submitGcashReference(int id, String reference) async =>
+      (await send('POST', '/mobile/orders/$id/gcash-reference', body: {'gcash_reference': reference}))['message'] as String? ??
+      'Reference sent.';
+
+  /// Puts the products of order [id] back in the cart; returns what the server says was added or skipped.
+  Future<String> buyAgain(int id) async =>
+      (await send('POST', '/mobile/orders/$id/buy-again'))['message'] as String? ?? 'Added to your cart.';
 
   /// The buyer received delivered order [id], which completes it.
   Future<Order> confirmReceipt(int id) async =>

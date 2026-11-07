@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Services\CheckoutService;
 use App\Models\Address;
 use App\Models\Announcement;
 use App\Models\CartItem;
@@ -182,8 +183,18 @@ class MobilePayload
             'status' => $order->status,
             'status_label' => Str::headline($order->status),
             'status_message' => self::STATUS_MESSAGES[$order->status] ?? 'Your order status was updated.',
-            'can_cancel' => in_array($order->status, \App\Services\CheckoutService::BUYER_CANCELLABLE, true),
+            'can_cancel' => in_array($order->status, CheckoutService::BUYER_CANCELLABLE, true),
+            // Shown as a disabled Cancel button with this reason once the seller confirmed the order.
+            'cancel_locked_reason' => self::cancelLockedReason($order),
+            'cancel_reason' => BuyerOrderTabs::reasonLabel(Schema::hasColumn('orders', 'cancel_reason') ? $order->cancel_reason : null),
+            'cancelled_at' => $order->status === 'cancelled' ? BuyerOrderTabs::cancelledAt($order)?->toIso8601String() : null,
             'can_confirm_receipt' => $order->status === 'delivered',
+            'can_buy_again' => in_array($order->status, ['cancelled', 'delivered', 'completed'], true),
+            // GCash paid to the seller: the reference and the seller's check (null for cash on delivery).
+            'gcash' => \App\Services\GcashPayments::forBuyer($order),
+            'can_review' => self::canReview($order),
+            // The list shows Return / Refund on the card too, when the complaints are loaded.
+            'can_return' => in_array($order->status, ['delivered', 'completed'], true) && $order->isWithinReturnWindow() && $order->relationLoaded('disputes') && $order->disputes->isEmpty(),
             'subtotal' => (float) $order->subtotal,
             'shipping_fee' => (float) $order->shipping_fee,
             'shipping_discount' => (float) $order->shipping_discount,
@@ -201,7 +212,9 @@ class MobilePayload
                 'unit_price' => (float) $item->unit_price,
                 'quantity' => (int) $item->quantity,
                 'line_total' => (float) $item->line_total,
-            ] + ($detailed ? self::reviewState($order, $item) : []))->values(),
+            // The list only needs whether an item waits for a rating ("To review"); the detail adds the full state.
+            ] + ($detailed ? self::reviewState($order, $item) : ['can_review' => in_array($order->status, ['delivered', 'completed'], true)
+                && $item->product_id && $item->relationLoaded('review') && ! $item->review]))->values(),
         ];
 
         if ($detailed) {
@@ -225,7 +238,6 @@ class MobilePayload
                 'return_deadline' => $order->returnDeadline()?->toIso8601String(),
                 'is_within_return_window' => $order->isWithinReturnWindow(),
                 'is_return_window_expired' => $order->isReturnWindowExpired(),
-                'can_return' => in_array($order->status, ['delivered', 'completed'], true) && $order->isWithinReturnWindow() && $order->relationLoaded('disputes') && $order->disputes->isEmpty(),
                 'can_complain' => $order->relationLoaded('disputes') && $order->status !== 'cancelled' && $order->disputes->isEmpty(),
                 'history' => ($order->relationLoaded('statusHistory') ? $order->statusHistory : collect())->map(fn ($entry) => [
                     'status' => $entry->status,
@@ -237,6 +249,24 @@ class MobilePayload
         }
 
         return $data;
+    }
+
+    /** Why Cancel is disabled: the seller confirmed the order and is preparing it. Null when Cancel is not shown at all. */
+    public static function cancelLockedReason(Order $order): ?string
+    {
+        $preparing = array_diff(self::STATUS_GROUPS['to_ship'], CheckoutService::BUYER_CANCELLABLE);
+
+        return in_array($order->status, $preparing, true)
+            ? 'The seller already confirmed this order and is preparing it, so it can no longer be cancelled. Message the seller if something is wrong.'
+            : null;
+    }
+
+    /** A delivered order with an item the buyer has not rated yet ("To review"). */
+    public static function canReview(Order $order): bool
+    {
+        return in_array($order->status, ['delivered', 'completed'], true)
+            && $order->relationLoaded('items')
+            && $order->items->contains(fn (OrderItem $item) => $item->product_id && $item->relationLoaded('review') && ! $item->review);
     }
 
     /** Whether the buyer can rate a delivered item, or the rating they gave. */

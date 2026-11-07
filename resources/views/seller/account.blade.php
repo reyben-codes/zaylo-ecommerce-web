@@ -54,6 +54,35 @@
                 </form>
             </section>
 
+            @if(\App\Services\GcashPayments::ready())
+                {{-- Buyers who pay by GCash send the money here and give you the reference to check. --}}
+                <section class="seller-panel" aria-labelledby="gcash-heading">
+                    <header class="seller-panel__header">
+                        <div>
+                            <h2 id="gcash-heading">GCash for buyer payments</h2>
+                            <p>Buyers who choose GCash send their payment to this account, then give you the reference number to check before you confirm the order.{{ auth()->user()->gcash_number ? '' : ' Until you add it, buyers can only pay your orders by cash on delivery.' }}</p>
+                        </div>
+                    </header>
+                    <form method="POST" action="{{ route('seller.account.gcash') }}" class="seller-panel__body seller-form">
+                        @csrf
+                        @method('PATCH')
+                        <div class="seller-field">
+                            <label for="gcash-number">GCash number</label>
+                            <input id="gcash-number" name="gcash_number" type="tel" inputmode="numeric" maxlength="11" placeholder="09XXXXXXXXX" value="{{ old('gcash_number', auth()->user()->gcash_number) }}" required @error('gcash_number') aria-invalid="true" @enderror>
+                            @error('gcash_number')<p class="seller-field__error">{{ $message }}</p>@enderror
+                        </div>
+                        <div class="seller-field">
+                            <label for="gcash-name">Name on the GCash account</label>
+                            <input id="gcash-name" name="gcash_name" maxlength="100" value="{{ old('gcash_name', auth()->user()->gcash_name) }}" required @error('gcash_name') aria-invalid="true" @enderror>
+                            @error('gcash_name')<p class="seller-field__error">{{ $message }}</p>@enderror
+                        </div>
+                        <div class="seller-form__actions">
+                            <button type="submit" class="seller-button"><i class="fas fa-check" aria-hidden="true"></i> Save GCash account</button>
+                        </div>
+                    </form>
+                </section>
+            @endif
+
             <section class="seller-panel" aria-labelledby="photo-heading">
                 <header class="seller-panel__header">
                     <div>

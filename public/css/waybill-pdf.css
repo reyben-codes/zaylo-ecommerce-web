@@ -324,3 +324,60 @@ table {
         box-shadow: none;
     }
 }
+
+/* ---- Queue mark: printed by the logistics partner for a seller without a printer (App\Support\WaybillQueue). ---- */
+.wb-queue { margin: 4px 0; border: 2px solid #000; }
+.wb-queue td { padding: 3px 5px; vertical-align: middle; }
+.wb-queue__swatch { width: 18px; background: #000; }
+.wb-queue__mark { display: block; font-size: 13px; font-weight: bold; letter-spacing: 1px; }
+.wb-queue--red .wb-queue__swatch { background: #d64545; }
+.wb-queue--blue .wb-queue__swatch { background: #2f6fde; }
+.wb-queue--green .wb-queue__swatch { background: #2e8b57; }
+.wb-queue--yellow .wb-queue__swatch { background: #e6b800; }
+.wb-queue--purple .wb-queue__swatch { background: #7b4fc9; }
+.wb-queue--orange .wb-queue__swatch { background: #e8772e; }
+.wb-queue--pink .wb-queue__swatch { background: #d94f9b; }
+
+/* ---- J&T Express layout: service band, big sort code, receiver over sender, COD row. ---- */
+.jt-band td { padding: 4px 6px; background: #000; color: #fff; vertical-align: middle; }
+.jt-band__name { font-size: 14px; font-weight: bold; letter-spacing: 1px; }
+.jt-band__service { text-align: right; font-size: 8px; font-weight: bold; }
+.jt-band__service span { font-weight: normal; }
+.jt-sort { margin-top: 4px; border: 2px solid #000; }
+.jt-sort td { padding: 4px 6px; vertical-align: middle; }
+.jt-sort__code { width: 62%; font-size: 26px; font-weight: bold; letter-spacing: 2px; text-align: center; border-right: 1px solid #000; }
+.jt-sort__meta { font-size: 8px; }
+.jt-barcode { margin: 4px 0; text-align: center; }
+.jt-barcode img { width: 92%; height: 46px; }
+.jt-party { border: 1px solid #000; }
+.jt-party td { padding: 4px 5px; vertical-align: top; border-bottom: 1px solid #000; }
+.jt-party__tag { width: 18px; padding: 4px 2px !important; background: #000; color: #fff; font-size: 7px; font-weight: bold; text-align: center; }
+.jt-party__tag--sender { background: #555; }
+.jt-phone { font-weight: normal; font-size: 9px; }
+.jt-cod { margin: 4px 0; border: 2px solid #000; }
+.jt-cod td { padding: 3px 6px; vertical-align: middle; }
+.jt-cod__label { width: 22%; font-size: 12px; font-weight: bold; border-right: 1px solid #000; }
+.jt-cod__amount { font-size: 16px; font-weight: bold; }
+.jt-cod__qr { width: 54px; text-align: right; }
+.jt-cod__qr img { width: 50px; height: 50px; }
+
+/* ---- Flash Express layout: barcode first, destination band, receiver and sender side by side, COD box. ---- */
+.fx-head td { padding: 3px 0; border-bottom: 3px solid #000; vertical-align: bottom; }
+.fx-head__name { font-size: 15px; font-weight: bold; font-style: italic; letter-spacing: 1px; }
+.fx-head__meta { text-align: right; font-size: 8px; }
+.fx-barcode { margin: 5px 0 3px; text-align: center; }
+.fx-barcode img { width: 96%; height: 52px; }
+.fx-dst { border: 2px solid #000; }
+.fx-dst td { padding: 3px 6px; vertical-align: middle; }
+.fx-dst__label { width: 30px; background: #000; color: #fff; font-size: 10px; font-weight: bold; text-align: center; }
+.fx-dst__code { font-size: 22px; font-weight: bold; letter-spacing: 2px; }
+.fx-dst__order { width: 34%; text-align: right; font-size: 8px; }
+.fx-party { margin-top: 4px; border: 1px solid #000; }
+.fx-party__cell { width: 50%; padding: 4px 5px; vertical-align: top; }
+.fx-party__cell--to { border-right: 1px solid #000; }
+.fx-cod { margin: 4px 0; border: 2px solid #000; }
+.fx-cod td { padding: 4px 6px; vertical-align: middle; }
+.fx-cod__label { display: block; font-size: 8px; font-weight: bold; }
+.fx-cod__amount { display: block; font-size: 18px; font-weight: bold; }
+.fx-cod__qr { width: 56px; text-align: right; }
+.fx-cod__qr img { width: 52px; height: 52px; }

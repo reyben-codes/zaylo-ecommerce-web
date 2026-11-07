@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\SettlementController;
+use App\Http\Controllers\VoucherController;
+use App\Http\Controllers\GcashPaymentController;
 use App\Http\Controllers\WalletController;
 use App\Http\Controllers\WorkspaceUpdatesController;
 use App\Http\Controllers\ActivityLogController;
@@ -122,6 +125,8 @@ Route::middleware(['auth', 'active', 'verified', 'role:buyer', 'nocache'])->pref
     // Reviews from the product page, without buying it.
     Route::post('/products/{product}/review', [\App\Http\Controllers\ProductReviewController::class, 'storeForProduct'])->middleware('throttle:10,1')->name('products.review');
     Route::post('/orders/{order}/cancel', [BuyerController::class, 'cancelOrder'])->name('orders.cancel');
+    Route::post('/orders/{order}/buy-again', [BuyerController::class, 'buyAgain'])->middleware('throttle:20,1')->name('orders.buy-again');
+    Route::post('/orders/{order}/gcash-reference', [GcashPaymentController::class, 'submit'])->middleware('throttle:20,1')->name('orders.gcash');
     Route::post('/orders/{order}/received', [BuyerController::class, 'confirmReceived'])->middleware('throttle:20,1')->name('orders.received');
     // The parcel on a map, and what the map polls while it is open.
     Route::get('/orders/{order}/track', [BuyerController::class, 'trackOrder'])->name('orders.track');
@@ -176,6 +181,7 @@ Route::middleware(['auth', 'active', 'verified', 'role:seller', 'nocache'])->pre
     Route::delete('/products/{product}', [SellerController::class, 'deleteProduct'])->name('products.destroy');
     Route::get('/orders', [SellerController::class, 'orders'])->name('orders');
     Route::patch('/orders/{order}/status', [SellerController::class, 'updateOrderStatus'])->name('orders.status');
+    Route::patch('/orders/{order}/gcash', [GcashPaymentController::class, 'verify'])->middleware('throttle:60,1')->name('orders.gcash');
     Route::patch('/orders/{order}/handover', [SellerController::class, 'confirmHandover'])->name('orders.handover');
     Route::get('/returns', [SellerReturnController::class, 'index'])->name('returns');
     Route::patch('/returns/{dispute}/received', [SellerReturnController::class, 'receive'])->name('returns.receive');
@@ -192,6 +198,10 @@ Route::middleware(['auth', 'active', 'verified', 'role:seller', 'nocache'])->pre
     Route::get('/account', [SellerController::class, 'account'])->name('account');
     Route::patch('/account/profile', [SellerController::class, 'updateProfile'])->name('account.profile');
     Route::patch('/account/store', [SellerController::class, 'updateStore'])->name('account.store');
+    Route::patch('/account/gcash', [GcashPaymentController::class, 'account'])->name('account.gcash');
+    Route::get('/vouchers', [VoucherController::class, 'seller'])->name('vouchers');
+    Route::get('/settlement', [SettlementController::class, 'seller'])->name('settlement');
+    Route::patch('/vouchers/{voucher}', [VoucherController::class, 'respond'])->middleware('throttle:30,1')->name('vouchers.respond');
         Route::post('/account/cover', [ShopCoverController::class, 'update'])->middleware('throttle:10,1')->name('account.cover.update');
         Route::delete('/account/cover', [ShopCoverController::class, 'destroy'])->name('account.cover.destroy');
     Route::put('/account/password', [SellerController::class, 'updatePassword'])->name('account.password');
@@ -265,6 +275,9 @@ Route::middleware(['auth', 'active', 'verified', 'role:admin', 'nocache'])->pref
 
     Route::get('/compliance', [AdminComplianceController::class, 'index'])->name('compliance');
     Route::get('/product-approvals', [AdminComplianceController::class, 'approvals'])->name('product-approvals');
+    Route::get('/vouchers', [VoucherController::class, 'admin'])->name('vouchers');
+    Route::post('/vouchers', [VoucherController::class, 'store'])->middleware('throttle:30,1')->name('vouchers.store');
+    Route::patch('/vouchers/{voucher}/toggle', [VoucherController::class, 'toggle'])->name('vouchers.toggle');
     Route::post('/compliance/products/{product}/warnings', [AdminComplianceController::class, 'warn'])->middleware('throttle:30,1')->name('compliance.warn');
     Route::patch('/compliance/products/{product}/visibility', [AdminComplianceController::class, 'toggle'])->name('compliance.toggle');
     Route::patch('/compliance/products/{product}/review', [AdminComplianceController::class, 'review'])->middleware('throttle:60,1')->name('compliance.review');
@@ -365,6 +378,9 @@ Route::middleware(['auth', 'active', 'verified', 'role:logistics', 'nocache'])->
     Route::post('/wallet/cash-out', [WalletController::class, 'cashOut'])->middleware('throttle:10,1')->name('wallet.cash-out');
     // Riders' GCash withdrawals from their wallets: the partner sends the money, then records the reference.
     Route::get('/rider-withdrawals', [RiderWithdrawalController::class, 'index'])->name('rider-withdrawals');
+    // Riders hand over the cash they collected on delivery; the hub records it and any shortfall.
+    Route::get('/cash-handovers', [SettlementController::class, 'cash'])->name('cash');
+    Route::post('/cash-handovers/{rider}', [SettlementController::class, 'recordCash'])->middleware('throttle:30,1')->name('cash.record');
     Route::post('/rider-withdrawals/{withdrawal}/pay', [RiderWithdrawalController::class, 'pay'])->middleware('throttle:30,1')->name('rider-withdrawals.pay');
     Route::post('/rider-withdrawals/{withdrawal}/reject', [RiderWithdrawalController::class, 'reject'])->middleware('throttle:30,1')->name('rider-withdrawals.reject');
     Route::get('/reports/export', [LogisticsOperationsController::class, 'exportReport'])->name('reports.export');

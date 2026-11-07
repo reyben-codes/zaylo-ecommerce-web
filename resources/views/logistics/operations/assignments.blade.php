@@ -11,7 +11,7 @@
         <div>
             <p class="seller-eyebrow">Sorting center</p>
             <h1>Assign riders</h1>
-            <p>{{ $hub ? 'Give a whole delivery area to one rider, or assign parcel by parcel.' : 'Parcels at the hub waiting for a rider.' }} {{ $riders->count() }} {{ Str::plural('rider', $riders->count()) }} available right now.</p>
+            <p>{{ $hub ? 'Give a whole delivery area to one rider, or assign parcel by parcel.' : 'Parcels at the hub waiting for a rider.' }} {{ $riders->count() }} {{ Str::plural('rider', $riders->count()) }} on shift right now. Only riders who timed in at the hub can take parcels.</p>
         </div>
         <div class="seller-page-heading__actions">
             <a href="{{ route('logistics.monitoring') }}" class="seller-button seller-button--secondary"><i class="fas fa-satellite-dish" aria-hidden="true"></i> Monitoring</a>
@@ -27,6 +27,9 @@
                 @endif
             </header>
             @error('area')<p class="seller-field__error parcel-report-error" role="alert">{{ $message }}</p>@enderror
+            @if($bins->isNotEmpty() && $riders->isEmpty())
+                <p class="parcel-empty-inline">No riders on shift. Riders can take parcels once they time in at the hub. <a href="{{ route('logistics.attendance') }}" class="workspace-link">See attendance</a></p>
+            @endif
             @if($bins->isEmpty())
                 <p class="parcel-empty-inline">Nothing to assign. Parcels appear here after they are <a href="{{ route('logistics.sorting') }}" class="workspace-link">sorted</a>.</p>
             @else
@@ -45,9 +48,7 @@
                                     <label class="sr-only" for="area-rider-{{ $loop->index }}">Rider for {{ $bin['area'] }}</label>
                                     <select id="area-rider-{{ $loop->index }}" name="rider_id" required>
                                         <option value="">Choose rider</option>
-                                        @foreach($riders as $rider)
-                                            <option value="{{ $rider->id }}">{{ $rider->user?->name }}</option>
-                                        @endforeach
+                                        @include('logistics.operations.partials.rider-options', ['riders' => $riders, 'area' => $bin['area']])
                                     </select>
                                     <button type="submit" class="seller-button seller-button--small">Assign all</button>
                                 </form>

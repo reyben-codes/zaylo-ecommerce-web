@@ -6,7 +6,8 @@ import 'package:zaylo_mobile/api/rider_api.dart';
 import 'package:zaylo_mobile/components/map/zaylo_map.dart';
 import 'package:zaylo_mobile/models/rider/rider_dashboard_models.dart';
 
-/// Shares the rider's location while the app is open and a parcel is out for delivery, so the buyer can follow it.
+/// Shares the rider's location while the app is open and the rider is on shift or has a parcel out for delivery, so
+/// the buyer can follow it and logistics can offer parcels to the nearest riders.
 /// It reports as often as the dashboard says, pauses while the app is in the background, and asks for the
 /// location permission once; after a refusal it stays quiet until the rider allows it in settings.
 class RiderLocationReporter {
@@ -28,7 +29,9 @@ class RiderLocationReporter {
   void follow(RiderDashboard dashboard) {
     final seconds = dashboard.locationReportSeconds;
     final onTheWay = dashboard.active.any((delivery) => delivery.status == 'out_for_delivery');
-    if (seconds == null || !onTheWay) {
+    // Also while timed in at the hub, so logistics can give parcels to the riders nearest them.
+    final onShift = dashboard.attendance?.status == 'on_shift';
+    if (seconds == null || !(onTheWay || onShift)) {
       _every = null;
       _pause();
       return;

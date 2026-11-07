@@ -111,6 +111,51 @@ class WaybillTest extends TestCase
         Code128::widths("TRK\u{00D1}");
     }
 
+    public function test_sellers_without_a_printer_get_a_queue_mark_and_the_partner_prints(): void
+    {
+        (require database_path('migrations/2026_11_07_000009_add_print_queue_to_shipments.php'))->up();
+        [$seller, $order] = $this->sellerOrder('processing');
+        [, $second] = $this->sellerOrder('processing');
+        $second->update(['seller_id' => $seller->id]);
+        $this->actingAs($seller);
+
+        $this->get(route('seller.orders'))->assertOk()->assertSee("I can't print the waybill", false);
+        $this->patch(route('seller.orders.status', $order), ['status' => 'ready_for_pickup', 'partner_prints' => '1'])
+            ->assertSessionHasNoErrors()->assertSessionHas('status', fn ($status) => str_contains($status, 'Write 01 RED big on the parcel'));
+        $this->patch(route('seller.orders.status', $second), ['status' => 'ready_for_pickup', 'partner_prints' => '1']);
+
+        // Numbers run up through the day, and the colour changes with each so neighbours never look alike.
+        $this->assertSame([1, 'red', true], [$order->fresh()->shipment->queue_number, $order->fresh()->shipment->queue_color, (bool) $order->fresh()->shipment->partner_prints]);
+        $this->assertSame([2, 'blue'], [$second->fresh()->shipment->queue_number, $second->fresh()->shipment->queue_color]);
+        $this->get(route('seller.orders'))->assertSee('01 · RED')->assertSee('Write this big on the parcel.');
+
+        // The printed waybill carries the same mark.
+        $this->get(route('seller.orders.waybill.print', $order))->assertOk()->assertSee('01 · RED')->assertSee('Match to the parcel marked 01 RED');
+    }
+
+    public function test_each_courier_gets_its_own_waybill_layout(): void
+    {
+        [$seller, $order] = $this->sellerOrder('processing');
+        $this->actingAs($seller)->patch(route('seller.orders.status', $order), ['status' => 'ready_for_pickup']);
+        $print = route('seller.orders.waybill.print', $order);
+
+        // ZAYLO Express (the default) keeps the ZAYLO label.
+        $this->get($print)->assertOk()->assertSee('class="wb-courier-zaylo-express wb-web"', false)->assertSee('WAYBILL')->assertDontSee('J&amp;T EXPRESS', false);
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn('orders', 'courier_choice')) {
+            $order->update(['courier_choice' => 'jnt_express']);
+            $this->get($print)->assertOk()->assertSee('wb-courier-jnt-express', false)->assertSee('J&amp;T EXPRESS', false)
+                ->assertSee('RECEIVER')->assertSee('SENDER')->assertSee('CEB-CEB');
+
+            $order->update(['courier_choice' => 'flash_express']);
+            $this->get($print)->assertOk()->assertSee('wb-courier-flash-express', false)->assertSee('FLASH EXPRESS')
+                ->assertSee('DST')->assertSee('CEB-CEB')->assertSee('COD AMOUNT');
+            $pdf = $this->get(route('seller.orders.waybill', $order))->assertOk();
+            $this->assertStringStartsWith('%PDF', $pdf->getContent());
+        }
+        $this->assertSame('LAG-CAL', Waybill::sortCode(['address' => '12 Rizal St, Calamba, Laguna']));
+    }
+
     private function sellerOrder(string $status): array
     {
         $seller = User::factory()->create(['role' => 'seller', 'status' => 'active', 'phone' => '09170000001']);

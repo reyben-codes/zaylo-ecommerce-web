@@ -42,7 +42,7 @@ class Rider extends Model
         'gcash_number', 'gcash_name',
     ];
 
-    protected $casts = ['is_active' => 'boolean', 'reviewed_at' => 'datetime', 'license_expires_on' => 'date', 'work_days' => 'array'];
+    protected $casts = ['is_active' => 'boolean', 'reviewed_at' => 'datetime', 'license_expires_on' => 'date', 'work_days' => 'array', 'last_located_at' => 'datetime'];
 
     /** Accepts the license typed in lower case or without dashes, e.g. n0123456789. */
     public static function normalizeLicense(?string $value): ?string

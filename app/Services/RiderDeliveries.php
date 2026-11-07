@@ -446,6 +446,28 @@ class RiderDeliveries
     }
 
     /** Only the deployed schema keeps a delivered_at timestamp; the newer one is dated by its last update. */
+    /**
+     * Delivered between two dates (Y-m-d, Philippine time, both days included). Delivered parcels are never deleted,
+     * so this searches the whole delivery history.
+     */
+    public static function whereDeliveredBetween(Builder $query, ?string $from, ?string $to): Builder
+    {
+        $column = $query->getModel()->qualifyColumn(self::deliveredColumn());
+
+        return ShipmentWorkflow::whereStage($query, ['delivered'])
+            ->when($from, fn (Builder $q) => $q->where($column, '>=', Carbon::parse($from, 'Asia/Manila')->startOfDay()->utc()))
+            ->when($to, fn (Builder $q) => $q->where($column, '<=', Carbon::parse($to, 'Asia/Manila')->endOfDay()->utc()));
+    }
+
+    /** Validation for an optional delivered-date range. */
+    public static function dateRangeRules(): array
+    {
+        return [
+            'from' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:today'],
+            'to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from'],
+        ];
+    }
+
     public static function deliveredColumn(): string
     {
         return Schema::hasColumn('shipments', 'delivered_at') ? 'delivered_at' : 'updated_at';

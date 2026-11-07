@@ -70,17 +70,22 @@ class CheckoutTotals {
     required this.shipping,
     required this.shippingDiscount,
     required this.total,
+    this.voucherDiscount = 0,
   });
 
   final double subtotal;
   final double shipping;
   final double shippingDiscount;
+
+  /// A discount voucher's pesos off the products of shops that joined it.
+  final double voucherDiscount;
   final double total;
 
   factory CheckoutTotals.fromJson(Map<String, dynamic> json) => CheckoutTotals(
         subtotal: parseMoney(json['subtotal']),
         shipping: parseMoney(json['shipping']),
         shippingDiscount: parseMoney(json['shipping_discount']),
+        voucherDiscount: parseMoney(json['voucher_discount']),
         total: parseMoney(json['total']),
       );
 }
@@ -148,6 +153,7 @@ class CheckoutQuote {
     required this.totals,
     required this.addresses,
     this.voucherCode,
+    this.voucherLabel,
     this.deliveryFrom,
     this.deliveryTo,
     this.identityVerified = true,
@@ -156,12 +162,22 @@ class CheckoutQuote {
     this.logisticsPartners = const [],
     this.defaultPartnerId,
     this.sellerCount = 1,
+    this.gcashSellers = const [],
   });
 
   final List<CartItem> items;
+
+  /// Each seller's own GCash account (null when they have none) and their items subtotal.
+  final List<GcashSeller> gcashSellers;
+
+  /// GCash can be chosen only when every seller in the order has a GCash account.
+  bool get gcashAvailable => gcashSellers.isNotEmpty && gcashSellers.every((seller) => seller.number != null);
   final CheckoutTotals totals;
   final List<Address> addresses;
   final String? voucherCode;
+
+  /// What the applied voucher does, e.g. "10% off, up to ₱100".
+  final String? voucherLabel;
   final DateTime? deliveryFrom;
   final DateTime? deliveryTo;
 
@@ -194,7 +210,8 @@ class CheckoutQuote {
       subtotal: totals.subtotal,
       shipping: shipping,
       shippingDiscount: discount,
-      total: totals.subtotal + shipping - discount,
+      voucherDiscount: totals.voucherDiscount,
+      total: totals.subtotal + shipping - discount - totals.voucherDiscount,
     );
   }
 
@@ -209,6 +226,7 @@ class CheckoutQuote {
           .map((item) => Address.fromJson(item as Map<String, dynamic>))
           .toList(),
       voucherCode: json['voucher_code'] as String?,
+      voucherLabel: json['voucher_label'] as String?,
       deliveryFrom: parseDate(delivery?['from']),
       deliveryTo: parseDate(delivery?['to']),
       identityVerified: json['identity_verified'] as bool? ?? true,
@@ -221,6 +239,35 @@ class CheckoutQuote {
           .toList(),
       defaultPartnerId: json['default_logistics_provider_id'] as int?,
       sellerCount: json['seller_count'] as int? ?? 1,
+      gcashSellers: (json['gcash_sellers'] as List<dynamic>? ?? const [])
+          .map((item) => GcashSeller.fromJson(item as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+}
+
+/// A seller the buyer pays by GCash: their own account and the items subtotal (shipping is added on top).
+class GcashSeller {
+  const GcashSeller({required this.sellerId, required this.shop, required this.subtotal, this.discount = 0, this.number, this.name});
+
+  final int sellerId;
+  final String shop;
+  final double subtotal;
+
+  /// The voucher discount this shop gives (it joined the voucher).
+  final double discount;
+  final String? number;
+  final String? name;
+
+  factory GcashSeller.fromJson(Map<String, dynamic> json) {
+    final account = json['account'] as Map<String, dynamic>?;
+    return GcashSeller(
+      sellerId: (json['seller_id'] as num).toInt(),
+      shop: json['shop'] as String? ?? 'Seller',
+      subtotal: parseMoney(json['subtotal']),
+      discount: parseMoney(json['discount']),
+      number: account?['number'] as String?,
+      name: account?['name'] as String?,
     );
   }
 }

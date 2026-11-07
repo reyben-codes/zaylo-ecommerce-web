@@ -2607,3 +2607,18 @@ img.user-avatar { background: var(--c-eee8e2); }
 @media (prefers-reduced-motion: reduce) {
     .toast-notification::after { animation: none; }
 }
+
+/* Checkout: paying each seller's own GCash, with a reference number per seller (checkout-gcash.js shows it). */
+.payment-method-option.is-unavailable { opacity: .55; cursor: not-allowed; }
+.gcash-pay { display: grid; gap: 12px; margin-top: 14px; padding: 16px; border: 1px solid var(--c-d9d0c7); border-radius: 10px; background: var(--c-fbf8f4); }
+.gcash-pay[hidden] { display: none; }
+.gcash-pay__intro { display: flex; gap: 8px; margin: 0; color: var(--c-4a4037); font-size: .84rem; line-height: 1.5; }
+.gcash-pay__intro i { margin-top: 3px; color: var(--c-7b563c); }
+.gcash-pay__seller { display: grid; grid-template-columns: minmax(0, 1fr) minmax(200px, 260px); gap: 12px; align-items: end; padding-top: 12px; border-top: 1px solid var(--c-eee8e2); }
+.gcash-pay__account { display: grid; gap: 3px; font-size: .84rem; color: var(--c-4a4037); }
+.gcash-pay__account strong { color: var(--c-1a1714); font-size: .9rem; }
+.gcash-pay__account small { color: var(--c-6b5f54); }
+.gcash-pay__reference { display: grid; gap: 5px; font-size: .8rem; font-weight: 600; color: var(--c-1a1714); }
+.gcash-pay__reference input { width: 100%; min-height: 42px; padding: 9px 12px; border: 1px solid var(--c-d9d0c7); border-radius: 8px; background: var(--c-ffffff); color: var(--c-1a1714); font: inherit; letter-spacing: .04em; }
+.gcash-pay__error { margin: 0; color: var(--c-883b33); font-size: .8rem; }
+@media (max-width: 640px) { .gcash-pay__seller { grid-template-columns: 1fr; } }

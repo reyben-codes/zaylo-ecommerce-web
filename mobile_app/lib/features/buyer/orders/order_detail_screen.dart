@@ -9,6 +9,7 @@ import 'package:zaylo_mobile/components/feedback.dart';
 import 'package:zaylo_mobile/components/layout.dart';
 import 'package:zaylo_mobile/components/star_rating.dart';
 import 'package:zaylo_mobile/features/buyer/orders/complaint_form_screen.dart';
+import 'package:zaylo_mobile/features/buyer/orders/order_actions.dart';
 import 'package:zaylo_mobile/features/buyer/orders/order_tracking_screen.dart';
 import 'package:zaylo_mobile/features/buyer/orders/review_form_screen.dart';
 import 'package:zaylo_mobile/features/buyer/orders/status_pill.dart';
@@ -32,7 +33,6 @@ class OrderDetailScreen extends StatefulWidget {
 class _OrderDetailScreenState extends State<OrderDetailScreen> {
   Order? _order;
   Object? _error;
-  bool _cancelling = false;
   bool _confirming = false;
 
   /// Tells the list to refresh when we pop after a cancel.
@@ -95,41 +95,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     final api = _api;
     await Navigator.of(context).push(MaterialPageRoute(builder: (_) => ComplaintDetailScreen(api: api, complaintId: id)));
     if (mounted) await _load();
-  }
-
-  Future<void> _cancel(Order order) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Cancel this order?'),
-        content: Text('${order.orderNumber} will be cancelled and its items returned to stock. This cannot be undone.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Keep order')),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: ZayloColors.danger),
-            child: const Text('Cancel order'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-    setState(() => _cancelling = true);
-    try {
-      final updated = await _api.cancelOrder(order.id);
-      if (!mounted) return;
-      setState(() {
-        _order = updated;
-        _changed = true;
-      });
-      showMessage(context, 'Order cancelled and stock restored.');
-    } on ApiException catch (error) {
-      if (!mounted) return;
-      showMessage(context, error.message);
-      _load();
-    } finally {
-      if (mounted) setState(() => _cancelling = false);
-    }
   }
 
   /// Finishes a delivered order once the buyer has it, which pays the seller.
@@ -291,28 +256,25 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                             : () => _openComplaint(order.complaint!.id),
                       ),
                     ],
-                    if (order.canCancel) ...[
+                    // Cancel (with a reason, or disabled once the seller confirmed), To review and Buy again; the
+                    // receipt and return cards above handle those two.
+                    if (order.canCancel || order.cancelLockedReason != null || order.canBuyAgain || order.itemToReview != null) ...[
                       const SizedBox(height: 22),
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton(
-                          onPressed: _cancelling ? null : () => _cancel(order),
-                          style: secondaryButtonStyle.copyWith(
-                            foregroundColor: WidgetStatePropertyAll(ZayloColors.danger),
-                            side: WidgetStatePropertyAll(BorderSide(color: ZayloColors.danger)),
-                            backgroundColor: WidgetStateProperty.resolveWith((states) =>
-                                states.contains(WidgetState.pressed) ? ZayloColors.dangerSoft : Colors.transparent),
-                          ),
-                          child: _cancelling
-                              ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                              : const Text('CANCEL ORDER'),
+                      OrderActions(
+                        order: order,
+                        showReceipt: false,
+                        showReturn: false,
+                        onChanged: (updated) {
+                          _changed = true;
+                          updated == null ? _load() : setState(() => _order = updated);
+                        },
+                      ),
+                      if (order.canCancel)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 8),
+                          child: Text('You can cancel until the seller confirms your order.',
+                              textAlign: TextAlign.center, style: TextStyle(fontSize: 12)),
                         ),
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.only(top: 8),
-                        child: Text('You can cancel until the seller starts preparing your order.',
-                            textAlign: TextAlign.center, style: TextStyle(fontSize: 12)),
-                      ),
                     ],
                     const SizedBox(height: 12),
                   ],

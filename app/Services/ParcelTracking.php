@@ -123,6 +123,8 @@ class ParcelTracking
         if (! self::inBounds($latitude, $longitude)) {
             throw ValidationException::withMessages(['latitude' => 'That location is outside the Philippines.']);
         }
+        // Kept on the rider too (also while on shift at the hub), so logistics can offer the nearest riders first.
+        RiderProximity::remember((int) $rider->id, $latitude, $longitude);
         $ids = ShipmentWorkflow::whereStage(app(RiderDeliveries::class)->forRider($rider), ['out_for_delivery'])->pluck('id');
 
         return $ids->isEmpty() ? 0 : Shipment::whereKey($ids)->update([

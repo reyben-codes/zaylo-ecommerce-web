@@ -9,7 +9,7 @@
 <div class="return-actions">
     @if($canAssign)
         @if($riders->isEmpty())
-            <span class="seller-cell-note">No riders available. <a href="{{ route('logistics.riders', ['status' => 'approved']) }}">Manage riders</a></span>
+            <span class="seller-cell-note">No riders on shift. Riders can take parcels once they time in at the hub. <a href="{{ route('logistics.attendance') }}">See attendance</a></span>
         @else
             <form method="POST" action="{{ route('logistics.returns.assign', $case) }}" class="parcel-inline-form">
                 @csrf

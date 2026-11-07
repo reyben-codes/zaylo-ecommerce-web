@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\BuyAgain;
+use App\Support\BuyerOrderTabs;
 use App\Http\Controllers\Concerns\UpdatesAccountSettings;
 use App\Models\Cart;
 use App\Models\CartItem;
@@ -330,24 +332,17 @@ class BuyerController extends Controller
     public function orders(Request $request, OrderReceipts $receipts)
     {
         $filter = $request->validate([
-            'status' => ['nullable', Rule::in(['all', 'to_ship', 'shipped', 'delivered', 'cancelled'])],
+            'status' => ['nullable', Rule::in(BuyerOrderTabs::tabs())],
         ])['status'] ?? 'all';
         $receipts->autoConfirmDue();
+        app(\App\Services\GcashPayments::class)->expireDue($this->checkoutService, buyerId: auth()->id());
 
-        $statusGroups = MobilePayload::STATUS_GROUPS;
-        $statusCounts = auth()->user()->orders()
-            ->selectRaw('status, COUNT(*) as total')
-            ->groupBy('status')
-            ->pluck('total', 'status');
-        $counts = ['all' => $statusCounts->sum()];
-        foreach ($statusGroups as $group => $statuses) {
-            $counts[$group] = collect($statuses)->sum(fn ($status) => (int) $statusCounts->get($status, 0));
-        }
+        // Cancelled orders move to Purchase history after a couple of days (BuyerOrderTabs).
+        $counts = BuyerOrderTabs::counts(auth()->user()->orders()->getQuery());
 
-        $orders = auth()->user()->orders()
+        $orders = BuyerOrderTabs::apply(auth()->user()->orders()->getQuery(), $filter)
             ->with(['items.review', 'items.product.images', 'payment', 'shipment', 'statusHistory' => fn ($query) => $query->oldest()])
             ->when(Schema::hasTable('dispute_messages'), fn ($query) => $query->with('disputes'))
-            ->when($filter !== 'all', fn ($query) => $query->whereIn('status', $statusGroups[$filter]))
             ->orderByDesc('placed_at')
             ->paginate(10)
             ->withQueryString();
@@ -370,11 +365,41 @@ class BuyerController extends Controller
         return response()->json(['tracking' => $tracking->forBuyer($order)]);
     }
 
-    public function cancelOrder(Order $order)
+    public function cancelOrder(Request $request, Order $order)
     {
-        $this->checkoutService->cancel($order, auth()->user());
+        $data = $request->validate(self::cancelRules(), self::cancelMessages());
+        $this->checkoutService->cancel($order, $request->user(), $data['reason'], filled($data['note'] ?? null) ? trim($data['note']) : null);
 
-        return back()->with('status', 'Order cancelled and stock restored.');
+        return back()->with('status', 'Order cancelled and stock restored. You can buy it again anytime from Cancelled.');
+    }
+
+    /** A cancel needs one of the listed reasons; "Other" needs a few words. Also used by the app. */
+    public static function cancelRules(): array
+    {
+        return [
+            'reason' => ['required', Rule::in(array_keys(BuyerOrderTabs::CANCEL_REASONS))],
+            'note' => ['nullable', 'required_if:reason,other', 'string', 'min:3', 'max:255'],
+        ];
+    }
+
+    public static function cancelMessages(): array
+    {
+        return [
+            'reason.required' => 'Choose why you are cancelling.',
+            'reason.in' => 'Choose one of the listed reasons.',
+            'note.required_if' => 'Tell us the reason in a few words.',
+        ];
+    }
+
+    /** Puts the products of an earlier order back in the cart. */
+    public function buyAgain(Order $order, BuyAgain $buyAgain)
+    {
+        abort_unless(OrderParties::for($order)['buyer'] === (int) auth()->id(), 404);
+        $result = $buyAgain->add(auth()->user(), $order);
+
+        return $result['added']
+            ? redirect()->route('buyer.cart')->with('status', BuyAgain::message($result))
+            : back()->with('error', BuyAgain::message($result));
     }
 
     /** The buyer received a delivered order, which completes it. */
@@ -434,11 +459,15 @@ class BuyerController extends Controller
         $voucherCode = Str::upper(trim((string) $request->query('voucher', '')));
         $voucher = null;
         if ($voucherCode !== '') {
-            $voucher = Voucher::where('code', $voucherCode)->first();
-            if (! $voucher?->isAvailable() || $voucher->type !== 'free_shipping') {
-                return redirect()->route('buyer.checkout.show')->withErrors(['voucher_code' => 'This voucher is invalid or no longer available.']);
+            try {
+                $voucher = $this->checkoutService->voucher($voucherCode);
+                $this->checkoutService->ensureVoucherApplies($voucher, $items);
+            } catch (\Illuminate\Validation\ValidationException $error) {
+                return redirect()->route('buyer.checkout.show')->withErrors($error->errors());
             }
         }
+        // Discount vouchers come off the items of shops that joined them (shop id => pesos).
+        $voucherDiscounts = app(\App\Services\Vouchers::class)->cartDiscounts($voucher, $items);
 
         $subtotal = $items->sum(fn (CartItem $item) => $item->unitPrice() * $item->quantity);
         $sellerCount = $items->pluck('product.seller_id')->unique()->count();
@@ -460,6 +489,9 @@ class BuyerController extends Controller
             'addresses' => $addresses,
             'estimatedShipStart' => now()->addWeekdays(2),
             'estimatedShipEnd' => now()->addWeekdays(4),
+            // GCash goes to each seller's own GCash, so checkout lists them with a reference field each.
+            'gcashSellers' => \App\Services\GcashPayments::ready() ? app(\App\Services\GcashPayments::class)->sellersFor($items) : collect(),
+            'voucherDiscounts' => $voucherDiscounts,
         ]);
     }
 
@@ -556,7 +588,7 @@ class BuyerController extends Controller
             'logistics_provider_id' => ['nullable', 'integer'],
             'quoted_unit_prices' => ['nullable', 'array'],
             'quoted_unit_prices.*' => ['required', 'numeric', 'min:0', 'decimal:0,2'],
-        ]);
+        ] + \App\Services\GcashPayments::checkoutRules());
         $validated['payment_method'] ??= 'cod';
         $validated['courier_choice'] ??= Order::DEFAULT_COURIER;
         if ($this->checkoutService->alreadyPlaced($validated['idempotency_key'])) {

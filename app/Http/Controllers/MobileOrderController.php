@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\BuyAgain;
+use App\Support\BuyerOrderTabs;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Services\CheckoutService;
@@ -25,27 +27,23 @@ class MobileOrderController extends Controller
     public function index(Request $request, OrderReceipts $receipts): JsonResponse
     {
         $filter = $request->validate([
-            'status' => ['nullable', Rule::in(['all', ...array_keys(MobilePayload::STATUS_GROUPS)])],
+            'status' => ['nullable', Rule::in(BuyerOrderTabs::tabs())],
         ])['status'] ?? 'all';
         $receipts->autoConfirmDue();
+        app(\App\Services\GcashPayments::class)->expireDue(app(CheckoutService::class), buyerId: $request->user()->id);
 
-        $statusCounts = $request->user()->orders()
-            ->selectRaw('status, COUNT(*) as total')
-            ->groupBy('status')
-            ->pluck('total', 'status');
-        $counts = ['all' => (int) $statusCounts->sum()];
-        foreach (MobilePayload::STATUS_GROUPS as $group => $statuses) {
-            $counts[$group] = collect($statuses)->sum(fn ($status) => (int) $statusCounts->get($status, 0));
-        }
+        $counts = BuyerOrderTabs::counts($request->user()->orders()->getQuery());
 
-        $orders = $request->user()->orders()
-            ->with(['items.product.images'])
-            ->when($filter !== 'all', fn ($query) => $query->whereIn('status', MobilePayload::STATUS_GROUPS[$filter]))
+        // The list shows Order received, Cancel, Return / Refund, Buy again and To review on each card, so it needs
+        // the reviews and complaints too.
+        $orders = BuyerOrderTabs::apply($request->user()->orders()->getQuery(), $filter)
+            ->with(array_filter(['items.product.images', 'items.review', Schema::hasTable('dispute_messages') ? 'disputes' : null]))
             ->orderByDesc('placed_at')
             ->paginate(10);
 
         return response()->json([
             'counts' => $counts,
+            'cancel_reasons' => collect(BuyerOrderTabs::CANCEL_REASONS)->map(fn ($label, $key) => ['key' => $key, 'label' => $label])->values(),
             'orders' => $orders->through(fn (Order $order) => MobilePayload::order($order)),
         ]);
     }
@@ -70,12 +68,23 @@ class MobileOrderController extends Controller
     public function cancel(Request $request, Order $order, CheckoutService $checkout): JsonResponse
     {
         abort_unless(OrderParties::for($order)['buyer'] === (int) $request->user()->id, 404);
-        $checkout->cancel($order, $request->user());
+        // App builds from before reasons were asked send none; they are recorded as "other" without a note.
+        $data = $request->has('reason') ? $request->validate(BuyerController::cancelRules(), BuyerController::cancelMessages()) : ['reason' => 'other'];
+        $checkout->cancel($order, $request->user(), $data['reason'], filled($data['note'] ?? null) ? trim($data['note']) : null);
 
         return response()->json([
             'message' => 'Order cancelled and stock restored.',
             'order' => $this->detailed($order->fresh()),
         ]);
+    }
+
+    /** Puts the products of an earlier order back in the cart. */
+    public function buyAgain(Request $request, Order $order, BuyAgain $buyAgain): JsonResponse
+    {
+        abort_unless(OrderParties::for($order)['buyer'] === (int) $request->user()->id, 404);
+        $result = $buyAgain->add($request->user(), $order);
+
+        return response()->json(['message' => BuyAgain::message($result)] + $result, $result['added'] ? 200 : 422);
     }
 
     /** The buyer received a delivered order, which completes it. */

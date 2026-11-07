@@ -13,6 +13,8 @@
     const sellers = Number(summary.dataset.sellers) || 0;
     const standardFee = Number(summary.dataset.standardFee) || 0;
     const freeShipping = summary.dataset.freeShipping === '1';
+    // A discount voucher's pesos off (shops that joined it); it does not depend on shipping.
+    const voucherDiscount = Number(summary.dataset.voucherDiscount) || 0;
     const ratesOf = input => {
         try {
             return JSON.parse(input.dataset.shippingRates) || {};
@@ -40,7 +42,12 @@
         if (discountRow) {
             discountRow.textContent = '−' + money(discount);
         }
-        summary.querySelector('[data-summary-total]').textContent = money(subtotal + shipping - discount);
+        summary.querySelector('[data-summary-total]').textContent = money(subtotal + shipping - discount - voucherDiscount);
+        // GCash: what to send each seller (their items plus their shipping fee).
+        const perSeller = rate ? rate.fee : standardFee;
+        document.querySelectorAll('[data-gcash-amount]').forEach(amount => {
+            amount.textContent = money((Number(amount.dataset.subtotal) || 0) + (freeShipping ? 0 : perSeller));
+        });
     };
 
     document.querySelectorAll('input[name="address_id"], input[name="logistics_provider_id"]').forEach(input => {

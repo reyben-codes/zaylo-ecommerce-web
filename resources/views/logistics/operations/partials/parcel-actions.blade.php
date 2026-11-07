@@ -64,16 +64,14 @@
 
     @if($awaitingRider && $riders !== null)
         @if($riders->isEmpty())
-            <span class="seller-cell-note">No riders available. <a href="{{ route('logistics.riders', ['status' => 'approved']) }}">Manage riders</a></span>
+            <span class="seller-cell-note">No riders on shift. Riders can take parcels once they time in at the hub. <a href="{{ route('logistics.attendance') }}">See attendance</a></span>
         @else
             <form method="POST" action="{{ route('logistics.parcels.assign', $shipment) }}" class="parcel-inline-form">
                 @csrf
                 <label class="sr-only" for="rider-{{ $shipment->id }}">Rider for parcel {{ $tracking }}</label>
                 <select id="rider-{{ $shipment->id }}" name="rider_id" required>
                     <option value="">Choose rider</option>
-                    @foreach($riders as $rider)
-                        <option value="{{ $rider->id }}">{{ $rider->user?->name }}{{ $rider->vehicle_type ? ' · '.$rider->vehicle_type : '' }}</option>
-                    @endforeach
+                    @include('logistics.operations.partials.rider-options', ['riders' => $riders, 'area' => \App\Services\RiderProximity::areaOf($shipment), 'pin' => \App\Services\RiderProximity::pinOf($shipment)])
                 </select>
                 <button type="submit" class="seller-button seller-button--small"><i class="fas fa-user-check" aria-hidden="true"></i> Assign</button>
             </form>

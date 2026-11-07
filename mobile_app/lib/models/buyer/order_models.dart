@@ -134,6 +134,12 @@ class Order {
     this.canComplain = false,
     this.canReturn = false,
     this.returnDeadline,
+    this.cancelLockedReason,
+    this.cancelReason,
+    this.cancelledAt,
+    this.canBuyAgain = false,
+    this.canReview = false,
+    this.gcash,
   });
 
   final int id;
@@ -186,6 +192,25 @@ class Order {
   final bool canReturn;
   final DateTime? returnDeadline;
 
+  /// Set once the seller confirmed the order: Cancel shows disabled, with this reason.
+  final String? cancelLockedReason;
+
+  /// What the buyer chose when cancelling, e.g. "I found a cheaper price elsewhere".
+  final String? cancelReason;
+  final DateTime? cancelledAt;
+
+  /// Cancelled or delivered: its products can go back in the cart.
+  final bool canBuyAgain;
+
+  /// Delivered with an item not rated yet ("To review").
+  final bool canReview;
+
+  /// GCash paid to the seller: the reference and the seller's check. Null for cash on delivery.
+  final OrderGcash? gcash;
+
+  /// The first item waiting for a rating, for the To review button.
+  OrderItem? get itemToReview => items.where((item) => item.canReview).firstOrNull;
+
   String get paymentLabel => switch (paymentMethod) {
         'gcash' => 'GCash',
         'cod' => 'Cash on delivery',
@@ -236,7 +261,77 @@ class Order {
         canComplain: json['can_complain'] as bool? ?? false,
         canReturn: json['can_return'] as bool? ?? false,
         returnDeadline: parseDate(json['return_deadline']),
+        cancelLockedReason: json['cancel_locked_reason'] as String?,
+        cancelReason: json['cancel_reason'] as String?,
+        cancelledAt: parseDate(json['cancelled_at']),
+        canBuyAgain: json['can_buy_again'] as bool? ?? false,
+        canReview: json['can_review'] as bool? ?? false,
+        gcash: json['gcash'] is Map<String, dynamic> ? OrderGcash.fromJson(json['gcash'] as Map<String, dynamic>) : null,
       );
+}
+
+/// The buyer's GCash payment for one order, sent to the seller's own GCash and checked by the seller.
+class OrderGcash {
+  const OrderGcash({
+    required this.status,
+    required this.statusLabel,
+    required this.amount,
+    required this.canSubmit,
+    this.reference,
+    this.rejectionNote,
+    this.sellerNumber,
+    this.sellerName,
+    this.expiresAt,
+  });
+
+  /// awaiting_reference, pending_verification, paid or rejected.
+  final String status;
+  final String statusLabel;
+  final double amount;
+
+  /// The buyer can enter (or re-enter) the reference number.
+  final bool canSubmit;
+  final String? reference;
+  final String? rejectionNote;
+  final String? sellerNumber;
+  final String? sellerName;
+
+  /// Unpaid GCash orders are cancelled at this time.
+  final DateTime? expiresAt;
+
+  factory OrderGcash.fromJson(Map<String, dynamic> json) {
+    final account = json['seller_account'] as Map<String, dynamic>?;
+    return OrderGcash(
+      status: json['status'] as String? ?? 'awaiting_reference',
+      statusLabel: json['status_label'] as String? ?? 'GCash',
+      amount: parseMoney(json['amount']),
+      canSubmit: json['can_submit'] as bool? ?? false,
+      reference: json['reference'] as String?,
+      rejectionNote: json['rejection_note'] as String?,
+      sellerNumber: account?['number'] as String?,
+      sellerName: account?['name'] as String?,
+      expiresAt: parseDate(json['expires_at']),
+    );
+  }
+}
+
+/// A reason the buyer can give for cancelling (the server's list, so it can change without an app update).
+class CancelReason {
+  const CancelReason(this.key, this.label);
+
+  final String key;
+  final String label;
+
+  /// Used until the first order list arrives.
+  static const fallback = [
+    CancelReason('change_address', 'I need to change the delivery address'),
+    CancelReason('change_items', 'I want to change items or quantities'),
+    CancelReason('found_cheaper', 'I found a cheaper price elsewhere'),
+    CancelReason('payment_issue', 'I want to change the payment method'),
+    CancelReason('ordered_by_mistake', 'I ordered by mistake'),
+    CancelReason('too_long', 'It is taking too long to ship'),
+    CancelReason('other', 'Other reason'),
+  ];
 }
 
 class OrderComplaint {
@@ -276,9 +371,11 @@ class OrderPage {
     required this.counts,
     required this.currentPage,
     required this.lastPage,
+    this.cancelReasons = CancelReason.fallback,
   });
 
   final List<Order> orders;
+  final List<CancelReason> cancelReasons;
   final Map<String, int> counts;
   final int currentPage;
   final int lastPage;
@@ -292,6 +389,14 @@ class OrderPage {
       counts: (json['counts'] as Map<String, dynamic>).map((key, value) => MapEntry(key, (value as num).toInt())),
       currentPage: (page['current_page'] as num).toInt(),
       lastPage: (page['last_page'] as num).toInt(),
+      cancelReasons: [
+        for (final reason in json['cancel_reasons'] as List<dynamic>? ?? const [])
+          if (reason is Map<String, dynamic>) CancelReason(reason['key'] as String, reason['label'] as String),
+      ].ifEmpty(CancelReason.fallback),
     );
   }
+}
+
+extension _OrFallback<T> on List<T> {
+  List<T> ifEmpty(List<T> fallback) => isEmpty ? fallback : this;
 }

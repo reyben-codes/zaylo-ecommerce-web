@@ -29,6 +29,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   final _voucher = TextEditingController();
   final _notes = TextEditingController();
 
+  /// GCash reference numbers typed at checkout, one per seller (each seller has their own GCash and order).
+  final Map<int, TextEditingController> _gcashRefs = {};
+
+  TextEditingController _gcashRef(int sellerId) => _gcashRefs.putIfAbsent(sellerId, TextEditingController.new);
+
   /// One key per checkout attempt, reused on retries so a dropped connection
   /// after the server placed the order can never create a duplicate.
   final _idempotencyKey = BuyerApi.newIdempotencyKey();
@@ -70,6 +75,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   void dispose() {
     _voucher.dispose();
     _notes.dispose();
+    for (final controller in _gcashRefs.values) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
@@ -164,6 +172,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         idempotencyKey: _idempotencyKey,
         voucherCode: _appliedVoucher,
         notes: _notes.text,
+        gcashReferences: _payment != 'gcash'
+            ? const {}
+            : {
+                for (final entry in _gcashRefs.entries)
+                  if (entry.value.text.trim().isNotEmpty) entry.key: entry.value.text.replaceAll(' ', ''),
+              },
       );
       await state.refreshCart().catchError((_) {});
       if (!mounted) return;
@@ -410,23 +424,72 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         ],
       ]);
 
-  Widget _paymentSection() => Column(children: [
-        _PaymentOption(
-          icon: Icons.payments_outlined,
-          title: 'Cash on Delivery',
-          subtitle: 'Pay when your order arrives',
-          selected: _payment == 'cod',
-          onTap: () => setState(() => _payment = 'cod'),
-        ),
-        const SizedBox(height: 10),
-        _PaymentOption(
+  Widget _paymentSection() {
+    final quote = _quote;
+    final sellers = quote?.gcashSellers ?? const <GcashSeller>[];
+    // Older servers send no GCash accounts: keep the plain option.
+    final gcashKnown = sellers.isNotEmpty;
+    final gcashOk = !gcashKnown || quote!.gcashAvailable;
+    final missing = sellers.where((seller) => seller.number == null).map((seller) => seller.shop).join(', ');
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      _PaymentOption(
+        icon: Icons.payments_outlined,
+        title: 'Cash on Delivery',
+        subtitle: 'Pay when your order arrives',
+        selected: _payment == 'cod',
+        onTap: () => setState(() => _payment = 'cod'),
+      ),
+      const SizedBox(height: 10),
+      Opacity(
+        opacity: gcashOk ? 1 : .55,
+        child: _PaymentOption(
           icon: Icons.phone_android_outlined,
           title: 'GCash',
-          subtitle: 'Manual payment, pending confirmation',
+          subtitle: gcashOk ? "Send to each seller's GCash, then enter the reference number" : '$missing has not set up GCash yet',
           selected: _payment == 'gcash',
-          onTap: () => setState(() => _payment = 'gcash'),
+          onTap: gcashOk ? () => setState(() => _payment = 'gcash') : null,
         ),
-      ]);
+      ),
+      if (_payment == 'gcash' && gcashKnown && gcashOk) ...[
+        const SizedBox(height: 12),
+        _gcashSellers(quote!, sellers),
+      ],
+    ]);
+  }
+
+  /// Each seller's GCash, what to send them (their items plus their shipping), and a reference field.
+  Widget _gcashSellers(CheckoutQuote quote, List<GcashSeller> sellers) {
+    final totals = _totals(quote);
+    final perSeller = quote.sellerCount == 0 ? 0.0 : (totals.shipping - totals.shippingDiscount) / quote.sellerCount;
+    return SectionCard(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text(
+          "Send each seller's amount to their GCash, then type the 13-digit reference number from your GCash receipt. "
+          'You can also add it later from My orders. Unpaid GCash orders are cancelled after 24 hours.',
+          style: TextStyle(fontSize: 12.5),
+        ),
+        for (final seller in sellers) ...[
+          Divider(color: ZayloColors.line, height: 24),
+          Text(seller.shop, style: TextStyle(fontWeight: FontWeight.w800, color: ZayloColors.ink)),
+          const SizedBox(height: 2),
+          Text('GCash ${seller.number} · ${seller.name ?? seller.shop}', style: const TextStyle(fontSize: 13)),
+          Text('Send ${peso(seller.subtotal - seller.discount + perSeller)} (items + shipping${seller.discount > 0 ? ' − voucher' : ''})',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: ZayloColors.ink)),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _gcashRef(seller.sellerId),
+            keyboardType: TextInputType.number,
+            maxLength: 25,
+            decoration: const InputDecoration(
+              labelText: 'GCash reference no. (optional now)',
+              hintText: 'e.g. 1234 567 890123',
+              counterText: '',
+            ),
+          ),
+        ],
+      ]),
+    );
+  }
 
   Widget _voucherSection() {
     if (_appliedVoucher != null) {
@@ -435,7 +498,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           Icon(Icons.check_circle, color: ZayloColors.success),
           const SizedBox(width: 10),
           Expanded(
-            child: Text('$_appliedVoucher applied: free shipping',
+            child: Text('$_appliedVoucher applied: ${_quote?.voucherLabel ?? 'free shipping'}',
                 style: TextStyle(fontWeight: FontWeight.w700, color: ZayloColors.ink)),
           ),
           TextButton(onPressed: _quoting ? null : _removeVoucher, child: const Text('Remove')),
@@ -475,6 +538,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           if (totals.shippingDiscount > 0)
             SummaryRow('Shipping voucher', '-${peso(totals.shippingDiscount)}',
                 valueColor: ZayloColors.success),
+          if (totals.voucherDiscount > 0)
+            SummaryRow('Voucher ${quote.voucherCode ?? ''}'.trim(), '-${peso(totals.voucherDiscount)}', valueColor: ZayloColors.success),
           Divider(color: ZayloColors.line, height: 20),
           SummaryRow('Total', peso(totals.total), emphasize: true),
           if (_quoting) Padding(padding: EdgeInsets.only(top: 8), child: LinearProgressIndicator(color: ZayloColors.ink)),
@@ -552,7 +617,9 @@ class _PaymentOption extends StatelessWidget {
   final String title;
   final String subtitle;
   final bool selected;
-  final VoidCallback onTap;
+
+  /// Null when the option cannot be chosen.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) => Material(

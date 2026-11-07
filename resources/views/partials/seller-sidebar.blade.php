@@ -11,6 +11,8 @@
                 ['route' => 'seller.returns', 'label' => 'Returns', 'icon' => 'fa-rotate-left', 'count' => 'returns'],
                 ['route' => 'seller.inventory', 'label' => 'Inventory', 'icon' => 'fa-warehouse'],
                 ['route' => 'seller.products', 'label' => 'Products', 'icon' => 'fa-shopping-bag', 'count' => 'products'],
+                ['route' => 'seller.vouchers', 'label' => 'Vouchers', 'icon' => 'fa-ticket', 'count' => 'vouchers'],
+                ['route' => 'seller.settlement', 'label' => 'Settlement', 'icon' => 'fa-scale-balanced'],
                 ['route' => 'seller.reports', 'label' => 'Reports', 'icon' => 'fa-chart-bar'],
                 ['route' => 'seller.chat', 'label' => 'Messages', 'icon' => 'fa-comment', 'count' => 'chat'],
                 ['route' => 'seller.logistics-messages', 'label' => 'Logistics chat', 'icon' => 'fa-truck-fast', 'count' => 'logistics_chat'],

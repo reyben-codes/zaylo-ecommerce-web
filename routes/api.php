@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\GcashPaymentController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\FaqController;
 use App\Http\Controllers\MobileAccountController;
@@ -147,6 +148,8 @@ Route::prefix('mobile')->name('mobile.')->middleware('throttle:60,1')->group(fun
             Route::get('/orders', [MobileOrderController::class, 'index'])->name('orders');
             Route::get('/orders/{order}', [MobileOrderController::class, 'show'])->name('orders.show');
             Route::post('/orders/{order}/cancel', [MobileOrderController::class, 'cancel'])->name('orders.cancel');
+            Route::post('/orders/{order}/buy-again', [MobileOrderController::class, 'buyAgain'])->middleware('throttle:20,1,mobile-buy-again')->name('orders.buy-again');
+            Route::post('/orders/{order}/gcash-reference', [GcashPaymentController::class, 'mobileSubmit'])->middleware('throttle:20,1,mobile-gcash-reference')->name('orders.gcash');
             Route::post('/orders/{order}/received', [MobileOrderController::class, 'received'])->middleware('throttle:20,1,mobile-order-received')->name('orders.received');
             Route::get('/orders/{order}/delivery-photo', [MobileOrderController::class, 'deliveryPhoto'])->name('orders.delivery-photo');
             // The parcel on a map: the buyer's pin, and the rider while it is out for delivery.

@@ -119,7 +119,12 @@
                             </td>
                             <td>
                                 <div class="order-actions">
-                                    @if($nextAction)
+                                    @php $gcashOrder = \App\Services\GcashPayments::isGcash($order) && $order->status !== 'cancelled'; @endphp
+                                    @if($gcashOrder)
+                                        @include('seller.partials.gcash-check', ['order' => $order])
+                                    @endif
+                                    {{-- A GCash order is confirmed only after the seller found the payment. --}}
+                                    @if($nextAction && ($nextAction['status'] !== 'confirmed' || \App\Services\GcashPayments::allowsConfirm($order)))
                                         <form method="POST" action="{{ route('seller.orders.status', $order) }}"
                                               @if($nextAction['status'] === 'completed') data-confirm="Confirm that the buyer received order {{ $order->order_number }}? This marks the payment as paid and completes the order." data-confirm-title="Mark as delivered?" data-confirm-button="Mark delivered" @endif>
                                             @csrf
@@ -140,12 +145,16 @@
                                             @elseif($nextAction['status'] === 'ready_for_pickup' && $partners->count() === 1)
                                                 <input type="hidden" name="logistics_provider_id" value="{{ $partners->first()->id }}">
                                             @endif
+                                            @if($nextAction['status'] === 'ready_for_pickup' && \App\Support\WaybillQueue::ready())
+                                                {{-- No printer: the partner prints it, matched by a queue number and colour written on the parcel. --}}
+                                                <label class="seller-check"><input type="checkbox" name="partner_prints" value="1"> I can't print the waybill</label>
+                                            @endif
                                             <button type="submit" class="seller-button seller-button--small"
                                                     @if($nextAction['status'] === 'ready_for_pickup' && ($buyerPartner || $partners->count() === 1)) aria-label="Ready to ship: request pickup from {{ ($buyerPartner ?? $partners->first())->name }}" @endif>
                                                 <i class="fas {{ $nextAction['icon'] }}" aria-hidden="true"></i> {{ $nextAction['label'] }}
                                             </button>
                                         </form>
-                                    @elseif(! $awaitingHandover)
+                                    @elseif(! $awaitingHandover && ! $gcashOrder)
                                         <span class="seller-cell-note">No action needed</span>
                                     @endif
 
@@ -168,6 +177,9 @@
                                            aria-label="View the rider's delivery photo for order {{ $order->order_number }} (opens in a new tab)"><i class="fas fa-camera" aria-hidden="true"></i> Delivery photo</a>
                                     @endif
 
+                                    @if(($queue = \App\Support\WaybillQueue::for($order->shipment)) && \App\Support\Waybill::available($order->shipment))
+                                        @include('partials.waybill-queue', ['queue' => $queue, 'note' => 'Write this big on the parcel. Your logistics partner prints the waybill.'])
+                                    @endif
                                     {{-- The rider scans the waybill's barcode or QR code to start the delivery and again to confirm it. --}}
                                     @if(\App\Support\Waybill::available($order->shipment))
                                         <a href="{{ route('seller.orders.waybill.print', $order) }}" class="seller-button seller-button--small seller-button--secondary" target="_blank" rel="noopener"

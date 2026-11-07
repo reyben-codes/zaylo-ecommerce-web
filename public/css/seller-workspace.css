@@ -875,3 +875,18 @@ a.seller-stat.is-active {
 @media (prefers-reduced-motion: reduce) {
     .toast-notification::after { animation: none; }
 }
+
+/* Waybill queue mark for parcels the logistics partner prints (partials/waybill-queue, App\Support\WaybillQueue). */
+.waybill-queue { display: inline-flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; margin-top: 4px; padding: 4px 9px 4px 6px; border: 2px solid var(--queue-color, #222); border-radius: 999px; background: var(--zaylo-surface, #fff); color: var(--zaylo-ink, #1a1714); font-size: .74rem; line-height: 1.2; }
+.waybill-queue strong { letter-spacing: .04em; }
+.waybill-queue__swatch { width: 14px; height: 14px; border-radius: 50%; background: var(--queue-color, #222); }
+.waybill-queue__note { color: var(--zaylo-muted, #6b5f54); font-size: .7rem; }
+.waybill-queue--red { --queue-color: #d64545; }
+.waybill-queue--blue { --queue-color: #2f6fde; }
+.waybill-queue--green { --queue-color: #2e8b57; }
+.waybill-queue--yellow { --queue-color: #e6b800; }
+.waybill-queue--purple { --queue-color: #7b4fc9; }
+.waybill-queue--orange { --queue-color: #e8772e; }
+.waybill-queue--pink { --queue-color: #d94f9b; }
+.waybill-queue--black { --queue-color: #222222; }
+.seller-check { display: flex; gap: 6px; align-items: center; margin: 4px 0; color: var(--zaylo-muted); font-size: .72rem; cursor: pointer; }

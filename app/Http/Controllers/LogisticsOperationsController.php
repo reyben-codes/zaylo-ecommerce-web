@@ -10,6 +10,8 @@ use App\Models\Shipment;
 use App\Services\ChatPhotos;
 use App\Services\LogisticsMessenger;
 use App\Services\ReturnPickups;
+use App\Services\RiderAttendanceClock;
+use App\Services\RiderDeliveries;
 use App\Services\ShipmentWorkflow;
 use App\Support\ParcelView;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -193,17 +195,24 @@ class LogisticsOperationsController extends Controller
         $filters = $request->validate([
             'stage' => ['nullable', Rule::in(array_keys(ShipmentWorkflow::STAGES))],
             'search' => ['nullable', 'string', 'max:100'],
-        ]);
+        ] + RiderDeliveries::dateRangeRules(), ['to.after_or_equal' => 'The end date must be on or after the start date.']);
         $stage = $filters['stage'] ?? null;
         $search = trim($filters['search'] ?? '');
+        $from = $filters['from'] ?? null;
+        $to = $filters['to'] ?? null;
+        // A delivered-date range searches the permanent delivery history, newest delivery first.
+        $ranged = $from || $to;
         $shipments = $this->search($this->withParcelDetails($this->parcels()), $search)
-            ->when($stage, fn (Builder $query) => ShipmentWorkflow::whereStage($query, [$stage]))
+            ->when($ranged, fn (Builder $query) => RiderDeliveries::whereDeliveredBetween($query, $from, $to)->orderByDesc(RiderDeliveries::deliveredColumn()))
+            ->when(! $ranged && $stage, fn (Builder $query) => ShipmentWorkflow::whereStage($query, [$stage]))
             ->latest('updated_at')->paginate(15)->withQueryString();
 
         return view('logistics.operations.deliveries', [
             'shipments' => $shipments,
-            'stage' => $stage,
+            'stage' => $ranged ? 'delivered' : $stage,
             'search' => $search,
+            'from' => $from,
+            'to' => $to,
             'counts' => $this->parcelStageCounts(),
         ]);
     }
@@ -397,7 +406,7 @@ class LogisticsOperationsController extends Controller
         $data = $request->validate(['rider_id' => ['required', 'integer']], ['rider_id.required' => 'Choose a rider.']);
         $rider = $this->availableRiders()->firstWhere('id', (int) $data['rider_id']);
         if (! $rider) {
-            throw ValidationException::withMessages(['rider_id' => 'That rider is not available for assignments.']);
+            throw ValidationException::withMessages(['rider_id' => 'That rider is not on shift. Riders can take parcels only after they time in at the hub, and not after they time out.']);
         }
 
         return $rider;
@@ -567,10 +576,16 @@ class LogisticsOperationsController extends Controller
     }
 
     /** Riders of this partner who are approved, active and not paused. */
+    /**
+     * Riders who can take parcels now: approved, not paused, active accounts, and on shift (timed in at the hub and not
+     * timed out). Every rider picker and every assignment goes through this list, so an old page cannot give a parcel
+     * to a rider who has not timed in.
+     */
     private function availableRiders(): Collection
     {
-        return Rider::query()
-            ->with('user')
+        return RiderAttendanceClock::whereOnShift(Rider::query())
+            // Their home address too, to offer riders who live near a parcel first (RiderProximity).
+            ->with('user.addresses')
             ->where('logistics_provider_id', $this->logisticsProvider()?->id)
             ->where('status', 'approved')
             ->where('is_active', true)

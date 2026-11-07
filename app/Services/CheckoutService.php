@@ -13,6 +13,7 @@ use App\Models\ProductVariant;
 use App\Models\Shipment;
 use App\Models\User;
 use App\Models\Voucher;
+use App\Support\BuyerOrderTabs;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -76,11 +77,27 @@ class CheckoutService
         }
         $query = Voucher::where('code', $code);
         $voucher = ($lock ? $query->lockForUpdate() : $query)->first();
-        if (! $voucher?->isAvailable() || $voucher->type !== 'free_shipping') {
+        if (! $voucher?->isAvailable() || ! array_key_exists($voucher->type, Voucher::TYPES) || ($voucher->needsOptIn() && ! Vouchers::ready())) {
             throw ValidationException::withMessages(['voucher_code' => 'This voucher is invalid or no longer available.']);
         }
 
         return $voucher;
+    }
+
+    /**
+     * A discount voucher works only on shops that joined it (and that reach its minimum spend); free shipping works on
+     * every shop. Refuses a voucher that would take nothing off this cart.
+     */
+    public function ensureVoucherApplies(?Voucher $voucher, Collection $items): void
+    {
+        if (! $voucher || $voucher->isFreeShipping() || app(Vouchers::class)->cartDiscounts($voucher, $items)) {
+            return;
+        }
+        $joined = app(Vouchers::class)->joinedShops($voucher);
+        $inCart = $items->pluck('product.seller_id')->map(fn ($id) => (int) $id)->unique();
+        throw ValidationException::withMessages(['voucher_code' => $inCart->intersect($joined)->isEmpty()
+            ? 'None of the shops in your order joined this voucher.'
+            : 'Spend at least ₱'.number_format((float) $voucher->min_spend, 2).' at a shop that joined to use this voucher.']);
     }
 
     /** @param Collection<int, CartItem> $items with product and variant loaded */
@@ -90,13 +107,16 @@ class CheckoutService
         $perSeller = ShippingRates::fee($zone);
         $subtotal = $items->sum(fn (CartItem $item) => $item->unitPrice() * $item->quantity);
         $shipping = $items->pluck('product.seller_id')->unique()->count() * $perSeller;
-        $shippingDiscount = $voucher ? $shipping : 0;
+        // Free shipping is ZAYLO's; a discount voucher comes off the items of shops that joined it, paid by them.
+        $shippingDiscount = $voucher?->isFreeShipping() ? $shipping : 0;
+        $voucherDiscount = round(array_sum(app(Vouchers::class)->cartDiscounts($voucher, $items)), 2);
 
         return [
             'subtotal' => (float) $subtotal,
             'shipping' => (float) $shipping,
             'shipping_discount' => (float) $shippingDiscount,
-            'total' => (float) ($subtotal + $shipping - $shippingDiscount),
+            'voucher_discount' => (float) $voucherDiscount,
+            'total' => (float) ($subtotal + $shipping - $shippingDiscount - $voucherDiscount),
             'shipping_per_seller' => $perSeller,
             'shipping_zone' => $zone,
         ];
@@ -154,6 +174,8 @@ class CheckoutService
             }
             $this->ensureCanOrder($buyer, $itemsToOrder);
             $voucher = $this->voucher($voucherCode, lock: true);
+            $this->ensureVoucherApplies($voucher, $itemsToOrder);
+            $joinedShops = $voucher ? app(Vouchers::class)->joinedShops($voucher) : [];
             $address = Address::where('user_id', $buyer->id)->whereKey($input['address_id'])->firstOrFail();
             if (! $address->isStructured()) {
                 throw ValidationException::withMessages(['address_id' => 'Please edit this saved address and select its Philippine locations before checkout.']);
@@ -164,6 +186,9 @@ class CheckoutService
 
             $orders = collect();
             foreach ($itemsToOrder->groupBy(fn ($item) => $item->product->seller_id ?? 0) as $sellerId => $items) {
+                if ($paymentMethod === 'gcash' && GcashPayments::ready() && ! GcashPayments::account(GcashPayments::sellerUser($items->first()->product))) {
+                    throw ValidationException::withMessages(['payment_method' => 'The seller of '.$items->first()->product->name.' has not set up GCash yet. Choose Cash on Delivery for this order.']);
+                }
                 $prepared = collect();
                 foreach ($items as $item) {
                     $product = Product::whereKey($item->product_id)->lockForUpdate()->firstOrFail();
@@ -193,17 +218,21 @@ class CheckoutService
                 }
 
                 $subtotal = $prepared->sum(fn ($row) => $row['unitPrice'] * $row['item']->quantity);
-                $shippingDiscount = $voucher ? $perSeller : 0;
+                $shippingDiscount = $voucher?->isFreeShipping() ? $perSeller : 0;
                 $shippingFee = $perSeller - $shippingDiscount;
+                // The shop pays a discount voucher it joined; nothing comes off shops that did not join.
+                $voucherDiscount = app(Vouchers::class)->discountFor($voucher, (int) $sellerId, (float) $subtotal, $joinedShops);
+                $usesVoucher = $voucher && ($voucher->isFreeShipping() || $voucherDiscount > 0);
                 $order = Order::create([
                     'order_number' => 'ZAY-'.now()->format('ymd').'-'.Str::upper(Str::random(8)),
                     'user_id' => $buyer->id, 'seller_id' => $sellerId ?: null, 'status' => 'placed',
-                    'subtotal' => $subtotal, 'shipping_fee' => $shippingFee, 'total' => $subtotal + $shippingFee,
-                    'voucher_code' => $voucher?->code, 'shipping_discount' => $shippingDiscount,
+                    'subtotal' => $subtotal, 'shipping_fee' => $shippingFee, 'total' => $subtotal + $shippingFee - $voucherDiscount,
+                    'voucher_code' => $usesVoucher ? $voucher->code : null, 'shipping_discount' => $shippingDiscount,
                     'payment_method' => $paymentMethod, 'recipient_name' => $address->recipient_name,
                     'phone' => $address->phone, 'shipping_address' => $address->formatted(),
                     'notes' => $input['notes'] ?? null, 'placed_at' => now(),
-                ] + ParcelTracking::orderPin($address) + (Schema::hasColumn('orders', 'courier_choice')
+                ] + (Schema::hasColumn('orders', 'voucher_discount') ? ['voucher_discount' => $voucherDiscount] : [])
+                  + ParcelTracking::orderPin($address) + (Schema::hasColumn('orders', 'courier_choice')
                     // Only once the 2026_10_26 migration has added the column.
                     ? ['courier_choice' => $input['courier_choice'] ?? Order::DEFAULT_COURIER]
                     : []) + (self::choosesPartner()
@@ -225,10 +254,15 @@ class CheckoutService
                     }
                 }
 
-                $order->payment()->create([
+                $payment = $order->payment()->create([
                     'provider' => $paymentMethod, 'status' => 'pending', 'amount' => $order->total,
                     'currency' => 'PHP', 'idempotency_key' => $input['idempotency_key'].'-'.$order->id,
                 ]);
+                // GCash goes to the seller's own GCash: the reference waits for the seller's check (GcashPayments).
+                if ($paymentMethod === 'gcash' && GcashPayments::ready()) {
+                    $reference = GcashPayments::normalize($input['gcash_references'][$sellerId] ?? null);
+                    $payment->forceFill(GcashPayments::checkoutPayment($reference !== '' ? $reference : null))->save();
+                }
                 $order->statusHistory()->create([
                     'changed_by' => $buyer->id, 'status' => 'placed', 'note' => 'Order placed by buyer.',
                 ]);
@@ -248,32 +282,52 @@ class CheckoutService
      * Cancels a buyer's order while the seller has not confirmed it yet, putting the stock back. The status is read
      * again under a row lock, so a page opened before the seller confirmed cannot cancel it afterwards.
      */
-    public function cancel(Order $order, User $buyer): void
+    public function cancel(Order $order, User $buyer, ?string $reason = null, ?string $note = null): void
     {
         abort_unless($order->user_id === $buyer->id, 403);
 
-        DB::transaction(function () use ($order, $buyer) {
+        DB::transaction(function () use ($order, $buyer, $reason, $note) {
             $lockedOrder = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
             if (! in_array($lockedOrder->status, self::BUYER_CANCELLABLE, true)) {
                 throw ValidationException::withMessages(['order' => $lockedOrder->status === 'cancelled'
                     ? "Order {$lockedOrder->order_number} is already cancelled."
                     : "The seller already confirmed order {$lockedOrder->order_number}, so it can no longer be cancelled. Message the seller if something is wrong."]);
             }
-            $lockedOrder->load(['items', 'shipment', 'payment']);
-            foreach ($lockedOrder->items as $item) {
-                if ($item->product_variant_id) {
-                    ProductVariant::whereKey($item->product_variant_id)->increment('stock', $item->quantity);
-                    Product::syncStockFromVariants((int) $item->product_id);
-                } elseif ($item->product_id) {
-                    Product::whereKey($item->product_id)->increment('stock', $item->quantity);
-                }
-            }
-            $lockedOrder->update(['status' => 'cancelled']);
-            $lockedOrder->shipment?->update(['status' => 'cancelled']);
-            $lockedOrder->payment?->update(['status' => 'cancelled']);
-            $lockedOrder->statusHistory()->create([
-                'changed_by' => $buyer->id, 'status' => 'cancelled', 'note' => 'Cancelled by buyer.',
-            ]);
+            $label = BuyerOrderTabs::reasonLabel($reason);
+            $this->cancelLocked($lockedOrder, $buyer->id, 'Cancelled by buyer'.($label ? ': '.$label.($note ? ' ('.$note.')' : '') : '').'.', $reason, $note);
         });
+    }
+
+    /** A GCash order the buyer never paid (App\Services\GcashPayments::expireDue): cancelled with its stock restored. */
+    public function cancelUnpaid(Order $order, string $note): void
+    {
+        DB::transaction(function () use ($order, $note) {
+            $locked = Order::whereKey($order->id)->lockForUpdate()->first();
+            if ($locked && in_array($locked->status, self::BUYER_CANCELLABLE, true)) {
+                $this->cancelLocked($locked, null, $note, 'payment_issue', null);
+            }
+        });
+    }
+
+    /** Puts the stock back and marks the (already locked) order, its parcel and payment cancelled. */
+    private function cancelLocked(Order $lockedOrder, ?int $actorId, string $note, ?string $reason, ?string $reasonNote): void
+    {
+        $lockedOrder->load(['items', 'shipment', 'payment']);
+        foreach ($lockedOrder->items as $item) {
+            if ($item->product_variant_id) {
+                ProductVariant::whereKey($item->product_variant_id)->increment('stock', $item->quantity);
+                Product::syncStockFromVariants((int) $item->product_id);
+            } elseif ($item->product_id) {
+                Product::whereKey($item->product_id)->increment('stock', $item->quantity);
+            }
+        }
+        $lockedOrder->update(['status' => 'cancelled']);
+        // The reason (BuyerOrderTabs::CANCEL_REASONS) and when, which later moves it to Purchase history.
+        if (Schema::hasColumn('orders', 'cancel_reason')) {
+            $lockedOrder->forceFill(['cancel_reason' => $reason, 'cancel_note' => $reasonNote, 'cancelled_at' => now()])->save();
+        }
+        $lockedOrder->shipment?->update(['status' => 'cancelled']);
+        $lockedOrder->payment?->update(['status' => 'cancelled']);
+        $lockedOrder->statusHistory()->create(['changed_by' => $actorId, 'status' => 'cancelled', 'note' => $note]);
     }
 }

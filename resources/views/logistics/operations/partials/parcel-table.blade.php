@@ -24,6 +24,7 @@
                     <td>
                         <strong class="parcel-tracking">{{ $parcel['tracking'] }}</strong>
                         <span class="seller-cell-note">Order {{ $parcel['order'] }}</span>
+                        @include('partials.waybill-queue', ['queue' => \App\Support\WaybillQueue::for($shipment), 'note' => 'Print for seller'])
                     </td>
                     <td>{{ $parcel['seller'] }}</td>
                     <td class="parcel-destination">

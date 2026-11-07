@@ -17,6 +17,7 @@ use App\Services\RiderWallet;
 use App\Services\ShipmentWorkflow;
 use App\Support\MobilePayload;
 use App\Support\ParcelView;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -188,9 +189,17 @@ class MobileRiderDashboardController extends Controller
         $data = $request->validate([
             'period' => ['nullable', 'in:'.implode(',', self::PERIODS)],
             'page' => ['nullable', 'integer', 'min:1'],
-        ]);
+            // A date range picked by the rider replaces the period; search finds a tracking or order number, or a name.
+            'search' => ['nullable', 'string', 'max:100'],
+        ] + RiderDeliveries::dateRangeRules(), ['to.after_or_equal' => 'The end date must be on or after the start date.']);
         $period = $data['period'] ?? 'all';
-        $query = $this->deliveries->completedSince($request->user(), $this->since($period));
+        $ranged = filled($data['from'] ?? null) || filled($data['to'] ?? null);
+        $query = $ranged
+            ? RiderDeliveries::whereDeliveredBetween($this->deliveries->completed($request->user()), $data['from'] ?? null, $data['to'] ?? null)
+            : $this->deliveries->completedSince($request->user(), $this->since($period));
+        if (filled($data['search'] ?? null)) {
+            $this->searchHistory($query, trim($data['search']));
+        }
 
         $page = (clone $query)->with($this->relations())->orderByDesc(RiderDeliveries::deliveredColumn())->paginate(20);
         $all = (clone $query)->with($this->relations())->get();
@@ -201,6 +210,25 @@ class MobileRiderDashboardController extends Controller
             'deliveries' => collect($page->items())->map(fn (Shipment $s) => $this->shipmentPayload($s))->values(),
             'next_page' => $page->hasMorePages() ? $page->currentPage() + 1 : null,
         ]);
+    }
+
+    /** Tracking number, order number or recipient, on whichever schema this database uses. */
+    private function searchHistory(Builder $query, string $term): void
+    {
+        $like = '%'.addcslashes($term, '%_\\').'%';
+        $query->where(function (Builder $match) use ($like) {
+            foreach (['tracking_number', 'tracking_code'] as $column) {
+                if (Schema::hasColumn('shipments', $column)) {
+                    $match->orWhere($column, 'like', $like);
+                }
+            }
+            if (Schema::hasColumn('shipments', 'order_id')) {
+                $match->orWhereHas('order', fn (Builder $order) => $order->where('order_number', 'like', $like)->orWhere('recipient_name', 'like', $like));
+            }
+            if (Schema::hasColumn('shipments', 'seller_order_id')) {
+                $match->orWhereHas('sellerOrder.order', fn (Builder $order) => $order->where('reference', 'like', $like));
+            }
+        });
     }
 
     /** Commission totals for today, this week, this month, all time, and the last 7 days. */

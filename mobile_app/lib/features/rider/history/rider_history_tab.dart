@@ -34,6 +34,29 @@ class _RiderHistoryTabState extends State<RiderHistoryTab> {
   /// Ignores responses from a filter the rider has already left.
   int _generation = 0;
 
+  /// A date range the rider picked replaces the period chips.
+  DateTimeRange? _range;
+  final _search = TextEditingController();
+
+  Future<void> _pickRange() async {
+    final now = DateTime.now();
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(now.year - 3),
+      lastDate: now,
+      initialDateRange: _range,
+      helpText: 'Delivered between',
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _range = picked);
+    _reload();
+  }
+
+  void _clearRange() {
+    setState(() => _range = null);
+    _reload();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -44,6 +67,7 @@ class _RiderHistoryTabState extends State<RiderHistoryTab> {
   @override
   void dispose() {
     widget.period.removeListener(_reload);
+    _search.dispose();
     super.dispose();
   }
 
@@ -64,7 +88,13 @@ class _RiderHistoryTabState extends State<RiderHistoryTab> {
     final generation = ++_generation;
     setState(() => _loading = true);
     try {
-      final result = await widget.api.history(period: widget.period.value, page: page);
+      final result = await widget.api.history(
+        period: widget.period.value,
+        page: page,
+        from: _range?.start,
+        to: _range?.end,
+        search: _search.text,
+      );
       if (!mounted || generation != _generation) return;
       setState(() {
         _summary = result.summary;
@@ -87,18 +117,71 @@ class _RiderHistoryTabState extends State<RiderHistoryTab> {
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.fromLTRB(20, 10, 20, 6),
             children: [
+              if (_range case final range?)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: InputChip(
+                    avatar: Icon(Icons.date_range, size: 18, color: ZayloColors.white),
+                    label: Text('${shortDate(range.start)} – ${shortDate(range.end)}'),
+                    selected: true,
+                    showCheckmark: false,
+                    selectedColor: ZayloColors.ink,
+                    labelStyle: TextStyle(color: ZayloColors.white),
+                    deleteIconColor: ZayloColors.white,
+                    onPressed: _pickRange,
+                    onDeleted: _clearRange,
+                    deleteButtonTooltipMessage: 'Clear dates',
+                  ),
+                )
+              else
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ActionChip(
+                    avatar: const Icon(Icons.date_range, size: 18),
+                    label: const Text('Dates'),
+                    onPressed: _pickRange,
+                  ),
+                ),
               for (final period in RiderPeriod.values)
                 Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: ChoiceChip(
                     label: Text(period.label),
-                    selected: widget.period.value == period,
+                    selected: _range == null && widget.period.value == period,
                     selectedColor: ZayloColors.ink,
-                    labelStyle: TextStyle(color: widget.period.value == period ? ZayloColors.white : ZayloColors.ink),
-                    onSelected: (_) => widget.period.value = period,
+                    labelStyle: TextStyle(
+                        color: _range == null && widget.period.value == period ? ZayloColors.white : ZayloColors.ink),
+                    onSelected: (_) {
+                      if (_range != null) {
+                        _range = null;
+                        if (widget.period.value == period) _reload();
+                      }
+                      widget.period.value = period;
+                    },
                   ),
                 ),
             ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
+          child: TextField(
+            controller: _search,
+            textInputAction: TextInputAction.search,
+            onSubmitted: (_) => _reload(),
+            decoration: InputDecoration(
+              isDense: true,
+              prefixIcon: const Icon(Icons.search),
+              hintText: 'Tracking no., order no. or recipient',
+              suffixIcon: IconButton(
+                tooltip: 'Clear search',
+                icon: const Icon(Icons.close),
+                onPressed: () {
+                  _search.clear();
+                  _reload();
+                },
+              ),
+            ),
           ),
         ),
         Expanded(
@@ -121,7 +204,9 @@ class _RiderHistoryTabState extends State<RiderHistoryTab> {
                       if (_deliveries.isEmpty && !_loading)
                         RiderEmptyCard(
                           icon: Icons.history,
-                          message: 'No deliveries completed ${widget.period.value == RiderPeriod.all ? 'yet' : widget.period.value.label.toLowerCase()}.',
+                          message: _range != null || _search.text.trim().isNotEmpty
+                              ? 'No deliveries match these dates or search.'
+                              : 'No deliveries completed ${widget.period.value == RiderPeriod.all ? 'yet' : widget.period.value.label.toLowerCase()}.',
                         ),
                       for (final delivery in _deliveries)
                         RiderDeliveryCard(

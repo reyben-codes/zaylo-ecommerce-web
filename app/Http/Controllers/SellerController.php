@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\WaybillQueue;
+use App\Services\GcashPayments;
 use App\Http\Controllers\Concerns\UpdatesAccountSettings;
 use App\Models\LogisticsProvider;
 use App\Models\Order;
@@ -249,6 +251,7 @@ class SellerController extends Controller
             'status' => ['nullable', Rule::in(['all', 'to_prepare', 'shipping', 'delivered', 'cancelled'])],
         ])['status'] ?? 'all';
         $receipts->autoConfirmDue();
+        app(GcashPayments::class)->expireDue(app(\App\Services\CheckoutService::class), shopId: $this->shopId());
         $statusLabels = self::STATUS_LABELS;
 
         if (! Order::usesLegacySchema()) {
@@ -291,11 +294,15 @@ class SellerController extends Controller
             'status.in' => 'The rider updates this parcel from here on.',
         ]);
         $partner = $data['status'] === 'ready_for_pickup' ? $this->chosenPartner($request, $order) : null;
+        $partnerPrints = $data['status'] === 'ready_for_pickup' && $request->boolean('partner_prints');
 
         DB::transaction(function () use ($order, $data, $partner) {
             $locked = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
             if (! in_array($data['status'], self::ORDER_TRANSITIONS[$locked->status] ?? [], true)) {
                 throw ValidationException::withMessages(['status' => 'That order status transition is not allowed.']);
+            }
+            if ($data['status'] === 'confirmed' && ! GcashPayments::allowsConfirm($locked->load('payment'))) {
+                throw ValidationException::withMessages(['status' => "Check the buyer's GCash payment first: open your GCash app, find the reference, then mark it received."]);
             }
 
             if ($data['status'] === 'cancelled') {
@@ -325,6 +332,15 @@ class SellerController extends Controller
                 ])->update(['status' => 'ready'] + (Shipment::tracksProvider() ? ['logistics_provider_id' => $partner?->id] : []));
             }
         });
+        // No printer: the partner prints the waybill; the seller writes the queue number and colour on the parcel.
+        if ($partnerPrints && ($shipment = $order->fresh()->shipment)) {
+            $queue = WaybillQueue::for(WaybillQueue::assign($shipment));
+            if ($queue) {
+                $printer = $partner?->name ?? 'Your logistics partner';
+
+                return back()->with('status', "Pickup requested. Write {$queue['number']} {$queue['name']} big on the parcel: {$printer} prints the waybill and matches it by that mark.");
+            }
+        }
 
         $message = match ($data['status']) {
             'ready_for_pickup' => $partner

@@ -2,17 +2,20 @@
 
 namespace Tests\Feature;
 
+use App\Services\RiderProximity;
 use App\Models\LogisticsMessage;
 use App\Models\LogisticsProvider;
 use App\Models\LogisticsThread;
 use App\Models\Order;
 use App\Models\Rider;
+use App\Models\RiderAttendance;
 use App\Models\SellerOrder;
 use App\Models\Shipment;
 use App\Models\User;
 use App\Services\RiderDeliveries;
 use App\Services\ShipmentWorkflow;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 /**
@@ -151,6 +154,90 @@ class LogisticsOperationsTest extends TestCase
         $this->get(route('logistics.assignments'))->assertViewHas('workload', fn ($rows) => $rows->firstWhere('rider.id', $rider->id)['assigned'] === 2);
     }
 
+    public function test_parcels_go_only_to_riders_who_timed_in_and_have_not_timed_out(): void
+    {
+        $offShift = $this->rider($this->provider, 'Late Rider', onShift: false);
+        $parcel = $this->parcel('ZX-0101', 'sorted');
+        $this->actingAs($this->owner);
+        $notOnShift = 'That rider is not on shift. Riders can take parcels only after they time in at the hub, and not after they time out.';
+
+        // Before time-in: not offered, and a stale page (or a crafted request) cannot assign to them either.
+        $this->get(route('logistics.assignments'))->assertOk()
+            ->assertSee('0 riders on shift right now')
+            ->assertSee('No riders on shift. Riders can take parcels once they time in at the hub.')
+            ->assertDontSee('<option value="'.$offShift->id.'">', false);
+        $this->post(route('logistics.parcels.assign', $parcel), ['rider_id' => $offShift->id])->assertSessionHasErrors(['rider_id' => $notOnShift]);
+        $this->post(route('logistics.areas.assign'), ['area' => 'Pasig City, Metro Manila', 'rider_id' => $offShift->id])->assertSessionHasErrors(['rider_id' => $notOnShift]);
+        $this->assertNull($parcel->fresh()->rider_id);
+
+        // A time-in left open from an old shift (past the 18-hour limit) does not count.
+        $stale = $this->timeIn($offShift, now()->subHours(20));
+        $this->post(route('logistics.parcels.assign', $parcel), ['rider_id' => $offShift->id])->assertSessionHasErrors('rider_id');
+        $stale->delete();
+
+        // Once they time in, they can take it.
+        $attendance = $this->timeIn($offShift);
+        $this->get(route('logistics.assignments'))->assertSee('1 rider on shift right now')->assertSee('Late Rider');
+        $this->post(route('logistics.parcels.assign', $parcel), ['rider_id' => $offShift->id])->assertSessionHasNoErrors();
+        $this->assertSame($offShift->id, $parcel->fresh()->rider_id);
+
+        // After they time out, nothing new goes to them.
+        $attendance->update(['time_out_at' => now()]);
+        $next = $this->parcel('ZX-0102', 'sorted');
+        $this->post(route('logistics.parcels.assign', $next), ['rider_id' => $offShift->id])->assertSessionHasErrors(['rider_id' => $notOnShift]);
+        $this->assertNull($next->fresh()->rider_id);
+    }
+
+    public function test_riders_nearest_a_parcel_are_offered_first(): void
+    {
+        $far = $this->rider($this->provider, 'Cebu Rider');
+        $far->user->addresses()->create(['label' => 'Home', 'recipient_name' => 'Cebu Rider', 'phone' => '09170000001', 'line1' => '1 Osmena Blvd', 'barangay' => 'Lahug', 'postal_code' => '6000', 'city' => 'Cebu City', 'province' => 'Cebu', 'is_default' => true]);
+        $near = $this->rider($this->provider, 'Pasig Rider');
+        $near->user->addresses()->create(['label' => 'Home', 'recipient_name' => 'Pasig Rider', 'phone' => '09170000002', 'line1' => '2 Caruncho Ave', 'barangay' => 'Kapitolyo', 'postal_code' => '1603', 'city' => 'Pasig City', 'province' => 'Metro Manila', 'is_default' => true]);
+        $this->parcel('ZX-0201', 'sorted', area: 'Pasig City, Metro Manila');
+        $this->actingAs($this->owner);
+
+        // By home address: the rider living in the parcel's city comes first, labelled.
+        $page = $this->get(route('logistics.assignments'))->assertOk()->getContent();
+        $this->assertStringContainsString('Pasig Rider · lives in Pasig City', $page);
+        $this->assertLessThan(strpos($page, 'Cebu Rider · lives in Cebu City'), strpos($page, 'Pasig Rider · lives in Pasig City'));
+
+        // A rider whose app reported a position near the buyer's pin beats both, with the distance.
+        $far->forceFill(['last_latitude' => 14.5764, 'last_longitude' => 121.0851, 'last_located_at' => now()->subMinutes(5)])->save();
+        $ranked = app(RiderProximity::class)->rank(collect([$near->fresh('user.addresses'), $far->fresh('user.addresses')]), 'Pasig City, Metro Manila', ['latitude' => 14.5794, 'longitude' => 121.0859]);
+        $this->assertSame(['Cebu Rider', 'Pasig Rider'], $ranked->map(fn ($row) => $row['rider']->user->name)->all());
+        $this->assertSame('0.3 km away', $ranked[0]['label']);
+
+        // An old position (over two hours) no longer counts.
+        $far->forceFill(['last_located_at' => now()->subHours(3)])->save();
+        $ranked = app(RiderProximity::class)->rank(collect([$far->fresh('user.addresses'), $near->fresh('user.addresses')]), 'Pasig City, Metro Manila', ['latitude' => 14.5794, 'longitude' => 121.0859]);
+        $this->assertSame('Pasig Rider', $ranked[0]['rider']->user->name);
+
+        // The rider app's location report is kept on the rider (also while only on shift).
+        RiderProximity::remember($near->user_id, 14.6, 121.1);
+        $this->assertEqualsWithDelta(14.6, (float) $near->fresh()->last_latitude, 0.0001);
+    }
+
+    public function test_delivered_parcels_can_be_searched_by_delivered_date(): void
+    {
+        $old = $this->parcel('ZX-0301', 'delivered');
+        $recent = $this->parcel('ZX-0302', 'delivered');
+        $moving = $this->parcel('ZX-0303', 'out_for_delivery');
+        $column = RiderDeliveries::deliveredColumn();
+        $old->forceFill([$column => now('Asia/Manila')->subDays(40)->setTime(10, 0)->utc()])->save();
+        $recent->forceFill([$column => now('Asia/Manila')->subDays(2)->setTime(10, 0)->utc()])->save();
+        $this->actingAs($this->owner);
+
+        $from = now('Asia/Manila')->subDays(7)->toDateString();
+        $this->get(route('logistics.deliveries', ['from' => $from, 'to' => now('Asia/Manila')->toDateString()]))->assertOk()
+            ->assertSee('ZX-0302')->assertDontSee('ZX-0301')->assertDontSee('ZX-0303')
+            ->assertSee('Delivered from')->assertSee('1 parcel');
+        // Months later the old delivery is still there.
+        $this->get(route('logistics.deliveries', ['from' => now('Asia/Manila')->subDays(45)->toDateString(), 'to' => now('Asia/Manila')->subDays(30)->toDateString()]))
+            ->assertSee('ZX-0301')->assertDontSee('ZX-0302');
+        $this->get(route('logistics.deliveries', ['from' => '2026-11-07', 'to' => '2026-11-01']))->assertSessionHasErrors(['to' => 'The end date must be on or after the start date.']);
+    }
+
     public function test_scanning_finds_a_parcel_and_offers_its_next_step(): void
     {
         $this->parcel('ZX-0003', 'picked_up');
@@ -255,11 +342,27 @@ class LogisticsOperationsTest extends TestCase
         return [$owner, $provider];
     }
 
-    private function rider(LogisticsProvider $provider, string $name): Rider
+    /** An approved rider, timed in at the hub unless [$onShift] is false (only riders on shift can take parcels). */
+    private function rider(LogisticsProvider $provider, string $name, bool $onShift = true): Rider
     {
         $user = User::factory()->create(['role' => 'rider', 'status' => 'active', 'name' => $name]);
+        $rider = Rider::create(['user_id' => $user->id, 'logistics_provider_id' => $provider->id, 'vehicle_type' => 'Motorcycle', 'status' => 'approved', 'is_active' => true]);
+        if ($onShift) {
+            $this->timeIn($rider);
+        }
 
-        return Rider::create(['user_id' => $user->id, 'logistics_provider_id' => $provider->id, 'vehicle_type' => 'Motorcycle', 'status' => 'approved', 'is_active' => true]);
+        return $rider;
+    }
+
+    private function timeIn(Rider $rider, ?Carbon $at = null): RiderAttendance
+    {
+        $at ??= now()->subHour();
+
+        return $rider->attendances()->create([
+            'logistics_provider_id' => $rider->logistics_provider_id,
+            'work_date' => $at->copy()->timezone('Asia/Manila')->toDateString(),
+            'time_in_at' => $at,
+        ]);
     }
 
     private function parcel(string $tracking, string $stage, ?LogisticsProvider $provider = null, string $area = 'Pasig City, Metro Manila'): Shipment

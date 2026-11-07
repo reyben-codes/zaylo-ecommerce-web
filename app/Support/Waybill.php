@@ -61,7 +61,37 @@ class Waybill
             'area' => Schema::hasColumn('shipments', 'sort_area') ? $shipment->sort_area : null,
             'notes' => trim((string) ($order?->notes ?? $order?->note ?? '')) ?: null,
             'printed' => now('Asia/Manila'),
+            // The courier on the order picks the label layout (ZAYLO, J&T or Flash Express).
+            'courier' => $courier = self::courierOf($order),
+            'courier_name' => (Order::COURIERS[$courier] ?? Order::COURIERS[Order::DEFAULT_COURIER])['name'],
+            'sort_code' => self::sortCode($recipient = self::recipient($order)),
+            // Printed by the logistics partner for a seller without a printer: the mark written on the parcel.
+            'queue' => WaybillQueue::for($shipment),
         ];
+    }
+
+    /** Layouts for each courier (resources/views/waybill/layouts). */
+    public const LAYOUTS = ['zaylo_express', 'jnt_express', 'flash_express'];
+
+    public static function courierOf(?Order $order): string
+    {
+        $courier = $order && Schema::hasColumn('orders', 'courier_choice') ? $order->courier_choice : null;
+
+        return in_array($courier, self::LAYOUTS, true) ? $courier : Order::DEFAULT_COURIER;
+    }
+
+    /**
+     * A short destination code for sorting, printed big like courier labels do: province and city, three letters each
+     * (e.g. "CEB-CEB" for Cebu City, Cebu; "LAG-CAL" for Calamba, Laguna).
+     */
+    public static function sortCode(array $recipient): string
+    {
+        $parts = array_values(array_filter(array_map('trim', explode(',', (string) ($recipient['address'] ?? '')))));
+        $city = $parts[count($parts) - 2] ?? ($parts[0] ?? '');
+        $province = $parts[count($parts) - 1] ?? '';
+        $code = fn (string $name) => strtoupper(substr(preg_replace('/[^A-Za-z]/', '', preg_replace('/\b(city of|city|municipality of)\b/i', '', \Illuminate\Support\Str::ascii($name))), 0, 3));
+
+        return trim(($code($province) ?: 'PH').'-'.($code($city) ?: 'XXX'), '-');
     }
 
     /** The tracking number as a QR code PNG (dompdf draws PNGs reliably), for phones that read QR faster than bars. */

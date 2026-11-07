@@ -230,3 +230,17 @@
     font: inherit;
     font-size: .74rem;
 }
+
+/* GCash paid to the seller: the reference to check before Confirm order (seller/partials/gcash-check). */
+.gcash-check { display: grid; gap: 6px; width: 100%; padding: 10px 12px; border: 1px solid var(--zaylo-border); border-left: 3px solid var(--zaylo-accent); border-radius: 8px; font-size: .74rem; color: var(--zaylo-muted); }
+.gcash-check strong { display: flex; gap: 6px; align-items: center; color: var(--zaylo-ink); font-size: .78rem; }
+.gcash-check b { color: var(--zaylo-ink); letter-spacing: .03em; }
+.gcash-check--paid { border-left-color: #2d6d3e; }
+.gcash-check--rejected { border-left-color: #b4483d; }
+.gcash-check__actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-start; }
+.gcash-check__actions form { margin: 0; }
+.gcash-check__reject summary { list-style: none; cursor: pointer; }
+.gcash-check__reject summary::-webkit-details-marker { display: none; }
+.gcash-check__form { display: grid; gap: 6px; margin-top: 8px; }
+.gcash-check__form label { color: var(--zaylo-ink); font-weight: 600; }
+.gcash-check__form textarea { width: 100%; padding: 7px 9px; border: 1px solid var(--zaylo-border); border-radius: 6px; background: var(--zaylo-surface); color: var(--zaylo-text); font: inherit; }

@@ -35,11 +35,24 @@
                 <label class="seller-field__label" for="parcel-search">Search</label>
                 <input type="search" id="parcel-search" name="search" value="{{ $search }}" placeholder="Tracking or order number" maxlength="100">
             </div>
+            {{-- Delivered parcels are kept for good: a date range searches the whole delivery history. --}}
+            <div class="seller-field">
+                <label class="seller-field__label" for="delivered-from">Delivered from</label>
+                <input type="date" id="delivered-from" name="from" value="{{ $from }}" max="{{ now('Asia/Manila')->toDateString() }}" @error('from') aria-invalid="true" @enderror>
+            </div>
+            <div class="seller-field">
+                <label class="seller-field__label" for="delivered-to">to</label>
+                <input type="date" id="delivered-to" name="to" value="{{ $to }}" max="{{ now('Asia/Manila')->toDateString() }}" @error('to') aria-invalid="true" @enderror>
+            </div>
             <button type="submit" class="seller-button seller-button--small"><i class="fas fa-magnifying-glass" aria-hidden="true"></i> Search</button>
-            @if($search !== '')
-                <a href="{{ route('logistics.deliveries', array_filter(['stage' => $stage])) }}" class="seller-button seller-button--small seller-button--secondary">Clear</a>
+            @if($search !== '' || $from || $to)
+                <a href="{{ route('logistics.deliveries', array_filter(['stage' => $from || $to ? null : $stage])) }}" class="seller-button seller-button--small seller-button--secondary">Clear</a>
             @endif
         </form>
+        @if($errors->hasAny(['from', 'to']))<p class="seller-field__error parcel-report-error" role="alert">{{ $errors->first('to') ?: $errors->first('from') }}</p>@endif
+        @if($from || $to)
+            <p class="parcel-empty-inline">Delivered {{ $from ? 'from '.\Illuminate\Support\Carbon::parse($from)->format('M j, Y') : '' }} {{ $to ? 'to '.\Illuminate\Support\Carbon::parse($to)->format('M j, Y') : 'until today' }} · {{ $shipments->total() }} {{ Str::plural('parcel', $shipments->total()) }}</p>
+        @endif
         @include('logistics.operations.partials.parcel-table', [
             'shipments' => $shipments,
             'empty' => ['icon' => 'fa-route', 'title' => 'No parcels match', 'text' => 'Try another step or search.'],

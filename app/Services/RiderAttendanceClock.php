@@ -10,6 +10,7 @@ use chillerlan\QRCode\Common\EccLevel;
 use chillerlan\QRCode\Output\QROutputInterface;
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -36,7 +37,7 @@ class RiderAttendanceClock
     private const MIN_SHIFT_MINUTES = 1;
 
     /** An open time in older than this is a forgotten time out; the next scan starts a new day instead. */
-    private const MAX_SHIFT_HOURS = 18;
+    public const MAX_SHIFT_HOURS = 18;
 
     public const STATUS_LABELS = [
         'on_shift' => 'On shift',
@@ -113,6 +114,17 @@ class RiderAttendanceClock
             // Two scans at the same moment: the unique day index lets only one time in through.
             throw ValidationException::withMessages(['code' => 'Your time in was already recorded. Pull down to refresh.']);
         }
+    }
+
+    /**
+     * Riders on shift right now: timed in (within MAX_SHIFT_HOURS, like the scanner) and not timed out yet. Only they
+     * can be given parcels or return pickups.
+     */
+    public static function whereOnShift(Builder $riders): Builder
+    {
+        return $riders->whereHas('attendances', fn (Builder $attendance) => $attendance
+            ->whereNull('time_out_at')
+            ->where('time_in_at', '>=', now()->subHours(self::MAX_SHIFT_HOURS)));
     }
 
     /**

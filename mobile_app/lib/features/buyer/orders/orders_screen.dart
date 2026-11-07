@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
 import 'package:zaylo_mobile/components/layout.dart';
+import 'package:zaylo_mobile/features/buyer/orders/order_actions.dart';
 import 'package:zaylo_mobile/features/buyer/orders/order_detail_screen.dart';
 import 'package:zaylo_mobile/features/buyer/orders/status_pill.dart';
 import 'package:zaylo_mobile/features/buyer/widgets/shop_actions.dart';
@@ -18,6 +19,8 @@ const _orderTabs = {
   'shipped': 'Shipped',
   'delivered': 'Delivered',
   'cancelled': 'Cancelled',
+  // Cancelled orders move here after a couple of days.
+  'history': 'Purchase history',
 };
 
 class OrdersScreen extends StatefulWidget {
@@ -34,6 +37,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
   final _scroll = ScrollController();
   final List<Order> _orders = [];
   Map<String, int> _counts = {};
+  List<CancelReason> _reasons = CancelReason.fallback;
   int _page = 0;
   bool _hasMore = true;
   bool _loading = false;
@@ -77,6 +81,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
       setState(() {
         _orders.addAll(page.orders);
         _counts = page.counts;
+        _reasons = page.cancelReasons;
         _page = page.currentPage;
         _hasMore = page.hasMore;
       });
@@ -163,27 +168,42 @@ class _OrdersScreenState extends State<OrdersScreen> {
             }
             return _hasMore ? const Padding(padding: EdgeInsets.all(12), child: Loader()) : const SizedBox.shrink();
           }
-          return _OrderCard(order: _orders[index], onTap: () => _open(_orders[index]));
+          return _OrderCard(order: _orders[index], reasons: _reasons, onTap: () => _open(_orders[index]), onChanged: _reload);
         },
       ),
     );
   }
 }
 
+/// One order. Its actions (Order received, Cancel, Return / Refund, To review, Buy again) sit at the bottom of the
+/// card, outside the tap area, so the buyer does not have to open the order to use them.
 class _OrderCard extends StatelessWidget {
-  const _OrderCard({required this.order, required this.onTap});
+  const _OrderCard({required this.order, required this.reasons, required this.onTap, required this.onChanged});
 
   final Order order;
+  final List<CancelReason> reasons;
   final VoidCallback onTap;
+  final VoidCallback onChanged;
 
   @override
   Widget build(BuildContext context) => Material(
         color: ZayloColors.paper,
+        clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
           side: BorderSide(color: ZayloColors.line),
         ),
-        child: InkWell(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          _summary(),
+          if (OrderActions.hasAny(order))
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+              child: OrderActions(order: order, reasons: reasons, onChanged: (_) => onChanged()),
+            ),
+        ]),
+      );
+
+  Widget _summary() => InkWell(
           borderRadius: BorderRadius.circular(14),
           onTap: onTap,
           child: Padding(
@@ -228,8 +248,11 @@ class _OrderCard extends StatelessWidget {
                 const Text('Total  ', style: TextStyle(fontSize: 12)),
                 Text(peso(order.total), style: TextStyle(fontWeight: FontWeight.w800, color: ZayloColors.ink)),
               ]),
+              if (order.cancelReason != null) ...[
+                const SizedBox(height: 6),
+                Text('Reason: ${order.cancelReason}', style: const TextStyle(fontSize: 12)),
+              ],
             ]),
           ),
-        ),
-      );
+        );
 }

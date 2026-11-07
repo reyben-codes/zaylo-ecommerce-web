@@ -113,6 +113,7 @@ class MobileShoppingController extends Controller
 
         $items = $this->selectedItems($request, $validated['cart_item_ids']);
         $voucher = $this->checkout->voucher($this->checkout->normalizeVoucherCode($validated['voucher_code'] ?? null));
+        $this->checkout->ensureVoucherApplies($voucher, $items);
         $addresses = $request->user()->addresses()->orderByDesc('is_default')->orderBy('id')->get();
         $partners = $this->checkout->partners();
         // Totals for the first usable address and its nearest partner; the app recalculates from logistics_partners.
@@ -123,6 +124,8 @@ class MobileShoppingController extends Controller
             'items' => $items->map(fn (CartItem $item) => MobilePayload::cartItem($item))->values(),
             'totals' => $this->checkout->quote($items, $voucher, $address, $partner),
             'voucher_code' => $voucher?->code,
+            // What the voucher does, e.g. "10% off, up to ₱100" (the app shows it once applied).
+            'voucher_label' => $voucher?->describe(),
             // The flat fee, which older app builds charge per seller.
             'shipping_per_seller' => CheckoutService::SHIPPING_PER_SELLER,
             // Partners the buyer can pick, with the fee per seller to each saved address (keyed by address id). The
@@ -138,6 +141,13 @@ class MobileShoppingController extends Controller
             ])->values(),
             // Only 18+ products need an approved ID. identity_verified stays "may order these items" so older apps,
             // which disable Place order when it is false, only block orders that hold 18+ products.
+            // GCash goes to each seller's own GCash; sellers without one cannot be paid by GCash.
+            'gcash_sellers' => \App\Services\GcashPayments::ready()
+                ? app(\App\Services\GcashPayments::class)->sellersFor($items)->map(fn (array $seller) => $seller + [
+                    // The voucher discount this shop gives, which the buyer does not send.
+                    'discount' => app(\App\Services\Vouchers::class)->cartDiscounts($voucher, $items)[$seller['seller_id']] ?? 0,
+                ])->values()
+                : [],
             'identity_verified' => ($adultItems = $this->checkout->itemsNeedingIdentity($request->user(), $items))->isEmpty(),
             'identity_required_for' => $adultItems->pluck('product.name')->unique()->values(),
             'estimated_delivery' => [
@@ -161,7 +171,7 @@ class MobileShoppingController extends Controller
             'cart_item_ids' => ['required', 'array', 'min:1'],
             'cart_item_ids.*' => ['required', 'integer', 'distinct'],
             'voucher_code' => ['nullable', 'string', 'max:50'],
-        ]);
+        ] + \App\Services\GcashPayments::checkoutRules());
         $validated['courier_choice'] ??= Order::DEFAULT_COURIER;
 
         // A retried request (for example after a dropped connection) must not order twice.

@@ -138,3 +138,52 @@ a.order-item__name:focus-visible {
         grid-column: 2;
     }
 }
+
+/* Buyer order actions: Cancel (with reasons), the disabled Cancel once the seller confirmed, To review and Buy again. */
+.order-status-card footer { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
+.order-cancelled-note { margin: -6px 0 14px; color: var(--c-6b5f54); font-size: .84rem; }
+
+.order-cancel { position: relative; }
+.order-cancel summary { list-style: none; cursor: pointer; }
+.order-cancel summary::-webkit-details-marker { display: none; }
+.order-cancel__form {
+    display: grid;
+    gap: 10px;
+    width: min(420px, 100%);
+    margin-top: 10px;
+    padding: 14px 16px;
+    border: 1px solid var(--c-d9d0c7);
+    border-radius: 10px;
+    background: var(--c-fbf8f4);
+}
+.order-cancel__form fieldset { display: grid; gap: 6px; margin: 0; padding: 0; border: 0; }
+.order-cancel__form legend { margin-bottom: 6px; color: var(--c-1a1714); font-size: .86rem; font-weight: 600; }
+.order-cancel__reason { display: flex; gap: 8px; align-items: center; color: var(--c-4a4037); font-size: .84rem; cursor: pointer; }
+.order-cancel__reason input { accent-color: var(--c-883b33); }
+.order-cancel__note { color: var(--c-1a1714); font-size: .82rem; font-weight: 600; }
+.order-cancel__note span { color: var(--c-6b5f54); font-weight: 400; }
+.order-cancel__form textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--c-d9d0c7); border-radius: 8px; background: var(--c-ffffff); color: var(--c-1a1714); font: inherit; font-size: .85rem; resize: vertical; }
+.order-cancel__error { margin: 0; color: var(--c-883b33); font-size: .8rem; }
+.order-cancel__submit { width: fit-content; border-color: var(--c-883b33); background: var(--c-883b33); }
+.order-cancel--locked:disabled { opacity: .45; cursor: not-allowed; }
+
+.order-action { display: inline-flex; gap: 6px; align-items: center; padding: 9px 14px; text-decoration: none; }
+.order-action--secondary { border-color: var(--c-d9d0c7); background: transparent; color: var(--c-1a1714); }
+.order-status-card footer form { margin: 0; }
+
+/* GCash paid to the seller (partials/gcash-buyer): status, where to send, and the reference form. */
+.gcash-status { display: grid; gap: 8px; margin: 0 0 14px; padding: 12px 14px; border: 1px solid var(--c-d9d0c7); border-left-width: 3px; border-radius: 10px; background: var(--c-fbf8f4); }
+.gcash-status--paid { border-left-color: var(--c-2d6d3e); }
+.gcash-status--rejected { border-left-color: var(--c-883b33); }
+.gcash-status--pending-verification, .gcash-status--awaiting-reference { border-left-color: var(--c-a17455); }
+.gcash-status__head { display: flex; gap: 10px; align-items: center; }
+.gcash-status__head i { color: var(--c-7b563c); font-size: 1.1rem; }
+.gcash-status--paid .gcash-status__head i { color: var(--c-2d6d3e); }
+.gcash-status--rejected .gcash-status__head i { color: var(--c-883b33); }
+.gcash-status__head strong { display: block; color: var(--c-1a1714); font-size: .88rem; }
+.gcash-status__head span { color: var(--c-6b5f54); font-size: .78rem; letter-spacing: .03em; }
+.gcash-status__note { margin: 0; color: var(--c-4a4037); font-size: .82rem; line-height: 1.5; }
+.gcash-status__form { display: flex; flex-wrap: wrap; gap: 8px; }
+.gcash-status__form input { flex: 1 1 200px; min-height: 40px; padding: 8px 12px; border: 1px solid var(--c-d9d0c7); border-radius: 8px; background: var(--c-ffffff); color: var(--c-1a1714); font: inherit; letter-spacing: .04em; }
+.gcash-status__form input[aria-invalid="true"] { border-color: var(--c-883b33); }
+.gcash-status__error { margin: 0; color: var(--c-883b33); font-size: .8rem; }

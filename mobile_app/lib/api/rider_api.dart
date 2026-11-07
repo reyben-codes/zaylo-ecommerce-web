@@ -143,9 +143,25 @@ class RiderApi extends ApiClient {
           as String;
 
   /// Completed deliveries for [period], newest first; [page] starts at 1.
-  Future<RiderHistoryPage> history({RiderPeriod period = RiderPeriod.all, int page = 1}) async =>
-      RiderHistoryPage.fromJson(
-          await send('GET', '/mobile/rider/history', query: {'period': period.value, 'page': '$page'}));
+  /// Delivered parcels for [period], or between [from] and [to] (inclusive) when given; [search] finds a tracking or
+  /// order number or a recipient. Delivered parcels are kept for good, so any past range can be searched.
+  Future<RiderHistoryPage> history({
+    RiderPeriod period = RiderPeriod.all,
+    int page = 1,
+    DateTime? from,
+    DateTime? to,
+    String? search,
+  }) async {
+    String day(DateTime date) =>
+        '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    return RiderHistoryPage.fromJson(await send('GET', '/mobile/rider/history', query: {
+      'period': period.value,
+      'page': '$page',
+      if (from != null) 'from': day(from),
+      if (to != null) 'to': day(to),
+      if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+    }));
+  }
 
   /// Chat with the buyer of delivery [id]. Opening it marks the buyer's messages as read.
   Future<DeliveryChat> deliveryChat(int id) async =>

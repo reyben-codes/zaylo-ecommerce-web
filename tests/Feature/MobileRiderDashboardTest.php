@@ -70,6 +70,25 @@ class MobileRiderDashboardTest extends TestCase
         ]);
     }
 
+    public function test_history_can_be_searched_by_delivered_dates_and_tracking_number(): void
+    {
+        $rider = $this->rider();
+        $old = $this->parcel('delivered', $rider);
+        $recent = $this->parcel('delivered', $rider);
+        DB::table('shipments')->where('id', $old)->update(['delivered_at' => now()->subDays(60)]);
+        DB::table('shipments')->where('id', $recent)->update(['delivered_at' => now()->subDay()]);
+        $this->signInMobile($rider);
+        $day = fn (int $daysAgo) => now('Asia/Manila')->subDays($daysAgo)->toDateString();
+
+        $this->getJson('/api/mobile/rider/history?from='.$day(7).'&to='.$day(0))->assertOk()
+            ->assertJsonPath('summary.deliveries', 1)->assertJsonCount(1, 'deliveries');
+        // Old deliveries stay in the history for good.
+        $this->getJson('/api/mobile/rider/history?from='.$day(90).'&to='.$day(30))->assertOk()->assertJsonPath('summary.deliveries', 1);
+        $this->getJson('/api/mobile/rider/history?search=TRK-'.DB::table('shipments')->where('id', $old)->value('order_id'))->assertOk()
+            ->assertJsonPath('summary.deliveries', 1);
+        $this->getJson('/api/mobile/rider/history?from='.$day(1).'&to='.$day(3))->assertUnprocessable()->assertJsonValidationErrors('to');
+    }
+
     public function test_dashboard_shows_the_riders_partner_vehicle_and_assigned_parcels_only(): void
     {
         $rider = $this->rider();

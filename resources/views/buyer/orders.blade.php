@@ -1,6 +1,9 @@
 @extends('layouts.app')
 
 @section('title', 'My Orders · ZAYLO')
+@push('scripts')
+<script src="{{ asset('js/smooth-disclosure.js') }}?v={{ filemtime(public_path('js/smooth-disclosure.js')) }}" defer></script>
+@endpush
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/product-reviews.css') }}?v={{ filemtime(public_path('css/product-reviews.css')) }}">
 <link rel="stylesheet" href="{{ asset('css/order-items.css') }}?v={{ filemtime(public_path('css/order-items.css')) }}">
@@ -19,13 +22,8 @@
 
 <div class="page-content orders-page">
     @php
-        $tabs = [
-            'all' => 'All orders',
-            'to_ship' => 'To ship',
-            'shipped' => 'Shipped',
-            'delivered' => 'Delivered',
-            'cancelled' => 'Cancelled',
-        ];
+        // Cancelled orders move to Purchase history after a couple of days.
+        $tabs = \App\Support\BuyerOrderTabs::LABELS;
         $statusMessages = [
             'placed' => 'Order placed. Waiting for the seller to confirm.',
             'confirmed' => 'The seller has confirmed your order.',
@@ -62,6 +60,19 @@
             </header>
 
             <p class="order-status-message">{{ $statusMessages[$order->status] ?? 'Your order status has been updated.' }}</p>
+            @include('partials.gcash-buyer', ['order' => $order])
+            @if($order->status === 'cancelled')
+                @php
+                    $cancelReason = \App\Support\BuyerOrderTabs::reasonLabel(\Illuminate\Support\Facades\Schema::hasColumn('orders', 'cancel_reason') ? $order->cancel_reason : null);
+                    $cancelledAt = \App\Support\BuyerOrderTabs::cancelledAt($order);
+                @endphp
+                <p class="order-cancelled-note">
+                    @if($cancelReason)<strong>Reason:</strong> {{ $cancelReason }}@if($order->cancel_note) ({{ $order->cancel_note }})@endif. @endif
+                    @if($cancelledAt && $cancelledAt->gt(now()->subDays(\App\Support\BuyerOrderTabs::HISTORY_AFTER_DAYS)))
+                        Moves to Purchase history on {{ $cancelledAt->copy()->addDays(\App\Support\BuyerOrderTabs::HISTORY_AFTER_DAYS)->timezone('Asia/Manila')->format('M j') }}.
+                    @endif
+                </p>
+            @endif
 
             @if($order->status === 'delivered')
                 @php
@@ -197,14 +208,47 @@
             <footer>
                 <strong>Total: &#8369;{{ number_format($order->total, 2) }}</strong>
                 <span>{{ strtoupper($order->payment_method) }} · Payment {{ str($order->payment?->status ?? 'pending')->replace('_', ' ')->title() }}</span>
+                @php $cancelLocked = \App\Support\MobilePayload::cancelLockedReason($order); @endphp
                 @if(in_array($order->status, \App\Services\CheckoutService::BUYER_CANCELLABLE, true))
-                    <form method="POST" action="{{ route('buyer.orders.cancel', $order) }}"
-                          data-confirm="Cancel order {{ $order->order_number }}? This cannot be undone." data-confirm-title="Cancel order?" data-confirm-button="Cancel order" data-confirm-tone="danger">
+                    @php $cancelErrors = $errors->hasAny(['reason', 'note']) && (int) old('cancel_order') === $order->id; @endphp
+                    <details class="order-cancel" data-smooth-disclosure @if($cancelErrors) open @endif>
+                        <summary class="text-button danger">Cancel order</summary>
+                        <div data-disclosure-content>
+                            <form method="POST" action="{{ route('buyer.orders.cancel', $order) }}" class="order-cancel__form"
+                                  data-confirm="Cancel order {{ $order->order_number }}? Its items go back on sale, and you can buy them again from Cancelled." data-confirm-title="Cancel order?" data-confirm-button="Cancel order" data-confirm-tone="danger">
+                                @csrf
+                                <input type="hidden" name="cancel_order" value="{{ $order->id }}">
+                                <fieldset>
+                                    <legend>Why are you cancelling?</legend>
+                                    @foreach(\App\Support\BuyerOrderTabs::CANCEL_REASONS as $key => $label)
+                                        <label class="order-cancel__reason">
+                                            <input type="radio" name="reason" value="{{ $key }}" required @checked($cancelErrors && old('reason') === $key)>
+                                            <span>{{ $label }}</span>
+                                        </label>
+                                    @endforeach
+                                </fieldset>
+                                <label class="order-cancel__note" for="cancel-note-{{ $order->id }}">Tell us more <span>(needed for "Other reason")</span></label>
+                                <textarea id="cancel-note-{{ $order->id }}" name="note" maxlength="255" rows="2">{{ $cancelErrors ? old('note') : '' }}</textarea>
+                                @if($cancelErrors)<p class="order-cancel__error" role="alert">{{ $errors->first('reason') ?: $errors->first('note') }}</p>@endif
+                                <button class="market-button order-cancel__submit" type="submit">Cancel order</button>
+                            </form>
+                        </div>
+                    </details>
+                @elseif($cancelLocked)
+                    {{-- The seller confirmed it: Cancel stays visible but cannot be pressed, with the reason. --}}
+                    <button class="text-button danger order-cancel--locked" type="button" disabled title="{{ $cancelLocked }}">
+                        <i class="fas fa-lock" aria-hidden="true"></i> Cancel order<span class="sr-only"> (unavailable: {{ $cancelLocked }})</span>
+                    </button>
+                @endif
+                @if(\App\Support\MobilePayload::canReview($order))
+                    @php $toReview = $order->items->first(fn ($item) => $item->product_id && ! $item->review); @endphp
+                    <a class="market-button order-action" href="{{ route('buyer.reviews.create', $toReview) }}"><i class="fas fa-star" aria-hidden="true"></i> To review</a>
+                @endif
+                @if(in_array($order->status, ['cancelled', 'delivered', 'completed'], true))
+                    <form method="POST" action="{{ route('buyer.orders.buy-again', $order) }}">
                         @csrf
-                        <button class="text-button danger" type="submit">Cancel order</button>
+                        <button class="market-button order-action order-action--secondary" type="submit"><i class="fas fa-rotate-right" aria-hidden="true"></i> Buy again</button>
                     </form>
-                @elseif($order->status === 'confirmed')
-                    <span class="order-cancel-note"><i class="fas fa-lock" aria-hidden="true"></i> The seller confirmed this order, so it can no longer be cancelled.</span>
                 @endif
                 @if($order->relationLoaded('disputes'))
                     @php $complaint = $order->disputes->first(); @endphp
@@ -276,7 +320,7 @@
     @empty
         <div class="placeholder-card order-empty-state">
             <i class="fas fa-box-open" aria-hidden="true"></i>
-            <h2>{{ $filter === 'all' ? 'No orders yet' : 'No '.$tabs[$filter].' orders' }}</h2>
+            <h2>{{ match ($filter) { 'all' => 'No orders yet', 'history' => 'No purchase history yet', default => 'No '.$tabs[$filter].' orders' } }}</h2>
             <p>{{ $filter === 'all' ? 'Your purchases will appear here after checkout.' : 'Orders at this stage will appear here.' }}</p>
             @if($filter === 'all')
                 <a href="{{ route('products.index') }}" class="market-button">Browse products</a>
