@@ -7,6 +7,7 @@ use App\Models\Dispute;
 use App\Models\Order;
 use App\Models\Rider;
 use App\Models\Shipment;
+use App\Models\User;
 use App\Services\ChatPhotos;
 use App\Services\LogisticsMessenger;
 use App\Services\ReturnPickups;
@@ -47,12 +48,16 @@ class LogisticsOperationsController extends Controller
         $shipments = $this->search(ShipmentWorkflow::whereStage($this->withParcelDetails($this->parcels()), [$tab === 'scheduled' ? 'confirmed' : 'ready']), $search)
             ->when($tab === 'scheduled', fn (Builder $query) => $query->orderBy('pickup_scheduled_for'))
             ->oldest()->paginate(15)->withQueryString();
+        $availableCouriers = $this->logisticsProvider()
+            ? $this->logisticsProvider()->couriers()->where('status', 'approved')->where('is_active', true)->with('user')->get()
+            : collect();
 
         return view('logistics.operations.pickups', [
             'shipments' => $shipments,
             'search' => $search,
             'tab' => $tab,
             'hub' => $hub,
+            'availableCouriers' => $availableCouriers,
             'counts' => [
                 'requests' => ShipmentWorkflow::whereStage($this->parcels(), ['ready'])->count(),
                 'scheduled' => $hub ? ShipmentWorkflow::whereStage($this->parcels(), ['confirmed'])->count() : 0,
@@ -307,6 +312,7 @@ class LogisticsOperationsController extends Controller
         $data = $request->validate([
             'decision' => ['required', Rule::in(['confirm', 'decline'])],
             'pickup_date' => ['exclude_unless:decision,confirm', 'required', 'date', 'after_or_equal:'.now('Asia/Manila')->toDateString(), 'before_or_equal:'.now('Asia/Manila')->addDays(14)->toDateString()],
+            'courier_id' => ['nullable', 'integer', Rule::exists('users', 'id')],
             'reason' => ['exclude_unless:decision,decline', 'required', 'string', 'min:5', 'max:500'],
         ], [
             'pickup_date.required' => 'Choose the pickup date.',
@@ -321,7 +327,11 @@ class LogisticsOperationsController extends Controller
 
         if ($data['decision'] === 'confirm') {
             $date = Carbon::parse($data['pickup_date'], 'Asia/Manila');
-            DB::transaction(function () use ($shipment, $date, $provider, $request) {
+            $courier = ! empty($data['courier_id']) ? User::find($data['courier_id']) : null;
+            if ($courier && ! $courier->isCourier()) {
+                throw ValidationException::withMessages(['courier_id' => 'The selected user is not a courier.']);
+            }
+            DB::transaction(function () use ($shipment, $date, $provider, $request, $courier) {
                 // An open request (no partner named) goes to the first partner to confirm it.
                 if ($provider && Shipment::tracksProvider() && $shipment->logistics_provider_id === null) {
                     $taken = Shipment::whereKey($shipment->id)->whereNull('logistics_provider_id')->update(['logistics_provider_id' => $provider->id]);
@@ -329,17 +339,33 @@ class LogisticsOperationsController extends Controller
                         throw ValidationException::withMessages(['pickup_date' => 'Another logistics partner has already taken this pickup.']);
                     }
                 }
-                $this->workflow->confirmPickup($shipment, $date, $request->user());
+                $this->workflow->confirmPickup($shipment, $date, $request->user(), $courier);
             });
             $provider && $this->messenger->notify($provider, $sellerId, "Pickup confirmed for order {$parcel['order']} (parcel {$parcel['tracking']}). We will collect it on {$date->format('l, M j')}. Please have it packed and labeled.");
 
-            return back()->with('status', "Pickup for {$parcel['tracking']} confirmed for {$date->format('M j')}.");
+            return back()->with('status', "Pickup for {$parcel['tracking']} confirmed for {$date->format('M j')}.".($courier ? " Assigned to courier {$courier->name}." : ''));
         }
 
         $this->workflow->declinePickup($shipment, $data['reason'], $request->user());
         $provider && $this->messenger->notify($provider, $sellerId, "We could not accept the pickup for order {$parcel['order']}: {$data['reason']} The order is back in your Processing list; mark it ready to ship again once it is fixed.");
 
         return back()->with('status', "Pickup for {$parcel['tracking']} declined. The seller has been told why.");
+    }
+
+    /** Assign or reassign a first-mile courier to pick up from the seller. */
+    public function assignCourier(Request $request, Shipment $shipment)
+    {
+        $this->ownsParcel($shipment, orOpenRequest: true);
+        $data = $request->validate([
+            'courier_id' => ['required', 'integer', Rule::exists('users', 'id')],
+        ], [
+            'courier_id.required' => 'Choose a courier to assign.',
+        ]);
+        $courier = User::whereKey($data['courier_id'])->firstOrFail();
+        abort_unless($courier->isCourier(), 422, 'Selected user is not a courier.');
+        $this->workflow->assignPickupCourier($shipment, $courier, $request->user());
+
+        return back()->with('status', 'Pickup for parcel '.$this->tracking($shipment).' assigned to courier '.$courier->name.'.');
     }
 
     public function sort(Request $request, Shipment $shipment)

@@ -268,12 +268,30 @@ class ShipmentWorkflow
         return (bool) preg_match('/^(NCR|CAR|BARMM|MIMAROPA|CALABARZON|SOCCSKSARGEN|Caraga|Region\b|National Capital|Cordillera|Bangsamoro|Ilocos|Cagayan Valley|Central Luzon|Bicol|Western Visayas|Central Visayas|Eastern Visayas|Zamboanga Peninsula|Northern Mindanao|Davao)/i', $part);
     }
 
-    public function confirmPickup(Shipment $shipment, Carbon $date, User $actor): void
+    public function confirmPickup(Shipment $shipment, Carbon $date, User $actor, ?User $courier = null): void
     {
-        DB::transaction(function () use ($shipment, $date, $actor) {
+        DB::transaction(function () use ($shipment, $date, $actor, $courier) {
             $locked = $this->lockAt($shipment, ['ready', 'confirmed'], 'This pickup was already collected or declined.');
-            $locked->update(['pickup_confirmed_at' => $locked->pickup_confirmed_at ?? now(), 'pickup_scheduled_for' => $date->toDateString()]);
-            $this->syncOrder($locked, 'confirmed', $actor, 'Pickup confirmed by logistics for '.$date->format('M j, Y').'.');
+            $attributes = [
+                'pickup_confirmed_at' => $locked->pickup_confirmed_at ?? now(),
+                'pickup_scheduled_for' => $date->toDateString(),
+            ];
+            if ($courier) {
+                $attributes['pickup_courier_id'] = $courier->id;
+            }
+            $locked->update($attributes);
+            $note = 'Pickup confirmed by logistics for '.$date->format('M j, Y').'.'
+                .($courier ? ' Assigned to pickup courier '.$courier->name.'.' : '');
+            $this->syncOrder($locked, 'confirmed', $actor, $note);
+        });
+    }
+
+    public function assignPickupCourier(Shipment $shipment, User $courier, User $actor): void
+    {
+        DB::transaction(function () use ($shipment, $courier, $actor) {
+            $locked = $this->lockAt($shipment, ['ready', 'confirmed'], 'This pickup was already collected or declined.');
+            $locked->update(['pickup_courier_id' => $courier->id]);
+            $this->syncOrder($locked, self::stageOf($locked), $actor, 'Assigned to pickup courier '.$courier->name.'.');
         });
     }
 
@@ -317,8 +335,13 @@ class ShipmentWorkflow
             }
             $attributes = ['status' => self::stored($to)];
             // Only the deployed schema keeps step timestamps; the newer one counts attempts and COD instead.
-            if ($to === 'picked_up' && Schema::hasColumn('shipments', 'picked_up_at') && ! $locked->picked_up_at) {
-                $attributes['picked_up_at'] = now();
+            if ($to === 'picked_up') {
+                if (Schema::hasColumn('shipments', 'picked_up_at') && ! $locked->picked_up_at) {
+                    $attributes['picked_up_at'] = now();
+                }
+                if ($actor->hasRole('courier') && ! $locked->pickup_courier_id) {
+                    $attributes['pickup_courier_id'] = $actor->id;
+                }
             }
             if ($to === 'delivered' && Schema::hasColumn('shipments', 'delivered_at')) {
                 $attributes['delivered_at'] = now();

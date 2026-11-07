@@ -193,20 +193,24 @@ class AuthController extends Controller
         $logisticsApplying = $request->input('role') === 'logistics' && $logisticsApplications->available();
         if ($logisticsApplying) {
             $logisticsApplications->prepare($request);
-        }        // Rider applications take a driver's license (LTO format), its expiry, and license and OR/CR documents.
-        $riderApplying = $request->input('role') === 'courier';
-        $riderDocuments = $riderApplying && Schema::hasColumn('riders', 'license_document_path');
-        if ($riderApplying) {
+        }        // Rider & Courier applications take a driver's license (LTO format), its expiry, and license and OR/CR documents.
+        $driverApplying = in_array($request->input('role'), ['courier', 'rider'], true);
+        $riderDocuments = $driverApplying && Schema::hasColumn('riders', 'license_document_path');
+        if ($driverApplying) {
             $request->merge([
                 'license_number' => Rider::normalizeLicense($request->input('license_number')) ?: null,
                 'plate_no' => Rider::normalizePlate($request->input('plate_no')) ?: null,
             ]);
         }
-        $riderOnly = fn (array $rules) => array_merge(['exclude_unless:role,courier', 'nullable', 'required_unless:vehicle_type,'.implode(',', Rider::UNLICENSED_VEHICLES)], $rules);
+        $driverOnly = fn (array $rules) => array_merge([
+            Rule::excludeIf(! $driverApplying),
+            'nullable',
+            'required_unless:vehicle_type,'.implode(',', Rider::UNLICENSED_VEHICLES),
+        ], $rules);
         $riderRules = $riderDocuments ? [
-            'license_expires_on' => $riderOnly(['date', 'after_or_equal:today']),
-            'license_document' => $riderOnly(['file', 'mimes:jpg,jpeg,png,pdf', 'max:'.Rider::MAX_DOCUMENT_KB]),
-            'or_cr_document' => $riderOnly(['file', 'mimes:jpg,jpeg,png,pdf', 'max:'.Rider::MAX_DOCUMENT_KB]),
+            'license_expires_on' => $driverOnly(['date', 'after_or_equal:today']),
+            'license_document' => $driverOnly(['file', 'mimes:jpg,jpeg,png,pdf', 'max:'.Rider::MAX_DOCUMENT_KB]),
+            'or_cr_document' => $driverOnly(['file', 'mimes:jpg,jpeg,png,pdf', 'max:'.Rider::MAX_DOCUMENT_KB]),
         ] : [];
 
         $validated = $request->validate(array_replace([
@@ -215,19 +219,19 @@ class AuthController extends Controller
             'first_name'            => ['required', 'string', 'min:2', 'max:50', new PersonName],
             'last_name'             => ['required', 'string', 'min:2', 'max:50', new PersonName],
             'phone'                 => ['required', 'string', 'max:11', new PhoneNumber, 'unique:users,phone'],
-            'date_of_birth'         => ['required_if:role,buyer,courier', 'nullable', 'bail', 'date', 'before_or_equal:today', function (string $attribute, mixed $value, \Closure $fail) {
+            'date_of_birth'         => ['required_if:role,buyer,courier,rider', 'nullable', 'bail', 'date', 'before_or_equal:today', function (string $attribute, mixed $value, \Closure $fail) {
                 if (Carbon::parse($value)->startOfDay()->gt(today()->subYears(18))) {
                     $fail('You must be at least 18 years old to register.');
                 }
             }],
             'terms'                 => 'accepted',
-            'role'                  => 'required|in:buyer,seller,courier,logistics',
+            'role'                  => 'required|in:buyer,seller,courier,rider,logistics',
             'company_name'          => 'exclude_unless:role,logistics|required|string|min:2|max:150',
             'service_area'          => $logisticsApplying ? 'exclude' : 'exclude_unless:role,logistics|nullable|string|max:150',
-            'logistics_provider_id' => ['exclude_unless:role,courier', 'required', 'integer', Rule::exists('logistics_providers', 'id')->where('status', 'approved')],
-            'vehicle_type'          => ['exclude_unless:role,courier', 'required', Rule::in(Rider::VEHICLE_TYPES)],
-            'plate_no'              => $riderOnly(['string', 'regex:'.Rider::PLATE_PATTERN, 'unique:riders,plate_no']),
-            'license_number'        => $riderOnly(['string', 'regex:'.Rider::LICENSE_PATTERN, 'unique:riders,license_number']),
+            'logistics_provider_id' => [Rule::excludeIf(! $driverApplying), 'required', 'integer', Rule::exists('logistics_providers', 'id')->where('status', 'approved')],
+            'vehicle_type'          => [Rule::excludeIf(! $driverApplying), 'required', Rule::in(Rider::VEHICLE_TYPES)],
+            'plate_no'              => $driverOnly(['string', 'regex:'.Rider::PLATE_PATTERN, 'unique:riders,plate_no']),
+            'license_number'        => $driverOnly(['string', 'regex:'.Rider::LICENSE_PATTERN, 'unique:riders,license_number']),
         ] + $riderRules + ($sellerApplying ? $sellerApplications->rules($request) : []),
             // The logistics company name rule (with its duplicate check) replaces the basic one above.
             $logisticsApplying ? $logisticsApplications->rules() : []), [
@@ -393,7 +397,7 @@ class AuthController extends Controller
 
         if (! $request->user()->isActive()) {
             $loginRoute = $request->user()->portalLoginRoute();
-            $reviewer = $request->user()->hasRole('rider') ? 'your logistics partner' : 'an administrator';
+            $reviewer = $request->user()->hasRole('rider', 'courier') ? 'your logistics partner' : 'an administrator';
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
@@ -401,8 +405,13 @@ class AuthController extends Controller
             return redirect()->route($loginRoute)->with('status', "Email verified. Your account is still awaiting approval from {$reviewer}.");
         }
 
+        // Couriers manage first-mile pickups on the website dashboard.
+        if ($request->user()->hasRole('courier')) {
+            return redirect()->route('courier.dashboard')->with('status', 'Email verified. Welcome to your Courier Dashboard.');
+        }
+
         // Riders work in the app, so the website signs them out and shows where to get it.
-        if ($request->user()->hasRole('rider', 'courier')) {
+        if ($request->user()->hasRole('rider')) {
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
@@ -536,6 +545,7 @@ class AuthController extends Controller
         if ($user->hasRole('admin')) return redirect()->route('admin.dashboard');
         if ($user->hasRole('seller')) return redirect()->route('seller.dashboard');
         if ($user->hasRole('logistics')) return redirect()->route('logistics.dashboard');
+        if ($user->hasRole('courier')) return redirect()->route('courier.dashboard');
         if ($user->hasRole('buyer')) return redirect()->route('buyer.dashboard');
 
         return redirect()->route('home');

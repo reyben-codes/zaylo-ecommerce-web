@@ -208,9 +208,9 @@ class PendingRegistrationService
             $pending->role === 'logistics' && isset($data['company_name']) && $this->logisticsApplications->companyNameTaken($data['company_name']) => 'Your company name was registered by another logistics partner in the meantime.',
             $pending->role === 'logistics' && isset($data['sec_registration_no']) && LogisticsProvider::where('sec_registration_no', $data['sec_registration_no'])->exists() => 'Your SEC registration number was registered by another logistics partner in the meantime.',
             $pending->role === 'logistics' && isset($data['tin']) && LogisticsProvider::where('tin', $data['tin'])->exists() => 'Your TIN was registered by another business in the meantime.',
-            $pending->role === 'courier' && ! empty($data['license_number']) && Rider::where('license_number', $data['license_number'])->exists() => "Your driver's license number was registered by another rider in the meantime.",
-            $pending->role === 'courier' && ! empty($data['plate_no']) && Rider::where('plate_no', $data['plate_no'])->exists() => 'Your plate number was registered by another rider in the meantime.',
-            $pending->role === 'courier' && ! LogisticsProvider::acceptingRiders()->whereKey($data['logistics_provider_id'] ?? 0)->exists() => 'That logistics partner is no longer accepting riders.',
+            in_array($pending->role, ['courier', 'rider'], true) && ! empty($data['license_number']) && Rider::where('license_number', $data['license_number'])->exists() => "Your driver's license number was registered by another driver in the meantime.",
+            in_array($pending->role, ['courier', 'rider'], true) && ! empty($data['plate_no']) && Rider::where('plate_no', $data['plate_no'])->exists() => 'Your plate number was registered by another driver in the meantime.',
+            in_array($pending->role, ['courier', 'rider'], true) && ! LogisticsProvider::acceptingRiders()->whereKey($data['logistics_provider_id'] ?? 0)->exists() => 'That logistics partner is no longer accepting drivers.',
             default => null,
         };
         if ($taken) {
@@ -229,9 +229,9 @@ class PendingRegistrationService
             'email' => $data['email'],
             // Hashed when the form was submitted; the model keeps an already-hashed value as is.
             'password' => $data['password_hash'],
-            'role' => $role === 'courier' ? 'rider' : $role,
+            'role' => $role,
             'phone' => $data['phone'],
-            'date_of_birth' => in_array($role, ['buyer', 'courier'], true) ? ($data['date_of_birth'] ?? null) : null,
+            'date_of_birth' => in_array($role, ['buyer', 'courier', 'rider'], true) ? ($data['date_of_birth'] ?? null) : null,
             'status' => $role === 'buyer' ? 'active' : 'pending',
         ]);
         $user->forceFill(['email_verified_at' => now()] + (! empty($data['gender']) && Schema::hasColumn('users', 'gender') ? ['gender' => $data['gender']] : []))->save();
@@ -268,7 +268,7 @@ class PendingRegistrationService
             ]);
         }
 
-        if ($role === 'courier') {
+        if (in_array($role, ['courier', 'rider'], true)) {
             $extra = Schema::hasColumn('riders', 'license_document_path') ? [
                 'license_expires_on' => $data['license_expires_on'] ?? null,
                 'license_document_path' => $documents['license_document'] ?? null,

@@ -21,6 +21,12 @@ class ParcelView
         $recipient = $order?->recipient_name ?: (is_array($address) ? (data_get($address, 'recipient') ?: data_get($address, 'recipient_name')) : null);
         $seller = $shipment->sellerOrder?->seller?->name
             ?? ($order?->seller ? $order->seller->sellerStoreName() : null);
+        $sellerUser = $shipment->sellerOrder?->seller?->owner ?? $order?->seller;
+        $sellerAddressModel = $shipment->sellerOrder?->seller?->pickupAddress
+            ?? $sellerUser?->addresses()->where('is_default', true)->first()
+            ?? $sellerUser?->addresses()->first();
+        $pickupAddress = $sellerAddressModel ? $sellerAddressModel->formatted() : null;
+
         $rider = Schema::hasColumn('shipments', 'rider_id') && $shipment->rider_id
             ? $shipment->rider?->user?->name
             : ($shipment->courier_id ? $shipment->courier?->name : null);
@@ -29,9 +35,13 @@ class ParcelView
             'tracking' => $shipment->tracking_number ?? $shipment->tracking_code ?? 'Parcel #'.$shipment->id,
             'order' => $order?->order_number ?: '—',
             'seller' => $seller ?: '—',
+            'seller_phone' => $sellerUser?->phone,
+            'pickup_address' => $pickupAddress ?: '—',
             'recipient' => $recipient ?: '—',
             'phone' => $order?->phone,
             'destination' => $destination ?: '—',
+            'pickup_courier' => $shipment->pickupCourier?->name,
+            'pickup_courier_id' => $shipment->pickup_courier_id,
             'rider' => $rider,
             'stage' => ShipmentWorkflow::stageOf($shipment),
             'label' => ShipmentWorkflow::labelOf($shipment),

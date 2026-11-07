@@ -37,7 +37,8 @@ class AdminController extends Controller
         'buyer' => 'Buyer',
         'seller' => 'Seller',
         'logistics' => 'Logistics partner',
-        'rider' => 'Rider',
+        'courier' => 'Courier (First-Mile)',
+        'rider' => 'Rider (Last-Mile)',
         'admin' => 'Administrator',
     ];
 

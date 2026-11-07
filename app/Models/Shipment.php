@@ -14,7 +14,7 @@ use Illuminate\Support\Str;
 class Shipment extends Model
 {
     protected $fillable = [
-        'order_id', 'courier_id', 'tracking_number', 'picked_up_at', 'delivered_at',
+        'order_id', 'courier_id', 'pickup_courier_id', 'tracking_number', 'picked_up_at', 'delivered_at',
         'seller_order_id', 'logistics_provider_id', 'rider_id', 'tracking_code',
         'status', 'fee_minor', 'cod_amount_minor', 'cod_collected', 'attempts',
         'pickup_confirmed_at', 'pickup_scheduled_for', 'sorted_at', 'sort_area',
@@ -32,6 +32,12 @@ class Shipment extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
+    }
+
+    /** The first-mile courier who picks up parcels from the seller and brings them to the hub. */
+    public function pickupCourier(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'pickup_courier_id');
     }
 
     public function courier(): BelongsTo

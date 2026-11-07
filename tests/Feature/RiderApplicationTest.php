@@ -150,7 +150,7 @@ class RiderApplicationTest extends TestCase
     private function apply(array $overrides = [])
     {
         $data = array_replace([
-            'role' => 'courier', 'first_name' => 'Pedro Jose', 'last_name' => 'Garcia', 'email' => 'pedrojose.garcia@example.com',
+            'role' => 'rider', 'first_name' => 'Pedro Jose', 'last_name' => 'Garcia', 'email' => 'pedrojose.garcia@example.com',
             'phone' => '09451239876', 'date_of_birth' => '1995-03-22', 'password' => 'Rider@2026', 'password_confirmation' => 'Rider@2026', 'terms' => '1',
             'logistics_provider_id' => $this->partner->id, 'vehicle_type' => 'Motorcycle', 'plate_no' => '123ABC',
             'license_number' => 'N01-23-456789', 'license_expires_on' => today()->addYears(4)->toDateString(),

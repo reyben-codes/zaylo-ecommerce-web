@@ -19,8 +19,17 @@ class RoleMiddleware
             return redirect()->route('login');
         }
 
-        $roles = array_map(fn (string $role) => $role === 'courier' ? 'rider' : $role, $roles);
-        if (! Auth::user()->hasRole(...$roles)) {
+        $expanded = [];
+        foreach ($roles as $role) {
+            $expanded[] = $role;
+            if ($role === 'courier') {
+                $expanded[] = 'rider';
+            } elseif ($role === 'rider') {
+                $expanded[] = 'courier';
+            }
+        }
+
+        if (! Auth::user()->hasRole(...array_unique($expanded))) {
             abort(403, 'Unauthorized. You do not have access to this area.');
         }
 

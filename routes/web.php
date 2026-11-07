@@ -240,11 +240,6 @@ Route::middleware(['auth', 'active', 'verified', 'role:courier', 'nocache'])->pr
     Route::get('/chat', [LogisticsChatController::class, 'rider'])->name('chat');
 });
 
-Route::middleware(['auth', 'active', 'verified', 'role:sorting_center', 'nocache'])->prefix('sorting-center')->name('sorting-center.')->group(function () {
-    Route::get('/dashboard', [SortingCenterController::class, 'dashboard'])->name('dashboard');
-    Route::patch('/shipments/{shipment}/status', [SortingCenterController::class, 'updateStatus'])->name('shipments.status');
-});
-
 Route::middleware(['auth', 'active', 'verified', 'role:admin', 'nocache'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/updates', [WorkspaceUpdatesController::class, 'admin'])->middleware('throttle:60,1')->name('updates');
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
@@ -311,7 +306,7 @@ Route::middleware(['auth', 'active', 'verified', 'role:buyer', 'nocache'])->grou
     Route::get('/buyer/orders/{order}/complaint', [DisputeController::class, 'create'])->name('buyer.disputes.create');
     Route::post('/buyer/orders/{order}/complaint', [DisputeController::class, 'store'])->middleware('throttle:10,1')->name('buyer.disputes.store');
 });
-Route::middleware(['auth', 'active', 'verified', 'role:buyer,seller,rider,admin', 'nocache'])->prefix('complaints')->name('disputes.')->group(function () {
+Route::middleware(['auth', 'active', 'verified', 'role:buyer,seller,rider,courier,admin', 'nocache'])->prefix('complaints')->name('disputes.')->group(function () {
     Route::get('/', [DisputeController::class, 'index'])->name('index');
     Route::get('/{dispute}', [DisputeController::class, 'show'])->name('show');
     Route::post('/{dispute}/messages', [DisputeController::class, 'reply'])->middleware('throttle:30,1')->name('reply');
@@ -327,7 +322,7 @@ Route::middleware(['auth', 'nocache'])->group(function () {
 
 // Help & support: every account can message the ZAYLO admin team.
 Route::middleware(['auth', 'active', 'verified', 'nocache'])->group(function () {
-    Route::get('/support', [SupportChatController::class, 'user'])->middleware('role:buyer,seller,rider,logistics')->name('support');
+    Route::get('/support', [SupportChatController::class, 'user'])->middleware('role:buyer,seller,rider,courier,logistics')->name('support');
     Route::get('/support/{thread}/messages', [SupportChatController::class, 'messages'])->middleware('throttle:120,1')->name('support.messages');
     Route::post('/support/{thread}', [SupportChatController::class, 'send'])->middleware('throttle:30,1')->name('support.send');
     Route::get('/support/{thread}/messages/{message}/{kind}', [SupportChatController::class, 'media'])->whereIn('kind', ['photo', 'video'])->middleware('throttle:240,1')->name('support.media');
@@ -358,6 +353,7 @@ Route::middleware(['auth', 'active', 'verified', 'role:logistics', 'nocache'])->
     Route::get('/notifications', [WorkspaceNotificationController::class, 'index'])->name('notifications');
     Route::post('/notifications/open', [WorkspaceNotificationController::class, 'open'])->name('notifications.open');
     Route::post('/notifications/read-all', [WorkspaceNotificationController::class, 'markAllRead'])->name('notifications.read-all');
+    Route::get('/couriers', [LogisticsController::class, 'couriers'])->name('couriers');
     Route::get('/riders', [LogisticsController::class, 'riders'])->name('riders');
     Route::get('/riders/{rider}/documents/{document}', [LogisticsController::class, 'riderDocument'])->name('riders.document');
     Route::patch('/riders/{rider}', [LogisticsController::class, 'updateRider'])->middleware('throttle:60,1')->name('riders.update');
@@ -391,6 +387,7 @@ Route::middleware(['auth', 'active', 'verified', 'role:logistics', 'nocache'])->
     Route::get('/parcels/{shipment}/waybill', [WaybillController::class, 'logistics'])->middleware('throttle:120,1')->name('parcels.waybill');
     Route::get('/parcels/{shipment}/waybill/print', [WaybillController::class, 'logisticsPrint'])->middleware('throttle:120,1')->name('parcels.waybill.print');
     Route::patch('/parcels/{shipment}/pickup', [LogisticsOperationsController::class, 'pickup'])->middleware('throttle:120,1')->name('parcels.pickup');
+    Route::post('/parcels/{shipment}/courier', [LogisticsOperationsController::class, 'assignCourier'])->middleware('throttle:120,1')->name('parcels.courier');
     Route::patch('/parcels/{shipment}/sort', [LogisticsOperationsController::class, 'sort'])->middleware('throttle:120,1')->name('parcels.sort');
     Route::patch('/parcels/{shipment}/status', [LogisticsOperationsController::class, 'advance'])->middleware('throttle:120,1')->name('parcels.advance');
     Route::patch('/returns/{dispute}/scan', [LogisticsOperationsController::class, 'updateReturnScan'])->middleware('throttle:120,1')->name('returns.scan');
@@ -408,7 +405,7 @@ Route::middleware(['auth', 'active', 'verified', 'role:logistics', 'nocache'])->
 });
 
 // Logistics chat, shared by the logistics partner, its sellers and its riders (each thread checks who may open it).
-Route::middleware(['auth', 'active', 'verified', 'role:logistics,seller,rider', 'nocache'])->prefix('logistics-chat')->name('logistics-chat.')->group(function () {
+Route::middleware(['auth', 'active', 'verified', 'role:logistics,seller,rider,courier', 'nocache'])->prefix('logistics-chat')->name('logistics-chat.')->group(function () {
     Route::get('/{thread}/messages', [LogisticsChatController::class, 'messages'])->middleware('throttle:120,1')->name('messages');
     Route::post('/{thread}', [LogisticsChatController::class, 'send'])->middleware('throttle:30,1')->name('send');
     Route::get('/{thread}/messages/{message}/{kind}', [LogisticsChatController::class, 'media'])->whereIn('kind', ['photo', 'video'])->middleware('throttle:240,1')->name('media');

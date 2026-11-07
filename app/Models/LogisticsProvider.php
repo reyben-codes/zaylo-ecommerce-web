@@ -47,6 +47,30 @@ class LogisticsProvider extends Model
         return $this->hasMany(Rider::class);
     }
 
+    /** First-mile pickup drivers (seller -> hub). */
+    public function couriers(): HasMany
+    {
+        return $this->hasMany(Rider::class)->whereHas('user', function ($q) {
+            if (\Illuminate\Support\Facades\Schema::hasColumn('users', 'role')) {
+                $q->where('role', 'courier');
+            } else {
+                $q->whereHas('roles', fn ($r) => $r->where('name', 'courier'));
+            }
+        });
+    }
+
+    /** Last-mile delivery drivers (hub -> buyer). */
+    public function deliveryRiders(): HasMany
+    {
+        return $this->hasMany(Rider::class)->whereHas('user', function ($q) {
+            if (\Illuminate\Support\Facades\Schema::hasColumn('users', 'role')) {
+                $q->where('role', 'rider');
+            } else {
+                $q->whereHas('roles', fn ($r) => $r->where('name', 'rider'));
+            }
+        });
+    }
+
     public function sellerOrders(): HasMany
     {
         return $this->hasMany(SellerOrder::class);

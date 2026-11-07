@@ -57,7 +57,7 @@ class LogisticsPartnerTest extends TestCase
         $partner = $this->approvedPartner('Swift Parcels');
         $other = $this->approvedPartner('Other Couriers');
 
-        $riderUser = $this->signUp($this->registration('courier', 'rider@example.com') + [
+        $riderUser = $this->signUp($this->registration('rider', 'rider@example.com') + [
             'logistics_provider_id' => $partner->id, 'vehicle_type' => 'Motorcycle', 'plate_no' => 'abc 1234', 'license_number' => 'N01-23-456789',
             'date_of_birth' => '1995-03-22', 'license_expires_on' => today()->addYears(3)->toDateString(),
             'license_document' => UploadedFile::fake()->create('drivers_license.jpg', 1500, 'image/jpeg'),

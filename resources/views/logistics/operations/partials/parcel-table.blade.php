@@ -2,6 +2,7 @@
      Expects $shipments; optional $riders (show the assign form), $hideActions, $empty (title, text). --}}
 @php
     $riders = $riders ?? null;
+    $couriers = $couriers ?? null;
     $hideActions = $hideActions ?? false;
 @endphp
 
@@ -13,7 +14,7 @@
                 <th>Seller</th>
                 <th>Deliver to</th>
                 <th>Step</th>
-                <th>Rider</th>
+                <th>Personnel</th>
                 @unless($hideActions)<th><span class="sr-only">Actions</span></th>@endunless
             </tr>
         </thead>
@@ -26,7 +27,15 @@
                         <span class="seller-cell-note">Order {{ $parcel['order'] }}</span>
                         @include('partials.waybill-queue', ['queue' => \App\Support\WaybillQueue::for($shipment), 'note' => 'Print for seller'])
                     </td>
-                    <td>{{ $parcel['seller'] }}</td>
+                    <td>
+                        <strong>{{ $parcel['seller'] }}</strong>
+                        @if($parcel['pickup_address'] && $parcel['pickup_address'] !== '—')
+                            <span class="seller-cell-note"><i class="fas fa-location-dot" aria-hidden="true"></i> {{ $parcel['pickup_address'] }}</span>
+                        @endif
+                        @if($parcel['seller_phone'])
+                            <span class="seller-cell-note"><i class="fas fa-phone" aria-hidden="true"></i> {{ $parcel['seller_phone'] }}</span>
+                        @endif
+                    </td>
                     <td class="parcel-destination">
                         <strong>{{ $parcel['recipient'] }}</strong>
                         <span class="seller-cell-note">{{ $parcel['destination'] }}</span>
@@ -48,9 +57,18 @@
                             ])
                         @endif
                     </td>
-                    <td>{{ $parcel['rider'] ?? '—' }}</td>
+                    <td>
+                        @if($parcel['pickup_courier'])
+                            <span class="seller-cell-note"><strong>Pickup:</strong> {{ $parcel['pickup_courier'] }}</span>
+                        @endif
+                        @if($parcel['rider'])
+                            <span class="seller-cell-note"><strong>Delivery:</strong> {{ $parcel['rider'] }}</span>
+                        @elseif(! $parcel['pickup_courier'])
+                            —
+                        @endif
+                    </td>
                     @unless($hideActions)
-                        <td>@include('logistics.operations.partials.parcel-actions', ['shipment' => $shipment, 'riders' => $riders])</td>
+                        <td>@include('logistics.operations.partials.parcel-actions', ['shipment' => $shipment, 'riders' => $riders, 'couriers' => $couriers])</td>
                     @endunless
                 </tr>
             @empty

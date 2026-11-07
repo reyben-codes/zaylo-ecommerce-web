@@ -21,8 +21,12 @@ final class SignUpRoles
                 'summary' => 'Open a shop and sell your products to buyers across the Philippines.',
             ],
             'courier' => [
-                'name' => 'Rider', 'icon' => 'fa-motorcycle', 'steps' => 7, 'approval' => 'Partner approval', 'needs' => "Driver's license and OR/CR",
-                'summary' => "Deliver parcels for one of ZAYLO's logistics partners, using the ZAYLO app.",
+                'name' => 'Courier (Pickup Driver)', 'icon' => 'fa-truck-pickup', 'steps' => 7, 'approval' => 'Partner approval', 'needs' => "Driver's license and OR/CR",
+                'summary' => 'Pick up parcels from sellers and deliver them to your logistics partner hub.',
+            ],
+            'rider' => [
+                'name' => 'Rider (Delivery Driver)', 'icon' => 'fa-motorcycle', 'steps' => 7, 'approval' => 'Partner approval', 'needs' => "Driver's license and OR/CR",
+                'summary' => "Deliver parcels from the logistics hub to buyers, using the ZAYLO app.",
             ],
             'logistics' => [
                 'name' => 'Logistics partner', 'icon' => 'fa-truck-fast', 'steps' => 7, 'approval' => 'Admin approval', 'needs' => 'SEC, BIR and business permit',

@@ -33,6 +33,7 @@ class LogisticsOperationsTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        \Illuminate\Support\Facades\Storage::fake('local');
         [$this->owner, $this->provider] = $this->partner('Express Delivery');
     }
 
@@ -103,7 +104,7 @@ class LogisticsOperationsTest extends TestCase
         $this->patch(route('logistics.parcels.advance', $shipment), ['status' => 'out_for_delivery'])->assertSessionHasErrors('status');
         $riderApp->scan($rider->user, 'ZX-0002');
         $this->patch(route('logistics.parcels.advance', $shipment), ['status' => 'delivered'])->assertSessionHasErrors('status');
-        $riderApp->scan($rider->user, 'ZX-0002');
+        $riderApp->scan($rider->user, 'ZX-0002', \Illuminate\Http\UploadedFile::fake()->image('proof.jpg'));
 
         $fresh = $shipment->fresh();
         $this->assertSame('delivered', $fresh->status);

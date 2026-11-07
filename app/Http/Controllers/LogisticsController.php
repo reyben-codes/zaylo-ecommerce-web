@@ -42,7 +42,8 @@ class LogisticsController extends Controller
             'provider' => $provider,
             'counts' => $this->riderCounts($provider),
             'parcels' => $this->parcelStageCounts(),
-            'availableRiders' => $provider->riders()->where('status', 'approved')->where('is_active', true)->count(),
+            'availableCouriers' => $provider->couriers()->where('status', 'approved')->where('is_active', true)->count(),
+            'availableRiders' => $provider->deliveryRiders()->where('status', 'approved')->where('is_active', true)->count(),
             'recentApplications' => $provider->riders()->where('status', 'pending')->with('user')->oldest()->limit(5)->get(),
             'recentParcels' => $this->withParcelDetails($this->parcels())
                 ->where(fn ($query) => ShipmentWorkflow::whereStage($query, ShipmentWorkflow::ACTIVE))
@@ -61,11 +62,31 @@ class LogisticsController extends Controller
         return back()->with('status', $rider->user->name.($data['available'] ? ' can take new deliveries again.' : ' is paused and will not get new deliveries.'));
     }
 
+    public function couriers(Request $request)
+    {
+        $provider = $this->provider();
+        $status = $request->validate(['status' => ['nullable', Rule::in(array_keys(self::RIDER_STATUS_LABELS))]])['status'] ?? 'approved';
+        $couriers = $provider->couriers()
+            ->where('status', $status)
+            ->with('user')
+            ->when($status === 'pending', fn ($query) => $query->oldest(), fn ($query) => $query->latest('reviewed_at'))
+            ->paginate(20)
+            ->withQueryString();
+
+        return view('logistics.couriers', [
+            'provider' => $provider,
+            'couriers' => $couriers,
+            'status' => $status,
+            'counts' => $this->courierCounts($provider),
+            'statusLabels' => self::RIDER_STATUS_LABELS,
+        ]);
+    }
+
     public function riders(Request $request)
     {
         $provider = $this->provider();
         $status = $request->validate(['status' => ['nullable', Rule::in(array_keys(self::RIDER_STATUS_LABELS))]])['status'] ?? 'pending';
-        $riders = $provider->riders()
+        $riders = $provider->deliveryRiders()
             ->where('status', $status)
             ->with('user')
             ->when($status === 'pending', fn ($query) => $query->oldest(), fn ($query) => $query->latest('reviewed_at'))
@@ -76,7 +97,7 @@ class LogisticsController extends Controller
             'provider' => $provider,
             'riders' => $riders,
             'status' => $status,
-            'counts' => $this->riderCounts($provider),
+            'counts' => $this->deliveryRiderCounts($provider),
             'statusLabels' => self::RIDER_STATUS_LABELS,
         ]);
     }
@@ -187,6 +208,24 @@ class LogisticsController extends Controller
     private function riderCounts(LogisticsProvider $provider): array
     {
         $counts = $provider->riders()->selectRaw('status, COUNT(*) as total')->groupBy('status')->pluck('total', 'status');
+
+        return collect(array_keys(self::RIDER_STATUS_LABELS))
+            ->mapWithKeys(fn (string $status) => [$status => (int) $counts->get($status, 0)])
+            ->all();
+    }
+
+    private function courierCounts(LogisticsProvider $provider): array
+    {
+        $counts = $provider->couriers()->selectRaw('status, COUNT(*) as total')->groupBy('status')->pluck('total', 'status');
+
+        return collect(array_keys(self::RIDER_STATUS_LABELS))
+            ->mapWithKeys(fn (string $status) => [$status => (int) $counts->get($status, 0)])
+            ->all();
+    }
+
+    private function deliveryRiderCounts(LogisticsProvider $provider): array
+    {
+        $counts = $provider->deliveryRiders()->selectRaw('status, COUNT(*) as total')->groupBy('status')->pluck('total', 'status');
 
         return collect(array_keys(self::RIDER_STATUS_LABELS))
             ->mapWithKeys(fn (string $status) => [$status => (int) $counts->get($status, 0)])

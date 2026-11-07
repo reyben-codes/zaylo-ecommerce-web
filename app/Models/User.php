@@ -192,6 +192,16 @@ class User extends Authenticatable implements MustVerifyEmail
         ]);
     }
 
+    public function isCourier(): bool
+    {
+        return $this->hasRole('courier');
+    }
+
+    public function isRider(): bool
+    {
+        return $this->hasRole('rider');
+    }
+
     /**
      * The sign-in page for this account: partners have their own portals, everyone else uses the shop login.
      */
@@ -201,8 +211,9 @@ class User extends Authenticatable implements MustVerifyEmail
             $this->hasRole('seller') => 'seller.login',
             $this->hasRole('logistics') => 'logistics.login',
             $this->hasRole('admin') => 'admin.login',
+            $this->hasRole('courier') => 'login',
             // Riders sign in only in the app.
-            $this->hasRole('rider', 'courier') => 'rider.app',
+            $this->hasRole('rider') => 'rider.app',
             default => 'login',
         };
     }

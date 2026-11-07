@@ -118,6 +118,16 @@ class Rider extends Model
         return $format($start).' – '.$format($end);
     }
 
+    public function isCourier(): bool
+    {
+        return $this->user?->hasRole('courier') ?? false;
+    }
+
+    public function isDeliveryRider(): bool
+    {
+        return $this->user?->hasRole('rider') ?? false;
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

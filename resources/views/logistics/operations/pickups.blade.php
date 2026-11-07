@@ -36,6 +36,7 @@
         @include('logistics.operations.partials.search', ['action' => route('logistics.pickups'), 'search' => $search, 'keep' => $tab === 'scheduled' ? ['tab' => 'scheduled'] : []])
         @include('logistics.operations.partials.parcel-table', [
             'shipments' => $shipments,
+            'couriers' => $availableCouriers,
             'empty' => $tab === 'scheduled'
                 ? ['icon' => 'fa-calendar-check', 'title' => 'No pickups scheduled', 'text' => 'Confirmed pickups wait here until you collect them.']
                 : ['icon' => 'fa-box-open', 'title' => $search !== '' ? 'No matching parcels' : 'No pickup requests', 'text' => 'Requests appear here when a seller marks an order "Ready to ship".'],

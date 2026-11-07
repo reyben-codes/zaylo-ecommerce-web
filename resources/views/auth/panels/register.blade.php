@@ -3,7 +3,7 @@
      go one short section at a time; without JavaScript the sections simply follow each other. --}}
 @php
     $requestedRole = old('role', request('role', 'buyer'));
-    $selectedRole = in_array($requestedRole, ['buyer', 'seller', 'courier', 'logistics'], true) ? $requestedRole : 'buyer';
+    $selectedRole = in_array($requestedRole, ['buyer', 'seller', 'courier', 'rider', 'logistics'], true) ? $requestedRole : 'buyer';
     $logisticsPartners ??= collect();
 
     $roleCopy = [
@@ -18,20 +18,25 @@
             'note' => 'Seller accounts require email verification and administrator approval before you can start selling.',
         ],
         'courier' => [
-            'title' => 'Become a rider',
-            'subtitle' => "Apply to deliver for one of ZAYLO's logistics partners.",
-            'note' => 'The logistics partner you choose reviews your application. You can sign in and accept deliveries once they approve you.',
+            'title' => 'Become a pickup courier',
+            'subtitle' => "Apply to pick up parcels from sellers for one of ZAYLO's logistics partners.",
+            'note' => 'The logistics partner you choose reviews your application. You can sign in and manage seller pickups once approved.',
+        ],
+        'rider' => [
+            'title' => 'Become a delivery rider',
+            'subtitle' => "Apply to deliver parcels to buyers for one of ZAYLO's logistics partners.",
+            'note' => 'The logistics partner you choose reviews your application. You can sign in on the ZAYLO app to start delivering once approved.',
         ],
         'logistics' => [
             'title' => 'Become a logistics partner',
-            'subtitle' => 'Register your delivery company and manage your own riders on ZAYLO.',
-            'note' => 'Logistics partner accounts require email verification and administrator approval. Once approved, riders can apply to your company.',
+            'subtitle' => 'Register your delivery company and manage your own couriers and riders on ZAYLO.',
+            'note' => 'Logistics partner accounts require email verification and administrator approval. Once approved, couriers and riders can apply to your company.',
         ],
     ][$selectedRole];
 
-    // Riders must choose a partner and logistics partners must name their company, which Google sign-up cannot collect.
+    // Drivers must choose a partner and logistics partners must name their company, which Google sign-up cannot collect.
     $allowsGoogle = in_array($selectedRole, ['buyer', 'seller'], true);
-    $hasUploads = in_array($selectedRole, ['seller', 'courier', 'logistics'], true);
+    $hasUploads = in_array($selectedRole, ['seller', 'courier', 'rider', 'logistics'], true);
 @endphp
 
 <div class="auth-panel auth-panel--register" data-auth-panel="register">
@@ -91,11 +96,11 @@
                 <p class="field-note">09XXXXXXXXX or +639XXXXXXXXX. Each mobile number can only be used for one account.</p>
             </div>
 
-            @if(in_array($selectedRole, ['buyer', 'courier'], true))
+            @if(in_array($selectedRole, ['buyer', 'courier', 'rider'], true))
                 <div class="form-group">
                     <label for="date_of_birth">Birthday</label>
                     <input type="date" id="date_of_birth" name="date_of_birth" value="{{ old('date_of_birth') }}" max="{{ today()->subYears(18)->toDateString() }}" autocomplete="bday" data-adult-birthday required>
-                    <p class="field-note">{{ $selectedRole === 'courier' ? 'Riders must be at least 18 years old.' : 'You must be at least 18 years old to shop on ZAYLO.' }}</p>
+                    <p class="field-note">{{ in_array($selectedRole, ['courier', 'rider'], true) ? 'Couriers and riders must be at least 18 years old.' : 'You must be at least 18 years old to shop on ZAYLO.' }}</p>
                 </div>
             @endif
 
@@ -120,7 +125,7 @@
             @include('logistics.partials.application-fields')
         @endif
 
-        @if($selectedRole === 'courier')
+        @if(in_array($selectedRole, ['courier', 'rider'], true))
             @include('auth.partials.rider-fields')
         @endif
 

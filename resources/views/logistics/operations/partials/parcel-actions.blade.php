@@ -11,6 +11,7 @@
     $awaitingSort = $workflow::awaitingSort($shipment);
     $stage = $workflow::stageOf($shipment);
     $riders = $riders ?? null;
+    $couriers = $couriers ?? null;
     $tracking = $shipment->tracking_number ?? $shipment->tracking_code;
     $today = now('Asia/Manila');
     $scanned = $scanned ?? null;
@@ -26,7 +27,30 @@
             <label class="sr-only" for="pickup-date-{{ $shipment->id }}">Pickup date for parcel {{ $tracking }}</label>
             <input type="date" id="pickup-date-{{ $shipment->id }}" name="pickup_date" value="{{ $today->toDateString() }}"
                    min="{{ $today->toDateString() }}" max="{{ $today->copy()->addDays(14)->toDateString() }}" required>
+            @if(isset($couriers) && $couriers->isNotEmpty())
+                <label class="sr-only" for="courier-{{ $shipment->id }}">Assign courier</label>
+                <select id="courier-{{ $shipment->id }}" name="courier_id">
+                    <option value="">Courier (optional)</option>
+                    @foreach($couriers as $c)
+                        <option value="{{ $c->user->id }}">{{ $c->user->name }} ({{ $c->vehicle_type ?: 'Courier' }})</option>
+                    @endforeach
+                </select>
+            @endif
             <button type="submit" class="seller-button seller-button--small"><i class="fas fa-calendar-check" aria-hidden="true"></i> Confirm pickup</button>
+        </form>
+    @endif
+
+    @if($stage === 'confirmed' && isset($couriers) && $couriers->isNotEmpty())
+        <form method="POST" action="{{ route('logistics.parcels.courier', $shipment) }}" class="parcel-inline-form">
+            @csrf
+            <label class="sr-only" for="assign-courier-{{ $shipment->id }}">Assign courier</label>
+            <select id="assign-courier-{{ $shipment->id }}" name="courier_id" required>
+                <option value="">{{ $parcel['pickup_courier'] ? 'Reassign courier' : 'Assign courier' }}</option>
+                @foreach($couriers as $c)
+                    <option value="{{ $c->user->id }}" @selected($parcel['pickup_courier_id'] === $c->user->id)>{{ $c->user->name }} ({{ $c->vehicle_type ?: 'Courier' }})</option>
+                @endforeach
+            </select>
+            <button type="submit" class="seller-button seller-button--small"><i class="fas fa-truck-pickup" aria-hidden="true"></i> {{ $parcel['pickup_courier'] ? 'Reassign' : 'Assign courier' }}</button>
         </form>
     @endif
 
