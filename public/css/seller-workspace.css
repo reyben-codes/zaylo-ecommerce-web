@@ -858,3 +858,20 @@ a.seller-stat.is-active {
 .seller-live-update[hidden] {
     display: none;
 }
+
+/* Countdown: the bottom bar shrinks until the message fades out, and stops while the pointer or focus is on it
+   (notifications.js sets --toast-duration and .is-paused). */
+.toast-notification::after {
+    height: 3px;
+    opacity: .6;
+    transform-origin: left center;
+    animation: toast-countdown var(--toast-duration, 5200ms) linear forwards;
+}
+.toast-notification.is-paused::after { animation-play-state: paused; }
+@keyframes toast-countdown {
+    from { transform: scaleX(1); }
+    to { transform: scaleX(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .toast-notification::after { animation: none; }
+}

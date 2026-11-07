@@ -9,6 +9,9 @@ document.addEventListener('DOMContentLoaded', () => {
         let remaining = timeout;
         let dismissed = false;
 
+        // The bar along the bottom shrinks over the same time and pauses with the timer (CSS: .toast-notification::after).
+        toast.style.setProperty('--toast-duration', `${timeout}ms`);
+
         const remove = () => {
             toast.remove();
 
@@ -33,6 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
             window.clearTimeout(timer);
             remaining = Math.max(0, remaining - (Date.now() - startedAt));
             timer = undefined;
+            toast.classList.add('is-paused');
         };
 
         const startTimer = () => {
@@ -40,6 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             startedAt = Date.now();
             timer = window.setTimeout(dismiss, remaining);
+            toast.classList.remove('is-paused');
         };
 
         closeButton?.addEventListener('click', dismiss);

@@ -2590,3 +2590,20 @@ img.user-avatar { background: var(--c-eee8e2); }
 .nav-avatar { display: block; width: 26px; height: 26px; font-size: .7rem; }
 .icon-group .buyer-nav-icon[aria-current="page"] .nav-avatar { outline: 2px solid var(--c-a17455); outline-offset: 2px; }
 .settings-photo { margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--c-e5dfd8); }
+
+/* Countdown: the bottom bar shrinks until the message fades out, and stops while the pointer or focus is on it
+   (notifications.js sets --toast-duration and .is-paused). */
+.toast-notification::after {
+    height: 3px;
+    opacity: .6;
+    transform-origin: left center;
+    animation: toast-countdown var(--toast-duration, 5200ms) linear forwards;
+}
+.toast-notification.is-paused::after { animation-play-state: paused; }
+@keyframes toast-countdown {
+    from { transform: scaleX(1); }
+    to { transform: scaleX(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .toast-notification::after { animation: none; }
+}
