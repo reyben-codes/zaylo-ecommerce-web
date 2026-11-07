@@ -62,7 +62,7 @@ class Waybill
             'notes' => trim((string) ($order?->notes ?? $order?->note ?? '')) ?: null,
             'printed' => now('Asia/Manila'),
             // The courier on the order picks the label layout (ZAYLO, J&T or Flash Express).
-            'courier' => $courier = self::courierOf($order),
+            'courier' => $courier = self::courierOf($order, $shipment),
             'courier_name' => (Order::COURIERS[$courier] ?? Order::COURIERS[Order::DEFAULT_COURIER])['name'],
             'sort_code' => self::sortCode($recipient = self::recipient($order)),
             // Printed by the logistics partner for a seller without a printer: the mark written on the parcel.
@@ -73,11 +73,32 @@ class Waybill
     /** Layouts for each courier (resources/views/waybill/layouts). */
     public const LAYOUTS = ['zaylo_express', 'jnt_express', 'flash_express'];
 
-    public static function courierOf(?Order $order): string
+    /**
+     * The layout follows the courier the parcel is assigned to: the logistics partner that picks it up when its name
+     * is J&T or Flash Express, otherwise the courier the buyer chose at checkout (ZAYLO Express by default).
+     */
+    public static function courierOf(?Order $order, ?Shipment $shipment = null): string
     {
+        $partner = $shipment && Shipment::tracksProvider() && $shipment->logistics_provider_id ? $shipment->provider?->name : null;
+        if ($assigned = self::courierNamed($partner)) {
+            return $assigned;
+        }
         $courier = $order && Schema::hasColumn('orders', 'courier_choice') ? $order->courier_choice : null;
 
         return in_array($courier, self::LAYOUTS, true) ? $courier : Order::DEFAULT_COURIER;
+    }
+
+    /** "J&T Express Calamba" → jnt_express, "Flash Express Hub" → flash_express; other names have no layout of their own. */
+    public static function courierNamed(?string $name): ?string
+    {
+        $name = strtolower((string) $name);
+
+        return match (true) {
+            $name === '' => null,
+            (bool) preg_match('/\bj\s*&\s*t\b|\bjnt\b|\bj and t\b/', $name) => 'jnt_express',
+            str_contains($name, 'flash') => 'flash_express',
+            default => null,
+        };
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Support\Waybill;
 use App\Services\RiderProximity;
 use App\Models\LogisticsMessage;
 use App\Models\LogisticsProvider;
@@ -236,6 +237,20 @@ class LogisticsOperationsTest extends TestCase
         $this->get(route('logistics.deliveries', ['from' => now('Asia/Manila')->subDays(45)->toDateString(), 'to' => now('Asia/Manila')->subDays(30)->toDateString()]))
             ->assertSee('ZX-0301')->assertDontSee('ZX-0302');
         $this->get(route('logistics.deliveries', ['from' => '2026-11-07', 'to' => '2026-11-01']))->assertSessionHasErrors(['to' => 'The end date must be on or after the start date.']);
+    }
+
+    public function test_the_waybill_layout_follows_the_assigned_logistics_partner(): void
+    {
+        [, $jnt] = $this->partner('J&T Express Calamba');
+        [, $flash] = $this->partner('Flash Express Laguna Hub');
+        $this->assertSame('jnt_express', Waybill::for($this->parcel('JT-0001', 'ready', $jnt))['courier']);
+        $this->assertSame('flash_express', Waybill::for($this->parcel('FX-0001', 'ready', $flash))['courier']);
+        // A partner with another name keeps the courier the buyer chose (ZAYLO Express by default).
+        $this->assertSame('zaylo_express', Waybill::for($this->parcel('ZX-0901', 'ready'))['courier']);
+
+        foreach (['J&T Express' => 'jnt_express', 'JNT Calamba' => 'jnt_express', 'J & T' => 'jnt_express', 'Flash' => 'flash_express', 'Express Delivery' => null, 'Jet Trucking' => null] as $name => $layout) {
+            $this->assertSame($layout, Waybill::courierNamed($name), $name);
+        }
     }
 
     public function test_scanning_finds_a_parcel_and_offers_its_next_step(): void
