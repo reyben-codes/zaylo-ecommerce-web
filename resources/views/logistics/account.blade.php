@@ -2,6 +2,10 @@
 
 @section('title', 'Account')
 
+@push('styles')
+    <link rel="stylesheet" href="{{ asset('css/admin-modules.css') }}?v={{ filemtime(public_path('css/admin-modules.css')) }}">
+@endpush
+
 @section('content')
     <section class="seller-page-heading">
         <div>
@@ -46,6 +50,47 @@
                     </div>
                 </form>
             </section>
+
+            @if(\Illuminate\Support\Facades\Schema::hasColumn('logistics_providers', 'waybill_layout'))
+                {{-- Every label this partner prints uses its own design (App\Support\Waybill::layoutFor). --}}
+                @php($currentLayout = \App\Support\Waybill::layoutFor($provider))
+                <section class="seller-panel" aria-labelledby="waybill-heading">
+                    <header class="seller-panel__header">
+                        <div>
+                            <h2 id="waybill-heading">Waybill design</h2>
+                            <p>Every waybill for parcels assigned to your company prints in this design, whether the seller or your hub prints it. Riders scan the same barcode or QR code on all of them.</p>
+                        </div>
+                    </header>
+                    <form method="POST" action="{{ route('logistics.account.waybill') }}" class="seller-panel__body seller-form">
+                        @csrf
+                        @method('PATCH')
+                        <fieldset class="waybill-designs">
+                            <legend class="sr-only">Waybill design</legend>
+                            @foreach(\App\Support\Waybill::LAYOUT_LABELS as $layout => $label)
+                                @php($logoFile = ['jnt_express' => 'images/couriers/jnt-express.png', 'flash_express' => 'images/couriers/flash-express.png'][$layout] ?? null)
+                                <label class="waybill-design{{ $currentLayout === $layout ? ' is-current' : '' }}">
+                                    <input type="radio" name="waybill_layout" value="{{ $layout }}" @checked(old('waybill_layout', $currentLayout) === $layout)>
+                                    <span class="waybill-design__body">
+                                        <span style="display:inline-flex; align-items:center; gap:8px;">
+                                            <strong>{{ $label }}</strong>
+                                            @if($logoFile && file_exists(public_path($logoFile)))
+                                                <img src="{{ asset($logoFile) }}" alt="{{ $label }}" style="height:15px; max-width:70px; object-fit:contain; vertical-align:middle;">
+                                            @endif
+                                        </span>
+                                        <span>{{ ['zaylo_express' => 'ZAYLO label: tracking and QR on top, deliver-to block, COD box.', 'jnt_express' => 'Like J&T: service box, big 3-part sort code, receiver over sender, tear-off copy.', 'flash_express' => 'Like Flash Express: big barcode first, black DST code band, to/from side by side, tear-off copy.'][$layout] }}</span>
+                                        @if($currentLayout === $layout)<em>In use</em>@endif
+                                    </span>
+                                    <a href="{{ route('logistics.waybill.preview', ['layout' => $layout]) }}" target="_blank" rel="noopener" class="workspace-link">Preview<span class="sr-only"> {{ $label }} (opens in a new tab)</span></a>
+                                </label>
+                            @endforeach
+                        </fieldset>
+                        @error('waybill_layout')<p class="seller-field__error">{{ $message }}</p>@enderror
+                        <div class="seller-form__actions">
+                            <button type="submit" class="seller-button"><i class="fas fa-check" aria-hidden="true"></i> Use this design</button>
+                        </div>
+                    </form>
+                </section>
+            @endif
 
             @include('partials.account-settings-forms', ['user' => $user, 'routePrefix' => 'logistics.account'])
         </div>

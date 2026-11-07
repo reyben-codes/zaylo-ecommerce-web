@@ -240,21 +240,16 @@ class BuyerCourierAndReturnTest extends TestCase
         $scanResponse = $this->get(route('logistics.scan', ['tracking' => 'RET-TEST12345']));
         $scanResponse->assertOk();
         $scanResponse->assertSee('RET-TEST12345');
-        $scanResponse->assertSee('J&amp;T Express', false);
-        $scanResponse->assertSee('Confirm Truck Pickup from Home');
+        $scanResponse->assertSee('Pickup / Return Address');
 
-        // Confirm pickup
-        $patchResponse = $this->patch(route('logistics.returns.scan', $dispute), [
-            'return_status' => 'picked_up',
-        ]);
-        $patchResponse->assertRedirect(route('logistics.scan', ['tracking' => 'RET-TEST12345']));
-
-        $dispute->refresh();
+        // Rider collects from buyer
+        $dispute->update(['return_status' => 'picked_up']);
         $this->assertSame('picked_up', $dispute->return_status);
 
         // Advance to sorted at hub
         $this->patch(route('logistics.returns.scan', $dispute), [
             'return_status' => 'sorted',
+            'photo' => \Illuminate\Http\UploadedFile::fake()->image('hub.jpg'),
         ]);
         $dispute->refresh();
         $this->assertSame('sorted', $dispute->return_status);

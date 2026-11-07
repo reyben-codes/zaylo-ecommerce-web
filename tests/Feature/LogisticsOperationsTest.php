@@ -239,14 +239,27 @@ class LogisticsOperationsTest extends TestCase
         $this->get(route('logistics.deliveries', ['from' => '2026-11-07', 'to' => '2026-11-01']))->assertSessionHasErrors(['to' => 'The end date must be on or after the start date.']);
     }
 
-    public function test_the_waybill_layout_follows_the_assigned_logistics_partner(): void
+    public function test_each_logistics_partner_prints_its_own_waybill_design(): void
     {
         [, $jnt] = $this->partner('J&T Express Calamba');
-        [, $flash] = $this->partner('Flash Express Laguna Hub');
+        [$flashOwner, $flash] = $this->partner('Flash Express Laguna Hub');
+        [, $other] = $this->partner('Agila Cargo');
+
+        // J&T and Flash by name; any other partner gets the design they do not use, so partners never all look alike.
         $this->assertSame('jnt_express', Waybill::for($this->parcel('JT-0001', 'ready', $jnt))['courier']);
         $this->assertSame('flash_express', Waybill::for($this->parcel('FX-0001', 'ready', $flash))['courier']);
-        // A partner with another name keeps the courier the buyer chose (ZAYLO Express by default).
-        $this->assertSame('zaylo_express', Waybill::for($this->parcel('ZX-0901', 'ready'))['courier']);
+        $this->assertSame('zaylo_express', Waybill::for($this->parcel('AG-0001', 'ready', $other))['courier']);
+        $designs = collect([$this->provider, $jnt, $flash, $other])->map(fn ($partner) => Waybill::layoutFor($partner->fresh()));
+        $this->assertSame(['zaylo_express', 'jnt_express', 'flash_express'], $designs->unique()->sort()->values()->sortBy(fn ($layout) => array_search($layout, Waybill::LAYOUTS))->values()->all());
+
+        // A partner can preview the designs and choose its own on the Account page.
+        $this->actingAs($flashOwner)->get(route('logistics.account'))->assertOk()->assertSee('Waybill design')
+            ->assertSee(route('logistics.waybill.preview', ['layout' => 'jnt_express']), false);
+        $this->get(route('logistics.waybill.preview', ['layout' => 'jnt_express']))->assertOk()
+            ->assertSee('wb-courier-jnt-express', false)->assertSee('Sample label')->assertDontSee('data-auto-print', false);
+        $this->patch(route('logistics.account.waybill'), ['waybill_layout' => 'jnt_express'])->assertSessionHasNoErrors();
+        $this->assertSame('jnt_express', Waybill::for($this->parcel('FX-0002', 'ready', $flash->fresh()))['courier']);
+        $this->patch(route('logistics.account.waybill'), ['waybill_layout' => 'fedex'])->assertSessionHasErrors('waybill_layout');
 
         foreach (['J&T Express' => 'jnt_express', 'JNT Calamba' => 'jnt_express', 'J & T' => 'jnt_express', 'Flash' => 'flash_express', 'Express Delivery' => null, 'Jet Trucking' => null] as $name => $layout) {
             $this->assertSame($layout, Waybill::courierNamed($name), $name);

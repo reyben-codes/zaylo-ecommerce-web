@@ -98,11 +98,25 @@
                             </label>
                             <label class="case-choice">
                                 <input type="radio" name="return_courier" value="jnt_express" @checked(old('return_courier') === 'jnt_express')>
-                                <span><i class="fas fa-truck" aria-hidden="true"></i> <strong>J&amp;T Express Truck</strong> &middot; Door-to-door home pickup &amp; handheld scan</span>
+                                <span>
+                                    @if(file_exists(public_path('images/couriers/jnt-express.png')))
+                                        <img src="{{ asset('images/couriers/jnt-express.png') }}" alt="J&amp;T Express" style="height:15px; max-width:65px; object-fit:contain; vertical-align:middle; margin-right:4px;">
+                                    @else
+                                        <i class="fas fa-truck" aria-hidden="true"></i>
+                                    @endif
+                                    <strong>J&amp;T Express Truck</strong> &middot; Door-to-door home pickup &amp; handheld scan
+                                </span>
                             </label>
                             <label class="case-choice">
                                 <input type="radio" name="return_courier" value="flash_express" @checked(old('return_courier') === 'flash_express')>
-                                <span><i class="fas fa-bolt" aria-hidden="true"></i> <strong>Flash Express Truck</strong> &middot; Door-to-door home pickup &amp; live tracking</span>
+                                <span>
+                                    @if(file_exists(public_path('images/couriers/flash-express.png')))
+                                        <img src="{{ asset('images/couriers/flash-express.png') }}" alt="Flash Express" style="height:15px; max-width:65px; object-fit:contain; vertical-align:middle; margin-right:4px;">
+                                    @else
+                                        <i class="fas fa-bolt" aria-hidden="true"></i>
+                                    @endif
+                                    <strong>Flash Express Truck</strong> &middot; Door-to-door home pickup &amp; live tracking
+                                </span>
                             </label>
                         </div>
                         @error('return_courier')<p class="seller-field__error" role="alert">{{ $message }}</p>@enderror

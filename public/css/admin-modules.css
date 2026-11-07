@@ -580,3 +580,12 @@
 .cash-handover-form input { min-height: 34px; padding: 6px 8px; border: 1px solid var(--zaylo-border); border-radius: 6px; background: var(--zaylo-surface); color: var(--zaylo-text); font: inherit; font-size: .78rem; }
 .cash-handover-form input[type="number"] { width: 110px; }
 .cash-handover-form input[name="note"] { flex: 1 1 160px; }
+
+/* Logistics Account: the partner's waybill design (App\Support\Waybill::LAYOUTS). */
+.waybill-designs { display: grid; gap: 10px; margin: 0; padding: 0; border: 0; }
+.waybill-design { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border: 1px solid var(--zaylo-border); border-radius: 10px; cursor: pointer; }
+.waybill-design.is-current { border-color: var(--zaylo-accent); }
+.waybill-design input { margin-top: 3px; accent-color: var(--zaylo-accent); }
+.waybill-design__body { display: grid; flex: 1; gap: 3px; font-size: .8rem; color: var(--zaylo-muted); }
+.waybill-design__body strong { color: var(--zaylo-ink); font-size: .86rem; }
+.waybill-design__body em { width: fit-content; padding: 1px 8px; border-radius: 999px; background: var(--zaylo-accent-soft); color: var(--zaylo-ink); font-size: .7rem; font-style: normal; font-weight: 600; }

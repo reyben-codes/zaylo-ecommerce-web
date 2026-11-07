@@ -158,6 +158,24 @@ class LogisticsController extends Controller
         return back()->with('status', 'Company details updated.');
     }
 
+    /** The partner picks its own waybill design; every label it prints uses it. */
+    public function updateWaybill(Request $request)
+    {
+        abort_unless(\Illuminate\Support\Facades\Schema::hasColumn('logistics_providers', 'waybill_layout'), 404);
+        $data = $request->validate(['waybill_layout' => ['required', \Illuminate\Validation\Rule::in(\App\Support\Waybill::LAYOUTS)]]);
+        $this->provider()->forceFill(['waybill_layout' => $data['waybill_layout']])->save();
+
+        return back()->with('status', 'Your waybills now print in the '.\App\Support\Waybill::LAYOUT_LABELS[$data['waybill_layout']].' design.');
+    }
+
+    /** A sample label in one design, to compare before choosing. */
+    public function previewWaybill(Request $request)
+    {
+        $layout = $request->validate(['layout' => ['required', \Illuminate\Validation\Rule::in(\App\Support\Waybill::LAYOUTS)]])['layout'];
+
+        return view('waybill.pdf', ['waybill' => \App\Support\Waybill::sample($layout, $this->provider()->name), 'web' => true, 'pdfUrl' => null]);
+    }
+
     private function provider(): LogisticsProvider
     {
         $provider = auth()->user()->logisticsProvider;

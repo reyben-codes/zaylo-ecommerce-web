@@ -140,9 +140,16 @@
                     <legend class="sr-only">Choose delivery truck</legend>
                     @foreach(\App\Models\Order::COURIERS as $courierKey => $courier)
                         @php($courierChecked = old('courier_choice', \App\Models\Order::DEFAULT_COURIER) === $courierKey)
+                        @php($courierLogo = ['jnt_express' => 'images/couriers/jnt-express.png', 'flash_express' => 'images/couriers/flash-express.png'][$courierKey] ?? null)
                         <label class="payment-method-option {{ $courierChecked ? 'selected' : '' }}">
                             <input type="radio" name="courier_choice" value="{{ $courierKey }}" @checked($courierChecked)>
-                            <span class="payment-method-option-icon"><i class="fas {{ ['jnt_express' => 'fa-truck', 'flash_express' => 'fa-bolt-lightning'][$courierKey] ?? 'fa-truck-fast' }}" aria-hidden="true"></i></span>
+                            <span class="payment-method-option-icon">
+                                @if($courierLogo && file_exists(public_path($courierLogo)))
+                                    <img src="{{ asset($courierLogo) }}" alt="{{ $courier['name'] }}" style="height:18px; max-width:64px; object-fit:contain; vertical-align:middle;">
+                                @else
+                                    <i class="fas {{ ['jnt_express' => 'fa-truck', 'flash_express' => 'fa-bolt-lightning'][$courierKey] ?? 'fa-truck-fast' }}" aria-hidden="true"></i>
+                                @endif
+                            </span>
                             <span class="payment-method-option-content">
                                 <span class="payment-method-option-title">{{ $courier['title'] }}</span>
                                 <span class="payment-method-option-description">{{ $courier['description'] }}</span>

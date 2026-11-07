@@ -21,11 +21,11 @@
         <script src="{{ asset('js/print.js') }}?v={{ filemtime(public_path('js/print.js')) }}" defer></script>
     @endif
 </head>
-<body class="wb-courier-{{ str_replace('_', '-', $waybill['courier']) }}{{ $web ? ' wb-web' : '' }}" @if($web) data-auto-print @endif>
+<body class="wb-courier-{{ str_replace('_', '-', $waybill['courier']) }}{{ $web ? ' wb-web' : '' }}" @if($web && ($pdfUrl ?? null)) data-auto-print @endif>
     @if($web)
         <nav class="wb-toolbar" aria-label="Waybill actions">
             <button type="button" class="wb-toolbar__button wb-toolbar__button--primary" data-print hidden><i class="fas fa-print" aria-hidden="true"></i> Print label</button>
-            <a href="{{ $pdfUrl }}" class="wb-toolbar__button"><i class="fas fa-file-pdf" aria-hidden="true"></i> Save as PDF</a>
+            @if($pdfUrl)<a href="{{ $pdfUrl }}" class="wb-toolbar__button"><i class="fas fa-file-pdf" aria-hidden="true"></i> Save as PDF</a>@else<span class="wb-toolbar__hint"><strong>Sample label</strong> (preview of this design)</span>@endif
             <span class="wb-toolbar__hint">Prints on a 4 × 6 in label. On regular paper, choose "Fit to page".</span>
         </nav>
         <div class="wb-sheet">

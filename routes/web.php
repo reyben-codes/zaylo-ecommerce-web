@@ -398,6 +398,8 @@ Route::middleware(['auth', 'active', 'verified', 'role:logistics', 'nocache'])->
     Route::post('/messages', [LogisticsChatController::class, 'startFromLogistics'])->middleware('throttle:20,1')->name('messages.start');
     Route::get('/account', [LogisticsController::class, 'account'])->name('account');
     Route::patch('/account/company', [LogisticsController::class, 'updateCompany'])->name('account.company');
+    Route::patch('/account/waybill', [LogisticsController::class, 'updateWaybill'])->name('account.waybill');
+    Route::get('/waybill-preview', [LogisticsController::class, 'previewWaybill'])->middleware('throttle:60,1')->name('waybill.preview');
     Route::patch('/account/profile', [LogisticsController::class, 'updateProfile'])->name('account.profile');
     Route::put('/account/password', [LogisticsController::class, 'updatePassword'])->name('account.password');
 });

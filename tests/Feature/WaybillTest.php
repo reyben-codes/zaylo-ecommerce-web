@@ -144,12 +144,12 @@ class WaybillTest extends TestCase
 
         if (\Illuminate\Support\Facades\Schema::hasColumn('orders', 'courier_choice')) {
             $order->update(['courier_choice' => 'jnt_express']);
-            $this->get($print)->assertOk()->assertSee('wb-courier-jnt-express', false)->assertSee('J&amp;T EXPRESS', false)
+            $this->get($print)->assertOk()->assertSee('wb-courier-jnt-express', false)->assertSee('J&amp;T Express', false)
                 ->assertSee('RECEIVER')->assertSee('SENDER')->assertSee('CEB-CEB');
 
             $order->update(['courier_choice' => 'flash_express']);
-            $this->get($print)->assertOk()->assertSee('wb-courier-flash-express', false)->assertSee('FLASH EXPRESS')
-                ->assertSee('DST')->assertSee('CEB-CEB')->assertSee('COD AMOUNT');
+            $this->get($print)->assertOk()->assertSee('wb-courier-flash-express', false)->assertSee('Flash Express')
+                ->assertSee('DST')->assertSee('CEB-CEB')->assertSee('Sorting line');
             $pdf = $this->get(route('seller.orders.waybill', $order))->assertOk();
             $this->assertStringStartsWith('%PDF', $pdf->getContent());
         }

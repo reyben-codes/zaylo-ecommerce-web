@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Address;
+use App\Models\LogisticsProvider;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\SellerApplication;
@@ -70,22 +71,70 @@ class Waybill
         ];
     }
 
-    /** Layouts for each courier (resources/views/waybill/layouts). */
+    /** Waybill designs (resources/views/waybill/layouts), each like that courier's own thermal label. */
     public const LAYOUTS = ['zaylo_express', 'jnt_express', 'flash_express'];
 
+    public const LAYOUT_LABELS = [
+        'zaylo_express' => 'ZAYLO Express',
+        'jnt_express' => 'J&T Express style',
+        'flash_express' => 'Flash Express style',
+    ];
+
     /**
-     * The layout follows the courier the parcel is assigned to: the logistics partner that picks it up when its name
-     * is J&T or Flash Express, otherwise the courier the buyer chose at checkout (ZAYLO Express by default).
+     * The label design follows the logistics partner the parcel is assigned to: every partner prints its own design
+     * (layoutFor). Before a partner is assigned, the courier the buyer chose at checkout decides.
      */
     public static function courierOf(?Order $order, ?Shipment $shipment = null): string
     {
-        $partner = $shipment && Shipment::tracksProvider() && $shipment->logistics_provider_id ? $shipment->provider?->name : null;
-        if ($assigned = self::courierNamed($partner)) {
-            return $assigned;
+        $partner = $shipment && Shipment::tracksProvider() && $shipment->logistics_provider_id ? $shipment->provider : null;
+        if ($partner) {
+            return self::layoutFor($partner);
         }
         $courier = $order && Schema::hasColumn('orders', 'courier_choice') ? $order->courier_choice : null;
 
         return in_array($courier, self::LAYOUTS, true) ? $courier : Order::DEFAULT_COURIER;
+    }
+
+    /**
+     * A partner's waybill design: the one it chose on its Account page; otherwise J&T or Flash by its name; otherwise
+     * a design the J&T- and Flash-named partners do not use, spread by partner, so partners do not all look the same.
+     */
+    public static function layoutFor(LogisticsProvider $partner): string
+    {
+        $chosen = Schema::hasColumn('logistics_providers', 'waybill_layout') ? $partner->waybill_layout : null;
+        if (in_array($chosen, self::LAYOUTS, true)) {
+            return $chosen;
+        }
+        if ($named = self::courierNamed($partner->name)) {
+            return $named;
+        }
+        $taken = LogisticsProvider::query()->pluck('name')->map(fn ($name) => self::courierNamed($name))->filter()->unique()->all();
+        $free = array_values(array_diff(self::LAYOUTS, $taken)) ?: self::LAYOUTS;
+
+        return $free[((int) $partner->id) % count($free)];
+    }
+
+    /** A made-up parcel in a design, so a partner can preview it before choosing (Logistics Center > Account). */
+    public static function sample(string $layout, ?string $carrier = null): array
+    {
+        $tracking = 'TRK-SAMPLE0001';
+
+        return [
+            'tracking' => $tracking, 'barcode' => Code128::dataUri($tracking, 56, 2), 'qr' => self::qrCode($tracking),
+            'order' => 'ZAY-SAMPLE-0001', 'placed' => now('Asia/Manila'),
+            'sender' => ['name' => 'Sample Shop', 'phone' => '09170000001', 'address' => '5 Mabini St, Pasig City, Metro Manila'],
+            'recipient' => ['name' => 'Juan Dela Cruz', 'phone' => '09171234567', 'address' => '78 Osmeña Blvd, Cebu City, Cebu'],
+            'items' => collect([['name' => 'Linen Bed Sheet Set', 'variant' => 'Queen', 'quantity' => 1], ['name' => 'Cotton Pillowcase', 'variant' => null, 'quantity' => 2]]),
+            'pieces' => 3, 'weight' => 1450, 'cod' => 1300.0, 'payment' => 'Cash on delivery', 'carrier' => $carrier,
+            'area' => 'Cebu City, Cebu', 'notes' => 'Sample label: not a real parcel', 'printed' => now('Asia/Manila'),
+            'courier' => $layout, 'courier_name' => self::LAYOUT_LABELS[$layout], 'sort_code' => 'CEB-CEB', 'queue' => null,
+        ];
+    }
+
+    /** A two-digit delivery route under the sort code (like couriers' sorting lanes), stable for a tracking number. */
+    public static function route(string $tracking): string
+    {
+        return str_pad((string) (crc32($tracking) % 40 + 1), 2, '0', STR_PAD_LEFT);
     }
 
     /** "J&T Express Calamba" → jnt_express, "Flash Express Hub" → flash_express; other names have no layout of their own. */

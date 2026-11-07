@@ -338,46 +338,91 @@ table {
 .wb-queue--orange .wb-queue__swatch { background: #e8772e; }
 .wb-queue--pink .wb-queue__swatch { background: #d94f9b; }
 
-/* ---- J&T Express layout: service band, big sort code, receiver over sender, COD row. ---- */
-.jt-band td { padding: 4px 6px; background: #000; color: #fff; vertical-align: middle; }
-.jt-band__name { font-size: 14px; font-weight: bold; letter-spacing: 1px; }
-.jt-band__service { text-align: right; font-size: 8px; font-weight: bold; }
-.jt-band__service span { font-weight: normal; }
-.jt-sort { margin-top: 4px; border: 2px solid #000; }
-.jt-sort td { padding: 4px 6px; vertical-align: middle; }
-.jt-sort__code { width: 62%; font-size: 26px; font-weight: bold; letter-spacing: 2px; text-align: center; border-right: 1px solid #000; }
-.jt-sort__meta { font-size: 8px; }
-.jt-barcode { margin: 4px 0; text-align: center; }
-.jt-barcode img { width: 92%; height: 46px; }
-.jt-party { border: 1px solid #000; }
-.jt-party td { padding: 4px 5px; vertical-align: top; border-bottom: 1px solid #000; }
-.jt-party__tag { width: 18px; padding: 4px 2px !important; background: #000; color: #fff; font-size: 7px; font-weight: bold; text-align: center; }
-.jt-party__tag--sender { background: #555; }
-.jt-phone { font-weight: normal; font-size: 9px; }
-.jt-cod { margin: 4px 0; border: 2px solid #000; }
-.jt-cod td { padding: 3px 6px; vertical-align: middle; }
-.jt-cod__label { width: 22%; font-size: 12px; font-weight: bold; border-right: 1px solid #000; }
-.jt-cod__amount { font-size: 16px; font-weight: bold; }
-.jt-cod__qr { width: 54px; text-align: right; }
-.jt-cod__qr img { width: 50px; height: 50px; }
+/* ---- Shared: the dashed tear-off line before the customer copy. ---- */
+.wb-tear { margin: 5px 0 3px; overflow: hidden; color: #000; font-size: 7px; letter-spacing: 1px; white-space: nowrap; }
 
-/* ---- Flash Express layout: barcode first, destination band, receiver and sender side by side, COD box. ---- */
-.fx-head td { padding: 3px 0; border-bottom: 3px solid #000; vertical-align: bottom; }
-.fx-head__name { font-size: 15px; font-weight: bold; font-style: italic; letter-spacing: 1px; }
-.fx-head__meta { text-align: right; font-size: 8px; }
-.fx-barcode { margin: 5px 0 3px; text-align: center; }
-.fx-barcode img { width: 96%; height: 52px; }
-.fx-dst { border: 2px solid #000; }
-.fx-dst td { padding: 3px 6px; vertical-align: middle; }
-.fx-dst__label { width: 30px; background: #000; color: #fff; font-size: 10px; font-weight: bold; text-align: center; }
-.fx-dst__code { font-size: 22px; font-weight: bold; letter-spacing: 2px; }
-.fx-dst__order { width: 34%; text-align: right; font-size: 8px; }
-.fx-party { margin-top: 4px; border: 1px solid #000; }
-.fx-party__cell { width: 50%; padding: 4px 5px; vertical-align: top; }
-.fx-party__cell--to { border-right: 1px solid #000; }
-.fx-cod { margin: 4px 0; border: 2px solid #000; }
-.fx-cod td { padding: 4px 6px; vertical-align: middle; }
-.fx-cod__label { display: block; font-size: 8px; font-weight: bold; }
-.fx-cod__amount { display: block; font-size: 18px; font-weight: bold; }
+/* ---- J&T Express style: brand row + EZ box, 3-part sort code, barcode, R/S blocks, COD row, tear-off copy. ---- */
+.jt-top { border: 2px solid #000; }
+.jt-top td { padding: 3px 5px; vertical-align: middle; }
+.jt-top__brand { width: 34%; font-size: 17px; font-weight: bold; font-style: italic; letter-spacing: -0.5px; }
+.jt-top__brand span { display: block; margin-top: -2px; font-size: 7px; font-style: normal; letter-spacing: 3px; }
+.jt-top__logo { display: block; max-width: 105px; max-height: 24px; height: auto; }
+.jt-top__meta { font-size: 7px; border-left: 1px solid #000; }
+.jt-top__meta .wb-label { display: inline; margin-right: 2px; }
+.jt-top__service { width: 44px; background: #000; color: #fff; font-size: 20px; font-weight: bold; text-align: center; }
+.jt-code { margin-top: 3px; border: 2px solid #000; }
+.jt-code td { padding: 2px 4px; font-size: 26px; font-weight: bold; text-align: center; letter-spacing: 1px; border-right: 2px solid #000; }
+.jt-code__route { width: 22%; background: #000; color: #fff; border-right: 0 !important; }
+.jt-barcode { margin: 4px 0 2px; text-align: center; }
+.jt-barcode img { width: 96%; height: 50px; }
+.jt-barcode__no { font-size: 11px; font-weight: bold; letter-spacing: 2px; }
+.jt-party { margin-top: 3px; border: 2px solid #000; }
+.jt-party td { vertical-align: top; }
+.jt-party__tag { width: 26px; padding: 3px 0; background: #000; color: #fff; font-size: 16px; font-weight: bold; text-align: center; }
+.jt-party__tag span { display: block; font-size: 5px; letter-spacing: 0; }
+.jt-party__tag--sender { background: #fff; color: #000; border-top: 2px solid #000; border-right: 1px solid #000; }
+.jt-party__body { padding: 3px 5px; }
+.jt-party__body--sender { border-top: 2px solid #000; font-size: 7px; }
+.jt-party__name { font-size: 11px; font-weight: bold; }
+.jt-party__name span { font-size: 10px; }
+.jt-party__address { font-size: 9px; font-weight: bold; line-height: 1.25; }
+.jt-money { margin-top: 3px; border: 2px solid #000; }
+.jt-money td { padding: 3px 5px; vertical-align: top; border-right: 1px solid #000; border-bottom: 1px solid #000; font-size: 8px; }
+.jt-money__cod { width: 42%; }
+.jt-money__cod strong { display: block; font-size: 15px; }
+.jt-money__goods { font-size: 7px; }
+.jt-money__qr { width: 56px; text-align: center; vertical-align: middle !important; border-right: 0 !important; }
+.jt-money__qr img { width: 52px; height: 52px; }
+.jt-foot { border: 1px solid #000; border-top: 0; }
+.jt-foot td { width: 50%; padding: 3px 5px; font-size: 7px; border-right: 1px solid #000; vertical-align: top; }
+.jt-foot__sign { height: 22px; border-top: 1px solid #000; }
+.jt-copy { border: 1px solid #000; }
+.jt-copy td { padding: 2px 4px; vertical-align: middle; }
+.jt-copy__brand { width: 30%; font-size: 11px; font-weight: bold; font-style: italic; }
+.jt-copy__brand span { display: block; font-size: 5px; font-style: normal; letter-spacing: 2px; }
+.jt-copy__logo { display: block; max-width: 65px; max-height: 16px; height: auto; }
+.jt-copy__bars { text-align: center; }
+.jt-copy__bars img { width: 96%; height: 22px; }
+.jt-copy__bars span { display: block; font-size: 7px; letter-spacing: 1px; }
+.jt-copy__info { font-size: 7px; border-top: 1px solid #000; }
+
+/* ---- Flash Express style: brand + black DST box, barcode first, sorting line, TO/FROM, inverted COD, tear-off. ---- */
+.fx-top td { padding: 0 0 3px; vertical-align: middle; }
+.fx-top__brand { font-size: 19px; font-weight: bold; font-style: italic; letter-spacing: 1px; }
+.fx-top__brand span { margin-left: 3px; font-size: 9px; letter-spacing: 2px; }
+.fx-top__logo { display: block; max-width: 110px; max-height: 28px; height: auto; }
+.fx-top__dst { width: 46%; padding: 4px 6px !important; background: #000; color: #fff; font-size: 20px; font-weight: bold; text-align: center; letter-spacing: 1px; }
+.fx-top__dst span { display: block; font-size: 7px; letter-spacing: 3px; }
+.fx-barcode { padding: 3px 0; text-align: center; border-top: 3px solid #000; border-bottom: 3px solid #000; }
+.fx-barcode img { width: 98%; height: 56px; }
+.fx-barcode__no { font-size: 12px; font-weight: bold; letter-spacing: 3px; }
+.fx-line { border-bottom: 1px solid #000; }
+.fx-line td { padding: 3px 4px; font-size: 8px; vertical-align: top; }
+.fx-line__lane { width: 42%; font-size: 13px !important; font-weight: bold; }
+.fx-party { margin-top: 3px; border: 2px solid #000; }
+.fx-party td { padding: 4px 5px; vertical-align: top; }
+.fx-party__to { width: 62%; border-right: 1px solid #000; }
+.fx-party__from { font-size: 7px; }
+.fx-party__tag { display: inline-block; margin-bottom: 2px; padding: 0 4px; background: #000; color: #fff; font-size: 8px; font-weight: bold; }
+.fx-party__tag--light { background: #fff; color: #000; border: 1px solid #000; }
+.fx-party__name { font-size: 12px; font-weight: bold; }
+.fx-party__phone { font-size: 10px; font-weight: bold; }
+.fx-party__address { font-size: 9px; line-height: 1.25; }
+.fx-cod { margin: 3px 0; border: 2px solid #000; }
+.fx-cod td { padding: 3px 5px; vertical-align: middle; }
+.fx-cod__box { width: 40%; background: #000; color: #fff; text-align: center; }
+.fx-cod__box span { display: block; font-size: 9px; font-weight: bold; letter-spacing: 2px; }
+.fx-cod__box strong { display: block; font-size: 17px; }
+.fx-cod__details { font-size: 7px; }
+.fx-cod__details .wb-label { display: inline; margin-right: 3px; }
 .fx-cod__qr { width: 56px; text-align: right; }
 .fx-cod__qr img { width: 52px; height: 52px; }
+.fx-sign { margin-top: 3px; }
+.fx-sign td { width: 50%; height: 20px; padding: 2px 4px; border-bottom: 1px solid #000; vertical-align: bottom; }
+.fx-copy { border: 1px solid #000; }
+.fx-copy td { padding: 2px 4px; vertical-align: middle; }
+.fx-copy__dst { width: 24%; background: #000; color: #fff; font-size: 11px; font-weight: bold; text-align: center; }
+.fx-copy__bars { text-align: center; }
+.fx-copy__bars img { width: 96%; height: 22px; }
+.fx-copy__bars span { display: block; font-size: 7px; letter-spacing: 1px; }
+.fx-copy__cod { width: 22%; font-size: 9px; font-weight: bold; text-align: right; }
