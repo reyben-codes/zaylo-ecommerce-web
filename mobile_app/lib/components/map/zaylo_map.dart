@@ -21,18 +21,21 @@ Marker mapMarker(LatLng point, MapPinKind kind) => Marker(
       alignment: kind == MapPinKind.home ? Alignment.topCenter : Alignment.center,
       child: switch (kind) {
         MapPinKind.home => Icon(Icons.location_on, size: 44, color: ZayloColors.ink, semanticLabel: 'Delivery pin'),
-        MapPinKind.rider || MapPinKind.me => Center(
+        // The ZAYLO favicon in a bronze ring, the same image as the website's map (public/images/map-rider.png).
+        MapPinKind.rider => Center(
+            child: Image.asset('assets/images/map_rider.png', width: 40, height: 40, semanticLabel: 'Rider'),
+          ),
+        MapPinKind.me => Center(
             child: Container(
               width: 34,
               height: 34,
               decoration: BoxDecoration(
-                color: kind == MapPinKind.rider ? ZayloColors.bronze : const Color(0xFF2F6FDE),
+                color: const Color(0xFF2F6FDE),
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.white, width: 3),
                 boxShadow: const [BoxShadow(color: Color(0x55000000), blurRadius: 6)],
               ),
-              child: Icon(kind == MapPinKind.rider ? Icons.two_wheeler : Icons.person, size: 17, color: Colors.white,
-                  semanticLabel: kind == MapPinKind.rider ? 'Rider' : 'You'),
+              child: const Icon(Icons.person, size: 17, color: Colors.white, semanticLabel: 'You'),
             ),
           ),
       },

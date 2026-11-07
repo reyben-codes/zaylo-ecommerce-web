@@ -27,13 +27,12 @@
 .track-map-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0; padding: 0; list-style: none; font-size: .85rem; }
 .track-map-legend span { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
 .track-map-legend .is-home { background: #2f2a26; }
-.track-map-legend .is-rider { background: #b8763e; }
+.track-map-legend .is-rider { width: 18px; height: 18px; vertical-align: -4px; background: url('../images/map-rider.png') center / contain no-repeat; }
 .track-map-note { margin: 0; font-size: .85rem; color: var(--c-6b5f54, #6b5f54); }
 
 /* Markers drawn with CSS, so no image files are needed. */
 .map-marker { border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 3px solid #fff; box-shadow: 0 2px 6px rgb(0 0 0 / 35%); }
 .map-marker--home { background: #2f2a26; }
-.map-marker--rider { background: #b8763e; border-radius: 50%; transform: none; }
 
 @media (max-width: 560px) {
     .zaylo-map { height: 260px; }

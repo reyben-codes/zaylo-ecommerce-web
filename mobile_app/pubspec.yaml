@@ -32,6 +32,7 @@ flutter:
   assets:
     - assets/images/ZAYLO_LOGO_DARK.png
     - assets/images/ZAYLO_LOGO_LIGHT.png
+    - assets/images/map_rider.png
     - assets/sounds/
     - assets/fonts/OFL.txt
   fonts:
