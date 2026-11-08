@@ -59,9 +59,17 @@ class RiderApi extends ApiClient {
   @override
   String get faqRole => 'rider';
 
-  /// Rider accounts only; buyers are turned away by the server.
+  /// Rider accounts only; buyers and couriers are turned away by the server.
   Future<AuthResult> login(String email, String password) async =>
       AuthResult.fromJson(await send('POST', '/mobile/rider/login', body: {
+        'email': email,
+        'password': password,
+        'device_name': deviceName,
+      }));
+
+  /// Courier accounts only; buyers and riders are turned away by the server.
+  Future<AuthResult> courierLogin(String email, String password) async =>
+      AuthResult.fromJson(await send('POST', '/mobile/courier/login', body: {
         'email': email,
         'password': password,
         'device_name': deviceName,

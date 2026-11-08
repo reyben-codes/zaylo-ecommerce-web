@@ -40,7 +40,7 @@ trait IssuesMobileTokens
             throw ValidationException::withMessages(['email' => 'Incorrect email or password.']);
         }
 
-        if (! $user->hasRole($role, ...($role === 'rider' ? ['courier'] : []))) {
+        if (! $user->hasRole($role)) {
             throw ValidationException::withMessages(['email' => $wrongRoleMessage]);
         }
 

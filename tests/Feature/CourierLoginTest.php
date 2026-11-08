@@ -36,9 +36,12 @@ class CourierLoginTest extends TestCase
             ->assertSessionHasErrors(['email' => "This is a courier account, so it can't sign in here. Please use the Courier sign-in page instead."]);
         $this->assertGuest();
 
-        // The app's driver sign-in takes couriers too.
-        $this->postJson('/api/mobile/rider/login', ['email' => 'courier@example.com', 'password' => 'Password123!', 'device_name' => 'Test phone'])
+        // Mobile app sign-in: courier and rider endpoints are separated.
+        $this->postJson('/api/mobile/courier/login', ['email' => 'courier@example.com', 'password' => 'Password123!', 'device_name' => 'Test phone'])
             ->assertOk()->assertJsonStructure(['token']);
+        $this->postJson('/api/mobile/rider/login', ['email' => 'courier@example.com', 'password' => 'Password123!', 'device_name' => 'Test phone'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['email' => 'This sign-in is for rider accounts. Couriers can use Courier sign-in instead.']);
     }
 
     public function test_riders_and_couriers_waiting_for_approval_cannot_use_the_courier_sign_in(): void
@@ -47,6 +50,10 @@ class CourierLoginTest extends TestCase
         $this->post(route('courier.login.submit'), ['email' => 'rider@example.com', 'password' => 'Password123!'])
             ->assertSessionHasErrors(['email' => "This is a rider account, so it can't sign in here. Please use the ZAYLO app page instead."]);
         $this->assertGuest();
+
+        $this->postJson('/api/mobile/courier/login', ['email' => 'rider@example.com', 'password' => 'Password123!', 'device_name' => 'Test phone'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['email' => 'This sign-in is for courier accounts. Riders can use Rider sign-in instead.']);
 
         $this->driver('courier', 'pending@example.com', 'pending');
         $this->post(route('courier.login.submit'), ['email' => 'pending@example.com', 'password' => 'Password123!'])

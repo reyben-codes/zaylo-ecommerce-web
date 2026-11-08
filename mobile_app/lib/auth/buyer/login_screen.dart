@@ -4,6 +4,7 @@ import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/auth/buyer/finish_sign_in.dart';
 import 'package:zaylo_mobile/auth/buyer/registration_screen.dart';
 import 'package:zaylo_mobile/auth/buyer/verify_email_screen.dart';
+import 'package:zaylo_mobile/auth/courier/courier_login_screen.dart';
 import 'package:zaylo_mobile/auth/forgot_password_screen.dart';
 import 'package:zaylo_mobile/auth/rider/rider_login_screen.dart';
 import 'package:zaylo_mobile/auth/widgets/auth_layout.dart';
@@ -124,7 +125,18 @@ class _LoginScreenState extends State<LoginScreen> {
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RiderLoginScreen())),
             style: secondaryButtonStyle,
             icon: const Icon(Icons.two_wheeler_outlined),
-            label: const Text('Login as a Rider or Courier'),
+            label: const Text('Login as a Rider'),
+          ),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          width: double.infinity,
+          height: 50,
+          child: OutlinedButton.icon(
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CourierLoginScreen())),
+            style: secondaryButtonStyle,
+            icon: const Icon(Icons.local_shipping_outlined),
+            label: const Text('Login as a Courier'),
           ),
         ),
         const SizedBox(height: 27),
