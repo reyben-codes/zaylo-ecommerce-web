@@ -14,7 +14,8 @@ class GoogleAuthController extends Controller
     {
         $request->session()->forget(['google_oauth', 'state']);
         $role = $request->query('role', 'buyer');
-        if (! is_string($role) || ! in_array($role, GoogleAccountService::PUBLIC_ROLES, true)) {
+        $allowed = array_merge(GoogleAccountService::PUBLIC_ROLES, ['courier']);
+        if (! is_string($role) || ! in_array($role, $allowed, true)) {
             return redirect()->route('login')->withErrors(['google' => 'Google sign-up is available for buyer and seller accounts. Riders and logistics partners can register with email.']);
         }
         if (! $this->configured()) {
@@ -43,7 +44,8 @@ class GoogleAuthController extends Controller
             if ($request->has('error')) {
                 return redirect()->route('login')->withErrors(['google' => 'Google sign-in was cancelled or denied. You can try again or use email and password.']);
             }
-            if (! is_array($context) || ! in_array($context['role'] ?? null, GoogleAccountService::PUBLIC_ROLES, true)
+            $allowed = array_merge(GoogleAccountService::PUBLIC_ROLES, ['courier']);
+            if (! is_array($context) || ! in_array($context['role'] ?? null, $allowed, true)
                 || ! is_int($context['started_at'] ?? null)
                 || $context['started_at'] < now()->subMinutes(10)->timestamp
                 || ! is_string($request->query('state')) || ! is_string($request->query('code'))
@@ -53,17 +55,18 @@ class GoogleAuthController extends Controller
 
             // Do not use stateless(): user() consumes and validates the session's state.
             $identity = Socialite::driver('google')->user();
-            $user = $accounts->resolve($identity, $context['role']);
+            $user = $accounts->resolve($identity, $context['role'], createAccount: $context['role'] !== 'courier');
             if (! $user->isActive()) {
+                $loginRoute = $context['role'] === 'courier' ? 'courier.login' : 'login';
                 $message = $user->status === 'pending'
-                    ? 'Your email is verified. Your marketplace account is awaiting administrator approval.'
+                    ? ($context['role'] === 'courier' ? 'Your courier application is still being reviewed by your logistics partner.' : 'Your email is verified. Your marketplace account is awaiting administrator approval.')
                     : 'This account is suspended. Please contact support.';
 
-                return redirect()->route('login')->withErrors(['google' => $message]);
+                return redirect()->route($loginRoute)->withErrors(['google' => $message]);
             }
 
-            // Riders sign in only in the app.
-            if ($user->hasRole('rider', 'courier')) {
+            // Riders sign in only in the app. Couriers can sign in on the website.
+            if ($user->isRider()) {
                 return redirect()->route('rider.app')->with('status', 'Riders sign in on the ZAYLO app with Login as a Rider.');
             }
 
@@ -74,15 +77,26 @@ class GoogleAuthController extends Controller
                 'buyer' => 'buyer.dashboard',
                 'seller' => 'seller.dashboard',
                 'logistics' => 'logistics.dashboard',
+                'courier' => 'courier.dashboard',
                 'admin' => 'admin.dashboard',
                 default => 'home',
             });
+        } catch (\App\Exceptions\NoGoogleAccountException) {
+            $loginRoute = ($context['role'] ?? 'buyer') === 'courier' ? 'courier.login' : 'login';
+
+            return redirect()->route($loginRoute)->withErrors(['google' => 'No courier account uses this Google email. Apply as a courier first, or sign in with your email and password.']);
         } catch (\App\Exceptions\WrongAccountTypeException $exception) {
             $target = AuthController::PORTALS[\App\Models\User::portalOf($exception->accountRole)] ?? AuthController::PORTALS['buyer'];
             $article = preg_match('/^[aeiou]/i', $target['account']) ? 'an' : 'a';
             session()->flash('portal_hint', ['url' => route($target['login']), 'label' => 'Go to the '.$target['page']]);
+            $fromRole = $context['role'] ?? 'buyer';
+            $fromRoute = match ($fromRole) {
+                'seller' => 'seller.login',
+                'courier' => 'courier.login',
+                default => 'login',
+            };
 
-            return redirect()->route(($context['role'] ?? 'buyer') === 'seller' ? 'seller.login' : 'login')
+            return redirect()->route($fromRoute)
                 ->withErrors(['google' => "This Google email belongs to {$article} {$target['account']} account, so it can't sign in here. Please use the {$target['page']} page instead."]);
         } catch (\Throwable $exception) {
             return $this->failed($exception);

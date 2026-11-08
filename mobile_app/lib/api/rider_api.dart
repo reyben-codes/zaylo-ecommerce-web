@@ -83,6 +83,13 @@ class RiderApi extends ApiClient {
         'device_name': deviceName,
       }));
 
+  /// Signs in an existing courier with a Google ID token.
+  Future<AuthResult> courierGoogleSignIn(String idToken) async =>
+      AuthResult.fromJson(await send('POST', '/mobile/courier/google', body: {
+        'id_token': idToken,
+        'device_name': deviceName,
+      }));
+
   /// Logistics partners accepting riders, and the vehicle types, for sign-up.
   Future<RiderSignUpOptions> signUpOptions() async =>
       RiderSignUpOptions.fromJson(await send('GET', '/mobile/rider/logistics-partners'));

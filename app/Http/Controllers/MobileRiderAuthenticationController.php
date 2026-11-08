@@ -39,10 +39,22 @@ class MobileRiderAuthenticationController extends Controller
     }
 
     /**
-     * "Continue with Google" for riders. Unlike buyers, it only signs in: a rider applies with the form (partner,
-     * license, documents) first, then can use the Google account with the same email from then on.
+     * "Continue with Google" for riders.
      */
     public function google(Request $request, GoogleIdTokenVerifier $tokens, GoogleAccountService $accounts): JsonResponse
+    {
+        return $this->driverGoogleSignIn($request, $tokens, $accounts, 'rider');
+    }
+
+    /**
+     * "Continue with Google" for couriers.
+     */
+    public function courierGoogle(Request $request, GoogleIdTokenVerifier $tokens, GoogleAccountService $accounts): JsonResponse
+    {
+        return $this->driverGoogleSignIn($request, $tokens, $accounts, 'courier');
+    }
+
+    private function driverGoogleSignIn(Request $request, GoogleIdTokenVerifier $tokens, GoogleAccountService $accounts, string $role): JsonResponse
     {
         if (! $request->has('id_token')) {
             $token = $request->input('idToken') ?? $request->input('token') ?? $request->input('credential');
@@ -64,18 +76,19 @@ class MobileRiderAuthenticationController extends Controller
             if (! $identity) {
                 throw ValidationException::withMessages(['google' => 'Google could not confirm this sign-in. Please try again.']);
             }
-            $user = $accounts->resolve($identity, 'rider', createAccount: false);
+            $user = $accounts->resolve($identity, $role, createAccount: false);
         } catch (NoGoogleAccountException) {
-            throw ValidationException::withMessages(['google' => 'No rider account uses this Google email. Register as a rider first, or sign in with your email and password.']);
+            throw ValidationException::withMessages(['google' => "No {$role} account uses this Google email. Register as a {$role} first, or sign in with your email and password."]);
         } catch (WrongAccountTypeException $exception) {
-            throw ValidationException::withMessages(['google' => User::portalOf($exception->accountRole) === 'buyer'
+            $accountType = User::portalOf($exception->accountRole);
+            throw ValidationException::withMessages(['google' => $accountType === 'buyer'
                 ? 'This Google email belongs to a buyer account. Use Log in as a buyer instead.'
-                : 'This Google email belongs to an account that uses the ZAYLO website, not the rider app.']);
+                : "This Google email belongs to a {$accountType} account, not {$role}."]);
         } catch (ValidationException $exception) {
             throw $exception;
         } catch (\Throwable $exception) {
             // Never log the token or Google's response; only what kind of failure it was.
-            Log::warning('Rider Google sign-in failed.', ['exception_type' => $exception::class]);
+            Log::warning(ucfirst($role).' Google sign-in failed.', ['exception_type' => $exception::class]);
             throw ValidationException::withMessages(['google' => 'We could not sign you in with Google. Please try again or use email and password.']);
         }
 

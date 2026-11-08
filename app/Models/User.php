@@ -226,7 +226,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public static function portalOf(?string $role): string
     {
-        return $role === 'courier' ? 'rider' : ($role ?: 'buyer');
+        return $role ?: 'buyer';
     }
 
     public function sellerStoreName(): string

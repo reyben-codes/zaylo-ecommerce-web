@@ -71,6 +71,7 @@ Route::prefix('mobile')->name('mobile.')->middleware('throttle:60,1')->group(fun
         Route::post('/rider/login', [MobileRiderAuthenticationController::class, 'login'])->name('rider.login');
         Route::post('/courier/login', [MobileRiderAuthenticationController::class, 'courierLogin'])->name('courier.login');
         Route::post('/rider/google', [MobileRiderAuthenticationController::class, 'google'])->name('rider.google');
+        Route::post('/courier/google', [MobileRiderAuthenticationController::class, 'courierGoogle'])->name('courier.google');
         Route::post('/rider/register', [MobileRiderAuthenticationController::class, 'register'])->name('rider.register');
         Route::post('/register', [MobileAuthenticationController::class, 'register'])->name('register');
         Route::post('/verify-email', [MobileAuthenticationController::class, 'verifyEmail'])->name('verify-email');

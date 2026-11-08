@@ -8,6 +8,7 @@ import 'package:zaylo_mobile/auth/forgot_password_screen.dart';
 import 'package:zaylo_mobile/auth/rider/rider_login_screen.dart';
 import 'package:zaylo_mobile/auth/rider/rider_verify_email_screen.dart';
 import 'package:zaylo_mobile/auth/widgets/auth_layout.dart';
+import 'package:zaylo_mobile/auth/widgets/google_sign_in_button.dart';
 import 'package:zaylo_mobile/components/buttons.dart';
 import 'package:zaylo_mobile/components/form_fields.dart';
 import 'package:zaylo_mobile/components/layout.dart';
@@ -63,6 +64,16 @@ class _CourierLoginScreenState extends State<CourierLoginScreen> {
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
+  }
+
+  /// "Continue with Google" for couriers; errors show in the screen's banner.
+  Future<void> _googleSignIn(String idToken) async {
+    final result = await _api.courierGoogleSignIn(idToken);
+    await _api.keepSignedIn(result.token);
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(MaterialPageRoute(
+      builder: (_) => RiderShell(api: _api, user: result.user),
+    ));
   }
 
   @override
@@ -123,6 +134,10 @@ class _CourierLoginScreenState extends State<CourierLoginScreen> {
             ),
             const SizedBox(height: 12),
             PrimaryButton(label: 'SIGN IN AS COURIER', busy: _submitting, onPressed: _submit),
+            GoogleSignInSection(
+              onError: (message) => setState(() => _error = message),
+              signIn: _googleSignIn,
+            ),
           ]),
         ),
         const SizedBox(height: 27),

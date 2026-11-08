@@ -6,6 +6,9 @@ use App\Models\LogisticsProvider;
 use App\Models\Rider;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
+use Laravel\Socialite\Facades\Socialite;
+use Laravel\Socialite\Two\User as GoogleUser;
 use Tests\TestCase;
 
 /**
@@ -59,6 +62,53 @@ class CourierLoginTest extends TestCase
         $this->post(route('courier.login.submit'), ['email' => 'pending@example.com', 'password' => 'Password123!'])
             ->assertSessionHasErrors(['email' => 'This courier account is pending approval or has been suspended.']);
         $this->assertGuest();
+    }
+
+    public function test_courier_can_sign_in_with_google_on_web_and_mobile(): void
+    {
+        config([
+            'services.google.client_id' => 'web-client.apps.googleusercontent.com',
+            'services.google.client_secret' => 'test-secret',
+            'services.google.redirect' => 'http://localhost/auth/google/callback',
+        ]);
+
+        $courier = $this->driver('courier', 'courier.google@example.com');
+
+        // Web Google sign-in button is present on the courier login page
+        $this->get(route('courier.login'))->assertOk()->assertSee(route('google.redirect', ['role' => 'courier']), false);
+
+        // Web Google callback signs the courier into courier.dashboard
+        $identity = (new GoogleUser)->map([
+            'id' => 'google-courier-123',
+            'email' => 'courier.google@example.com',
+            'name' => 'Courier Google',
+            'avatar' => 'https://lh3.googleusercontent.com/avatar',
+        ]);
+        $identity->user = ['email_verified' => true];
+        Socialite::shouldReceive('driver->user')->andReturn($identity);
+
+        session()->put('google_oauth', ['role' => 'courier', 'started_at' => now()->timestamp]);
+        $this->get('/auth/google/callback?state=xyz&code=abc')
+            ->assertRedirect(route('courier.dashboard'));
+        $this->assertAuthenticatedAs($courier);
+        auth()->logout();
+
+        // Mobile Google token sign-in
+        Http::fake([
+            'https://oauth2.googleapis.com/tokeninfo*' => Http::response([
+                'aud' => 'web-client.apps.googleusercontent.com',
+                'iss' => 'https://accounts.google.com',
+                'exp' => (string) now()->addHour()->timestamp,
+                'sub' => 'google-courier-123',
+                'email' => 'courier.google@example.com',
+                'email_verified' => 'true',
+                'name' => 'Courier Google',
+            ]),
+        ]);
+
+        $response = $this->postJson('/api/mobile/courier/google', ['id_token' => 'valid-token', 'device_name' => 'Courier Phone'])
+            ->assertOk()->assertJsonStructure(['token', 'user']);
+        $this->assertSame('google-courier-123', $courier->fresh()->google_id);
     }
 
     private function driver(string $role, string $email, string $status = 'active'): User

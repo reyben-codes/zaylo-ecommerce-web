@@ -34,7 +34,7 @@
             'label' => 'ZAYLO COURIER', 'heading' => 'Welcome, Courier',
             'subtitle' => 'Sign in to see the parcels to pick up from sellers and bring to your partner hub.',
             'action' => route('courier.login.submit'), 'button' => 'Sign In as Courier',
-            'google' => null,
+            'google' => route('google.redirect', ['role' => 'courier']),
             'footer' => ['New courier?', 'Apply to become a courier', route('register', ['role' => 'courier'])],
         ],
         'admin' => [
