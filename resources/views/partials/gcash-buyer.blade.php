@@ -24,8 +24,8 @@
                 @csrf
                 <input type="hidden" name="gcash_order" value="{{ $order->id }}">
                 <label class="sr-only" for="gcash-ref-{{ $order->id }}">GCash reference number for {{ $order->order_number }}</label>
-                <input id="gcash-ref-{{ $order->id }}" type="text" name="gcash_reference" inputmode="numeric" autocomplete="off" maxlength="25"
-                       placeholder="13-digit reference no." value="{{ $refError ? old('gcash_reference') : '' }}" required @if($refError) aria-invalid="true" @endif>
+                <input id="gcash-ref-{{ $order->id }}" type="text" name="gcash_reference" inputmode="numeric" autocomplete="off" maxlength="13" minlength="13"
+                       placeholder="13-digit reference no." value="{{ $refError ? old('gcash_reference') : '' }}" required pattern="[0-9]{13}" @if($refError) aria-invalid="true" @endif>
                 <button class="market-button" type="submit">Send reference</button>
             </form>
             @if($refError)<p class="gcash-status__error" role="alert">{{ $errors->first('gcash_reference') }}</p>@endif

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/api/buyer_api.dart';
@@ -479,10 +480,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           TextField(
             controller: _gcashRef(seller.sellerId),
             keyboardType: TextInputType.number,
-            maxLength: 25,
+            maxLength: 13,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(13),
+            ],
             decoration: const InputDecoration(
               labelText: 'GCash reference no. (optional now)',
-              hintText: 'e.g. 1234 567 890123',
+              hintText: '13-digit reference no.',
               counterText: '',
             ),
           ),

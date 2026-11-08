@@ -3,6 +3,7 @@
 @section('title', 'My Orders · ZAYLO')
 @push('scripts')
 <script src="{{ asset('js/smooth-disclosure.js') }}?v={{ filemtime(public_path('js/smooth-disclosure.js')) }}" defer></script>
+<script src="{{ asset('js/checkout-gcash.js') }}?v={{ filemtime(public_path('js/checkout-gcash.js')) }}" defer></script>
 @endpush
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/product-reviews.css') }}?v={{ filemtime(public_path('css/product-reviews.css')) }}">

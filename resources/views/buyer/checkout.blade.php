@@ -180,7 +180,7 @@
                                 <label class="gcash-pay__reference">
                                     <span>GCash reference no.</span>
                                     <input type="text" name="gcash_references[{{ $seller['seller_id'] }}]" value="{{ old('gcash_references.'.$seller['seller_id']) }}"
-                                           inputmode="numeric" autocomplete="off" maxlength="25" placeholder="e.g. 1234 567 890123" pattern="[0-9 ]{13,25}">
+                                           inputmode="numeric" autocomplete="off" maxlength="13" minlength="13" placeholder="13-digit reference no." pattern="[0-9]{13}">
                                 </label>
                             </div>
                         @endforeach

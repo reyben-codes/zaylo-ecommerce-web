@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/components/buttons.dart';
@@ -398,8 +399,12 @@ class _GcashReferenceSheetState extends State<_GcashReferenceSheet> {
             controller: _reference,
             autofocus: true,
             keyboardType: TextInputType.number,
-            maxLength: 25,
-            decoration: InputDecoration(labelText: 'Reference no.', hintText: 'e.g. 1234 567 890123', counterText: '', errorText: _error),
+            maxLength: 13,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(13),
+            ],
+            decoration: InputDecoration(labelText: 'Reference no.', hintText: '13-digit reference no.', counterText: '', errorText: _error),
             onSubmitted: (_) => _submit(),
           ),
           const SizedBox(height: 14),
