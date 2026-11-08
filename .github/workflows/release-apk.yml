@@ -72,6 +72,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+          cache: 'gradle'
 
       - uses: subosito/flutter-action@v2
         with:
@@ -122,8 +123,19 @@ jobs:
           BUILD_NUMBER=$(( GITHUB_RUN_NUMBER + 1 ))
           # APP_VERSION lets the app compare itself with the newest release and suggest updating; PATCH_NOTES fills
           # its Patch notes pop-up.
-          flutter build apk --release --build-name="$VERSION" --build-number="$BUILD_NUMBER" --dart-define=APP_VERSION="$VERSION" --dart-define=PATCH_NOTES="$(cat "$RUNNER_TEMP/patch-notes/patch-notes.b64")"
-          mv build/app/outputs/flutter-apk/app-release.apk zaylo.apk
+          for i in 1 2 3; do
+            echo "Attempt $i: Building APK..."
+            if flutter build apk --release --build-name="$VERSION" --build-number="$BUILD_NUMBER" --dart-define=APP_VERSION="$VERSION" --dart-define=PATCH_NOTES="$(cat "$RUNNER_TEMP/patch-notes/patch-notes.b64")"; then
+              break
+            fi
+            if [ "$i" -eq 3 ]; then
+              echo "::error::flutter build apk failed after 3 attempts."
+              exit 1
+            fi
+            echo "Build attempt $i failed on artifact download. Retrying in 10s..."
+            sleep 10
+          done
+          mv build/app/outputs/flutter-apk/*.apk zaylo.apk
 
       # Checks the finished APK itself, so a release can never again go out signed with another key.
       - name: Check the APK's signature
