@@ -7,6 +7,7 @@ import 'package:zaylo_mobile/auth/buyer/verify_email_screen.dart';
 import 'package:zaylo_mobile/auth/widgets/auth_layout.dart';
 import 'package:zaylo_mobile/auth/widgets/google_sign_in_button.dart';
 import 'package:zaylo_mobile/auth/widgets/registration_progress.dart';
+import 'package:zaylo_mobile/auth/widgets/role_selection_cards.dart';
 import 'package:zaylo_mobile/components/buttons.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
 import 'package:zaylo_mobile/components/form_fields.dart';
@@ -113,6 +114,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         children: [
           const AuthMasthead(registering: true),
           const SizedBox(height: 32),
+          if (_step == 1) const AuthRoleCards(selectedRole: AuthRole.buyer, isLogin: false),
           const Eyebrow('Join ZAYLO'),
           const SizedBox(height: 9),
           Text(

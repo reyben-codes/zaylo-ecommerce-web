@@ -157,7 +157,7 @@ class MobileRiderAuthenticationController extends Controller
             'first_name', 'last_name', 'date_of_birth', 'gender', 'email', 'phone', 'password', 'password_confirmation',
             'logistics_provider_id', 'vehicle_type', 'license_number', 'license_expires_on', 'license_document', 'or_cr_document',
         ])->all() + [
-            'role' => 'rider',
+            'role' => in_array($request->input('role'), ['rider', 'courier'], true) ? $request->input('role') : 'rider',
             'plate_no' => $validated['plate_number'] ?? null,
             'home_address' => $homeAddress,
         ];

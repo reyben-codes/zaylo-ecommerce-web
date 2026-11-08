@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:zaylo_mobile/auth/buyer/login_screen.dart';
-import 'package:zaylo_mobile/auth/buyer/registration_screen.dart';
+import 'package:zaylo_mobile/auth/widgets/role_selection_cards.dart';
 import 'package:zaylo_mobile/components/buttons.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 
@@ -41,14 +40,17 @@ class SignedOutPrompt extends StatelessWidget {
               const SizedBox(height: 24),
               PrimaryButton(
                 label: 'SIGN IN',
-                onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LoginScreen())),
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => const AccountTypeSelectionScreen(isLogin: true),
+                )),
               ),
               const SizedBox(height: 10),
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton(
-                  onPressed: () =>
-                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RegistrationScreen())),
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => const AccountTypeSelectionScreen(isLogin: false),
+                  )),
                   style: secondaryButtonStyle,
                   child: const Text('CREATE NEW ACCOUNT'),
                 ),

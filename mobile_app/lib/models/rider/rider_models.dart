@@ -64,6 +64,7 @@ class RiderRegistration {
     required this.passwordConfirmation,
     required this.logisticsProviderId,
     required this.vehicleType,
+    this.role = 'rider',
     this.licenseNumber = '',
     this.licenseExpiresOn = '',
     this.plateNumber = '',
@@ -89,6 +90,7 @@ class RiderRegistration {
   /// The logistics partner reviewing the application.
   final int logisticsProviderId;
   final String vehicleType;
+  final String role;
 
   /// Empty for bicycles, which need no license, plate or OR/CR.
   final String licenseNumber;
@@ -101,6 +103,7 @@ class RiderRegistration {
   final bool termsAccepted;
 
   Map<String, String> get fields => {
+        'role': role,
         'first_name': firstName,
         'last_name': lastName,
         'date_of_birth': dateOfBirth,

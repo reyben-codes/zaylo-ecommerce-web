@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 
 import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/auth/buyer/finish_sign_in.dart';
-import 'package:zaylo_mobile/auth/buyer/registration_screen.dart';
 import 'package:zaylo_mobile/auth/buyer/verify_email_screen.dart';
 import 'package:zaylo_mobile/auth/courier/courier_login_screen.dart';
 import 'package:zaylo_mobile/auth/forgot_password_screen.dart';
 import 'package:zaylo_mobile/auth/rider/rider_login_screen.dart';
 import 'package:zaylo_mobile/auth/widgets/auth_layout.dart';
 import 'package:zaylo_mobile/auth/widgets/google_sign_in_button.dart';
+import 'package:zaylo_mobile/auth/widgets/role_selection_cards.dart';
 import 'package:zaylo_mobile/components/buttons.dart';
 import 'package:zaylo_mobile/components/form_fields.dart';
 import 'package:zaylo_mobile/components/layout.dart';
@@ -62,6 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) => AuthScaffold(children: [
         const AuthMasthead(registering: false),
         const SizedBox(height: 32),
+        const AuthRoleCards(selectedRole: AuthRole.buyer, isLogin: true),
         const Eyebrow('ZAYLO account'),
         const SizedBox(height: 9),
         Text('Welcome Back', style: Theme.of(context).textTheme.headlineSmall),
@@ -143,7 +144,7 @@ class _LoginScreenState extends State<LoginScreen> {
         Center(
           child: TextButton(
             onPressed: () => Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const RegistrationScreen()),
+              MaterialPageRoute(builder: (_) => const AccountTypeSelectionScreen(isLogin: false)),
             ),
             child: const Text("Don't have an account? Create new account"),
           ),

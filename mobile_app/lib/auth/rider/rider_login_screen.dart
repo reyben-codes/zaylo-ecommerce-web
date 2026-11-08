@@ -10,6 +10,7 @@ import 'package:zaylo_mobile/auth/rider/rider_registration_screen.dart';
 import 'package:zaylo_mobile/auth/rider/rider_verify_email_screen.dart';
 import 'package:zaylo_mobile/auth/widgets/auth_layout.dart';
 import 'package:zaylo_mobile/auth/widgets/google_sign_in_button.dart';
+import 'package:zaylo_mobile/auth/widgets/role_selection_cards.dart';
 import 'package:zaylo_mobile/components/buttons.dart';
 import 'package:zaylo_mobile/components/form_fields.dart';
 import 'package:zaylo_mobile/components/layout.dart';
@@ -88,6 +89,7 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
   Widget _screen(BuildContext context) => AuthScaffold(children: [
         const AuthMasthead(registering: false),
         const SizedBox(height: 32),
+        const AuthRoleCards(selectedRole: AuthRole.rider, isLogin: true),
         const Eyebrow('ZAYLO rider'),
         const SizedBox(height: 9),
         Text('Welcome Back, Rider', style: Theme.of(context).textTheme.headlineSmall),

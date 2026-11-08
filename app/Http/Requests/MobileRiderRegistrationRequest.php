@@ -76,6 +76,7 @@ class MobileRiderRegistrationRequest extends FormRequest
             'line1' => ['required', 'string', 'max:255'],
             'postal_code' => ['required', 'regex:/^[0-9]{4}$/D'],
             'terms_accepted' => $this->withDocuments ? ['accepted'] : ['nullable'],
+            'role' => ['nullable', 'string', Rule::in(['rider', 'courier'])],
         ];
     }
 

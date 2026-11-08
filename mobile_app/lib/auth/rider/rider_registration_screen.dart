@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:zaylo_mobile/state/chat_head_state.dart';
 import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/api/rider_api.dart';
+import 'package:zaylo_mobile/auth/courier/courier_login_screen.dart';
 import 'package:zaylo_mobile/auth/rider/rider_login_screen.dart';
+import 'package:zaylo_mobile/auth/widgets/role_selection_cards.dart';
 import 'package:zaylo_mobile/components/document_upload_field.dart';
 import 'package:zaylo_mobile/auth/rider/widgets/rider_terms_dialog.dart';
 import 'package:zaylo_mobile/auth/widgets/auth_layout.dart';
@@ -31,10 +33,11 @@ import 'package:zaylo_mobile/utils/validators.dart';
 /// 5. a confirmation. The rider applies to a logistics partner, which
 /// approves the account from its Riders page on the website.
 class RiderRegistrationScreen extends StatefulWidget {
-  const RiderRegistrationScreen({super.key, this.api});
+  const RiderRegistrationScreen({super.key, this.api, this.role = 'rider'});
 
   /// Defaults to a rider client on the buyer client's server; tests pass a fake.
   final RiderApi? api;
+  final String role;
 
   @override
   State<RiderRegistrationScreen> createState() => _RiderRegistrationScreenState();
@@ -176,6 +179,7 @@ class _RiderRegistrationScreenState extends State<RiderRegistrationScreen> {
   RiderRegistration _registration() {
     final licensed = _needsLicense(_loadedOptions);
     return RiderRegistration(
+      role: widget.role,
       firstName: _firstName.text.trim(),
       lastName: _lastName.text.trim(),
       dateOfBirth: _birthdayText.text,
@@ -282,12 +286,17 @@ class _RiderRegistrationScreenState extends State<RiderRegistrationScreen> {
             if (_step == _successStep)
               _ApplicationSubmitted(email: _email.text.trim(), partner: _partnerName, onDone: _finish)
             else ...[
-              const Eyebrow('Ride with ZAYLO'),
+              if (_step == 1)
+                AuthRoleCards(
+                  selectedRole: widget.role == 'courier' ? AuthRole.courier : AuthRole.rider,
+                  isLogin: false,
+                ),
+              Eyebrow(widget.role == 'courier' ? 'ZAYLO courier' : 'Ride with ZAYLO'),
               const SizedBox(height: 9),
               Text(
                 switch (_step) {
-                  1 => 'Register as a rider',
-                  2 => 'Your rider details',
+                  1 => widget.role == 'courier' ? 'Register as a courier' : 'Register as a rider',
+                  2 => widget.role == 'courier' ? 'Your courier details' : 'Your rider details',
                   _termsStep => 'Terms and conditions',
                   _ => 'Check your email',
                 },
@@ -296,8 +305,12 @@ class _RiderRegistrationScreenState extends State<RiderRegistrationScreen> {
               const SizedBox(height: 7),
               Text(
                 switch (_step) {
-                  1 => 'Tell us who you are and where you live. You must be at least $minimumAge years old to ride with ZAYLO.',
-                  2 => 'Choose the logistics partner you will ride for, then add your contact details and vehicle.',
+                  1 => widget.role == 'courier'
+                      ? 'Tell us who you are and where you live. You must be at least $minimumAge years old to join as a courier.'
+                      : 'Tell us who you are and where you live. You must be at least $minimumAge years old to ride with ZAYLO.',
+                  2 => widget.role == 'courier'
+                      ? 'Choose the logistics partner you will pick up for, then add your contact details and vehicle.'
+                      : 'Choose the logistics partner you will ride for, then add your contact details and vehicle.',
                   _termsStep => 'Read the Rider Terms and Conditions, then submit your application.',
                   _ => 'Enter the six-digit code we sent to ${_email.text.trim()}. Your application goes to '
                       '${_partnerName ?? 'your logistics partner'} once the code is confirmed.',
@@ -326,9 +339,11 @@ class _RiderRegistrationScreenState extends State<RiderRegistrationScreen> {
               Center(
                 child: TextButton(
                   onPressed: () => Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (_) => const RiderLoginScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => widget.role == 'courier' ? const CourierLoginScreen() : const RiderLoginScreen(),
+                    ),
                   ),
-                  child: const Text('Already a rider? Sign in'),
+                  child: Text(widget.role == 'courier' ? 'Already a courier? Sign in' : 'Already a rider? Sign in'),
                 ),
               ),
             ],

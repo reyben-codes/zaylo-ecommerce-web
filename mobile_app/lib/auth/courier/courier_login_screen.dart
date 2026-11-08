@@ -6,9 +6,11 @@ import 'package:zaylo_mobile/api/rider_api.dart';
 import 'package:zaylo_mobile/auth/buyer/login_screen.dart';
 import 'package:zaylo_mobile/auth/forgot_password_screen.dart';
 import 'package:zaylo_mobile/auth/rider/rider_login_screen.dart';
+import 'package:zaylo_mobile/auth/rider/rider_registration_screen.dart';
 import 'package:zaylo_mobile/auth/rider/rider_verify_email_screen.dart';
 import 'package:zaylo_mobile/auth/widgets/auth_layout.dart';
 import 'package:zaylo_mobile/auth/widgets/google_sign_in_button.dart';
+import 'package:zaylo_mobile/auth/widgets/role_selection_cards.dart';
 import 'package:zaylo_mobile/components/buttons.dart';
 import 'package:zaylo_mobile/components/form_fields.dart';
 import 'package:zaylo_mobile/components/layout.dart';
@@ -82,6 +84,7 @@ class _CourierLoginScreenState extends State<CourierLoginScreen> {
   Widget _screen(BuildContext context) => AuthScaffold(children: [
         const AuthMasthead(registering: false),
         const SizedBox(height: 32),
+        const AuthRoleCards(selectedRole: AuthRole.courier, isLogin: true),
         const Eyebrow('ZAYLO courier'),
         const SizedBox(height: 9),
         Text('Welcome Back, Courier', style: Theme.of(context).textTheme.headlineSmall),
@@ -141,6 +144,14 @@ class _CourierLoginScreenState extends State<CourierLoginScreen> {
           ]),
         ),
         const SizedBox(height: 27),
+        Center(
+          child: TextButton(
+            onPressed: () => Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const RiderRegistrationScreen(role: 'courier')),
+            ),
+            child: const Text('New courier? Register as a courier'),
+          ),
+        ),
         Center(
           child: TextButton(
             onPressed: () => Navigator.of(context).pushReplacement(
