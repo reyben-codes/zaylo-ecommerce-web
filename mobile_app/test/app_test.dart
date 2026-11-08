@@ -1152,18 +1152,18 @@ void main() {
     await tester.tap(find.descendant(of: find.byType(HomeTopBar), matching: find.byTooltip('Messages')));
     await tester.pumpAndSettle();
     expect(find.byType(LoginScreen), findsOneWidget);
-    expect(find.text('Login as a Rider'), findsOneWidget);
-    expect(find.text('Login as a Courier'), findsOneWidget);
+    expect(find.text('Rider'), findsOneWidget);
+    expect(find.text('Courier'), findsOneWidget);
 
-    // Open rider login
-    await tester.tap(find.text('Login as a Rider'));
+    // Open rider login via the Rider selection card
+    await tester.tap(find.text('Rider'));
     await tester.pumpAndSettle();
     expect(find.text('Welcome Back, Rider'), findsOneWidget);
     expect(find.text('ZAYLO RIDER'), findsOneWidget);
     expect(find.text('SIGN IN AS RIDER'), findsOneWidget);
 
-    // Navigate to courier login from rider login
-    await tester.tap(find.text('Courier instead? Log in as a courier'));
+    // Navigate to courier login via the Courier selection card
+    await tester.tap(find.text('Courier'));
     await tester.pumpAndSettle();
     expect(find.text('Welcome Back, Courier'), findsOneWidget);
     expect(find.text('ZAYLO COURIER'), findsOneWidget);

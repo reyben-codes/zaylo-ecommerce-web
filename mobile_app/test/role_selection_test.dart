@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:zaylo_mobile/auth/buyer/login_screen.dart';
 import 'package:zaylo_mobile/auth/buyer/registration_screen.dart';
 import 'package:zaylo_mobile/auth/courier/courier_login_screen.dart';
 import 'package:zaylo_mobile/auth/rider/rider_login_screen.dart';
