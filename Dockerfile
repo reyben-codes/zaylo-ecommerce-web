@@ -27,13 +27,32 @@ ENV APACHE_DOCUMENT_ROOT /var/www/html/public
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
 RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
-# Copy your existing project files into the container
+# Install Composer and configure build environment
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+ENV COMPOSER_ALLOW_SUPERUSER=1 \
+    COMPOSER_NO_INTERACTION=1 \
+    COMPOSER_PROCESS_TIMEOUT=600 \
+    COMPOSER_MAX_PARALLEL_HTTP=4
+
+RUN composer config --global process-timeout 600 && \
+    composer config --global http-timeout 300
+
 WORKDIR /var/www/html
+
+# Copy dependency manifests first to cache vendor layer and avoid redownloading packages
+COPY composer.json composer.lock ./
+
+# Download dependencies with automatic retry for transient GitHub API/network timeouts
+RUN for i in 1 2 3; do \
+        composer install --no-dev --no-scripts --no-autoloader --prefer-dist && break || \
+        (echo "Composer install attempt $i failed, retrying in 5 seconds..." && sleep 5); \
+    done
+
+# Copy the rest of the application files
 COPY . .
 
-# Install Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
-RUN composer install --no-dev --optimize-autoloader
+# Generate optimized autoloader and discover packages
+RUN composer dump-autoload --optimize --no-dev
 
 # Set permissions for Laravel storage and cache folders
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
