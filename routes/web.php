@@ -93,6 +93,8 @@ Route::middleware('guest')->group(function () {
     Route::post('/seller/login', [AuthController::class, 'sellerLogin'])->middleware(['throttle:login', 'json.redirect'])->name('seller.login.submit');
     Route::get('/logistics/login', [AuthController::class, 'showLogisticsLogin'])->name('logistics.login');
     Route::post('/logistics/login', [AuthController::class, 'logisticsLogin'])->middleware(['throttle:login', 'json.redirect'])->name('logistics.login.submit');
+    Route::get('/courier/login', [AuthController::class, 'showCourierLogin'])->name('courier.login');
+    Route::post('/courier/login', [AuthController::class, 'courierLogin'])->middleware(['throttle:login', 'json.redirect'])->name('courier.login.submit');
     Route::get('/admin/login', [AuthController::class, 'showAdminLogin'])->name('admin.login');
     Route::post('/admin/login', [AuthController::class, 'adminLogin'])->middleware(['throttle:login', 'json.redirect'])->name('admin.login.submit');
     Route::get('/register', [AuthController::class, 'showRegister'])->name('register');

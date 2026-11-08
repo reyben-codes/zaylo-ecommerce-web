@@ -1,6 +1,7 @@
 {{-- Sign-in panel for every role, shown in the sign-in modal (partials/auth-modal). Role cards at the top pick the
      account type: public/js/auth-modal.js switches the form in place from each card's data-portal, keeping what was
-     typed; without JavaScript each card is a link to that role's sign-in page. Riders sign in only in the app. --}}
+     typed; without JavaScript each card is a link to that role's sign-in page. Couriers sign in here or in the app;
+     riders sign in only in the app. --}}
 @php
     $portal ??= 'shop';
     $portals = [
@@ -28,6 +29,14 @@
             'google' => null,
             'footer' => ['New partner?', 'Apply to become a logistics partner', route('register', ['role' => 'logistics'])],
         ],
+        'courier' => [
+            'name' => 'Courier', 'icon' => 'fa-truck-pickup', 'url' => route('courier.login'),
+            'label' => 'ZAYLO COURIER', 'heading' => 'Welcome, Courier',
+            'subtitle' => 'Sign in to see the parcels to pick up from sellers and bring to your partner hub.',
+            'action' => route('courier.login.submit'), 'button' => 'Sign In as Courier',
+            'google' => null,
+            'footer' => ['New courier?', 'Apply to become a courier', route('register', ['role' => 'courier'])],
+        ],
         'admin' => [
             'name' => 'Admin', 'icon' => 'fa-user-shield', 'url' => route('admin.login'),
             'label' => 'ZAYLO ADMIN CENTER', 'heading' => 'Welcome, Admin',
@@ -44,7 +53,7 @@
     <nav class="portal-cards" aria-labelledby="portal-cards-label">
         <p class="portal-cards__label" id="portal-cards-label">Sign in as</p>
         <div class="portal-cards__grid">
-            @foreach(['shop', 'seller', 'logistics'] as $key)
+            @foreach(['shop', 'seller', 'logistics', 'courier'] as $key)
                 @include('auth.partials.portal-card', ['key' => $key, 'card' => $portals[$key], 'active' => $portal === $key])
             @endforeach
             {{-- Riders deliver with the app, so this card opens the app download page. --}}

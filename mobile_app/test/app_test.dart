@@ -1152,11 +1152,12 @@ void main() {
     await tester.tap(find.descendant(of: find.byType(HomeTopBar), matching: find.byTooltip('Messages')));
     await tester.pumpAndSettle();
     expect(find.byType(LoginScreen), findsOneWidget);
-    await tester.tap(find.text('Login as a Rider'));
+    await tester.tap(find.text('Login as a Rider or Courier'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Welcome Back, Rider'), findsOneWidget);
-    expect(find.text('SIGN IN AS RIDER'), findsOneWidget);
+    // Riders and couriers share the driver sign-in.
+    expect(find.text('Welcome Back, Driver'), findsOneWidget);
+    expect(find.text('ZAYLO RIDER & COURIER'), findsOneWidget);
   });
 
   testWidgets('rider registration collects personal details, then partner, vehicle and documents', (tester) async {
@@ -1781,7 +1782,7 @@ void main() {
       await openRiderLogin(tester, FakeGoogleIdTokenSource(available: false));
 
       expect(find.text('Continue with Google'), findsNothing);
-      expect(find.text('SIGN IN AS RIDER'), findsOneWidget);
+      expect(find.text('SIGN IN'), findsOneWidget);
     });
   });
 

@@ -41,6 +41,8 @@ class AuthController extends Controller
         'logistics' => ['login' => 'logistics.login', 'dashboard' => 'logistics.dashboard', 'account' => 'logistics partner', 'page' => 'Logistics Center sign-in'],
         // Riders sign in only in the app; their "login" is the page to get it.
         'rider' => ['login' => 'rider.app', 'dashboard' => 'rider.app', 'account' => 'rider', 'page' => 'ZAYLO app'],
+        // Couriers (pickup drivers) sign in on the website or in the app.
+        'courier' => ['login' => 'courier.login', 'dashboard' => 'courier.dashboard', 'account' => 'courier', 'page' => 'Courier sign-in'],
         'admin' => ['login' => 'admin.login', 'dashboard' => 'admin.dashboard', 'account' => 'admin', 'page' => 'Admin Center sign-in'],
     ];
 
@@ -75,6 +77,16 @@ class AuthController extends Controller
         return $this->portalLogin($request, 'logistics');
     }
 
+    public function showCourierLogin(Request $request)
+    {
+        return AuthModal::respond($request, 'login', ['portal' => 'courier'], 'ZAYLO · Courier Sign In');
+    }
+
+    public function courierLogin(Request $request)
+    {
+        return $this->portalLogin($request, 'courier');
+    }
+
     public function showAdminLogin(Request $request)
     {
         return AuthModal::respond($request, 'login', ['portal' => 'admin'], 'ZAYLO · Admin Sign In');
@@ -105,7 +117,8 @@ class AuthController extends Controller
             throw ValidationException::withMessages(['email' => 'Incorrect email or password.']);
         }
 
-        $accountPortal = Auth::user()->portal();
+        // Couriers have their own sign-in on the website; riders stay in the app.
+        $accountPortal = Auth::user()->isCourier() ? 'courier' : Auth::user()->portal();
         if ($accountPortal !== $portal) {
             Auth::logout();
             $this->refuseWrongPortal($accountPortal);

@@ -87,11 +87,11 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
   Widget _screen(BuildContext context) => AuthScaffold(children: [
         const AuthMasthead(registering: false),
         const SizedBox(height: 32),
-        const Eyebrow('ZAYLO rider'),
+        const Eyebrow('ZAYLO rider & courier'),
         const SizedBox(height: 9),
-        Text('Welcome Back, Rider', style: Theme.of(context).textTheme.headlineSmall),
+        Text('Welcome Back, Driver', style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 7),
-        Text('Sign in to view your deliveries and keep orders moving.',
+        Text('Riders and couriers sign in here to see their deliveries and pickups and keep orders moving.',
             style: Theme.of(context).textTheme.bodyMedium),
         const SizedBox(height: 28),
         if (_error != null)
@@ -138,7 +138,7 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            PrimaryButton(label: 'SIGN IN AS RIDER', busy: _submitting, onPressed: _submit),
+            PrimaryButton(label: 'SIGN IN', busy: _submitting, onPressed: _submit),
             GoogleSignInSection(
               onError: (message) => setState(() => _error = message),
               signIn: _googleSignIn,
@@ -151,7 +151,7 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
             onPressed: () => Navigator.of(context).pushReplacement(
               MaterialPageRoute(builder: (_) => const RiderRegistrationScreen()),
             ),
-            child: const Text('New rider? Register as a rider'),
+            child: const Text('New driver? Register as a rider or courier'),
           ),
         ),
         Center(

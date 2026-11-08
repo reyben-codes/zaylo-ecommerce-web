@@ -30,7 +30,7 @@ class MobileRiderAuthenticationController extends Controller
 
     public function login(Request $request): JsonResponse
     {
-        return $this->signInWithRole($request, 'rider', 'This sign-in is for rider accounts. Buyers can use Log in instead.');
+        return $this->signInWithRole($request, 'rider', 'This sign-in is for rider and courier accounts. Buyers can use Log in instead.');
     }
 
     /**

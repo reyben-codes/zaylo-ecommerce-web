@@ -124,7 +124,7 @@ html.auth-modal-open, html.auth-modal-open body { overflow: hidden; }
 /* Sign-in role cards: pick the account type; the selected card is filled in ink with a check. */
 .portal-cards { margin: 0 0 26px; }
 .portal-cards__label { margin: 0 0 10px; color: var(--muted); font-size: .7rem; letter-spacing: .2em; text-transform: uppercase; }
-.portal-cards__grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.portal-cards__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .portal-card {
     position: relative;
     display: flex;

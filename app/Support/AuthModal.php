@@ -34,7 +34,7 @@ final class AuthModal
     /** Paths whose links open in the modal instead of loading a page. */
     public static function paths(): array
     {
-        return collect(['login', 'seller.login', 'logistics.login', 'admin.login', 'register', 'verification.notice', 'password.request'])
+        return collect(['login', 'seller.login', 'logistics.login', 'courier.login', 'admin.login', 'register', 'verification.notice', 'password.request'])
             ->map(fn (string $route) => parse_url(route($route), PHP_URL_PATH) ?: '/')
             ->values()
             ->all();

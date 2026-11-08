@@ -124,7 +124,7 @@ class _LoginScreenState extends State<LoginScreen> {
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RiderLoginScreen())),
             style: secondaryButtonStyle,
             icon: const Icon(Icons.two_wheeler_outlined),
-            label: const Text('Login as a Rider'),
+            label: const Text('Login as a Rider or Courier'),
           ),
         ),
         const SizedBox(height: 27),
