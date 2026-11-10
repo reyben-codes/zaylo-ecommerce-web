@@ -11,7 +11,51 @@
         <div>
             <p class="seller-eyebrow">Cash on delivery</p>
             <h1>Cash handover</h1>
-            <p>Riders collect the order total in cash for every cash-on-delivery parcel. Count each rider's cash when they time out and record what you received; any shortfall stays on record against the rider. GCash orders were paid to the seller, so riders collect nothing for them. From this cash your company keeps its {{ \App\Services\LogisticsPayouts::partnerPercent() }}% of the shipping fees and ZAYLO settles the rest with the sellers.</p>
+            <p>Riders retain ₱40 per COD parcel and hand the remaining cash to your hub. Count it before allocating the fixed ₱40 plus 10% product logistics share, the Admin share, and the seller's 80% product share. A parcel is fully settled only after its seller transfer is recorded.</p>
+        </div>
+    </section>
+
+    <section class="seller-panel">
+        <header class="seller-panel__header"><div><h2>COD settlements</h2><p>Verified handovers are allocated automatically. Record the seller transfer reference to complete a parcel's settlement.</p></div></header>
+        <div class="seller-table-wrap">
+            <table class="seller-table workspace-table admin-money">
+                <thead><tr><th>Parcel</th><th>Received from rider</th><th>Logistics</th><th>Admin</th><th>Seller</th><th>Status</th><th>Seller transfer</th></tr></thead>
+                <tbody>
+                    @forelse($settlements as $settlement)
+                        <tr>
+                            <td><strong>{{ $settlement->shipment?->tracking_number ?? $settlement->shipment?->tracking_code ?? '#'.$settlement->shipment_id }}</strong><span class="seller-cell-note">{{ $settlement->seller?->name ?? 'Seller unavailable' }}</span></td>
+                            <td>&#8369;{{ number_format($settlement->amount_received, 2) }}</td>
+                            <td>&#8369;{{ number_format($settlement->logistics_earnings, 2) }}</td>
+                            <td>&#8369;{{ number_format($settlement->admin_earnings, 2) }}</td>
+                            <td><strong>&#8369;{{ number_format($settlement->seller_earnings, 2) }}</strong></td>
+                            <td>
+                                @if($settlement->status === \App\Models\LogisticsCodSettlement::SETTLED)
+                                    <span class="commission-state commission-state--settled">Settled</span>
+                                    <span class="seller-cell-note">{{ $settlement->settled_at?->timezone('Asia/Manila')->format('M j, Y g:i A') }} by {{ $settlement->settler?->name ?? '—' }}</span>
+                                @else
+                                    <span class="commission-state commission-state--pending">Awaiting seller transfer</span>
+                                    <span class="seller-cell-note">Allocated by {{ $settlement->recorder?->name ?? '—' }}</span>
+                                @endif
+                            </td>
+                            <td>
+                                @if($settlement->status === \App\Models\LogisticsCodSettlement::SETTLED)
+                                    {{ $settlement->seller_reference }}
+                                @else
+                                    <form method="POST" action="{{ route('logistics.cash.settlements.settle', $settlement) }}" class="payout-form"
+                                          data-confirm="Confirm that ₱{{ number_format($settlement->seller_earnings, 2) }} was transferred to {{ $settlement->seller?->name ?? 'the seller' }}?" data-confirm-title="Record seller transfer?" data-confirm-button="Record transfer">
+                                        @csrf
+                                        <label class="sr-only" for="seller-reference-{{ $settlement->id }}">Seller transfer reference</label>
+                                        <input id="seller-reference-{{ $settlement->id }}" name="seller_reference" maxlength="100" placeholder="Transfer reference" required>
+                                        <button type="submit" class="seller-button seller-button--small">Settle</button>
+                                    </form>
+                                @endif
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="7"><p class="admin-empty-inline">No verified COD handovers are ready to settle.</p></td></tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
     </section>
 

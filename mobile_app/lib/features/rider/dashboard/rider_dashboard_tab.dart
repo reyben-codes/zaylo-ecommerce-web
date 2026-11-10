@@ -286,6 +286,7 @@ class RiderDashboardTabState extends State<RiderDashboardTab> with RiderDelivery
         onOtherAction: busyDeliveryId == null ? (status) => advanceDelivery(delivery, status) : null,
         onAccept: busyDeliveryId == null ? () => acceptAssignment(delivery) : null,
         onDecline: busyDeliveryId == null ? () => declineAssignment(delivery) : null,
+        onCollectCod: busyDeliveryId == null ? () => collectCod(delivery) : null,
         onChat: () => openDeliveryChat(delivery),
         onTap: () => openDeliveryDetails(delivery),
       );

@@ -1,8 +1,8 @@
 <?php
 
-use App\Http\Controllers\GcashPaymentController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\FaqController;
+use App\Http\Controllers\GcashPaymentController;
 use App\Http\Controllers\MobileAccountController;
 use App\Http\Controllers\MobileAppVersionController;
 use App\Http\Controllers\MobileAuthenticationController;
@@ -104,6 +104,7 @@ Route::prefix('mobile')->name('mobile.')->middleware('throttle:60,1')->group(fun
             Route::get('/deliveries/{shipment}', [MobileRiderDashboardController::class, 'show'])->name('deliveries.show');
             // Proof of delivery: a photo of the parcel at the door, right after the delivery scan.
             Route::post('/deliveries/{shipment}/proof', [MobileRiderDashboardController::class, 'proof'])->middleware('throttle:20,1,mobile-rider-proof')->name('deliveries.proof');
+            Route::post('/deliveries/{shipment}/collect-cod', [MobileRiderDashboardController::class, 'collectCod'])->middleware('throttle:30,1,mobile-rider-cod')->name('deliveries.collect-cod');
             Route::patch('/deliveries/{shipment}', [MobileRiderDashboardController::class, 'update'])->name('deliveries.update');
             // Chat with the buyer while the parcel is with the rider.
             Route::get('/deliveries/{shipment}/chat', [MobileDeliveryChatController::class, 'riderShow'])->name('deliveries.chat');

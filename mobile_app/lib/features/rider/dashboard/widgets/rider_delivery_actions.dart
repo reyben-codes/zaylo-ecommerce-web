@@ -211,6 +211,26 @@ mixin RiderDeliveryActions<T extends StatefulWidget> on State<T> {
     }
   }
 
+  /// Records only the server-calculated COD amount after proof of delivery is complete.
+  Future<void> collectCod(RiderDelivery delivery) async {
+    final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Confirm COD collection'),
+            content: Text('Confirm that you collected ${delivery.cashToCollect.toStringAsFixed(2)} from the buyer. '
+                'You keep ${delivery.riderCommission.toStringAsFixed(2)} and hand '
+                '${delivery.amountToHandLogistics.toStringAsFixed(2)} to your logistics partner.'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+              TextButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Confirm collection')),
+            ],
+          ),
+        ) ??
+        false;
+    if (!confirmed || !mounted) return;
+    await _run(delivery, () => riderApi.collectCod(delivery.id), 'COD collection recorded. Your ₱40.00 commission is in your wallet.');
+  }
+
   /// Opens the camera for proof of delivery: the parcel with the recipient or
   /// at the door. Returns null when the rider backs out or the photo is unusable.
   Future<File?> _takeDeliveryPhoto() => _takePhoto(
@@ -268,7 +288,7 @@ mixin RiderDeliveryActions<T extends StatefulWidget> on State<T> {
         builder: (dialogContext) => AlertDialog(
           title: const Text('Mark as delivered?'),
           content: Text(delivery.cashToCollect > 0
-              ? 'Confirm the parcel was handed over and you collected the cash on delivery. '
+              ? 'Confirm the parcel was handed over. After the delivery photo is saved, record the COD cash collection. '
                   'Next, take a photo as proof of delivery.'
               : 'Confirm the parcel was handed over to the recipient. Next, take a photo as proof of delivery.'),
           actions: [

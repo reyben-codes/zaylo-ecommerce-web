@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\LogisticsCodSettlement;
 use App\Models\User;
 use App\Services\CashHandovers;
+use App\Services\LogisticsCodSettlements;
 use App\Services\MarketplaceLedger;
-use App\Services\Settlement;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Money after delivery: riders hand their COD cash to the hub (Logistics Center), and each seller sees what ZAYLO owes
@@ -14,7 +18,7 @@ use Illuminate\Http\Request;
  */
 class SettlementController extends Controller
 {
-    public function cash(Request $request, CashHandovers $handovers)
+    public function cash(Request $request, CashHandovers $handovers, LogisticsCodSettlements $settlements)
     {
         abort_unless(CashHandovers::ready(), 404);
         $provider = $request->user()->logisticsProvider;
@@ -23,7 +27,18 @@ class SettlementController extends Controller
         return view('logistics.cash-handovers', [
             'owed' => $handovers->owedTo($provider),
             'history' => $handovers->history($provider),
+            'settlements' => $settlements->forProvider($provider),
         ]);
+    }
+
+    public function settleCod(Request $request, LogisticsCodSettlement $settlement, LogisticsCodSettlements $settlements)
+    {
+        $data = $request->validate(['seller_reference' => ['required', 'string', 'max:100']]);
+        $provider = $request->user()->logisticsProvider;
+        abort_unless($provider, 404);
+        $settlements->settle($settlement, $provider, $request->user(), $data['seller_reference']);
+
+        return back()->with('status', 'Seller transfer recorded. This COD parcel is fully settled.');
     }
 
     public function recordCash(Request $request, User $rider, CashHandovers $handovers)
@@ -32,17 +47,42 @@ class SettlementController extends Controller
             'received' => ['required', 'numeric', 'min:0', 'max:10000000'],
             'note' => ['nullable', 'string', 'max:255'],
         ], ['received.required' => 'Enter the cash you counted.']);
-        $handover = $handovers->record($request->user()->logisticsProvider, $rider, (float) $data['received'], $data['note'] ?? null, $request->user());
+        $provider = $request->user()->logisticsProvider;
+        abort_unless($provider, 404);
+        $handover = $handovers->record($provider, $rider, (float) $data['received'], $data['note'] ?? null, $request->user());
 
         return back()->with('status', $handover->shortfall > 0
-            ? "Recorded ₱".number_format($handover->received, 2)." from {$rider->name}: ₱".number_format($handover->shortfall, 2).' short, kept on record.'
-            : "Recorded ₱".number_format($handover->received, 2)." from {$rider->name} for {$handover->parcels} COD ".str('parcel')->plural($handover->parcels).'.');
+            ? 'Recorded ₱'.number_format($handover->received, 2)." from {$rider->name}: ₱".number_format($handover->shortfall, 2).' short, kept on record.'
+            : 'Recorded ₱'.number_format($handover->received, 2)." from {$rider->name} for {$handover->parcels} COD ".str('parcel')->plural($handover->parcels).'.');
     }
 
-    public function seller(Request $request, Settlement $settlement)
+    /** The seller's COD ledger; payments count as paid only after Logistics recorded the transfer. */
+    public function seller(Request $request, LogisticsCodSettlements $settlements)
     {
-        return view('seller.settlement', $settlement->forSeller($request->user()) + [
-            'commissionPercent' => (int) round(MarketplaceLedger::rate() * 100),
+        $input = $request->validate([
+            'from' => ['nullable', 'date_format:Y-m-d'],
+            'to' => ['nullable', 'date_format:Y-m-d'],
+            'status' => ['nullable', Rule::in([LogisticsCodSettlement::AWAITING_SELLER_TRANSFER, LogisticsCodSettlement::SETTLED])],
+        ]);
+        $zone = MarketplaceLedger::TIMEZONE;
+        $to = isset($input['to']) ? Carbon::createFromFormat('Y-m-d', $input['to'], $zone)->endOfDay() : now($zone)->endOfDay();
+        $from = isset($input['from']) ? Carbon::createFromFormat('Y-m-d', $input['from'], $zone)->startOfDay() : $to->copy()->subDays(89)->startOfDay();
+        if ($from->gt($to)) {
+            throw ValidationException::withMessages(['from' => 'The start date must be on or before the end date.']);
+        }
+
+        $rows = $settlements->forSeller($request->user(), $from->copy()->utc(), $to->copy()->utc(), $input['status'] ?? null);
+
+        return view('seller.settlement', [
+            'ready' => LogisticsCodSettlements::ready(),
+            'rows' => $rows,
+            'summary' => $settlements->sellerSummary($rows),
+            'status' => $input['status'] ?? null,
+            'statuses' => [
+                LogisticsCodSettlement::AWAITING_SELLER_TRANSFER => 'Pending settlement',
+                LogisticsCodSettlement::SETTLED => 'Paid',
+            ],
+            'range' => ['from' => $from->toDateString(), 'to' => $to->toDateString(), 'label' => $from->format('M j, Y').' – '.$to->format('M j, Y')],
         ]);
     }
 }

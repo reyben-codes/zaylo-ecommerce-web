@@ -2,17 +2,16 @@ import 'package:flutter/material.dart';
 
 import 'package:zaylo_mobile/auth/buyer/login_screen.dart';
 import 'package:zaylo_mobile/auth/buyer/registration_screen.dart';
-import 'package:zaylo_mobile/auth/courier/courier_login_screen.dart';
 import 'package:zaylo_mobile/auth/rider/rider_login_screen.dart';
 import 'package:zaylo_mobile/auth/rider/rider_registration_screen.dart';
 import 'package:zaylo_mobile/auth/widgets/auth_layout.dart';
 import 'package:zaylo_mobile/components/layout.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 
-enum AuthRole { buyer, rider, courier }
+enum AuthRole { buyer, rider }
 
 /// Squared selection cards displayed horizontally at the top of authentication screens.
-/// Allows the user to switch between Buyer, Rider, and Courier accounts with one tap.
+/// Allows the user to switch between Buyer and Rider accounts with one tap.
 class AuthRoleCards extends StatelessWidget {
   const AuthRoleCards({
     super.key,
@@ -30,13 +29,11 @@ class AuthRoleCards extends StatelessWidget {
       target = switch (role) {
         AuthRole.buyer => const LoginScreen(),
         AuthRole.rider => const RiderLoginScreen(),
-        AuthRole.courier => const CourierLoginScreen(),
       };
     } else {
       target = switch (role) {
         AuthRole.buyer => const RegistrationScreen(),
-        AuthRole.rider => const RiderRegistrationScreen(role: 'rider'),
-        AuthRole.courier => const RiderRegistrationScreen(role: 'courier'),
+        AuthRole.rider => const RiderRegistrationScreen(),
       };
     }
     Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => target));
@@ -71,15 +68,6 @@ class AuthRoleCards extends StatelessWidget {
                   icon: Icons.two_wheeler_outlined,
                   isSelected: selectedRole == AuthRole.rider,
                   onTap: () => _onSelect(context, AuthRole.rider),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _RoleSquareCard(
-                  title: 'Courier',
-                  icon: Icons.local_shipping_outlined,
-                  isSelected: selectedRole == AuthRole.courier,
-                  onTap: () => _onSelect(context, AuthRole.courier),
                 ),
               ),
             ],
@@ -200,24 +188,7 @@ class AccountTypeSelectionScreen extends StatelessWidget {
               MaterialPageRoute(
                 builder: (_) => isLogin
                     ? const RiderLoginScreen()
-                    : const RiderRegistrationScreen(role: 'rider'),
-              ),
-            );
-          },
-        ),
-        const SizedBox(height: 14),
-        _SelectionOptionCard(
-          icon: Icons.local_shipping_outlined,
-          title: 'Pickup Courier',
-          subtitle: isLogin
-              ? 'Sign in to manage seller pickups and transfer parcels to partner hubs.'
-              : 'Apply to pick up parcels from sellers and transfer them to logistics partner hubs.',
-          onTap: () {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(
-                builder: (_) => isLogin
-                    ? const CourierLoginScreen()
-                    : const RiderRegistrationScreen(role: 'courier'),
+                    : const RiderRegistrationScreen(),
               ),
             );
           },

@@ -346,9 +346,6 @@ class ShipmentWorkflow
             if ($to === 'delivered' && Schema::hasColumn('shipments', 'delivered_at')) {
                 $attributes['delivered_at'] = now();
             }
-            if ($to === 'delivered' && Schema::hasColumn('shipments', 'cod_collected')) {
-                $attributes['cod_collected'] = true;
-            }
             if ($to === 'out_for_delivery' && Schema::hasColumn('shipments', 'attempts')) {
                 $attributes['attempts'] = (int) $locked->attempts + 1;
             }

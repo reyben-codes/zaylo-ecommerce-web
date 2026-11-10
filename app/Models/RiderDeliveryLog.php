@@ -9,10 +9,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class RiderDeliveryLog extends Model
 {
     public const ACCEPTED = 'accepted';
+
     public const DECLINED = 'declined';
+
     public const OUT_FOR_DELIVERY = 'out_for_delivery';
+
     public const FAILED = 'failed';
+
     public const DELIVERED = 'delivered';
+
+    public const COD_COLLECTED = 'cod_collected';
 
     protected $fillable = ['shipment_id', 'user_id', 'action', 'reason', 'note'];
 

@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zaylo_mobile/auth/buyer/registration_screen.dart';
-import 'package:zaylo_mobile/auth/courier/courier_login_screen.dart';
 import 'package:zaylo_mobile/auth/rider/rider_login_screen.dart';
 import 'package:zaylo_mobile/auth/widgets/role_selection_cards.dart';
 
 void main() {
-  testWidgets('AccountTypeSelectionScreen for registration shows Buyer, Rider, and Courier selection cards', (tester) async {
+  testWidgets('AccountTypeSelectionScreen for registration shows Buyer and Rider selection cards', (tester) async {
     tester.view.physicalSize = const Size(400, 3200);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() {
@@ -23,7 +22,7 @@ void main() {
     expect(find.text('Create New Account'), findsOneWidget);
     expect(find.text('Buyer'), findsOneWidget);
     expect(find.text('Delivery Rider'), findsOneWidget);
-    expect(find.text('Pickup Courier'), findsOneWidget);
+    expect(find.text('Pickup Courier'), findsNothing);
 
     // Tapping Buyer navigates to RegistrationScreen
     await tester.tap(find.text('Buyer'));
@@ -31,7 +30,7 @@ void main() {
     expect(find.byType(RegistrationScreen), findsOneWidget);
   });
 
-  testWidgets('AccountTypeSelectionScreen for login shows Buyer, Rider, and Courier selection cards', (tester) async {
+  testWidgets('AccountTypeSelectionScreen for login shows Buyer and Rider selection cards', (tester) async {
     tester.view.physicalSize = const Size(400, 3200);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() {
@@ -48,7 +47,7 @@ void main() {
     expect(find.text('Sign In to ZAYLO'), findsOneWidget);
     expect(find.text('Buyer'), findsOneWidget);
     expect(find.text('Delivery Rider'), findsOneWidget);
-    expect(find.text('Pickup Courier'), findsOneWidget);
+    expect(find.text('Pickup Courier'), findsNothing);
 
     // Tapping Delivery Rider navigates to RiderLoginScreen
     await tester.tap(find.text('Delivery Rider'));
@@ -56,7 +55,7 @@ void main() {
     expect(find.byType(RiderLoginScreen), findsOneWidget);
   });
 
-  testWidgets('AccountTypeSelectionScreen for login can navigate to CourierLoginScreen', (tester) async {
+  testWidgets('AccountTypeSelectionScreen for login does not offer the removed courier flow', (tester) async {
     tester.view.physicalSize = const Size(400, 3200);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() {
@@ -70,8 +69,6 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('Pickup Courier'));
-    await tester.pumpAndSettle();
-    expect(find.byType(CourierLoginScreen), findsOneWidget);
+    expect(find.text('Pickup Courier'), findsNothing);
   });
 }

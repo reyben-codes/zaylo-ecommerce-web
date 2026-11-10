@@ -149,13 +149,14 @@ class MobileRiderDashboardTest extends TestCase
             ->assertJsonPath('delivery.actions.1.status', 'failed')
             ->assertJsonPath('delivery.actions.1.needs_scan', false);
         $this->postJson('/api/mobile/rider/deliveries/scan', ['code' => "TRK-$orderId"])->assertOk()->assertJsonPath('step', 'delivered');
+        $this->postJson("/api/mobile/rider/deliveries/$shipmentId/collect-cod")->assertOk();
 
         $this->getJson('/api/mobile/rider/dashboard')
             ->assertJsonPath('stats.completed', 1)
-            ->assertJsonPath('stats.earnings_today', 15)
+            ->assertJsonPath('stats.earnings_today', 40)
             ->assertJsonPath('stats.earnings.today.deliveries', 1)
-            ->assertJsonPath('stats.earnings.week.earnings', 15)
-            ->assertJsonPath('stats.earnings.all.earnings', 15)
+            ->assertJsonPath('stats.earnings.week.earnings', 40)
+            ->assertJsonPath('stats.earnings.all.earnings', 40)
             ->assertJsonCount(1, 'recent')
             ->assertJsonPath('recent.0.chat_open', false);
         // The rider does not finish the order: it waits for the buyer to confirm they received it.

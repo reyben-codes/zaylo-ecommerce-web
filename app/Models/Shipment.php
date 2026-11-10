@@ -16,14 +16,14 @@ class Shipment extends Model
     protected $fillable = [
         'order_id', 'courier_id', 'pickup_courier_id', 'tracking_number', 'picked_up_at', 'delivered_at',
         'seller_order_id', 'logistics_provider_id', 'rider_id', 'tracking_code',
-        'status', 'fee_minor', 'cod_amount_minor', 'cod_collected', 'attempts',
+        'status', 'fee_minor', 'cod_amount_minor', 'cod_collected', 'cod_collected_at', 'cod_collected_by', 'attempts',
         'pickup_confirmed_at', 'pickup_scheduled_for', 'sorted_at', 'sort_area',
         'delivery_proof_path', 'handover_confirmed_at',
         'rider_latitude', 'rider_longitude', 'rider_located_at',
     ];
 
     protected $casts = [
-        'cod_collected' => 'boolean', 'picked_up_at' => 'datetime', 'delivered_at' => 'datetime',
+        'cod_collected' => 'boolean', 'cod_collected_at' => 'datetime', 'picked_up_at' => 'datetime', 'delivered_at' => 'datetime',
         'rider_located_at' => 'datetime',
         'pickup_confirmed_at' => 'datetime', 'pickup_scheduled_for' => 'date', 'sorted_at' => 'datetime',
         'handover_confirmed_at' => 'datetime',

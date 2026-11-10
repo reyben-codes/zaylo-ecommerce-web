@@ -1,10 +1,5 @@
 <?php
 
-use App\Http\Controllers\SettlementController;
-use App\Http\Controllers\VoucherController;
-use App\Http\Controllers\GcashPaymentController;
-use App\Http\Controllers\WalletController;
-use App\Http\Controllers\WorkspaceUpdatesController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\AdminComplianceController;
@@ -16,40 +11,45 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BuyerController;
 use App\Http\Controllers\BuyerNotificationController;
 use App\Http\Controllers\ChatController;
-use App\Http\Controllers\PolicyController;
-use App\Http\Controllers\ProfilePhotoController;
-use App\Http\Controllers\PublicFileController;
-use App\Http\Controllers\ReturnPhotoController;
-use App\Http\Controllers\ProductSaleController;
+use App\Http\Controllers\CodTransactionHistoryController;
 use App\Http\Controllers\ComplianceWarningController;
 use App\Http\Controllers\CourierController;
+use App\Http\Controllers\DeliveryProofController;
+use App\Http\Controllers\DisputeController;
+use App\Http\Controllers\FaqController;
+use App\Http\Controllers\GcashPaymentController;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\IdentityVerificationController;
 use App\Http\Controllers\LocationController;
-use App\Http\Controllers\DeliveryProofController;
-use App\Http\Controllers\DisputeController;
-use App\Http\Controllers\FaqController;
 use App\Http\Controllers\LogisticsApplicationController;
 use App\Http\Controllers\LogisticsAttendanceController;
 use App\Http\Controllers\LogisticsChatController;
 use App\Http\Controllers\LogisticsController;
 use App\Http\Controllers\LogisticsOperationsController;
 use App\Http\Controllers\LogisticsPayoutController;
+use App\Http\Controllers\PolicyController;
+use App\Http\Controllers\ProductReviewController;
+use App\Http\Controllers\ProductSaleController;
+use App\Http\Controllers\ProfilePhotoController;
+use App\Http\Controllers\PublicFileController;
+use App\Http\Controllers\ReturnPhotoController;
 use App\Http\Controllers\RiderWithdrawalController;
 use App\Http\Controllers\SellerApplicationController;
 use App\Http\Controllers\SellerController;
-use App\Http\Controllers\SellerShopSectionController;
 use App\Http\Controllers\SellerReturnController;
+use App\Http\Controllers\SellerShopSectionController;
+use App\Http\Controllers\SettlementController;
 use App\Http\Controllers\ShopController;
 use App\Http\Controllers\ShopCoverController;
-use App\Http\Controllers\SortingCenterController;
 use App\Http\Controllers\SupportChatController;
+use App\Http\Controllers\VoucherController;
+use App\Http\Controllers\WalletController;
 use App\Http\Controllers\WaybillController;
 use App\Http\Controllers\WorkspaceNotificationController;
+use App\Http\Controllers\WorkspaceUpdatesController;
 use App\Models\Product;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Schema;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 // Uploaded photos saved as "/storage/..." links: redirected to Cloudflare R2, or sent from storage/app/public.
@@ -83,6 +83,10 @@ Route::middleware(['auth', 'active', 'verified', 'role:buyer,seller,courier', 'n
         Route::patch('/{address}/default', [AddressController::class, 'makeDefault'])->name('default');
         Route::delete('/{address}', [AddressController::class, 'destroy'])->name('destroy');
     });
+
+// A parcel's financial history is read-only; the service applies a second, parcel-level ownership check.
+Route::middleware(['auth', 'active', 'verified', 'role:buyer,seller,rider,logistics,admin', 'nocache'])
+    ->get('/cod-history/{shipment}', [CodTransactionHistoryController::class, 'show'])->name('cod-history.show');
 
 Route::middleware('guest')->group(function () {
     Route::get('/auth/google', [GoogleAuthController::class, 'redirect'])->middleware('throttle:10,1')->name('google.redirect');
@@ -122,10 +126,10 @@ Route::middleware(['auth', 'active', 'verified', 'role:buyer', 'nocache'])->pref
     Route::post('/notifications/read-all', [BuyerNotificationController::class, 'markAllRead'])->name('notifications.read-all');
     Route::get('/products', fn () => redirect()->route('products.index'))->name('products');
     Route::get('/orders', [BuyerController::class, 'orders'])->name('orders');
-    Route::get('/order-items/{orderItem}/review', [\App\Http\Controllers\ProductReviewController::class, 'create'])->name('reviews.create');
-    Route::post('/order-items/{orderItem}/review', [\App\Http\Controllers\ProductReviewController::class, 'store'])->middleware('throttle:10,1')->name('reviews.store');
+    Route::get('/order-items/{orderItem}/review', [ProductReviewController::class, 'create'])->name('reviews.create');
+    Route::post('/order-items/{orderItem}/review', [ProductReviewController::class, 'store'])->middleware('throttle:10,1')->name('reviews.store');
     // Reviews from the product page, without buying it.
-    Route::post('/products/{product}/review', [\App\Http\Controllers\ProductReviewController::class, 'storeForProduct'])->middleware('throttle:10,1')->name('products.review');
+    Route::post('/products/{product}/review', [ProductReviewController::class, 'storeForProduct'])->middleware('throttle:10,1')->name('products.review');
     Route::post('/orders/{order}/cancel', [BuyerController::class, 'cancelOrder'])->name('orders.cancel');
     Route::post('/orders/{order}/buy-again', [BuyerController::class, 'buyAgain'])->middleware('throttle:20,1')->name('orders.buy-again');
     Route::post('/orders/{order}/gcash-reference', [GcashPaymentController::class, 'submit'])->middleware('throttle:20,1')->name('orders.gcash');
@@ -207,8 +211,8 @@ Route::middleware(['auth', 'active', 'verified', 'role:seller', 'nocache'])->pre
     Route::delete('/vouchers/{voucher}', [VoucherController::class, 'destroySeller'])->name('vouchers.destroy');
     Route::get('/settlement', [SettlementController::class, 'seller'])->name('settlement');
     Route::patch('/vouchers/{voucher}', [VoucherController::class, 'respond'])->middleware('throttle:30,1')->name('vouchers.respond');
-        Route::post('/account/cover', [ShopCoverController::class, 'update'])->middleware('throttle:10,1')->name('account.cover.update');
-        Route::delete('/account/cover', [ShopCoverController::class, 'destroy'])->name('account.cover.destroy');
+    Route::post('/account/cover', [ShopCoverController::class, 'update'])->middleware('throttle:10,1')->name('account.cover.update');
+    Route::delete('/account/cover', [ShopCoverController::class, 'destroy'])->name('account.cover.destroy');
     Route::put('/account/password', [SellerController::class, 'updatePassword'])->name('account.password');
     Route::get('/chat', [ChatController::class, 'index'])->name('chat');
     Route::get('/logistics-messages', [LogisticsChatController::class, 'seller'])->name('logistics-messages');
@@ -283,6 +287,7 @@ Route::middleware(['auth', 'active', 'verified', 'role:admin', 'nocache'])->pref
     Route::patch('/compliance/products/{product}/review', [AdminComplianceController::class, 'review'])->middleware('throttle:60,1')->name('compliance.review');
 
     Route::get('/commissions', [AdminFinanceController::class, 'commissions'])->name('commissions');
+    Route::get('/cod-commissions', [AdminFinanceController::class, 'codCommissions'])->name('cod-commissions');
     Route::post('/commissions/record', [AdminFinanceController::class, 'recordCommissions'])->name('commissions.record');
     Route::post('/commissions/settle', [AdminFinanceController::class, 'settleCommissions'])->name('commissions.settle');
     // Logistics partners' share of the shipping fee of each parcel they delivered.
@@ -382,6 +387,7 @@ Route::middleware(['auth', 'active', 'verified', 'role:logistics', 'nocache'])->
     // Riders hand over the cash they collected on delivery; the hub records it and any shortfall.
     Route::get('/cash-handovers', [SettlementController::class, 'cash'])->name('cash');
     Route::post('/cash-handovers/{rider}', [SettlementController::class, 'recordCash'])->middleware('throttle:30,1')->name('cash.record');
+    Route::post('/cash-settlements/{settlement}', [SettlementController::class, 'settleCod'])->middleware('throttle:30,1')->name('cash.settlements.settle');
     Route::post('/rider-withdrawals/{withdrawal}/pay', [RiderWithdrawalController::class, 'pay'])->middleware('throttle:30,1')->name('rider-withdrawals.pay');
     Route::post('/rider-withdrawals/{withdrawal}/reject', [RiderWithdrawalController::class, 'reject'])->middleware('throttle:30,1')->name('rider-withdrawals.reject');
     Route::get('/reports/export', [LogisticsOperationsController::class, 'exportReport'])->name('reports.export');

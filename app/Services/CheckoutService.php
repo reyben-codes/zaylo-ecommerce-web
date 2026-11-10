@@ -130,14 +130,14 @@ class CheckoutService
     }
 
     /** @param Collection<int, CartItem> $items with product and variant loaded */
-    public function quote(Collection $items, ?Voucher $voucher, ?Address $address = null, ?LogisticsProvider $partner = null): array
+    public function quote(Collection $items, ?Voucher $voucher, ?Address $address = null, ?LogisticsProvider $partner = null, string $paymentMethod = 'cod'): array
     {
         $zone = ShippingRates::zone($partner, $address);
         $perSeller = ShippingRates::fee($zone);
         $subtotal = $items->sum(fn (CartItem $item) => $item->unitPrice() * $item->quantity);
         $shipping = $items->pluck('product.seller_id')->unique()->count() * $perSeller;
         // Free shipping is ZAYLO's; a discount voucher comes off the items of shops that joined it, paid by them.
-        if ($voucher?->isFreeShipping()) {
+        if ($voucher?->isFreeShipping() && $paymentMethod !== 'cod') {
             $sellerIdsInCart = $items->pluck('product.seller_id')->map(fn ($id) => (int) $id)->unique();
             $shippingDiscount = $voucher->seller_id
                 ? ($sellerIdsInCart->contains((int) $voucher->seller_id) ? $perSeller : 0)
@@ -211,6 +211,9 @@ class CheckoutService
             $this->ensureCanOrder($buyer, $itemsToOrder);
             $voucher = $this->voucher($voucherCode, lock: true);
             $this->ensureVoucherApplies($voucher, $itemsToOrder);
+            if ($paymentMethod === 'cod' && $voucher?->isFreeShipping()) {
+                throw ValidationException::withMessages(['voucher_code' => 'Free-shipping vouchers cannot be used with Cash on Delivery because COD shipping is fixed at ₱120 per seller order.']);
+            }
             $joinedShops = $voucher ? app(Vouchers::class)->joinedShops($voucher) : [];
             $address = Address::where('user_id', $buyer->id)->whereKey($input['address_id'])->firstOrFail();
             if (! $address->isStructured()) {
@@ -254,7 +257,7 @@ class CheckoutService
                 }
 
                 $subtotal = $prepared->sum(fn ($row) => $row['unitPrice'] * $row['item']->quantity);
-                $isFreeShipping = $voucher?->isFreeShipping() && (! $voucher->seller_id || (int) $sellerId === (int) $voucher->seller_id);
+                $isFreeShipping = $paymentMethod !== 'cod' && $voucher?->isFreeShipping() && (! $voucher->seller_id || (int) $sellerId === (int) $voucher->seller_id);
                 $shippingDiscount = $isFreeShipping ? $perSeller : 0;
                 $shippingFee = $perSeller - $shippingDiscount;
                 // The shop pays a discount voucher it joined; nothing comes off shops that did not join.
@@ -294,6 +297,16 @@ class CheckoutService
                 $payment = $order->payment()->create([
                     'provider' => $paymentMethod, 'status' => 'pending', 'amount' => $order->total,
                     'currency' => 'PHP', 'idempotency_key' => $input['idempotency_key'].'-'.$order->id,
+                    // The request never supplies this: it is calculated from
+                    // locked product rows and the server's fixed shipping fee.
+                    'payload' => $paymentMethod === 'cod' ? [
+                        'cod_amount' => (float) $order->total,
+                        'commission_breakdown' => Settlement::breakdown(
+                            max(0, (float) $subtotal - (float) $voucherDiscount),
+                            (float) $shippingFee,
+                            (float) $shippingDiscount,
+                        ),
+                    ] : null,
                 ]);
                 // GCash goes to the seller's own GCash: the reference waits for the seller's check (GcashPayments).
                 if ($paymentMethod === 'gcash' && GcashPayments::ready()) {

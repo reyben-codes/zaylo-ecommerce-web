@@ -197,7 +197,7 @@ class FakeApi extends BuyerApi {
       });
 
   @override
-  Future<CheckoutQuote> quote(List<int> cartItemIds, {String? voucherCode}) async => CheckoutQuote.fromJson({
+  Future<CheckoutQuote> quote(List<int> cartItemIds, {String? voucherCode, String paymentMethod = 'cod'}) async => CheckoutQuote.fromJson({
         'items': cartJson(cartItemIds)['items'],
         'totals': {'subtotal': 499.0, 'shipping': 120.0, 'shipping_discount': 0.0, 'total': 619.0},
         'addresses': [
@@ -378,8 +378,8 @@ class PartnerCheckoutApi extends FakeApi {
   int? placedPartnerId;
 
   @override
-  Future<CheckoutQuote> quote(List<int> cartItemIds, {String? voucherCode}) async {
-    final base = await super.quote(cartItemIds, voucherCode: voucherCode);
+  Future<CheckoutQuote> quote(List<int> cartItemIds, {String? voucherCode, String paymentMethod = 'cod'}) async {
+    final base = await super.quote(cartItemIds, voucherCode: voucherCode, paymentMethod: paymentMethod);
     return CheckoutQuote(
       items: base.items,
       totals: const CheckoutTotals(subtotal: 499, shipping: 60, shippingDiscount: 0, total: 559),
@@ -1153,7 +1153,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(LoginScreen), findsOneWidget);
     expect(find.text('Rider'), findsOneWidget);
-    expect(find.text('Courier'), findsOneWidget);
+    expect(find.text('Courier'), findsNothing);
 
     // Open rider login via the Rider selection card
     await tester.tap(find.text('Rider'));
@@ -1162,12 +1162,6 @@ void main() {
     expect(find.text('ZAYLO RIDER'), findsOneWidget);
     expect(find.text('SIGN IN AS RIDER'), findsOneWidget);
 
-    // Navigate to courier login via the Courier selection card
-    await tester.tap(find.text('Courier'));
-    await tester.pumpAndSettle();
-    expect(find.text('Welcome Back, Courier'), findsOneWidget);
-    expect(find.text('ZAYLO COURIER'), findsOneWidget);
-    expect(find.text('SIGN IN AS COURIER'), findsOneWidget);
   });
 
   testWidgets('rider registration collects personal details, then partner, vehicle and documents', (tester) async {

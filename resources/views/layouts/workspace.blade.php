@@ -24,6 +24,7 @@
                 ['route' => 'admin.disputes', 'label' => 'Disputes', 'icon' => 'fa-scale-balanced', 'count' => 'disputes'],
                 ['route' => 'admin.vouchers', 'label' => 'Vouchers', 'icon' => 'fa-ticket'],
                 ['route' => 'admin.commissions', 'label' => 'Commission', 'icon' => 'fa-percent'],
+                ['route' => 'admin.cod-commissions', 'label' => 'COD commissions', 'icon' => 'fa-cash-register'],
                 ['route' => 'admin.logistics-payouts', 'label' => 'Logistics payouts', 'icon' => 'fa-money-bill-transfer'],
                 ['route' => 'admin.reports', 'label' => 'Reports', 'icon' => 'fa-chart-column'],
                 ['heading' => 'Platform'],

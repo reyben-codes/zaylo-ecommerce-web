@@ -77,7 +77,14 @@ class _RiderDeliveryDetailScreenState extends State<RiderDeliveryDetailScreen>
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
                 children: [
-                  RiderDeliveryCard(delivery: shown),
+                  RiderDeliveryCard(
+                    delivery: shown,
+                    busy: busyDeliveryId == shown.id,
+                    onCollectCod: shown.canCollectCod ? () async {
+                      await collectCod(shown);
+                      if (mounted) await _reload();
+                    } : null,
+                  ),
                   if (shown.destination case final destination? when shown.status != 'delivered')
                     _DestinationMap(destination: destination, recipient: shown.recipientName),
                   if (delivery != null && (delivery.canAddDeliveryPhoto || delivery.hasDeliveryPhoto))

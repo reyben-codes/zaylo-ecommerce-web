@@ -112,6 +112,10 @@ class RiderApi extends ApiClient {
         if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
       }))['delivery'] as Map<String, dynamic>);
 
+  /// Confirms cash was collected for this rider's delivered COD parcel.
+  Future<RiderDelivery> collectCod(int id) async =>
+      RiderDelivery.fromJson((await send('POST', '/mobile/rider/deliveries/$id/collect-cod'))['delivery'] as Map<String, dynamic>);
+
   /// Takes a new assignment from the logistics partner.
   Future<RiderDelivery> acceptDelivery(int id) async =>
       RiderDelivery.fromJson((await send('POST', '/mobile/rider/deliveries/$id/accept'))['delivery'] as Map<String, dynamic>);

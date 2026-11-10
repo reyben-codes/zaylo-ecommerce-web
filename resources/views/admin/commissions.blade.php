@@ -26,6 +26,7 @@
                 @csrf
                 <button type="submit" class="seller-button seller-button--secondary"><i class="fas fa-calculator" aria-hidden="true"></i> Calculate missing</button>
             </form>
+            <a href="{{ route('admin.cod-commissions') }}" class="seller-button seller-button--secondary"><i class="fas fa-cash-register" aria-hidden="true"></i> COD dashboard</a>
             <a href="{{ route('admin.reports.pdf', ['report' => 'commission'] + $period) }}" class="seller-button"><i class="fas fa-file-pdf" aria-hidden="true"></i> {{ $seller ? 'Seller report' : 'Commission report' }}</a>
         </div>
     </section>

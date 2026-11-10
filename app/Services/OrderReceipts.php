@@ -92,9 +92,10 @@ class OrderReceipts
                 $locked->update(['status' => 'completed', 'completed_at' => now()]);
                 $locked->payment?->update(['status' => 'paid', 'paid_at' => now()]);
                 if ($locked->seller_id && Schema::hasTable('commissions')) {
+                    $settlement = app(Settlement::class)->forOrder($locked);
                     DB::table('commissions')->updateOrInsert(['order_id' => $locked->id], [
                         'seller_id' => $locked->seller_id, 'rate' => 10,
-                        'amount' => round((float) $locked->subtotal * 0.10, 2),
+                        'amount' => $settlement['admin_earnings'],
                         'status' => 'earned', 'created_at' => now(), 'updated_at' => now(),
                     ]);
                 }

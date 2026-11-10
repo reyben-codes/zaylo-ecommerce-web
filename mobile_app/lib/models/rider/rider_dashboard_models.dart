@@ -301,6 +301,10 @@ class RiderDelivery {
     this.notes,
     this.paymentMethod,
     this.cashToCollect = 0,
+    this.riderCommission = 0,
+    this.amountToHandLogistics = 0,
+    this.codCollected = false,
+    this.canCollectCod = false,
     this.deliveryFee = 0,
     this.pickedUpAt,
     this.deliveredAt,
@@ -338,6 +342,10 @@ class RiderDelivery {
   final String? notes;
   final String? paymentMethod;
   final double cashToCollect;
+  final double riderCommission;
+  final double amountToHandLogistics;
+  final bool codCollected;
+  final bool canCollectCod;
   final double deliveryFee;
   final DateTime? pickedUpAt;
   final DateTime? deliveredAt;
@@ -394,6 +402,10 @@ class RiderDelivery {
         notes: json['notes'] as String?,
         paymentMethod: json['payment_method'] as String?,
         cashToCollect: _money(json['cash_to_collect']),
+        riderCommission: _money(json['rider_commission']),
+        amountToHandLogistics: _money(json['amount_to_hand_logistics']),
+        codCollected: json['cod_collected'] as bool? ?? false,
+        canCollectCod: json['can_collect_cod'] as bool? ?? false,
         deliveryFee: _money(json['delivery_fee']),
         pickedUpAt: _date(json['picked_up_at']),
         deliveredAt: _date(json['delivered_at']),

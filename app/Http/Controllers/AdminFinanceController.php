@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\LogisticsCodSettlement;
 use App\Models\Product;
+use App\Services\LogisticsCodSettlements;
 use App\Services\MarketplaceLedger;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -44,6 +46,36 @@ class AdminFinanceController extends Controller
             'rows' => $rows->when($state, fn ($rows) => $rows->where('commission_status', $state))->sortByDesc('placed')->values(),
             'state' => $state,
             'states' => self::COMMISSION_STATES,
+        ]);
+    }
+
+    /** Verified COD collections and their end-to-end allocation, visible only in the Admin Center. */
+    public function codCommissions(Request $request, LogisticsCodSettlements $cod)
+    {
+        [$from, $to, $range] = $this->range($request, defaultDays: 90);
+        $filters = $request->validate([
+            'order' => ['nullable', 'string', 'max:100'],
+            'seller' => ['nullable', 'integer'],
+            'rider' => ['nullable', 'integer'],
+            'logistics' => ['nullable', 'integer'],
+            'status' => ['nullable', Rule::in([LogisticsCodSettlement::AWAITING_SELLER_TRANSFER, LogisticsCodSettlement::SETTLED])],
+        ]);
+        $all = $cod->adminRows($from, $to);
+        $rows = $cod->adminRows($from, $to, $filters);
+
+        return view('admin.cod-commissions', [
+            'ready' => LogisticsCodSettlements::ready(),
+            'range' => $range,
+            'filters' => $filters,
+            'rows' => $rows,
+            'summary' => $cod->adminSummary($rows),
+            'sellers' => $all->mapWithKeys(fn (LogisticsCodSettlement $row) => [$row->seller_user_id => $row->seller?->name])->filter()->sort(),
+            'riders' => $all->mapWithKeys(fn (LogisticsCodSettlement $row) => [$row->handover?->rider_user_id => $row->handover?->rider?->name])->filter()->sort(),
+            'providers' => $all->mapWithKeys(fn (LogisticsCodSettlement $row) => [$row->logistics_provider_id => $row->provider?->name])->filter()->sort(),
+            'statuses' => [
+                LogisticsCodSettlement::AWAITING_SELLER_TRANSFER => 'Awaiting seller transfer',
+                LogisticsCodSettlement::SETTLED => 'Settled',
+            ],
         ]);
     }
 

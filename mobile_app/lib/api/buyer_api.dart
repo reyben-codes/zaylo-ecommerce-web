@@ -151,9 +151,10 @@ class BuyerApi extends ApiClient {
 
   // --------------------------------------------------------------- Checkout
 
-  Future<CheckoutQuote> quote(List<int> cartItemIds, {String? voucherCode}) async =>
+  Future<CheckoutQuote> quote(List<int> cartItemIds, {String? voucherCode, String paymentMethod = 'cod'}) async =>
       CheckoutQuote.fromJson(await send('POST', '/mobile/checkout/quote', body: {
         'cart_item_ids': cartItemIds,
+        'payment_method': paymentMethod,
         if (voucherCode != null && voucherCode.trim().isNotEmpty) 'voucher_code': voucherCode.trim(),
       }));
 

@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y \
     unzip \
     git \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
-    && docker-php-ext-install gd exif pdo pdo_mysql \
+    && docker-php-ext-install gd exif pdo pdo_mysql pdo_sqlite sqlite3 \
     && rm -rf /var/lib/apt/lists/*
 
 # PHP's defaults (2 MB per file, 8 MB per form) are below what the site accepts: 5 MB photos and documents,

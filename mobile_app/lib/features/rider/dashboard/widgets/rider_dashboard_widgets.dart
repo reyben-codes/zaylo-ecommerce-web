@@ -286,6 +286,7 @@ class RiderDeliveryCard extends StatelessWidget {
     this.onOtherAction,
     this.onAccept,
     this.onDecline,
+    this.onCollectCod,
     this.onTap,
   });
 
@@ -294,6 +295,7 @@ class RiderDeliveryCard extends StatelessWidget {
   /// Answer a new assignment ([RiderDelivery.needsAcceptance]); shown instead of the delivery steps.
   final VoidCallback? onAccept;
   final VoidCallback? onDecline;
+  final VoidCallback? onCollectCod;
 
   /// Opens the delivery's details.
   final VoidCallback? onTap;
@@ -356,12 +358,32 @@ class RiderDeliveryCard extends StatelessWidget {
                   value: delivery.cashToCollect > 0 ? peso(delivery.cashToCollect) : 'Prepaid',
                 ),
               ),
-              Expanded(child: _Amount(label: 'Delivery fee', value: peso(delivery.deliveryFee))),
+              Expanded(child: _Amount(label: 'Your commission', value: peso(delivery.riderCommission))),
             ]),
+            if (delivery.cashToCollect > 0) ...[
+              const SizedBox(height: 6),
+              Text(
+                delivery.codCollected
+                    ? 'COD collected. Hand ${peso(delivery.amountToHandLogistics)} to Logistics.'
+                    : 'After collection: keep ${peso(delivery.riderCommission)}; hand ${peso(delivery.amountToHandLogistics)} to Logistics.',
+                style: TextStyle(fontSize: 12, color: ZayloColors.muted),
+              ),
+            ],
             if (delivery.deliveredAt != null) ...[
               const SizedBox(height: 8),
               Text('Delivered ${dateTimeLabel(delivery.deliveredAt)}',
                   style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
+            ],
+            if (delivery.canCollectCod && onCollectCod != null) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: busy ? null : onCollectCod,
+                  icon: const Icon(Icons.payments_outlined),
+                  label: Text('COLLECT COD ${peso(delivery.cashToCollect)}'),
+                ),
+              ),
             ],
             if (onChat != null && delivery.chatOpen) ...[
               const SizedBox(height: 14),

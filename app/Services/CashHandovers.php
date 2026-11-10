@@ -19,15 +19,18 @@ use Illuminate\Validation\ValidationException;
  */
 class CashHandovers
 {
-    public function __construct(private readonly RiderDeliveries $deliveries) {}
+    public function __construct(
+        private readonly RiderDeliveries $deliveries,
+        private readonly LogisticsCodSettlements $settlements,
+    ) {}
 
     public static function ready(): bool
     {
-        return Schema::hasTable('rider_cash_handovers') && Schema::hasColumn('shipments', 'cash_handover_id');
+        return Schema::hasTable('rider_cash_handovers') && Schema::hasColumn('shipments', 'cash_handover_id') && CodCollections::ready();
     }
 
     /** Delivered COD parcels whose cash the rider has not handed over yet, with the amount for each. */
-    public function held(User $rider): Collection
+    public function held(User $rider, bool $lock = false): Collection
     {
         if (! self::ready()) {
             return collect();
@@ -37,8 +40,9 @@ class CashHandovers
             Schema::hasColumn('shipments', 'seller_order_id') ? 'sellerOrder.order' : null,
         ]));
 
-        return $this->deliveries->completed($rider)->whereNull('cash_handover_id')->with($relations)->get()
-            ->map(fn (Shipment $shipment) => ['shipment' => $shipment, 'cash' => RiderDeliveries::amounts($shipment)['cash_to_collect']])
+        return $this->deliveries->completed($rider)->where('cod_collected', true)->whereNull('cash_handover_id')
+            ->when($lock, fn ($query) => $query->lockForUpdate())->with($relations)->get()
+            ->map(fn (Shipment $shipment) => ['shipment' => $shipment, 'cash' => RiderDeliveries::amounts($shipment)['amount_to_hand_logistics']])
             ->filter(fn (array $row) => $row['cash'] > 0)->values();
     }
 
@@ -60,21 +64,30 @@ class CashHandovers
         abort_unless((int) $rider->rider?->logistics_provider_id === (int) $provider->id, 403);
 
         return DB::transaction(function () use ($provider, $rider, $received, $note, $recorder) {
-            $held = $this->held($rider);
+            $held = $this->held($rider, lock: true);
             if ($held->isEmpty()) {
                 throw ValidationException::withMessages(['received' => $rider->name.' has no cash on delivery to hand over.']);
             }
             $expected = round($held->sum('cash'), 2);
+            $received = round($received, 2);
+            if ($received > $expected) {
+                throw ValidationException::withMessages(['received' => 'The cash counted cannot be greater than the ₱'.number_format($expected, 2).' expected from this rider. Record any separate cash through the appropriate workflow.']);
+            }
             $shortfall = round(max(0, $expected - $received), 2);
             if ($shortfall > 0 && blank($note)) {
                 throw ValidationException::withMessages(['note' => 'The cash is ₱'.number_format($shortfall, 2).' short. Note what the rider said.']);
             }
             $handover = RiderCashHandover::create([
                 'logistics_provider_id' => $provider->id, 'rider_user_id' => $rider->id, 'parcels' => $held->count(),
-                'expected' => $expected, 'received' => round($received, 2), 'shortfall' => $shortfall,
+                'expected' => $expected, 'received' => $received, 'shortfall' => $shortfall,
                 'note' => $note, 'recorded_by' => $recorder->id,
             ]);
             Shipment::whereKey($held->pluck('shipment.id'))->update(['cash_handover_id' => $handover->id]);
+            $this->settlements->allocate($handover, $held, $recorder);
+            app(ActivityLogger::class)->record(
+                'logistics.cod_handover_recorded', 'settlement', 'COD handover recorded from '.$rider->name.'.',
+                $recorder, $handover, ['expected' => $expected, 'received' => $received, 'shortfall' => $shortfall, 'parcels' => $held->count()],
+            );
 
             return $handover;
         });

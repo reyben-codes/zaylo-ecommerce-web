@@ -88,7 +88,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       _voucherError = null;
     });
     try {
-      final quote = await _api.quote(widget.cartItemIds, voucherCode: voucher ?? _appliedVoucher);
+      final quote = await _api.quote(widget.cartItemIds, voucherCode: voucher ?? _appliedVoucher, paymentMethod: _payment);
       if (!mounted) return;
       setState(() {
         _quote = quote;
@@ -438,7 +438,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         title: 'Cash on Delivery',
         subtitle: 'Pay when your order arrives',
         selected: _payment == 'cod',
-        onTap: () => setState(() => _payment = 'cod'),
+        onTap: () {
+          if (_payment == 'cod') return;
+          setState(() => _payment = 'cod');
+          _loadQuote();
+        },
       ),
       const SizedBox(height: 10),
       Opacity(
@@ -448,7 +452,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           title: 'GCash',
           subtitle: gcashOk ? "Send to each seller's GCash, then enter the reference number" : '$missing has not set up GCash yet',
           selected: _payment == 'gcash',
-          onTap: gcashOk ? () => setState(() => _payment = 'gcash') : null,
+          onTap: gcashOk
+              ? () {
+                  if (_payment == 'gcash') return;
+                  setState(() => _payment = 'gcash');
+                  _loadQuote();
+                }
+              : null,
         ),
       ),
       if (_payment == 'gcash' && gcashKnown && gcashOk) ...[
@@ -539,14 +549,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     return SectionCard(
         child: Column(children: [
           SummaryRow('Subtotal', peso(totals.subtotal)),
-          SummaryRow(quote.sellerCount > 1 ? 'Shipping (${quote.sellerCount} sellers)' : 'Shipping', peso(totals.shipping)),
+          SummaryRow(quote.sellerCount > 1 ? 'Shipping Fee (₱120 × ${quote.sellerCount} sellers)' : 'Shipping Fee', peso(totals.shipping)),
           if (totals.shippingDiscount > 0)
             SummaryRow('Shipping voucher', '-${peso(totals.shippingDiscount)}',
                 valueColor: ZayloColors.success),
           if (totals.voucherDiscount > 0)
             SummaryRow('Voucher ${quote.voucherCode ?? ''}'.trim(), '-${peso(totals.voucherDiscount)}', valueColor: ZayloColors.success),
           Divider(color: ZayloColors.line, height: 20),
-          SummaryRow('Total', peso(totals.total), emphasize: true),
+          SummaryRow(_payment == 'cod' ? 'Total COD Amount' : 'Total', peso(totals.total), emphasize: true),
           if (_quoting) Padding(padding: EdgeInsets.only(top: 8), child: LinearProgressIndicator(color: ZayloColors.ink)),
         ]),
       );

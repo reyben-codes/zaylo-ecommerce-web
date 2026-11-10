@@ -12,14 +12,15 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Rider wallets. Each parcel a rider delivers credits COMMISSION, part of the logistics partner's share of the
+ * Rider wallets. Each prepaid parcel a rider delivers, and each COD parcel whose cash collection is confirmed, credits
+ * COMMISSION, part of the logistics partner's share of the
  * shipping fee that ZAYLO pays the partner (LogisticsPayouts). Riders withdraw to GCash from MIN_WITHDRAWAL up to their
  * balance; the amount leaves the balance at once, the rider's logistics partner sends it and records the GCash
  * reference, and a rejected request returns it. The balance is commissions less every withdrawal that was not rejected.
  */
 class RiderWallet
 {
-    public const COMMISSION = 15.00;
+    public const COMMISSION = Settlement::RIDER_SHIPPING_MINOR / 100;
 
     public const MIN_WITHDRAWAL = 100.00;
 
@@ -32,7 +33,7 @@ class RiderWallet
         return Schema::hasTable('rider_commissions') && Schema::hasTable('rider_withdrawals');
     }
 
-    /** Credits the rider for a delivered parcel. A parcel is credited once, however often this runs. */
+    /** Credits the rider for an eligible delivered parcel. A parcel is credited once, however often this runs. */
     public function credit(Shipment $shipment, User $rider): ?RiderCommission
     {
         if (! self::ready()) {

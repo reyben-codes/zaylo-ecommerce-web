@@ -129,7 +129,7 @@ class MarketplaceLedger
     }
 
     /**
-     * Records the 10% commission of every completed order that has none yet (deployed layout).
+     * Records the admin's COD share of every completed order that has none yet (deployed layout).
      * Returns how many were added.
      */
     public function recordMissingCommissions(): int
@@ -142,7 +142,7 @@ class MarketplaceLedger
         foreach ($missing as $order) {
             DB::table('commissions')->insert([
                 'order_id' => $order->id, 'seller_id' => $order->seller_id, 'rate' => self::rate() * 100,
-                'amount' => round((float) $order->subtotal * self::rate(), 2), 'status' => 'earned',
+                'amount' => app(Settlement::class)->forOrder($order)['admin_earnings'], 'status' => 'earned',
                 'created_at' => now(), 'updated_at' => now(),
             ]);
         }
@@ -177,11 +177,12 @@ class MarketplaceLedger
         return $orders->map(function (Order $order) use ($commissions, $stores) {
             $record = $commissions[$order->id] ?? null;
             $subtotal = (float) $order->subtotal;
+            $adminShare = app(Settlement::class)->forOrder($order)['admin_earnings'];
             [$amount, $state] = match (true) {
                 $record !== null => [(float) $record->amount, $record->status === 'settled' ? 'settled' : 'earned'],
                 $order->status === 'cancelled' => [0.0, 'none'],
-                in_array($order->status, self::COMPLETED, true) => [round($subtotal * self::rate(), 2), 'unrecorded'],
-                default => [round($subtotal * self::rate(), 2), 'pending'],
+                in_array($order->status, self::COMPLETED, true) => [$adminShare, 'unrecorded'],
+                default => [$adminShare, 'pending'],
             };
 
             return [
@@ -214,7 +215,11 @@ class MarketplaceLedger
             ->get()
             ->map(function (SellerOrder $sellerOrder) {
                 $status = (string) $sellerOrder->status;
-                $commission = (int) $sellerOrder->commission_minor / 100 ?: round((int) $sellerOrder->subtotal_minor / 100 * self::rate(), 2);
+                $commission = (int) $sellerOrder->commission_minor / 100
+                    ?: Settlement::breakdown(
+                        (int) $sellerOrder->subtotal_minor / 100,
+                        (int) $sellerOrder->shipping_fee_minor / 100,
+                    )['admin_earnings'];
 
                 return [
                     'order_id' => $sellerOrder->order_id,

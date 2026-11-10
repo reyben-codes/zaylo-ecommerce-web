@@ -11,7 +11,10 @@
         ?? $shippingTable->sortBy(fn ($partner) => $rateTo($partner)['fee'] ?? $standardFee)->first();
     $perSeller = $selectedPartner ? ($rateTo($selectedPartner)['fee'] ?? $standardFee) : $standardFee;
     $shipping = $perSeller * $sellerCount;
-    $shippingDiscount = $voucher?->isFreeShipping() ? $shipping : 0;
+    $selectedPayment = old('payment_method', 'cod');
+    // COD is always collected with the fixed shipping fee: a shipping subsidy
+    // would make the commission distribution exceed the cash in hand.
+    $shippingDiscount = $voucher?->isFreeShipping() && $selectedPayment !== 'cod' ? $shipping : 0;
     // A discount voucher only comes off the products of shops that joined it.
     $voucherDiscount = round(array_sum($voucherDiscounts), 2);
 @endphp
@@ -28,7 +31,7 @@
             <button type="submit" class="text-button">Apply</button>
             @if($voucher)<a href="{{ route('buyer.checkout.show') }}" class="checkout-voucher-remove">Remove</a>@endif
         </form>
-        @if($voucher)<p class="checkout-voucher-applied"><i class="fas fa-circle-check" aria-hidden="true"></i> {{ $voucher->code }} applied: {{ $voucher->isFreeShipping() ? 'free shipping' : $voucher->describe().' on products from shops in this voucher (−₱'.number_format($voucherDiscount, 2).')' }}</p>@endif
+        @if($voucher)<p class="checkout-voucher-applied"><i class="fas fa-circle-check" aria-hidden="true"></i> {{ $voucher->code }} applied: {{ $voucher->isFreeShipping() ? 'free shipping with GCash; COD shipping is fixed at ₱120 per seller order' : $voucher->describe().' on products from shops in this voucher (−₱'.number_format($voucherDiscount, 2).')' }}</p>@endif
         @error('voucher_code')<p class="cart-validation" role="alert">{{ $message }}</p>@enderror
     </section>
 
@@ -107,7 +110,7 @@
                         <span class="checkout-step">3</span>
                         <div>
                             <h2 id="checkout-partner-title">Logistics partner</h2>
-                            <p>The shipping fee depends on how far your address is from the partner's hub.</p>
+                            <p>Choose the partner that will deliver your parcel. Shipping is a fixed &#8369;120 per seller order.</p>
                         </div>
                     </div>
                     <fieldset class="payment-method-options courier-options">
@@ -120,7 +123,7 @@
                                 <span class="payment-method-option-icon"><i class="fas fa-warehouse" aria-hidden="true"></i></span>
                                 <span class="payment-method-option-content">
                                     <span class="payment-method-option-title">{{ $partner['name'] }}</span>
-                                    <span class="payment-method-option-description">@if($partner['hub'])Hub: {{ $partner['hub'] }} · @endif<span data-shipping-rate>&#8369;{{ number_format($rate['fee'] ?? $standardFee, 2) }} per seller · {{ $rate['label'] ?? 'Standard rate' }}</span></span>
+                                    <span class="payment-method-option-description">@if($partner['hub'])Hub: {{ $partner['hub'] }} · @endif<span data-shipping-rate>Fixed &#8369;{{ number_format($standardFee, 2) }} per seller</span></span>
                                 </span>
                             </label>
                         @endforeach
@@ -162,9 +165,9 @@
             <section class="checkout-section-card" aria-labelledby="checkout-payment-title">
                 <div class="checkout-section-heading"><span class="checkout-step">{{ $shippingTable->isNotEmpty() ? 5 : 4 }}</span><div><h2 id="checkout-payment-title">Payment method</h2><p>Choose how you would like to pay.</p></div></div>
                 <fieldset class="payment-method-options"><legend class="sr-only">Payment method</legend>
-                    <label class="payment-method-option {{ old('payment_method', 'cod') === 'cod' ? 'selected' : '' }}"><input type="radio" name="payment_method" value="cod" @checked(old('payment_method', 'cod') === 'cod')><span class="payment-method-option-icon"><i class="fas fa-money-bill-wave" aria-hidden="true"></i></span><span class="payment-method-option-content"><span class="payment-method-option-title">Cash on Delivery</span><span class="payment-method-option-description">Pay when your order arrives</span></span></label>
+                    <label class="payment-method-option {{ $selectedPayment === 'cod' ? 'selected' : '' }}"><input type="radio" name="payment_method" value="cod" @checked($selectedPayment === 'cod')><span class="payment-method-option-icon"><i class="fas fa-money-bill-wave" aria-hidden="true"></i></span><span class="payment-method-option-content"><span class="payment-method-option-title">Cash on Delivery</span><span class="payment-method-option-description">Pay when your order arrives</span></span></label>
                     @php($gcashMissing = $gcashSellers->filter(fn ($seller) => ! $seller['account']))
-                    <label class="payment-method-option {{ old('payment_method') === 'gcash' ? 'selected' : '' }} {{ $gcashMissing->isNotEmpty() ? 'is-unavailable' : '' }}"><input type="radio" name="payment_method" value="gcash" @checked(old('payment_method') === 'gcash') @disabled($gcashMissing->isNotEmpty())><span class="payment-method-option-icon"><i class="fas fa-mobile-alt" aria-hidden="true"></i></span><span class="payment-method-option-content"><span class="payment-method-option-title">GCash</span><span class="payment-method-option-description">{{ $gcashMissing->isNotEmpty() ? $gcashMissing->pluck('shop')->join(', ').' has not set up GCash yet' : "Send to each seller's GCash, then enter the reference number" }}</span></span></label>
+                    <label class="payment-method-option {{ $selectedPayment === 'gcash' ? 'selected' : '' }} {{ $gcashMissing->isNotEmpty() ? 'is-unavailable' : '' }}"><input type="radio" name="payment_method" value="gcash" @checked($selectedPayment === 'gcash') @disabled($gcashMissing->isNotEmpty())><span class="payment-method-option-icon"><i class="fas fa-mobile-alt" aria-hidden="true"></i></span><span class="payment-method-option-content"><span class="payment-method-option-title">GCash</span><span class="payment-method-option-description">{{ $gcashMissing->isNotEmpty() ? $gcashMissing->pluck('shop')->join(', ').' has not set up GCash yet' : "Send to each seller's GCash, then enter the reference number" }}</span></span></label>
                 </fieldset>
                 @if($gcashSellers->isNotEmpty() && $gcashMissing->isEmpty())
                     {{-- Shown when GCash is chosen (checkout-gcash.js). Each seller has their own GCash and their own order. --}}
@@ -193,10 +196,10 @@
         <aside class="checkout-card checkout-order-summary" data-checkout-summary data-subtotal="{{ $subtotal }}" data-sellers="{{ $sellerCount }}" data-standard-fee="{{ $standardFee }}" data-free-shipping="{{ $voucher?->isFreeShipping() ? 1 : 0 }}" data-voucher-discount="{{ $voucherDiscount }}">
             <h2>Order summary</h2>
             <p class="summary-row"><span>Products ({{ $items->sum('quantity') }})</span><strong>&#8369;{{ number_format($subtotal, 2) }}</strong></p>
-            <p class="summary-row"><span>Shipping ({{ $sellerCount }} seller(s))</span><strong data-summary-shipping>&#8369;{{ number_format($shipping, 2) }}</strong></p>
-            @if($voucher?->isFreeShipping())<p class="summary-row checkout-discount"><span>Free shipping voucher</span><strong data-summary-discount>−&#8369;{{ number_format($shippingDiscount, 2) }}</strong></p>@endif
+            <p class="summary-row"><span>Shipping Fee{{ $sellerCount > 1 ? ' (₱120 × '.$sellerCount.' sellers)' : '' }}</span><strong data-summary-shipping>&#8369;{{ number_format($shipping, 2) }}</strong></p>
+            @if($voucher?->isFreeShipping())<p class="summary-row checkout-discount" data-free-shipping-row @if($selectedPayment === 'cod') hidden @endif><span>Free shipping voucher</span><strong data-summary-discount>−&#8369;{{ number_format($shippingDiscount, 2) }}</strong></p>@endif
             @if($voucherDiscount > 0)<p class="summary-row checkout-discount"><span>Voucher {{ $voucher->code }}</span><strong>−&#8369;{{ number_format($voucherDiscount, 2) }}</strong></p>@endif
-            <p class="summary-row checkout-total"><span>Total to pay</span><strong data-summary-total>&#8369;{{ number_format($subtotal + $shipping - $shippingDiscount - $voucherDiscount, 2) }}</strong></p>
+            <p class="summary-row checkout-total"><span data-summary-total-label>Total COD Amount</span><strong data-summary-total>&#8369;{{ number_format($subtotal + $shipping - $shippingDiscount - $voucherDiscount, 2) }}</strong></p>
             <p class="checkout-summary-note">Your final total is recalculated when you place the order if prices or stock have changed.</p>
             <button class="market-button" type="submit" @disabled($usableAddresses->isEmpty() || $identityItems->isNotEmpty())>Place order</button>
             @if($identityItems->isNotEmpty())<p class="checkout-summary-note">18+ items need an approved ID before you can order them.</p>@endif

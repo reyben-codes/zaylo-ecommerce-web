@@ -3,12 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Announcement;
-use App\Models\Rider;
 use App\Models\Dispute;
+use App\Models\Rider;
 use App\Models\Shipment;
 use App\Models\User;
 use App\Services\ActivityLogger;
 use App\Services\ChatPhotos;
+use App\Services\CodCollections;
 use App\Services\ParcelTracking;
 use App\Services\ReturnPickups;
 use App\Services\RiderAttendanceClock;
@@ -20,6 +21,7 @@ use App\Support\ParcelView;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -41,6 +43,7 @@ class MobileRiderDashboardController extends Controller
 
     public function __construct(
         private readonly RiderDeliveries $deliveries,
+        private readonly CodCollections $codCollections,
         private readonly ReturnPickups $returns,
         private readonly RiderAttendanceClock $attendance,
     ) {}
@@ -326,6 +329,17 @@ class MobileRiderDashboardController extends Controller
         ]);
     }
 
+    /** The assigned rider confirms the COD cash only after this parcel was delivered. */
+    public function collectCod(Request $request, Shipment $shipment): JsonResponse
+    {
+        $shipment = $this->codCollections->collect($shipment, $request->user());
+
+        return response()->json([
+            'message' => 'COD payment collected. Keep ₱40.00 as your delivery commission and hand ₱'.number_format(RiderDeliveries::amounts($shipment)['amount_to_hand_logistics'], 2).' to your logistics partner.',
+            'delivery' => $this->shipmentPayload($shipment->load($this->relations()), withTimeline: true),
+        ]);
+    }
+
     /**
      * Retakes the rider's photo of the parcel at the door, which the delivery scan sends. The seller and buyer can
      * open it from the order. A new photo replaces the old one for a day after delivery.
@@ -354,7 +368,7 @@ class MobileRiderDashboardController extends Controller
         ]);
     }
 
-    private function since(string $period): ?\Illuminate\Support\Carbon
+    private function since(string $period): ?Carbon
     {
         $now = now(self::TIMEZONE);
 
@@ -484,6 +498,11 @@ class MobileRiderDashboardController extends Controller
             ] : null,
             'payment_method' => $amounts['payment_method'],
             'cash_to_collect' => $amounts['cash_to_collect'],
+            'rider_commission' => $amounts['rider_commission'],
+            'amount_to_hand_logistics' => $amounts['amount_to_hand_logistics'],
+            'cod_collected' => $amounts['cod_collected'],
+            'can_collect_cod' => CodCollections::ready() && $amounts['cash_to_collect'] > 0
+                && $stage === 'delivered' && ! $amounts['cod_collected'],
             'delivery_fee' => $amounts['delivery_fee'],
             'attempts' => (int) ($shipment->attempts ?? 0),
             'picked_up_at' => $shipment->picked_up_at?->toIso8601String(),

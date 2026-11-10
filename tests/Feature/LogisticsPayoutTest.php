@@ -60,7 +60,7 @@ class LogisticsPayoutTest extends TestCase
 
         $payouts = app(LogisticsPayouts::class);
         $summary = $payouts->summary($payouts->rows());
-        $this->assertSame(['parcels' => 3, 'fees' => 360.0, 'partner' => 288.0, 'rider' => 0.0, 'zaylo' => 72.0, 'paid' => 0.0, 'owed' => 288.0, 'unpaidParcels' => 3], $summary);
+        $this->assertSame(['parcels' => 3, 'fees' => 360.0, 'partner' => 150.0, 'rider' => 0.0, 'zaylo' => 150.0, 'paid' => 0.0, 'owed' => 150.0, 'unpaidParcels' => 3], $summary);
 
         $this->actingAs($admin)->get(route('admin.logistics-payouts'))->assertOk()
             ->assertSee('Express Delivery')->assertSee('₱192.00')->assertSee('Mark as paid');
@@ -68,13 +68,13 @@ class LogisticsPayoutTest extends TestCase
         $this->post(route('admin.logistics-payouts.pay', $express), ['reference' => 'GCASH-123'])->assertRedirect()
             ->assertSessionHas('status', 'Recorded a payout of ₱192.00 to Express Delivery for 2 delivered parcels.');
         $payout = LogisticsPayout::sole();
-        $this->assertSame([2, 240.0, 192.0, 'GCASH-123', $admin->id], [$payout->parcels, $payout->shipping_fees, $payout->amount, $payout->reference, $payout->paid_by]);
+        $this->assertSame([2, 240.0, 100.0, 'GCASH-123', $admin->id], [$payout->parcels, $payout->shipping_fees, $payout->amount, $payout->reference, $payout->paid_by]);
         $this->assertTrue(ActivityLog::where('event', 'admin.logistics-payouts.pay')->exists());
 
         // Nothing is left to pay Express, and Swift is untouched.
         $this->post(route('admin.logistics-payouts.pay', $express))->assertSessionHas('status', 'Express Delivery has no unpaid delivered parcels.');
         $this->assertSame(1, LogisticsPayout::count());
-        $this->assertSame(['paid' => 192.0, 'owed' => 96.0], array_intersect_key($payouts->summary($payouts->rows()), ['paid' => 0, 'owed' => 0]));
+        $this->assertSame(['paid' => 100.0, 'owed' => 50.0], array_intersect_key($payouts->summary($payouts->rows()), ['paid' => 0, 'owed' => 0]));
 
         // The partner sees its own earnings and payouts.
         $this->actingAs($owner)->get(route('logistics.earnings'))->assertOk()
@@ -92,13 +92,13 @@ class LogisticsPayoutTest extends TestCase
         // ₱120 fees: ZAYLO keeps ₱24 each and pays the partner ₱96 each, which includes the rider's ₱15 on the first.
         $payouts = app(LogisticsPayouts::class);
         $this->assertSame(
-            ['fees' => 240.0, 'partner' => 192.0, 'rider' => 15.0, 'zaylo' => 48.0, 'owed' => 192.0],
+            ['fees' => 240.0, 'partner' => 100.0, 'rider' => 40.0, 'zaylo' => 100.0, 'owed' => 100.0],
             array_intersect_key($payouts->summary($payouts->rows()), array_flip(['fees', 'partner', 'rider', 'zaylo', 'owed'])),
         );
 
         $this->actingAs($admin)->get(route('admin.logistics-payouts'))->assertOk()->assertSee('Rider commissions')->assertSee('&#8369;15.00', false);
         $this->post(route('admin.logistics-payouts.pay', $express))->assertSessionHas('status', 'Recorded a payout of ₱192.00 to Express Delivery for 2 delivered parcels.');
-        $this->assertSame([192.0, 15.0], [LogisticsPayout::sole()->amount, LogisticsPayout::sole()->rider_commissions]);
+        $this->assertSame([100.0, 40.0], [LogisticsPayout::sole()->amount, LogisticsPayout::sole()->rider_commissions]);
 
         $this->actingAs($owner)->get(route('logistics.earnings'))->assertOk()->assertSee('Rider commission')->assertSee('&#8369;96.00', false);
     }

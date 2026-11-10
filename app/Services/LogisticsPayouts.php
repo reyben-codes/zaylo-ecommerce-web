@@ -13,14 +13,14 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * What ZAYLO owes logistics partners: for every parcel a partner delivered, PARTNER_SHARE of its shipping fee goes
- * to the partner company and the rest stays with ZAYLO. The rider's commission for the parcel (RiderWallet) is part of
- * the partner's share: the partner sends it to the rider when they withdraw. The admin pays partners in batches
+ * What ZAYLO owes logistics partners: every delivered parcel earns the
+ * logistics company ₱40 shipping plus 10% of product value. The rider's ₱40
+ * is a separate wallet credit. The admin pays partners in batches.
  * (LogisticsPayout); a partner with several branches is paid as one company and pays its branches itself.
  */
 class LogisticsPayouts
 {
-    public const PARTNER_SHARE = 0.80;
+    public const PRODUCT_COMMISSION_RATE = Settlement::PRODUCT_COMMISSION_BPS / 10000;
 
     /** Whether the database can track payouts (the 2026_11_04 migration ran and parcels record their partner). */
     public static function ready(): bool
@@ -30,7 +30,7 @@ class LogisticsPayouts
 
     public static function partnerPercent(): int
     {
-        return (int) round(self::PARTNER_SHARE * 100);
+        return (int) round(self::PRODUCT_COMMISSION_RATE * 100);
     }
 
     /**
@@ -96,7 +96,7 @@ class LogisticsPayouts
                 'parcels' => $rows->count(),
                 'shipping_fees' => round($rows->sum('fee'), 2),
                 'amount' => round($rows->sum('partner'), 2),
-                'partner_share' => self::PARTNER_SHARE,
+                'partner_share' => self::PRODUCT_COMMISSION_RATE,
             ] + (Schema::hasColumn('logistics_payouts', 'rider_commissions') ? [
                 'rider_commissions' => round($rows->sum('rider'), 2),
             ] : []) + [
@@ -127,10 +127,12 @@ class LogisticsPayouts
     private function row(Shipment $shipment): array
     {
         $fee = self::feeOf($shipment);
-        $share = round($fee * self::PARTNER_SHARE, 2);
-        // The rider's commission is paid out of the partner's share.
+        $split = app(Settlement::class)->forShipment($shipment);
+        // A rider is credited only when the authenticated delivery workflow
+        // completes. This keeps historical/manual shipment rows from gaining a
+        // wallet credit without an assigned rider.
         $rider = RiderWallet::ready() ? round((float) ($shipment->riderCommission?->amount ?? 0), 2) : 0.0;
-        $partner = $share;
+        $partner = $split['logistics_earnings'];
 
         return [
             'shipment_id' => $shipment->id,
@@ -141,7 +143,7 @@ class LogisticsPayouts
             'fee' => $fee,
             'partner' => $partner,
             'rider' => $rider,
-            'zaylo' => round($fee - $share, 2),
+            'zaylo' => $split['admin_earnings'],
             'payout_id' => $shipment->logistics_payout_id ? (int) $shipment->logistics_payout_id : null,
         ];
     }

@@ -89,6 +89,7 @@ class RiderDeliveries
         RiderDeliveryLog::OUT_FOR_DELIVERY => 'Out for delivery',
         RiderDeliveryLog::FAILED => 'Delivery attempt failed',
         RiderDeliveryLog::DELIVERED => 'Delivered to the buyer',
+        RiderDeliveryLog::COD_COLLECTED => 'Cash on delivery collected',
     ];
 
     public function __construct(
@@ -296,10 +297,12 @@ class RiderDeliveries
             throw ValidationException::withMessages(['reason' => 'Choose why the parcel could not be delivered.']);
         }
         $failure = $to === 'failed' ? self::failureSummary($reason, $note) : null;
-        // Delivering credits the rider's wallet in the same transaction, so a delivered parcel always pays the rider.
+        // COD commissions are credited only once the rider records the cash collection. Prepaid parcels still earn
+        // their delivery commission as soon as they are delivered.
         DB::transaction(function () use ($shipment, $to, $rider, $failure) {
             $this->workflow->advance($shipment, $to, $rider, $failure ? 'Delivery attempt failed: '.$failure.'.' : null);
-            if ($to === 'delivered') {
+            $order = $shipment->order ?: $shipment->sellerOrder?->order;
+            if ($to === 'delivered' && $order?->payment_method !== 'cod') {
                 $this->wallet->credit($shipment, $rider);
             }
         });
@@ -362,7 +365,7 @@ class RiderDeliveries
                 'success_rate' => $attempts ? round($delivered->count() / $attempts * 100, 1) : null,
             ],
             'money' => [
-                'cash_collected' => round($delivered->sum(fn (Shipment $s) => self::amounts($s)['cash_to_collect']), 2),
+                'cash_collected' => round($delivered->sum(fn (Shipment $s) => self::amounts($s)['cod_collected'] ? self::amounts($s)['cash_to_collect'] : 0), 2),
                 'delivery_fees' => round($delivered->sum(fn (Shipment $s) => self::amounts($s)['delivery_fee']), 2),
             ],
             'failed_reasons' => $breakdown($failed, self::FAILED_REASONS),
@@ -482,7 +485,7 @@ class RiderDeliveries
         return $shipment->delivered_at ?? $shipment->updated_at;
     }
 
-    /** Order total, cash to collect and the delivery fee, on whichever schema this database uses. */
+    /** Order total, COD collection and the delivery fee, on whichever schema this database uses. */
     public static function amounts(Shipment $shipment): array
     {
         $order = $shipment->order ?: $shipment->sellerOrder?->order;
@@ -500,11 +503,17 @@ class RiderDeliveries
         $cod = $order?->payment_method === 'cod';
         $codAmount = $shipment->getAttribute('cod_amount_minor') ? $shipment->cod_amount_minor / 100 : $total;
 
+        $collectionTracked = Schema::hasColumn('shipments', 'cod_collected');
+        $riderCommission = $cod ? min(RiderWallet::COMMISSION, $codAmount) : 0.0;
+
         return [
             'total' => round($total, 2),
             'delivery_fee' => round((float) $fee, 2),
             'payment_method' => $order?->payment_method,
             'cash_to_collect' => $cod ? round((float) $codAmount, 2) : 0.0,
+            'rider_commission' => round($riderCommission, 2),
+            'amount_to_hand_logistics' => $cod ? round(max(0, $codAmount - $riderCommission), 2) : 0.0,
+            'cod_collected' => $collectionTracked && (bool) $shipment->cod_collected,
         ];
     }
 }

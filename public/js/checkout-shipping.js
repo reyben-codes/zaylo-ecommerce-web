@@ -1,57 +1,41 @@
-// Checkout: the shipping fee depends on the chosen logistics partner's distance to the chosen address. Each partner
-// option carries its fee to every saved address, so the fees and the order summary follow either choice. The server
-// prices the order again when it is placed.
+// Checkout uses the server-defined fixed ₱120 shipping fee per seller order.
+// The server recalculates every amount from locked cart rows when it places an order.
 (() => {
     const summary = document.querySelector('[data-checkout-summary]');
-    const partners = Array.from(document.querySelectorAll('input[name="logistics_provider_id"][data-shipping-rates]'));
-    if (!summary || partners.length === 0) {
-        return;
-    }
+    if (!summary) return;
 
+    const partners = Array.from(document.querySelectorAll('input[name="logistics_provider_id"]'));
     const money = amount => '₱' + amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const subtotal = Number(summary.dataset.subtotal) || 0;
     const sellers = Number(summary.dataset.sellers) || 0;
     const standardFee = Number(summary.dataset.standardFee) || 0;
     const freeShipping = summary.dataset.freeShipping === '1';
-    // A discount voucher's pesos off (shops that joined it); it does not depend on shipping.
     const voucherDiscount = Number(summary.dataset.voucherDiscount) || 0;
-    const ratesOf = input => {
-        try {
-            return JSON.parse(input.dataset.shippingRates) || {};
-        } catch {
-            return {};
-        }
-    };
 
     const update = () => {
-        const address = document.querySelector('input[name="address_id"]:checked')?.value;
+        const shipping = standardFee * sellers;
+        const method = document.querySelector('input[name="payment_method"]:checked')?.value;
+        const discount = freeShipping && method !== 'cod' ? shipping : 0;
+        const total = subtotal + shipping - discount - voucherDiscount;
+
         partners.forEach(input => {
-            const rate = ratesOf(input)[address];
             const label = input.closest('label')?.querySelector('[data-shipping-rate]');
-            if (label) {
-                label.textContent = `${money(rate ? rate.fee : standardFee)} per seller · ${rate ? rate.label : 'Standard rate'}`;
-            }
+            if (label) label.textContent = `Fixed ${money(standardFee)} per seller`;
         });
 
-        const chosen = partners.find(input => input.checked);
-        const rate = chosen ? ratesOf(chosen)[address] : null;
-        const shipping = (rate ? rate.fee : standardFee) * sellers;
-        const discount = freeShipping ? shipping : 0;
         summary.querySelector('[data-summary-shipping]').textContent = money(shipping);
         const discountRow = summary.querySelector('[data-summary-discount]');
-        if (discountRow) {
-            discountRow.textContent = '−' + money(discount);
-        }
-        summary.querySelector('[data-summary-total]').textContent = money(subtotal + shipping - discount - voucherDiscount);
-        // GCash: what to send each seller (their items plus their shipping fee).
-        const perSeller = rate ? rate.fee : standardFee;
+        if (discountRow) discountRow.textContent = '−' + money(discount);
+        summary.querySelector('[data-free-shipping-row]')?.toggleAttribute('hidden', discount === 0);
+        summary.querySelector('[data-summary-total]').textContent = money(total);
+        summary.querySelector('[data-summary-total-label]').textContent = method === 'cod' ? 'Total COD Amount' : 'Total to pay';
+
         document.querySelectorAll('[data-gcash-amount]').forEach(amount => {
-            amount.textContent = money((Number(amount.dataset.subtotal) || 0) + (freeShipping ? 0 : perSeller));
+            amount.textContent = money((Number(amount.dataset.subtotal) || 0) + (freeShipping ? 0 : standardFee));
         });
     };
 
-    document.querySelectorAll('input[name="address_id"], input[name="logistics_provider_id"]').forEach(input => {
-        input.addEventListener('change', update);
-    });
+    document.querySelectorAll('input[name="address_id"], input[name="logistics_provider_id"], input[name="payment_method"]')
+        .forEach(input => input.addEventListener('change', update));
     update();
 })();

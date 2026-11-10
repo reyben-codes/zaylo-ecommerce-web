@@ -52,7 +52,9 @@ class ShippingRates
 
     public static function fee(?string $zone): float
     {
-        return self::ZONES[$zone]['fee'] ?? self::STANDARD_FEE;
+        // The COD commission policy has one nationwide shipping charge. Zones
+        // remain useful for routing and logistics-partner selection.
+        return self::STANDARD_FEE;
     }
 
     public static function label(?string $zone): string

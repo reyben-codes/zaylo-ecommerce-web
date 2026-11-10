@@ -1,20 +1,18 @@
 # ZAYLO Mobile
 
-The buyer-facing Flutter companion for the Laravel ZAYLO marketplace. It mirrors the web store's warm cream, black, and taupe visual language and includes a browsable catalog, product details, saved items, a quantity-aware cart, checkout confirmation, and an account view.
+The Flutter companion for the Laravel ZAYLO marketplace. It includes buyer shopping and account journeys as well as the delivery-rider workflow.
 
 ## Start it
 
-From this directory, generate native platform folders once (they are intentionally not committed here), then run the app:
+From this directory, fetch packages and run the app on a connected device or running emulator:
 
 ```powershell
-flutter create . --platforms=android,ios
 flutter pub get
 flutter run
 ```
 
-The app reads the same Laravel marketplace database through the read-only API at
-`/api/mobile`. It does **not** connect directly to MySQL, which keeps database
-credentials out of the app. By default it uses the live site,
+The app uses Laravel's `/api/mobile` endpoints; it never connects directly to
+MySQL. By default it uses the live site,
 `https://zaylo-zyl.shop/api`, so with a phone connected this is enough:
 
 ```powershell
@@ -29,12 +27,8 @@ flutter run --dart-define=ZAYLO_API_URL=http://10.0.2.2:8000/api
 ```
 
 For a physical phone on a local server, replace `10.0.2.2` with the LAN address
-of the machine running Laravel. The visual tokens are in
-`lib/theme/zaylo_theme.dart`, API work is isolated in
-`lib/services/storefront_api.dart`, and the storefront widgets are in
-`lib/screens/storefront_screen.dart`.
+of the machine running Laravel. Visual tokens are in `lib/theme/zaylo_theme.dart`,
+and API clients are in `lib/api/`.
 
-The existing cart, wishlist, checkout, and account routes are browser-session
-routes. The mobile UI currently keeps bag/saved interactions in its session;
-add Laravel Sanctum-backed authenticated endpoints before making those writes
-persist to a buyer account.
+Buyer and rider sessions use separate Sanctum bearer tokens kept in secure
+storage.

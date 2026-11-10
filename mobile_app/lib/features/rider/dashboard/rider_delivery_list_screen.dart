@@ -71,6 +71,7 @@ class _RiderDeliveryListScreenState extends State<RiderDeliveryListScreen> with 
                         onOtherAction: busyDeliveryId == null ? (status) => advanceDelivery(delivery, status) : null,
                         onAccept: busyDeliveryId == null ? () => acceptAssignment(delivery) : null,
                         onDecline: busyDeliveryId == null ? () => declineAssignment(delivery) : null,
+                        onCollectCod: busyDeliveryId == null ? () => collectCod(delivery) : null,
                         onChat: () => openDeliveryChat(delivery),
                         onTap: () => openDeliveryDetails(delivery),
                       ),
