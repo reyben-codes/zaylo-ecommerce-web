@@ -101,6 +101,16 @@ class CheckoutService
                     'voucher_code' => "This voucher only applies to items from {$shopName}.",
                 ]);
             }
+            if ($voucher->min_spend) {
+                $applicableSpend = $voucher->seller_id
+                    ? (float) $items->filter(fn ($item) => (int) ($item->product->seller_id ?? 0) === (int) $voucher->seller_id)->sum(fn ($item) => $item->unitPrice() * $item->quantity)
+                    : (float) $items->sum(fn ($item) => $item->unitPrice() * $item->quantity);
+                if ($applicableSpend < $voucher->min_spend) {
+                    throw ValidationException::withMessages([
+                        'voucher_code' => 'Spend at least ₱'.number_format((float) $voucher->min_spend, 2).' to use this free shipping voucher.',
+                    ]);
+                }
+            }
 
             return;
         }
@@ -127,6 +137,96 @@ class CheckoutService
         throw ValidationException::withMessages(['voucher_code' => $inCart->intersect($joined)->isEmpty()
             ? 'None of the shops in your order joined this voucher.'
             : 'Spend at least ₱'.number_format((float) $voucher->min_spend, 2).' at a shop that joined to use this voucher.']);
+    }
+
+    /**
+     * Active vouchers that can be displayed or applied at checkout for this cart's items.
+     *
+     * @param  Collection<int, CartItem>  $items
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function availableVouchersFor(Collection $items): Collection
+    {
+        if ($items->isEmpty()) {
+            return collect();
+        }
+
+        $vouchersService = app(Vouchers::class);
+        $sellerIds = $items->pluck('product.seller_id')->map(fn ($id) => (int) $id)->filter()->unique()->values();
+        $subtotal = (float) $items->sum(fn ($item) => $item->unitPrice() * $item->quantity);
+        $shopSubtotals = $items->groupBy(fn ($item) => (int) ($item->product->seller_id ?? 0))
+            ->map(fn ($group) => (float) $group->sum(fn ($item) => $item->unitPrice() * $item->quantity));
+
+        $vouchers = Voucher::where('is_active', true)->latest('id')->get();
+
+        return $vouchers->filter(function (Voucher $v) use ($sellerIds) {
+            if (! $v->isAvailable()) {
+                return false;
+            }
+            if ($v->isFreeShipping()) {
+                return ! $v->seller_id || $sellerIds->contains((int) $v->seller_id);
+            }
+            if ($v->seller_id) {
+                return $sellerIds->contains((int) $v->seller_id);
+            }
+            $joined = app(Vouchers::class)->joinedShops($v);
+
+            return $sellerIds->intersect($joined)->isNotEmpty();
+        })->map(function (Voucher $v) use ($items, $shopSubtotals, $subtotal, $vouchersService) {
+            $canApply = true;
+            $reasonCannotApply = null;
+            $estimatedDiscount = 0.0;
+            $shopName = $v->seller_id ? $vouchersService->shopName((int) $v->seller_id) : 'All shops';
+
+            if ($v->isFreeShipping()) {
+                $applicableSpend = $v->seller_id ? ($shopSubtotals->get((int) $v->seller_id) ?? 0.0) : $subtotal;
+                if ($v->min_spend && $applicableSpend < $v->min_spend) {
+                    $canApply = false;
+                    $shortfall = $v->min_spend - $applicableSpend;
+                    $reasonCannotApply = 'Add ₱'.number_format($shortfall, 2).' more';
+                }
+            } else {
+                $joined = $vouchersService->joinedShops($v);
+                if ($v->seller_id && ! in_array((int) $v->seller_id, $joined, true)) {
+                    $canApply = false;
+                    $reasonCannotApply = 'Shop has not joined';
+                } else {
+                    $applicableSpend = $v->seller_id ? ($shopSubtotals->get((int) $v->seller_id) ?? 0.0) : $subtotal;
+                    if ($v->min_spend && $applicableSpend < $v->min_spend) {
+                        $canApply = false;
+                        $shortfall = $v->min_spend - $applicableSpend;
+                        $reasonCannotApply = 'Add ₱'.number_format($shortfall, 2).' more';
+                    } else {
+                        $discounts = $vouchersService->cartDiscounts($v, $items);
+                        $estimatedDiscount = round(array_sum($discounts), 2);
+                        if ($estimatedDiscount <= 0) {
+                            $canApply = false;
+                            $reasonCannotApply = 'No items eligible';
+                        }
+                    }
+                }
+            }
+
+            return [
+                'id' => $v->id,
+                'code' => $v->code,
+                'name' => $v->name,
+                'type' => $v->type,
+                'is_free_shipping' => $v->isFreeShipping(),
+                'offer_label' => match ($v->type) {
+                    'free_shipping' => 'Free Shipping',
+                    'percent' => rtrim(rtrim(number_format((float) $v->value, 2), '0'), '.').'% OFF',
+                    default => '₱'.number_format((float) $v->value, 2).' OFF',
+                },
+                'description' => $v->describe(),
+                'min_spend' => $v->min_spend ? (float) $v->min_spend : null,
+                'expires_at' => $v->expires_at?->timezone('Asia/Manila')->format('M j, Y'),
+                'can_apply' => $canApply,
+                'reason_cannot_apply' => $reasonCannotApply,
+                'estimated_discount' => $estimatedDiscount,
+                'shop_name' => $shopName,
+            ];
+        })->values();
     }
 
     /** @param Collection<int, CartItem> $items with product and variant loaded */

@@ -163,6 +163,7 @@ class CheckoutQuote {
     this.defaultPartnerId,
     this.sellerCount = 1,
     this.gcashSellers = const [],
+    this.availableVouchers = const [],
   });
 
   final List<CartItem> items;
@@ -199,6 +200,7 @@ class CheckoutQuote {
 
   /// Shipping is charged once per seller.
   final int sellerCount;
+  final List<AvailableVoucher> availableVouchers;
 
   /// The totals with [partnerId] delivering to [addressId], or the server's [totals] when that pair has no rate.
   CheckoutTotals totalsFor(int? partnerId, int? addressId) {
@@ -242,8 +244,59 @@ class CheckoutQuote {
       gcashSellers: (json['gcash_sellers'] as List<dynamic>? ?? const [])
           .map((item) => GcashSeller.fromJson(item as Map<String, dynamic>))
           .toList(),
+      availableVouchers: (json['available_vouchers'] as List<dynamic>? ?? const [])
+          .map((item) => AvailableVoucher.fromJson(item as Map<String, dynamic>))
+          .toList(),
     );
   }
+}
+
+class AvailableVoucher {
+  const AvailableVoucher({
+    required this.id,
+    required this.code,
+    this.name,
+    required this.type,
+    required this.isFreeShipping,
+    required this.offerLabel,
+    required this.description,
+    this.minSpend,
+    this.expiresAt,
+    this.canApply = true,
+    this.reasonCannotApply,
+    this.estimatedDiscount = 0,
+    this.shopName = 'All shops',
+  });
+
+  final int id;
+  final String code;
+  final String? name;
+  final String type;
+  final bool isFreeShipping;
+  final String offerLabel;
+  final String description;
+  final double? minSpend;
+  final String? expiresAt;
+  final bool canApply;
+  final String? reasonCannotApply;
+  final double estimatedDiscount;
+  final String shopName;
+
+  factory AvailableVoucher.fromJson(Map<String, dynamic> json) => AvailableVoucher(
+    id: (json['id'] as num?)?.toInt() ?? 0,
+    code: json['code'] as String? ?? '',
+    name: json['name'] as String?,
+    type: json['type'] as String? ?? 'fixed',
+    isFreeShipping: json['is_free_shipping'] as bool? ?? false,
+    offerLabel: json['offer_label'] as String? ?? '',
+    description: json['description'] as String? ?? '',
+    minSpend: json['min_spend'] != null ? parseMoney(json['min_spend']) : null,
+    expiresAt: json['expires_at'] as String?,
+    canApply: json['can_apply'] as bool? ?? true,
+    reasonCannotApply: json['reason_cannot_apply'] as String?,
+    estimatedDiscount: parseMoney(json['estimated_discount']),
+    shopName: json['shop_name'] as String? ?? 'All shops',
+  );
 }
 
 /// A seller the buyer pays by GCash: their own account and the items subtotal (shipping is added on top).

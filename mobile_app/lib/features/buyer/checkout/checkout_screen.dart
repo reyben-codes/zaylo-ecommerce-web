@@ -123,6 +123,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _loadQuote(voucher: code);
   }
 
+  void _applySpecificVoucher(String code) {
+    FocusScope.of(context).unfocus();
+    _voucher.text = code;
+    _loadQuote(voucher: code);
+  }
+
   void _removeVoucher() {
     _voucher.clear();
     _appliedVoucher = null;
@@ -507,41 +513,204 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   Widget _voucherSection() {
-    if (_appliedVoucher != null) {
-      return SectionCard(
-        child: Row(children: [
-          Icon(Icons.check_circle, color: ZayloColors.success),
-          const SizedBox(width: 10),
+    final available = _quote?.availableVouchers ?? const [];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (_appliedVoucher != null) ...[
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: ZayloColors.success.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: ZayloColors.success.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.check_circle, color: ZayloColors.success, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '$_appliedVoucher applied',
+                        style: TextStyle(fontWeight: FontWeight.w700, color: ZayloColors.ink, fontSize: 13),
+                      ),
+                      Text(
+                        _quote?.voucherLabel ?? 'Discount voucher applied',
+                        style: TextStyle(color: ZayloColors.muted, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                TextButton(
+                  onPressed: _quoting ? null : _removeVoucher,
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.red.shade700,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text('Remove', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+        if (available.isNotEmpty) ...[
+          Text(
+            'Available vouchers (${available.length})',
+            style: TextStyle(fontWeight: FontWeight.w700, color: ZayloColors.ink, fontSize: 13),
+          ),
+          const SizedBox(height: 8),
+          ...available.map((v) {
+            final isApplied = _appliedVoucher?.toUpperCase() == v.code.toUpperCase();
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isApplied
+                    ? ZayloColors.success.withValues(alpha: 0.08)
+                    : (v.canApply ? ZayloColors.paper : ZayloColors.sand.withValues(alpha: 0.3)),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isApplied
+                      ? ZayloColors.success
+                      : (v.canApply ? ZayloColors.cardBorder : ZayloColors.line.withValues(alpha: 0.5)),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: isApplied ? ZayloColors.success : (v.canApply ? ZayloColors.taupe : ZayloColors.muted),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          v.isFreeShipping ? Icons.local_shipping : Icons.discount,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          v.offerLabel,
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 10),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          v.name != null && v.name!.isNotEmpty ? '${v.code} · ${v.name}' : v.code,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontWeight: FontWeight.w800, color: ZayloColors.ink, fontSize: 13),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          v.description,
+                          style: TextStyle(color: ZayloColors.muted, fontSize: 11),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          v.shopName + (v.expiresAt != null ? ' · Ends ${v.expiresAt}' : ''),
+                          style: TextStyle(color: ZayloColors.onInkFaint, fontSize: 10),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  if (isApplied)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: ZayloColors.success.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.check, size: 14, color: ZayloColors.success),
+                          const SizedBox(width: 3),
+                          Text(
+                            'Applied',
+                            style: TextStyle(
+                              color: ZayloColors.success,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else if (v.canApply)
+                    OutlinedButton(
+                      onPressed: _quoting ? null : () => _applySpecificVoucher(v.code),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        side: BorderSide(color: ZayloColors.ink),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                      ),
+                      child: Text(
+                        'Apply',
+                        style: TextStyle(color: ZayloColors.ink, fontWeight: FontWeight.w700, fontSize: 11),
+                      ),
+                    )
+                  else
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: ZayloColors.sand.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        v.reasonCannotApply ?? 'Unavailable',
+                        style: TextStyle(color: ZayloColors.muted, fontSize: 10),
+                      ),
+                    ),
+                ],
+              ),
+            );
+          }),
+          const SizedBox(height: 8),
+        ],
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Expanded(
-            child: Text('$_appliedVoucher applied: ${_quote?.voucherLabel ?? 'free shipping'}',
-                style: TextStyle(fontWeight: FontWeight.w700, color: ZayloColors.ink)),
+            child: TextField(
+              controller: _voucher,
+              textCapitalization: TextCapitalization.characters,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => _applyVoucher(),
+              decoration: zayloInputDecoration('Enter voucher code', errorText: _voucherError),
+            ),
           ),
-          TextButton(onPressed: _quoting ? null : _removeVoucher, child: const Text('Remove')),
+          const SizedBox(width: 10),
+          SizedBox(
+            height: 50,
+            child: OutlinedButton(
+              onPressed: _quoting ? null : _applyVoucher,
+              style: secondaryButtonStyle.copyWith(
+                padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 18)),
+              ),
+              child: const Text('APPLY'),
+            ),
+          ),
         ]),
-      );
-    }
-    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Expanded(
-        child: TextField(
-          controller: _voucher,
-          textCapitalization: TextCapitalization.characters,
-          textInputAction: TextInputAction.done,
-          onSubmitted: (_) => _applyVoucher(),
-          decoration: zayloInputDecoration('Enter voucher code', errorText: _voucherError),
-        ),
-      ),
-      const SizedBox(width: 10),
-      SizedBox(
-        height: 50,
-        child: OutlinedButton(
-          onPressed: _quoting ? null : _applyVoucher,
-          style: secondaryButtonStyle.copyWith(
-            padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 18)),
-          ),
-          child: const Text('APPLY'),
-        ),
-      ),
-    ]);
+      ],
+    );
   }
 
   Widget _summarySection(CheckoutQuote quote) {

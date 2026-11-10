@@ -61,7 +61,7 @@ class AuthRoleCards extends StatelessWidget {
                   onTap: () => _onSelect(context, AuthRole.buyer),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 12),
               Expanded(
                 child: _RoleSquareCard(
                   title: 'Rider',

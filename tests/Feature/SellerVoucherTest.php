@@ -54,13 +54,18 @@ class SellerVoucherTest extends TestCase
         $items = $buyer->cart()->first()->items()->with('product')->get();
         $this->assertSame([(int) $lamp->fresh()->seller_id => 100.0], app(Vouchers::class)->cartDiscounts($voucher->fresh(), $items));
         $this->post(route('buyer.cart.selection'), ['action' => 'checkout', 'cart_item_ids' => $items->pluck('id')->all()]);
+        $this->get(route('buyer.checkout.show'))->assertOk()
+            ->assertSee('Available vouchers for your order')
+            ->assertSee('PAYDAY10');
         $this->get(route('buyer.checkout.show', ['voucher' => 'payday10']))->assertOk()
             ->assertSee('PAYDAY10 applied: 10% off')->assertSee('Voucher PAYDAY10')->assertSee('data-voucher-discount="100"', false);
 
-        // The app quote has the same discount.
+        // The app quote has the same discount and includes available_vouchers.
         $this->signInMobile($buyer);
         $this->postJson('/api/mobile/checkout/quote', ['cart_item_ids' => $items->pluck('id')->all(), 'voucher_code' => 'PAYDAY10'])->assertOk()
-            ->assertJsonPath('totals.voucher_discount', 100)->assertJsonPath('voucher_label', '10% off, up to ₱150.00, min. spend ₱500.00');
+            ->assertJsonPath('totals.voucher_discount', 100)
+            ->assertJsonPath('voucher_label', '10% off, up to ₱150.00, min. spend ₱500.00')
+            ->assertJsonPath('available_vouchers.0.code', 'PAYDAY10');
         // A cart with only the declining shop gets nothing, and is told why.
         $this->postJson('/api/mobile/checkout/quote', ['cart_item_ids' => [$items->firstWhere('product.id', $cable->id)->id], 'voucher_code' => 'PAYDAY10'])
             ->assertUnprocessable()->assertJsonPath('errors.voucher_code.0', 'None of the shops in your order joined this voucher.');

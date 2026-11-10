@@ -486,6 +486,7 @@ class BuyerController extends Controller
             'shippingTable' => $shippingTable,
             'standardFee' => ShippingRates::STANDARD_FEE,
             'voucher' => $voucher,
+            'availableVouchers' => $this->checkoutService->availableVouchersFor($items),
             'addresses' => $addresses,
             'estimatedShipStart' => now()->addWeekdays(2),
             'estimatedShipEnd' => now()->addWeekdays(4),

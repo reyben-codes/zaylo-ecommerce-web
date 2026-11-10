@@ -69,6 +69,13 @@ class VoucherController extends Controller
         }
         $data['created_by'] = $request->user()->id;
 
+        if (! empty($data['starts_at'])) {
+            $data['starts_at'] = \Illuminate\Support\Carbon::parse($data['starts_at'], 'Asia/Manila')->utc();
+        }
+        if (! empty($data['expires_at'])) {
+            $data['expires_at'] = \Illuminate\Support\Carbon::parse($data['expires_at'], 'Asia/Manila')->utc();
+        }
+
         $voucher = $this->vouchers->create($data);
 
         if ($voucher->seller_id) {
@@ -120,6 +127,13 @@ class VoucherController extends Controller
             'value.required' => 'Enter the discount amount or percent.',
         ]);
         $data['code'] = strtoupper($data['code']);
+
+        if (! empty($data['starts_at'])) {
+            $data['starts_at'] = \Illuminate\Support\Carbon::parse($data['starts_at'], 'Asia/Manila')->utc();
+        }
+        if (! empty($data['expires_at'])) {
+            $data['expires_at'] = \Illuminate\Support\Carbon::parse($data['expires_at'], 'Asia/Manila')->utc();
+        }
 
         $voucher = $this->vouchers->createForSeller($data, $shopId, $request->user());
 

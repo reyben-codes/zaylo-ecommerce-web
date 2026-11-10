@@ -52,8 +52,8 @@ class Voucher extends Model
     public function isAvailable(): bool
     {
         return $this->is_active
-            && ($this->starts_at === null || $this->starts_at->lte(now()))
-            && ($this->expires_at === null || $this->expires_at->gte(now()))
+            && ($this->starts_at === null || $this->starts_at->lte(now()->addMinutes(2)))
+            && ($this->expires_at === null || $this->expires_at->gte(now()->subMinutes(2)))
             && ($this->usage_limit === null || $this->used_count < $this->usage_limit);
     }
 

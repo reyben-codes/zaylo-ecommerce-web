@@ -129,6 +129,7 @@ class MobileShoppingController extends Controller
             'voucher_code' => $voucher?->code,
             // What the voucher does, e.g. "10% off, up to ₱100" (the app shows it once applied).
             'voucher_label' => $voucher?->describe(),
+            'available_vouchers' => $this->checkout->availableVouchersFor($items),
             // The flat fee, which older app builds charge per seller.
             'shipping_per_seller' => CheckoutService::SHIPPING_PER_SELLER,
             // Partners the buyer can pick, with the fee per seller to each saved address (keyed by address id). The

@@ -119,7 +119,7 @@ class _QuantityStepperState extends State<QuantityStepper> {
               enabled: widget.enabled,
               keyboardType: TextInputType.number,
               textInputAction: TextInputAction.done,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter('${widget.max}'.length.clamp(1, 7))],
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(7)],
               textAlign: TextAlign.center,
               style: const TextStyle(fontWeight: FontWeight.w700),
               decoration: const InputDecoration(

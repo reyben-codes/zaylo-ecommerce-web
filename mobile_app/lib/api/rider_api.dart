@@ -67,25 +67,10 @@ class RiderApi extends ApiClient {
         'device_name': deviceName,
       }));
 
-  /// Courier accounts only; buyers and riders are turned away by the server.
-  Future<AuthResult> courierLogin(String email, String password) async =>
-      AuthResult.fromJson(await send('POST', '/mobile/courier/login', body: {
-        'email': email,
-        'password': password,
-        'device_name': deviceName,
-      }));
-
   /// Signs in an existing rider with a Google ID token. Never creates an account:
   /// riders apply with the sign-up form first.
   Future<AuthResult> googleSignIn(String idToken) async =>
       AuthResult.fromJson(await send('POST', '/mobile/rider/google', body: {
-        'id_token': idToken,
-        'device_name': deviceName,
-      }));
-
-  /// Signs in an existing courier with a Google ID token.
-  Future<AuthResult> courierGoogleSignIn(String idToken) async =>
-      AuthResult.fromJson(await send('POST', '/mobile/courier/google', body: {
         'id_token': idToken,
         'device_name': deviceName,
       }));

@@ -213,6 +213,21 @@ class FakeApi extends BuyerApi {
           },
         ],
         'identity_verified': identityVerified,
+        'voucher_code': voucherCode,
+        'voucher_label': voucherCode != null && voucherCode.isNotEmpty ? '₱100.00 off' : null,
+        'available_vouchers': [
+          {
+            'id': 1,
+            'code': 'TESTVOUCHER',
+            'name': 'Test Promo',
+            'type': 'fixed',
+            'is_free_shipping': false,
+            'offer_label': '₱100.00 OFF',
+            'description': '₱100.00 off',
+            'can_apply': true,
+            'shop_name': 'All shops',
+          },
+        ],
       });
 
   @override
@@ -1162,6 +1177,11 @@ void main() {
     expect(find.text('ZAYLO RIDER'), findsOneWidget);
     expect(find.text('SIGN IN AS RIDER'), findsOneWidget);
 
+    // Navigate back to buyer login via the Buyer selection card
+    await tester.tap(find.text('Buyer'));
+    await tester.pumpAndSettle();
+    expect(find.byType(LoginScreen), findsOneWidget);
+    expect(find.text('Welcome Back'), findsOneWidget);
   });
 
   testWidgets('rider registration collects personal details, then partner, vehicle and documents', (tester) async {
@@ -2015,6 +2035,22 @@ void main() {
       expect(find.text('18+ items need an approved ID'), findsNothing);
       final placeOrder = find.ancestor(of: find.text('PLACE ORDER'), matching: find.byType(FilledButton));
       expect(tester.widget<FilledButton>(placeOrder).onPressed, isNotNull);
+    });
+
+    testWidgets('checkout displays available vouchers and applies them when tapped', (tester) async {
+      await pumpApp(tester, token: 'stored-token', api: FakeApi(cartIds: [11]));
+      await open(tester, const CheckoutScreen(cartItemIds: [11]));
+
+      await tester.drag(find.byType(ListView), const Offset(0, -300));
+      await tester.pump();
+      expect(find.text('Available vouchers (1)'), findsOneWidget);
+      expect(find.textContaining('TESTVOUCHER'), findsOneWidget);
+      expect(find.text('₱100.00 OFF'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Apply'));
+      await tester.pump();
+
+      expect(find.text('TESTVOUCHER applied'), findsOneWidget);
     });
 
     testWidgets('checkout picks the nearest logistics partner and the fee follows the buyer\'s pick', (tester) async {

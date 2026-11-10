@@ -36,6 +36,7 @@ class RiderRegistrationScreen extends StatefulWidget {
 
   /// Defaults to a rider client on the buyer client's server; tests pass a fake.
   final RiderApi? api;
+
   @override
   State<RiderRegistrationScreen> createState() => _RiderRegistrationScreenState();
 }
@@ -284,7 +285,10 @@ class _RiderRegistrationScreenState extends State<RiderRegistrationScreen> {
               _ApplicationSubmitted(email: _email.text.trim(), partner: _partnerName, onDone: _finish)
             else ...[
               if (_step == 1)
-                const AuthRoleCards(selectedRole: AuthRole.rider, isLogin: false),
+                const AuthRoleCards(
+                  selectedRole: AuthRole.rider,
+                  isLogin: false,
+                ),
               const Eyebrow('Ride with ZAYLO'),
               const SizedBox(height: 9),
               Text(
@@ -329,7 +333,9 @@ class _RiderRegistrationScreenState extends State<RiderRegistrationScreen> {
               Center(
                 child: TextButton(
                   onPressed: () => Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (_) => const RiderLoginScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => const RiderLoginScreen(),
+                    ),
                   ),
                   child: const Text('Already a rider? Sign in'),
                 ),
