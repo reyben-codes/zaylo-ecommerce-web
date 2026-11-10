@@ -133,6 +133,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     setState(() => _quoting = true);
     try {
       await _api.claimVoucher(code);
+      if (!mounted) return;
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Voucher $code claimed!')),
@@ -140,6 +141,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       }
       await _loadQuote(voucher: code);
     } catch (e) {
+      if (!mounted) return;
       if (mounted) {
         final message = e is ApiException ? (e.fieldErrors['voucher'] ?? e.message) : '$e';
         ScaffoldMessenger.of(context).showSnackBar(

@@ -12,6 +12,7 @@ use App\Services\Vouchers;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Tests\Support\PsgcFixtures;
+use Tests\Support\LegacyOrderTables;
 use Tests\Support\SignsInMobile;
 use Tests\TestCase;
 
@@ -21,7 +22,7 @@ use Tests\TestCase;
  */
 class SellerVoucherTest extends TestCase
 {
-    use PsgcFixtures, RefreshDatabase, SignsInMobile;
+    use LegacyOrderTables, PsgcFixtures, RefreshDatabase, SignsInMobile;
 
     public function test_shops_opt_in_and_only_their_products_get_the_discount(): void
     {
@@ -207,6 +208,23 @@ class SellerVoucherTest extends TestCase
         ]);
         $response->assertUnprocessable();
         $this->assertStringContainsString('only applies to items from', $response->json('errors.voucher_code.0'));
+        $this->assertDatabaseMissing('voucher_claims', ['voucher_id' => $voucher->id, 'user_id' => $buyer->id]);
+
+        // An eligible quote claims the voucher, but a used claim cannot be applied again.
+        $this->postJson('/api/mobile/checkout/quote', [
+            'cart_item_ids' => $items->pluck('id')->all(),
+            'voucher_code' => 'BAKERY20',
+        ])->assertOk();
+        $claim = VoucherClaim::where('voucher_id', $voucher->id)->where('user_id', $buyer->id)->firstOrFail();
+        $claim->update(['used_at' => now()]);
+        $this->postJson('/api/mobile/checkout/quote', [
+            'cart_item_ids' => $items->pluck('id')->all(),
+        ])->assertOk()->assertJsonPath('available_vouchers.0.can_apply', false)
+            ->assertJsonPath('available_vouchers.0.reason_cannot_apply', 'Already used');
+        $this->postJson('/api/mobile/checkout/quote', [
+            'cart_item_ids' => $items->pluck('id')->all(),
+            'voucher_code' => 'BAKERY20',
+        ])->assertUnprocessable()->assertJsonValidationErrors('voucher_code');
     }
 
     public function test_seller_voucher_preview_is_rendered(): void
@@ -223,6 +241,12 @@ class SellerVoucherTest extends TestCase
 
     public function test_buyer_can_claim_voucher_and_usage_limit_prevents_other_claims(): void
     {
+        $this->useLegacyOrderTables();
+        \Illuminate\Support\Facades\Schema::table('payments', function (\Illuminate\Database\Schema\Blueprint $table) {
+            $table->string('currency')->default('PHP');
+            $table->string('idempotency_key')->nullable()->unique();
+            $table->json('payload')->nullable();
+        });
         $seller = User::factory()->create(['role' => 'seller', 'status' => 'active', 'name' => 'Fashion Boutique']);
         $product = Product::create(['seller_id' => $seller->id, 'name' => 'Silk Dress', 'category' => 'storage_bins', 'price' => 1200, 'stock' => 10, 'is_active' => true]);
 
@@ -254,6 +278,8 @@ class SellerVoucherTest extends TestCase
 
         // Buyer A claims the voucher.
         $this->post(route('buyer.vouchers.claim', $voucher))->assertSessionHasNoErrors();
+        $this->post(route('buyer.vouchers.claim', $voucher))->assertSessionHasNoErrors();
+        $this->assertSame(1, $voucher->claims()->count());
         $this->assertDatabaseHas('voucher_claims', [
             'voucher_id' => $voucher->id,
             'user_id' => $buyerA->id,
@@ -286,7 +312,7 @@ class SellerVoucherTest extends TestCase
             ->assertUnprocessable();
 
         // Buyer A completes checkout with the voucher.
-        $this->actingAs($buyerA);
+        $this->withoutToken()->actingAs($buyerA, 'web');
         $addressA = $buyerA->addresses()->first();
         $this->post(route('buyer.checkout'), [
             'idempotency_key' => (string) \Illuminate\Support\Str::uuid(),
@@ -295,7 +321,7 @@ class SellerVoucherTest extends TestCase
             'address_id' => $addressA->id,
             'payment_method' => 'cod',
             'voucher_code' => 'LIMITEDONE',
-        ])->assertSessionHasNoErrors();
+        ])->assertSessionHasNoErrors()->assertRedirect(route('buyer.orders'));
 
         // Voucher claim is marked used, used_count is incremented.
         $this->assertDatabaseHas('voucher_claims', [

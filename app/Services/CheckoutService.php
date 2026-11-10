@@ -95,6 +95,8 @@ class CheckoutService
             return;
         }
 
+        $this->ensureVoucherCartApplies($voucher, $items);
+
         if ($buyer === null && auth()->check()) {
             $buyer = auth()->user();
         }
@@ -120,6 +122,10 @@ class CheckoutService
             }
         }
 
+    }
+
+    private function ensureVoucherCartApplies(Voucher $voucher, Collection $items): void
+    {
         $inCart = $items->pluck('product.seller_id')->map(fn ($id) => (int) $id)->unique();
         if ($voucher->isFreeShipping()) {
             if ($voucher->seller_id && ! $inCart->contains((int) $voucher->seller_id)) {
@@ -249,6 +255,11 @@ class CheckoutService
                 }
             }
 
+            if ($buyer && $v->claims()->where('user_id', $buyer->id)->whereNotNull('used_at')->exists()) {
+                $canApply = false;
+                $reasonCannotApply = 'Already used';
+            }
+
             return [
                 'id' => $v->id,
                 'code' => $v->code,
@@ -357,7 +368,7 @@ class CheckoutService
             }
             $this->ensureCanOrder($buyer, $itemsToOrder);
             $voucher = $this->voucher($voucherCode, lock: true);
-            $this->ensureVoucherApplies($voucher, $itemsToOrder);
+            $this->ensureVoucherApplies($voucher, $itemsToOrder, $buyer);
             if ($paymentMethod === 'cod' && $voucher?->isFreeShipping()) {
                 throw ValidationException::withMessages(['voucher_code' => 'Free-shipping vouchers cannot be used with Cash on Delivery because COD shipping is fixed at ₱120 per seller order.']);
             }
@@ -377,7 +388,7 @@ class CheckoutService
                 }
                 $prepared = collect();
                 foreach ($items as $item) {
-                    $product = Product::whereKey($item->product_id)->lockForUpdate()->firstOrFail();
+                    $product = Product::whereKey($item->product->getKey())->lockForUpdate()->firstOrFail();
                     $variant = $item->product_variant_id
                         ? ProductVariant::whereKey($item->product_variant_id)->lockForUpdate()->firstOrFail()
                         : null;

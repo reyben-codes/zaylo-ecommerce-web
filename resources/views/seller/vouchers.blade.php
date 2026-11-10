@@ -211,6 +211,5 @@
 @endsection
 
 @push('scripts')
-    <script src="{{ asset('js/smooth-disclosure.js') }}" defer></script>
     <script src="{{ asset('js/seller-voucher-preview.js') }}" defer></script>
 @endpush
