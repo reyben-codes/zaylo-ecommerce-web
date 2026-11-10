@@ -99,10 +99,12 @@ class VoucherController extends Controller
     public function seller(Request $request)
     {
         abort_unless(Vouchers::ready(), 404);
+        $shopId = Shop::idForSeller($request->user());
 
         return view('seller.vouchers', [
             'invitations' => $this->vouchers->invitationsFor($request->user()),
             'shopVouchers' => $this->vouchers->shopVouchersFor($request->user()),
+            'shopName' => $shopId ? $this->vouchers->shopName((int) $shopId) : $request->user()->name,
         ]);
     }
 

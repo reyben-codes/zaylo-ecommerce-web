@@ -23,54 +23,91 @@
             </div>
         </summary>
         <div data-disclosure-content>
-            <form method="POST" action="{{ route('seller.vouchers.store') }}" class="seller-panel__body seller-form voucher-form">
-                @csrf
-                <div class="seller-field">
-                    <label for="seller-voucher-code">Code</label>
-                    <input id="seller-voucher-code" name="code" value="{{ old('code') }}" maxlength="30" placeholder="e.g. MYSHOP10" required @error('code') aria-invalid="true" @enderror>
-                    @error('code')<p class="seller-field__error">{{ $message }}</p>@enderror
-                </div>
-                <div class="seller-field">
-                    <label for="seller-voucher-name">Name <span class="seller-field__help">(optional)</span></label>
-                    <input id="seller-voucher-name" name="name" value="{{ old('name') }}" maxlength="80" placeholder="e.g. Shop Welcome Voucher">
-                </div>
-                <div class="seller-field">
-                    <label for="seller-voucher-type">Type</label>
-                    <select id="seller-voucher-type" name="type" required>
-                        <option value="percent" @selected(old('type', 'percent') === 'percent')>% off</option>
-                        <option value="fixed" @selected(old('type') === 'fixed')>&#8369; off</option>
-                    </select>
-                </div>
-                <div class="seller-field">
-                    <label for="seller-voucher-value">Discount (% or &#8369;)</label>
-                    <input id="seller-voucher-value" name="value" type="number" step="0.01" min="1" value="{{ old('value') }}" placeholder="e.g. 10 for 10% or 50 for ₱50" required @error('value') aria-invalid="true" @enderror>
-                    @error('value')<p class="seller-field__error">{{ $message }}</p>@enderror
-                </div>
-                <div class="seller-field">
-                    <label for="seller-voucher-min">Minimum spend (&#8369;)</label>
-                    <input id="seller-voucher-min" name="min_spend" type="number" step="0.01" min="0" value="{{ old('min_spend') }}" placeholder="0 or leave empty">
-                </div>
-                <div class="seller-field">
-                    <label for="seller-voucher-max">Most it can take off (&#8369;, for %)</label>
-                    <input id="seller-voucher-max" name="max_discount" type="number" step="0.01" min="1" value="{{ old('max_discount') }}" placeholder="Leave empty for no limit">
-                </div>
-                <div class="seller-field">
-                    <label for="seller-voucher-limit">Uses allowed</label>
-                    <input id="seller-voucher-limit" name="usage_limit" type="number" min="1" value="{{ old('usage_limit') }}" placeholder="No limit">
-                </div>
-                <div class="seller-field">
-                    <label for="seller-voucher-starts">Starts</label>
-                    <input id="seller-voucher-starts" name="starts_at" type="datetime-local" value="{{ old('starts_at') }}">
-                </div>
-                <div class="seller-field">
-                    <label for="seller-voucher-ends">Ends</label>
-                    <input id="seller-voucher-ends" name="expires_at" type="datetime-local" value="{{ old('expires_at') }}" @error('expires_at') aria-invalid="true" @enderror>
-                    @error('expires_at')<p class="seller-field__error">{{ $message }}</p>@enderror
-                </div>
-                <div class="seller-form__actions">
-                    <button type="submit" class="seller-button"><i class="fas fa-ticket" aria-hidden="true"></i> Create shop voucher</button>
-                </div>
-            </form>
+            <div class="seller-voucher-creator-grid">
+                <form id="seller-voucher-form" method="POST" action="{{ route('seller.vouchers.store') }}" class="seller-panel__body seller-form voucher-form">
+                    @csrf
+                    <div class="seller-field">
+                        <label for="seller-voucher-code">Code</label>
+                        <input id="seller-voucher-code" name="code" value="{{ old('code') }}" maxlength="30" placeholder="e.g. MYSHOP10" required @error('code') aria-invalid="true" @enderror>
+                        @error('code')<p class="seller-field__error">{{ $message }}</p>@enderror
+                    </div>
+                    <div class="seller-field">
+                        <label for="seller-voucher-name">Name <span class="seller-field__help">(optional)</span></label>
+                        <input id="seller-voucher-name" name="name" value="{{ old('name') }}" maxlength="80" placeholder="e.g. Shop Welcome Voucher">
+                    </div>
+                    <div class="seller-field">
+                        <label for="seller-voucher-type">Type</label>
+                        <select id="seller-voucher-type" name="type" required>
+                            <option value="percent" @selected(old('type', 'percent') === 'percent')>% off</option>
+                            <option value="fixed" @selected(old('type') === 'fixed')>&#8369; off</option>
+                        </select>
+                    </div>
+                    <div class="seller-field">
+                        <label for="seller-voucher-value">Discount (% or &#8369;)</label>
+                        <input id="seller-voucher-value" name="value" type="number" step="0.01" min="1" value="{{ old('value') }}" placeholder="e.g. 10 for 10% or 50 for ₱50" required @error('value') aria-invalid="true" @enderror>
+                        @error('value')<p class="seller-field__error">{{ $message }}</p>@enderror
+                    </div>
+                    <div class="seller-field">
+                        <label for="seller-voucher-min">Minimum spend (&#8369;)</label>
+                        <input id="seller-voucher-min" name="min_spend" type="number" step="0.01" min="0" value="{{ old('min_spend') }}" placeholder="0 or leave empty">
+                    </div>
+                    <div class="seller-field">
+                        <label for="seller-voucher-max">Most it can take off (&#8369;, for %)</label>
+                        <input id="seller-voucher-max" name="max_discount" type="number" step="0.01" min="1" value="{{ old('max_discount') }}" placeholder="Leave empty for no limit">
+                    </div>
+                    <div class="seller-field">
+                        <label for="seller-voucher-limit">Uses allowed</label>
+                        <input id="seller-voucher-limit" name="usage_limit" type="number" min="1" value="{{ old('usage_limit') }}" placeholder="No limit">
+                    </div>
+                    <div class="seller-field">
+                        <label for="seller-voucher-starts">Starts</label>
+                        <input id="seller-voucher-starts" name="starts_at" type="datetime-local" value="{{ old('starts_at') }}">
+                    </div>
+                    <div class="seller-field">
+                        <label for="seller-voucher-ends">Ends</label>
+                        <input id="seller-voucher-ends" name="expires_at" type="datetime-local" value="{{ old('expires_at') }}" @error('expires_at') aria-invalid="true" @enderror>
+                        @error('expires_at')<p class="seller-field__error">{{ $message }}</p>@enderror
+                    </div>
+                    <div class="seller-form__actions">
+                        <button type="submit" class="seller-button"><i class="fas fa-ticket" aria-hidden="true"></i> Create shop voucher</button>
+                    </div>
+                </form>
+
+                <aside class="seller-voucher-preview-container" aria-label="Buyer voucher preview">
+                    <div class="seller-voucher-preview-heading">
+                        <span class="seller-eyebrow"><i class="fas fa-eye" aria-hidden="true"></i> Buyer preview</span>
+                        <h3>How buyers will see it</h3>
+                        <p>Live preview of your voucher when released in checkout.</p>
+                    </div>
+
+                    <div class="seller-voucher-preview-card">
+                        <div class="seller-voucher-preview-card__top">
+                            <span class="seller-voucher-preview-card__badge" id="preview-badge">
+                                <i class="fas fa-tag" aria-hidden="true"></i>
+                                <span id="preview-badge-text">10% OFF</span>
+                            </span>
+                            <span class="seller-voucher-preview-card__quota" id="preview-usage-badge">
+                                <i class="fas fa-ticket" aria-hidden="true"></i>
+                                <span id="preview-usage-badge-text">Unlimited claims</span>
+                            </span>
+                        </div>
+                        <div class="seller-voucher-preview-card__main">
+                            <strong class="seller-voucher-preview-card__code" id="preview-code">MYSHOP10</strong>
+                            <p class="seller-voucher-preview-card__name" id="preview-name"></p>
+                            <p class="seller-voucher-preview-card__desc" id="preview-desc">10% off</p>
+                            <div class="seller-voucher-preview-card__meta">
+                                <span><i class="fas fa-store" aria-hidden="true"></i> <span id="preview-shop">{{ $shopName ?? auth()->user()->name }}</span></span>
+                                <span id="preview-validity-wrap">· <span id="preview-validity">Valid until ended</span></span>
+                            </div>
+                        </div>
+                        <div class="seller-voucher-preview-card__action">
+                            <button type="button" class="btn-voucher-claim seller-voucher-preview-btn" disabled>
+                                <i class="fas fa-hand-holding-dollar" aria-hidden="true"></i> Claim
+                            </button>
+                        </div>
+                    </div>
+                </aside>
+            </div>
         </div>
     </details>
 
@@ -175,4 +212,5 @@
 
 @push('scripts')
     <script src="{{ asset('js/smooth-disclosure.js') }}" defer></script>
+    <script src="{{ asset('js/seller-voucher-preview.js') }}" defer></script>
 @endpush

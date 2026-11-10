@@ -39,6 +39,11 @@ class Voucher extends Model
         return $this->hasMany(VoucherSeller::class);
     }
 
+    public function claims(): HasMany
+    {
+        return $this->hasMany(VoucherClaim::class);
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
@@ -47,6 +52,47 @@ class Voucher extends Model
     public function isShopSpecific(): bool
     {
         return $this->seller_id !== null;
+    }
+
+    public function remainingClaims(): ?int
+    {
+        if ($this->usage_limit === null) {
+            return null;
+        }
+
+        return max(0, (int) $this->usage_limit - $this->claims()->count());
+    }
+
+    public function isFullyClaimed(): bool
+    {
+        if ($this->usage_limit === null) {
+            return false;
+        }
+
+        return $this->claims()->count() >= $this->usage_limit;
+    }
+
+    public function claimedBy(User|int|null $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+        $userId = $user instanceof User ? $user->id : (int) $user;
+
+        return $this->claims()->where('user_id', $userId)->exists();
+    }
+
+    public function canBeClaimedBy(?User $user): bool
+    {
+        if (! $user || ! $this->isAvailable()) {
+            return false;
+        }
+
+        if ($this->claimedBy($user)) {
+            return false;
+        }
+
+        return ! $this->isFullyClaimed();
     }
 
     public function isAvailable(): bool

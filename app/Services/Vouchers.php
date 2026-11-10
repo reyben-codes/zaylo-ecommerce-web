@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\Seller;
 use App\Models\User;
 use App\Models\Voucher;
+use App\Models\VoucherClaim;
 use App\Models\VoucherSeller;
 use App\Notifications\VoucherInvitation;
 use App\Support\Shop;
@@ -13,6 +14,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Vouchers and who pays for them.
@@ -101,6 +103,46 @@ class Vouchers
         $row->update(['status' => $join ? VoucherSeller::ACCEPTED : VoucherSeller::DECLINED, 'responded_at' => now()]);
 
         return $row;
+    }
+
+    /**
+     * A buyer claims a voucher.
+     *
+     * If the voucher has a usage limit (e.g. 1 or N uses), total claims are capped at that limit.
+     * Once reached, no other buyers can claim it.
+     */
+    public function claim(Voucher $voucher, User $buyer): VoucherClaim
+    {
+        return DB::transaction(function () use ($voucher, $buyer) {
+            $locked = Voucher::lockForUpdate()->find($voucher->id);
+            if (! $locked || ! $locked->isAvailable()) {
+                throw ValidationException::withMessages([
+                    'voucher' => 'This voucher is no longer active or available.',
+                ]);
+            }
+
+            $existing = VoucherClaim::where('voucher_id', $locked->id)
+                ->where('user_id', $buyer->id)
+                ->first();
+            if ($existing) {
+                return $existing;
+            }
+
+            if ($locked->usage_limit !== null) {
+                $claimsCount = VoucherClaim::where('voucher_id', $locked->id)->count();
+                if ($claimsCount >= $locked->usage_limit) {
+                    throw ValidationException::withMessages([
+                        'voucher' => 'This voucher has already been claimed by another buyer.',
+                    ]);
+                }
+            }
+
+            return VoucherClaim::create([
+                'voucher_id' => $locked->id,
+                'user_id' => $buyer->id,
+                'claimed_at' => now(),
+            ]);
+        });
     }
 
     /** @return Collection<int, VoucherSeller> the shop's invitations from platform/admin, newest first */

@@ -147,6 +147,7 @@ Route::prefix('mobile')->name('mobile.')->middleware('throttle:60,1')->group(fun
 
             Route::post('/checkout/quote', [MobileShoppingController::class, 'quote'])->name('checkout.quote');
             Route::post('/checkout', [MobileShoppingController::class, 'placeOrder'])->middleware('throttle:10,1,mobile-checkout')->name('checkout');
+            Route::post('/vouchers/{code}/claim', [MobileShoppingController::class, 'claimVoucher'])->middleware('throttle:30,1,mobile-voucher-claim')->name('vouchers.claim');
 
             Route::get('/orders', [MobileOrderController::class, 'index'])->name('orders');
             Route::get('/orders/{order}', [MobileOrderController::class, 'show'])->name('orders.show');

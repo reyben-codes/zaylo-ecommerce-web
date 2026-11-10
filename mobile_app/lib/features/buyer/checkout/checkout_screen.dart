@@ -129,6 +129,27 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _loadQuote(voucher: code);
   }
 
+  Future<void> _claimVoucher(String code) async {
+    setState(() => _quoting = true);
+    try {
+      await _api.claimVoucher(code);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Voucher $code claimed!')),
+        );
+      }
+      await _loadQuote(voucher: code);
+    } catch (e) {
+      if (mounted) {
+        final message = e is ApiException ? (e.fieldErrors['voucher'] ?? e.message) : '$e';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), backgroundColor: Colors.red.shade800),
+        );
+      }
+      setState(() => _quoting = false);
+    }
+  }
+
   void _removeVoucher() {
     _voucher.clear();
     _appliedVoucher = null;
@@ -624,7 +645,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          v.shopName + (v.expiresAt != null ? ' · Ends ${v.expiresAt}' : ''),
+                          v.shopName +
+                              (v.expiresAt != null ? ' · Ends ${v.expiresAt}' : '') +
+                              (v.usageLimit != null
+                                  ? (v.usageLimit == 1
+                                      ? ' · 1 use only'
+                                      : (v.remainingClaims != null ? ' · ${v.remainingClaims} left' : ' · ${v.usageLimit} uses'))
+                                  : '') +
+                              (v.isClaimed ? ' · Claimed' : ''),
                           style: TextStyle(color: ZayloColors.onInkFaint, fontSize: 10),
                         ),
                       ],
@@ -653,6 +681,32 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           ),
                         ],
                       ),
+                    )
+                  else if (v.isFullyClaimed && !v.isClaimed)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: Colors.red.shade200),
+                      ),
+                      child: Text(
+                        'Fully claimed',
+                        style: TextStyle(color: Colors.red.shade800, fontWeight: FontWeight.w700, fontSize: 10),
+                      ),
+                    )
+                  else if (!v.isClaimed && v.canClaim)
+                    ElevatedButton(
+                      onPressed: _quoting ? null : () => _claimVoucher(v.code),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: ZayloColors.taupe,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                      ),
+                      child: const Text('Claim', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 11)),
                     )
                   else if (v.canApply)
                     OutlinedButton(

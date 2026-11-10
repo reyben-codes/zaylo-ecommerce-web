@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Product;
 use App\Models\User;
 use App\Models\Voucher;
+use App\Models\VoucherClaim;
 use App\Models\VoucherSeller;
 use App\Notifications\VoucherInvitation;
 use App\Services\Vouchers;
@@ -206,5 +207,103 @@ class SellerVoucherTest extends TestCase
         ]);
         $response->assertUnprocessable();
         $this->assertStringContainsString('only applies to items from', $response->json('errors.voucher_code.0'));
+    }
+
+    public function test_seller_voucher_preview_is_rendered(): void
+    {
+        $seller = User::factory()->create(['role' => 'seller', 'status' => 'active', 'name' => 'Pottery Barn']);
+
+        $this->actingAs($seller)->get(route('seller.vouchers'))
+            ->assertOk()
+            ->assertSee('seller-voucher-creator-grid')
+            ->assertSee('Buyer preview')
+            ->assertSee('seller-voucher-preview-card')
+            ->assertSee('seller-voucher-preview.js');
+    }
+
+    public function test_buyer_can_claim_voucher_and_usage_limit_prevents_other_claims(): void
+    {
+        $seller = User::factory()->create(['role' => 'seller', 'status' => 'active', 'name' => 'Fashion Boutique']);
+        $product = Product::create(['seller_id' => $seller->id, 'name' => 'Silk Dress', 'category' => 'storage_bins', 'price' => 1200, 'stock' => 10, 'is_active' => true]);
+
+        // Seller creates a voucher with usage_limit = 1 (only 1 claim/use allowed).
+        $this->actingAs($seller)->post(route('seller.vouchers.store'), [
+            'code' => 'LIMITEDONE',
+            'name' => 'VIP One Customer Only',
+            'type' => 'fixed',
+            'value' => 100,
+            'usage_limit' => 1,
+            'min_spend' => 500,
+        ])->assertSessionHasNoErrors();
+        $voucher = Voucher::where('code', 'LIMITEDONE')->firstOrFail();
+
+        $buyerA = User::factory()->create(['role' => 'buyer', 'status' => 'active']);
+        $buyerA->addresses()->create($this->savedAddressData(['is_default' => true]));
+        $buyerB = User::factory()->create(['role' => 'buyer', 'status' => 'active']);
+        $buyerB->addresses()->create($this->savedAddressData(['is_default' => true]));
+
+        // Buyer A adds item to cart and sees the voucher with Claim button.
+        $this->actingAs($buyerA)->post(route('buyer.cart.add', $product), ['quantity' => 1]);
+        $buyerAItem = $buyerA->cart()->first()->items()->first();
+        $this->post(route('buyer.cart.selection'), ['action' => 'checkout', 'cart_item_ids' => [$buyerAItem->id]]);
+
+        $responseA = $this->get(route('buyer.checkout.show'));
+        $responseA->assertOk()
+            ->assertSee('LIMITEDONE')
+            ->assertSee('Claim');
+
+        // Buyer A claims the voucher.
+        $this->post(route('buyer.vouchers.claim', $voucher))->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('voucher_claims', [
+            'voucher_id' => $voucher->id,
+            'user_id' => $buyerA->id,
+            'used_at' => null,
+        ]);
+
+        // Now Buyer A checkout shows it as Claimed.
+        $this->get(route('buyer.checkout.show'))->assertOk()
+            ->assertSee('Claimed');
+
+        // Buyer B adds item to cart and views checkout: the voucher is Fully Claimed!
+        $this->actingAs($buyerB)->post(route('buyer.cart.add', $product), ['quantity' => 1]);
+        $buyerBItem = $buyerB->cart()->first()->items()->first();
+        $this->post(route('buyer.cart.selection'), ['action' => 'checkout', 'cart_item_ids' => [$buyerBItem->id]]);
+
+        $responseB = $this->get(route('buyer.checkout.show'));
+        $responseB->assertOk()
+            ->assertSee('Fully claimed');
+
+        // If Buyer B attempts to claim the voucher, they are rejected.
+        $this->post(route('buyer.vouchers.claim', $voucher))->assertSessionHasErrors('voucher');
+
+        // If Buyer B attempts to apply the code at checkout, it is rejected.
+        $this->get(route('buyer.checkout.show', ['voucher' => 'LIMITEDONE']))
+            ->assertSessionHasErrors('voucher_code');
+
+        // Mobile API: Buyer B trying to claim via mobile endpoint receives 422.
+        $this->signInMobile($buyerB);
+        $this->postJson('/api/mobile/vouchers/LIMITEDONE/claim')
+            ->assertUnprocessable();
+
+        // Buyer A completes checkout with the voucher.
+        $this->actingAs($buyerA);
+        $addressA = $buyerA->addresses()->first();
+        $this->post(route('buyer.checkout'), [
+            'idempotency_key' => (string) \Illuminate\Support\Str::uuid(),
+            'cart_item_ids' => [$buyerAItem->id],
+            'quoted_unit_prices' => [$buyerAItem->id => '1200.00'],
+            'address_id' => $addressA->id,
+            'payment_method' => 'cod',
+            'voucher_code' => 'LIMITEDONE',
+        ])->assertSessionHasNoErrors();
+
+        // Voucher claim is marked used, used_count is incremented.
+        $this->assertDatabaseHas('voucher_claims', [
+            'voucher_id' => $voucher->id,
+            'user_id' => $buyerA->id,
+        ]);
+        $claim = VoucherClaim::where('voucher_id', $voucher->id)->where('user_id', $buyerA->id)->first();
+        $this->assertNotNull($claim->used_at);
+        $this->assertSame(1, $voucher->fresh()->used_count);
     }
 }

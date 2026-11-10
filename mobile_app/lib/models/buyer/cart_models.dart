@@ -266,6 +266,11 @@ class AvailableVoucher {
     this.reasonCannotApply,
     this.estimatedDiscount = 0,
     this.shopName = 'All shops',
+    this.isClaimed = false,
+    this.canClaim = false,
+    this.isFullyClaimed = false,
+    this.remainingClaims,
+    this.usageLimit,
   });
 
   final int id;
@@ -281,6 +286,11 @@ class AvailableVoucher {
   final String? reasonCannotApply;
   final double estimatedDiscount;
   final String shopName;
+  final bool isClaimed;
+  final bool canClaim;
+  final bool isFullyClaimed;
+  final int? remainingClaims;
+  final int? usageLimit;
 
   factory AvailableVoucher.fromJson(Map<String, dynamic> json) => AvailableVoucher(
     id: (json['id'] as num?)?.toInt() ?? 0,
@@ -296,6 +306,11 @@ class AvailableVoucher {
     reasonCannotApply: json['reason_cannot_apply'] as String?,
     estimatedDiscount: parseMoney(json['estimated_discount']),
     shopName: json['shop_name'] as String? ?? 'All shops',
+    isClaimed: json['is_claimed'] as bool? ?? false,
+    canClaim: json['can_claim'] as bool? ?? false,
+    isFullyClaimed: json['is_fully_claimed'] as bool? ?? false,
+    remainingClaims: (json['remaining_claims'] as num?)?.toInt(),
+    usageLimit: (json['usage_limit'] as num?)?.toInt(),
   );
 }
 

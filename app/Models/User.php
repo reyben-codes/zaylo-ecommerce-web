@@ -318,6 +318,16 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasOne(Cart::class);
     }
 
+    public function voucherClaims(): HasMany
+    {
+        return $this->hasMany(VoucherClaim::class);
+    }
+
+    public function claimedVouchers()
+    {
+        return $this->belongsToMany(Voucher::class, 'voucher_claims')->withPivot(['claimed_at', 'used_at'])->withTimestamps();
+    }
+
     public function orders()
     {
         return $this->hasMany(Order::class, Schema::hasColumn('orders', 'user_id') ? 'user_id' : 'buyer_id');

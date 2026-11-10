@@ -237,6 +237,22 @@ class MobileShoppingController extends Controller
             ->map(fn (Order $order) => MobilePayload::order($order))->values();
     }
 
+    public function claimVoucher(Request $request, string $code): JsonResponse
+    {
+        $voucher = $this->checkout->voucher($this->checkout->normalizeVoucherCode($code));
+        $claim = app(\App\Services\Vouchers::class)->claim($voucher, $request->user());
+
+        return response()->json([
+            'success' => true,
+            'message' => "Voucher {$voucher->code} claimed successfully!",
+            'voucher' => [
+                'id' => $voucher->id,
+                'code' => $voucher->code,
+                'claimed_at' => $claim->claimed_at?->toISOString(),
+            ],
+        ]);
+    }
+
     private function ownCartItem(Request $request, CartItem $cartItem): void
     {
         abort_unless($cartItem->cart?->user_id === $request->user()->id, 403);

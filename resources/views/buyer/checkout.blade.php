@@ -37,7 +37,7 @@
             <div class="checkout-voucher-applied-banner">
                 <i class="fas fa-circle-check" aria-hidden="true"></i>
                 <div class="checkout-voucher-applied-info">
-                    <strong class="checkout-voucher-applied">{{ $voucher->code }} applied: {{ $voucher->isFreeShipping() ? 'free shipping with GCash; COD shipping is fixed at ?120 per seller order' : $voucher->describe().' on products from shops in this voucher (−₱'.number_format($voucherDiscount, 2).')' }}</strong>
+                    <strong class="checkout-voucher-applied">{{ $voucher->code }} applied: {{ $voucher->isFreeShipping() ? 'free shipping with GCash; COD shipping is fixed at ₱120 per seller order' : $voucher->describe().' on products from shops in this voucher (−₱'.number_format($voucherDiscount, 2).')' }}</strong>
                 </div>
                 <a href="{{ route('buyer.checkout.show') }}" class="checkout-voucher-remove-pill" title="Remove voucher"><i class="fas fa-xmark"></i> Remove</a>
             </div>
@@ -64,11 +64,24 @@
                                 <span class="checkout-voucher-tile__meta">
                                     <span><i class="fas fa-store"></i> {{ $av['shop_name'] }}</span>
                                     @if($av['expires_at'])<span>· Ends {{ $av['expires_at'] }}</span>@endif
+                                    @if(!empty($av['usage_limit']))
+                                        <span>· <i class="fas fa-ticket"></i> {{ $av['usage_limit'] == 1 ? '1 use only' : ($av['remaining_claims'] !== null ? $av['remaining_claims'].' left' : $av['usage_limit'].' uses') }}</span>
+                                    @endif
+                                    @if(!empty($av['is_claimed']))
+                                        <span class="checkout-voucher-claimed-tag"><i class="fas fa-circle-check"></i> Claimed</span>
+                                    @endif
                                 </span>
                             </div>
                             <div class="checkout-voucher-tile__action">
                                 @if($isApplied)
                                     <span class="checkout-voucher-tag applied"><i class="fas fa-check"></i> Applied</span>
+                                @elseif($av['is_fully_claimed'] && ! $av['is_claimed'])
+                                    <span class="checkout-voucher-tag fully-claimed" title="This voucher has already been claimed by another buyer"><i class="fas fa-lock"></i> Fully claimed</span>
+                                @elseif(! $av['is_claimed'] && $av['can_claim'])
+                                    <form method="POST" action="{{ route('buyer.vouchers.claim', $av['id']) }}" class="checkout-voucher-claim-form">
+                                        @csrf
+                                        <button type="submit" class="btn-voucher-claim"><i class="fas fa-hand-holding-dollar"></i> Claim</button>
+                                    </form>
                                 @elseif($av['can_apply'])
                                     <a href="{{ route('buyer.checkout.show', ['voucher' => $av['code']]) }}" class="btn-voucher-apply">Apply</a>
                                 @else

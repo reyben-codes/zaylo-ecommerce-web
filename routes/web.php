@@ -145,6 +145,7 @@ Route::middleware(['auth', 'active', 'verified', 'role:buyer', 'nocache'])->pref
     Route::delete('/cart/items/{cartItem}', [BuyerController::class, 'removeCartItem'])->name('cart.remove');
     Route::get('/checkout', [BuyerController::class, 'showCheckout'])->name('checkout.show');
     Route::post('/checkout', [BuyerController::class, 'checkout'])->name('checkout');
+    Route::post('/vouchers/{voucher}/claim', [BuyerController::class, 'claimVoucher'])->middleware('throttle:30,1')->name('vouchers.claim');
     Route::get('/wishlist', [BuyerController::class, 'wishlist'])->name('wishlist');
     Route::post('/wishlist/{product}', [BuyerController::class, 'toggleWishlist'])->name('wishlist.toggle');
     Route::get('/account', [BuyerController::class, 'account'])->name('account');

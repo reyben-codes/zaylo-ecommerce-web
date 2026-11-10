@@ -13,6 +13,7 @@ use App\Models\ProductVariant;
 use App\Models\Shipment;
 use App\Models\User;
 use App\Models\Voucher;
+use App\Models\VoucherClaim;
 use App\Support\BuyerOrderTabs;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -88,11 +89,37 @@ class CheckoutService
      * A discount voucher works only on shops that joined it (and that reach its minimum spend); free shipping works on
      * every shop (or only the specified shop if targeted). Refuses a voucher that would take nothing off this cart.
      */
-    public function ensureVoucherApplies(?Voucher $voucher, Collection $items): void
+    public function ensureVoucherApplies(?Voucher $voucher, Collection $items, ?User $buyer = null): void
     {
         if (! $voucher) {
             return;
         }
+
+        if ($buyer === null && auth()->check()) {
+            $buyer = auth()->user();
+        }
+
+        if ($buyer) {
+            if ($voucher->claimedBy($buyer)) {
+                $claim = VoucherClaim::where('voucher_id', $voucher->id)
+                    ->where('user_id', $buyer->id)
+                    ->whereNotNull('used_at')
+                    ->first();
+                if ($claim) {
+                    throw ValidationException::withMessages([
+                        'voucher_code' => 'You have already used this voucher.',
+                    ]);
+                }
+            } else {
+                if ($voucher->isFullyClaimed()) {
+                    throw ValidationException::withMessages([
+                        'voucher_code' => 'This voucher has already been claimed by another buyer.',
+                    ]);
+                }
+                app(Vouchers::class)->claim($voucher, $buyer);
+            }
+        }
+
         $inCart = $items->pluck('product.seller_id')->map(fn ($id) => (int) $id)->unique();
         if ($voucher->isFreeShipping()) {
             if ($voucher->seller_id && ! $inCart->contains((int) $voucher->seller_id)) {
@@ -145,10 +172,14 @@ class CheckoutService
      * @param  Collection<int, CartItem>  $items
      * @return Collection<int, array<string, mixed>>
      */
-    public function availableVouchersFor(Collection $items): Collection
+    public function availableVouchersFor(Collection $items, ?User $buyer = null): Collection
     {
         if ($items->isEmpty()) {
             return collect();
+        }
+
+        if ($buyer === null && auth()->check()) {
+            $buyer = auth()->user();
         }
 
         $vouchersService = app(Vouchers::class);
@@ -172,11 +203,22 @@ class CheckoutService
             $joined = app(Vouchers::class)->joinedShops($v);
 
             return $sellerIds->intersect($joined)->isNotEmpty();
-        })->map(function (Voucher $v) use ($items, $shopSubtotals, $subtotal, $vouchersService) {
+        })->map(function (Voucher $v) use ($items, $shopSubtotals, $subtotal, $vouchersService, $buyer) {
             $canApply = true;
             $reasonCannotApply = null;
             $estimatedDiscount = 0.0;
             $shopName = $v->seller_id ? $vouchersService->shopName((int) $v->seller_id) : 'All shops';
+
+            $isClaimed = $buyer ? $v->claimedBy($buyer) : false;
+            $claimsCount = $v->claims()->count();
+            $remainingClaims = $v->usage_limit !== null ? max(0, (int) $v->usage_limit - $claimsCount) : null;
+            $isFullyClaimed = $v->usage_limit !== null && $claimsCount >= $v->usage_limit;
+            $canClaim = (bool) ($buyer && ! $isClaimed && ! $isFullyClaimed && $v->isAvailable());
+
+            if ($isFullyClaimed && ! $isClaimed) {
+                $canApply = false;
+                $reasonCannotApply = 'Fully claimed';
+            }
 
             if ($v->isFreeShipping()) {
                 $applicableSpend = $v->seller_id ? ($shopSubtotals->get((int) $v->seller_id) ?? 0.0) : $subtotal;
@@ -225,6 +267,11 @@ class CheckoutService
                 'reason_cannot_apply' => $reasonCannotApply,
                 'estimated_discount' => $estimatedDiscount,
                 'shop_name' => $shopName,
+                'is_claimed' => $isClaimed,
+                'can_claim' => $canClaim,
+                'is_fully_claimed' => $isFullyClaimed,
+                'remaining_claims' => $remainingClaims,
+                'usage_limit' => $v->usage_limit,
             ];
         })->values();
     }
@@ -417,6 +464,14 @@ class CheckoutService
                     'changed_by' => $buyer->id, 'status' => 'placed', 'note' => 'Order placed by buyer.',
                 ]);
                 $orders->push($order);
+            }
+            if ($voucher && $buyer) {
+                VoucherClaim::where('voucher_id', $voucher->id)
+                    ->where('user_id', $buyer->id)
+                    ->whereNull('used_at')
+                    ->latest('id')
+                    ->first()
+                    ?->update(['used_at' => now()]);
             }
             $voucher?->increment('used_count');
             $cart->items()->whereIn('id', $selectedIds)->delete();

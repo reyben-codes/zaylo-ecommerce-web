@@ -496,6 +496,31 @@ class BuyerController extends Controller
         ]);
     }
 
+    public function claimVoucher(Request $request, Voucher $voucher)
+    {
+        try {
+            app(\App\Services\Vouchers::class)->claim($voucher, $request->user());
+        } catch (ValidationException $e) {
+            if ($request->wantsJson()) {
+                return response()->json(['message' => $e->getMessage(), 'errors' => $e->errors()], 422);
+            }
+
+            return back()->withErrors($e->errors());
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'status' => 'claimed',
+                'voucher' => [
+                    'id' => $voucher->id,
+                    'code' => $voucher->code,
+                ],
+            ]);
+        }
+
+        return back()->with('status', "Voucher {$voucher->code} claimed! You can now apply it to your order.");
+    }
+
     public function addToCart(Request $request, Product $product)
     {
         $validated = $request->validate([

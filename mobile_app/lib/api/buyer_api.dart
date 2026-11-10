@@ -158,6 +158,9 @@ class BuyerApi extends ApiClient {
         if (voucherCode != null && voucherCode.trim().isNotEmpty) 'voucher_code': voucherCode.trim(),
       }));
 
+  Future<Map<String, dynamic>> claimVoucher(String code) async =>
+      await send('POST', '/mobile/vouchers/${Uri.encodeComponent(code)}/claim');
+
   Future<List<Order>> placeOrder({
     required List<int> cartItemIds,
     required int addressId,
