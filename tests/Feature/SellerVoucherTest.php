@@ -239,6 +239,35 @@ class SellerVoucherTest extends TestCase
             ->assertSee('seller-voucher-preview.js');
     }
 
+    public function test_checkout_uses_a_modal_for_multiple_claimable_shop_vouchers(): void
+    {
+        $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);
+        $otherSeller = User::factory()->create(['role' => 'seller', 'status' => 'active']);
+        $buyer = User::factory()->create(['role' => 'buyer', 'status' => 'active']);
+        $buyer->addresses()->create($this->savedAddressData(['is_default' => true]));
+        $product = Product::create(['seller_id' => $seller->id, 'name' => 'Shop item', 'category' => 'storage_bins', 'price' => 500, 'stock' => 10, 'is_active' => true]);
+        $createVoucher = function (User $owner, string $code) {
+            $this->actingAs($owner)->post(route('seller.vouchers.store'), [
+                'code' => $code, 'type' => 'fixed', 'value' => 50,
+            ])->assertSessionHasNoErrors();
+        };
+        $createVoucher($seller, 'SHOPFIRST');
+        $createVoucher($otherSeller, 'UNRELATEDSHOP');
+        $this->actingAs($buyer)->post(route('buyer.cart.add', $product), ['quantity' => 1]);
+        $this->get(route('buyer.checkout.show'))->assertOk()->assertSee('SHOPFIRST')
+            ->assertDontSee('UNRELATEDSHOP')->assertDontSee('data-vouchers-open', false);
+
+        $createVoucher($seller, 'SHOPSECOND');
+        $this->actingAs($buyer)->get(route('buyer.checkout.show'))->assertOk()
+            ->assertSee('data-vouchers-open', false)->assertSee('id="checkout-vouchers-dialog"', false)
+            ->assertSee('SHOPFIRST')->assertSee('SHOPSECOND')->assertDontSee('UNRELATEDSHOP');
+
+        $this->post(route('buyer.vouchers.claim', Voucher::where('code', 'SHOPFIRST')->firstOrFail()))
+            ->assertSessionHasNoErrors();
+        $this->get(route('buyer.checkout.show'))->assertOk()->assertSee('SHOPSECOND')
+            ->assertSee('Claimed')->assertDontSee('data-vouchers-open', false);
+    }
+
     public function test_buyer_can_claim_voucher_and_usage_limit_prevents_other_claims(): void
     {
         $this->useLegacyOrderTables();

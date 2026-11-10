@@ -14,6 +14,7 @@
     $shippingDiscount = $voucher?->isFreeShipping() ? $shipping : 0;
     // A discount voucher only comes off the products of shops that joined it.
     $voucherDiscount = round(array_sum($voucherDiscounts), 2);
+    $claimableVoucherCount = collect($availableVouchers ?? [])->where('can_claim', true)->count();
 @endphp
 
 <div class="page-hero"><div class="page-hero-inner"><i class="fas fa-credit-card" aria-hidden="true"></i><div><h1>Checkout</h1><p>Review your order and delivery details before placing it.</p></div></div></div>
@@ -23,7 +24,7 @@
     <section class="checkout-voucher-card" aria-labelledby="voucher-title">
         <div class="checkout-voucher-header">
             <div>
-                <h2 id="voucher-title"><i class="fas fa-ticket" aria-hidden="true"></i> Voucher &amp; Promotions</h2>
+                <h2 id="voucher-title"><i class="fas fa-ticket" aria-hidden="true"></i> Redeem a voucher</h2>
                 <p>Choose an available voucher or enter a promo code to apply to your order.</p>
             </div>
             <form method="GET" action="{{ route('buyer.checkout.show') }}" class="checkout-voucher-form">
@@ -43,12 +44,31 @@
             </div>
         @endif
         @error('voucher_code')<p class="cart-validation" role="alert">{{ $message }}</p>@enderror
+        @error('voucher')<p class="cart-validation" role="alert">{{ $message }}</p>@enderror
 
         @if(!empty($availableVouchers) && $availableVouchers->isNotEmpty())
-            <div class="checkout-vouchers-section">
+            @if($claimableVoucherCount > 1)
+                <button type="button" class="checkout-vouchers-open" data-vouchers-open aria-haspopup="dialog" aria-controls="checkout-vouchers-dialog" hidden>
+                    <i class="fas fa-ticket" aria-hidden="true"></i> Available vouchers <span>{{ $claimableVoucherCount }}</span>
+                    <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                </button>
+                <dialog id="checkout-vouchers-dialog" class="checkout-vouchers-dialog" aria-labelledby="checkout-vouchers-heading" aria-describedby="checkout-vouchers-description">
+                    <header class="checkout-vouchers-dialog__header">
+                        <div>
+                            <h2 id="checkout-vouchers-heading">Available vouchers</h2>
+                            <p id="checkout-vouchers-description">Claim a voucher from the shops in your order, then apply it at checkout.</p>
+                        </div>
+                        <button type="button" class="checkout-vouchers-close" data-vouchers-close aria-label="Close available vouchers" autofocus><i class="fas fa-xmark" aria-hidden="true"></i></button>
+                    </header>
+                    <div data-vouchers-dialog-content></div>
+                </dialog>
+            @endif
+            <div class="checkout-vouchers-section" data-checkout-vouchers>
                 <p class="checkout-vouchers-title">Available vouchers for your order ({{ $availableVouchers->count() }}):</p>
+                @foreach($availableVouchers->groupBy('shop_name') as $voucherShop => $shopVouchers)
+                <h3 class="checkout-vouchers-shop"><i class="fas fa-store" aria-hidden="true"></i> {{ $voucherShop }}</h3>
                 <div class="checkout-vouchers-grid">
-                    @foreach($availableVouchers as $av)
+                    @foreach($shopVouchers as $av)
                         @php $isApplied = $voucher && $voucher->code === $av['code']; @endphp
                         <div class="checkout-voucher-tile{{ $isApplied ? ' is-applied' : '' }}{{ ! $av['can_apply'] ? ' is-disabled' : '' }}">
                             <div class="checkout-voucher-tile__left">
@@ -91,7 +111,10 @@
                         </div>
                     @endforeach
                 </div>
+                @endforeach
             </div>
+        @else
+            <p class="checkout-vouchers-empty">No vouchers are available for the shops in this order right now.</p>
         @endif
     </section>
 
@@ -268,19 +291,7 @@
     </form>
 </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    ['payment_method', 'courier_choice', 'logistics_provider_id'].forEach(name => {
-        document.querySelectorAll(`input[name="${name}"]`).forEach(radio => {
-            radio.addEventListener('change', () => {
-                radio.closest('fieldset').querySelectorAll('.payment-method-option').forEach(option => {
-                    option.classList.toggle('selected', option.querySelector('input').checked);
-                });
-            });
-        });
-    });
-});
-</script>
+<script src="{{ asset('js/checkout-vouchers.js') }}?v={{ filemtime(public_path('js/checkout-vouchers.js')) }}" defer></script>
 <script src="{{ asset('js/checkout-shipping.js') }}?v={{ filemtime(public_path('js/checkout-shipping.js')) }}" defer></script>
 <script src="{{ asset('js/checkout-gcash.js') }}?v={{ filemtime(public_path('js/checkout-gcash.js')) }}" defer></script>
 @endsection

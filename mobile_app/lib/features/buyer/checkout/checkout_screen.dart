@@ -589,7 +589,97 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             style: TextStyle(fontWeight: FontWeight.w700, color: ZayloColors.ink, fontSize: 13),
           ),
           const SizedBox(height: 8),
-          ...available.map((v) {
+          if (available.where((v) => v.canClaim).length > 1)
+            OutlinedButton.icon(
+              key: const ValueKey('available-vouchers-button'),
+              onPressed: _quoting ? null : () => _showAvailableVouchers(available),
+              icon: const Icon(Icons.discount_outlined),
+              label: Text('Available vouchers (${available.where((v) => v.canClaim).length})'),
+            )
+          else
+            ...available.map((v) => _voucherCard(v)),
+          const SizedBox(height: 8),
+        ],
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(
+            child: TextField(
+              controller: _voucher,
+              textCapitalization: TextCapitalization.characters,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => _applyVoucher(),
+              decoration: zayloInputDecoration('Enter voucher code', errorText: _voucherError),
+            ),
+          ),
+          const SizedBox(width: 10),
+          SizedBox(
+            height: 50,
+            child: OutlinedButton(
+              onPressed: _quoting ? null : _applyVoucher,
+              style: secondaryButtonStyle.copyWith(
+                padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 18)),
+              ),
+              child: const Text('APPLY'),
+            ),
+          ),
+        ]),
+      ],
+    );
+  }
+
+  Future<void> _showAvailableVouchers(List<AvailableVoucher> available) async {
+    final groups = <String, List<AvailableVoucher>>{};
+    for (final voucher in available) {
+      groups.putIfAbsent(voucher.shopName, () => []).add(voucher);
+    }
+    final selection = await showGeneralDialog<({AvailableVoucher voucher, bool claim})>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+      transitionDuration: MediaQuery.of(context).disableAnimations
+          ? Duration.zero : const Duration(milliseconds: 300),
+      transitionBuilder: (context, animation, secondaryAnimation, child) => FadeTransition(
+        opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut, reverseCurve: Curves.easeOut),
+        child: child,
+      ),
+      pageBuilder: (dialogContext, animation, secondaryAnimation) => AlertDialog(
+        insetPadding: const EdgeInsets.all(16),
+        contentPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        scrollable: true,
+        title: Row(children: [
+          const Expanded(child: Text('Available vouchers')),
+          IconButton(
+            autofocus: true,
+            tooltip: 'Close available vouchers',
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            icon: const Icon(Icons.close),
+          ),
+        ]),
+        content: SizedBox(
+          width: 560,
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Claim a voucher from the shops in your order, then apply it at checkout.'),
+            for (final group in groups.entries) ...[
+              const SizedBox(height: 16),
+              Text(group.key, style: const TextStyle(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 8),
+              for (final voucher in group.value)
+                _voucherCard(voucher, onSelect: (selected, claim) {
+                  Navigator.of(dialogContext).pop((voucher: selected, claim: claim));
+                }),
+            ],
+          ]),
+        ),
+      ),
+    );
+    if (!mounted || selection == null) return;
+    if (selection.claim) {
+      await _claimVoucher(selection.voucher.code);
+    } else {
+      _applySpecificVoucher(selection.voucher.code);
+    }
+  }
+
+  Widget _voucherCard(AvailableVoucher v, {void Function(AvailableVoucher, bool)? onSelect}) {
             final isApplied = _appliedVoucher?.toUpperCase() == v.code.toUpperCase();
             return Container(
               margin: const EdgeInsets.only(bottom: 8),
@@ -699,7 +789,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     )
                   else if (!v.isClaimed && v.canClaim)
                     ElevatedButton(
-                      onPressed: _quoting ? null : () => _claimVoucher(v.code),
+                      onPressed: _quoting ? null : () => onSelect != null ? onSelect(v, true) : _claimVoucher(v.code),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: ZayloColors.taupe,
                         foregroundColor: Colors.white,
@@ -712,7 +802,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     )
                   else if (v.canApply)
                     OutlinedButton(
-                      onPressed: _quoting ? null : () => _applySpecificVoucher(v.code),
+                      onPressed: _quoting ? null : () => onSelect != null ? onSelect(v, false) : _applySpecificVoucher(v.code),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         minimumSize: Size.zero,
@@ -740,33 +830,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ],
               ),
             );
-          }),
-          const SizedBox(height: 8),
-        ],
-        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Expanded(
-            child: TextField(
-              controller: _voucher,
-              textCapitalization: TextCapitalization.characters,
-              textInputAction: TextInputAction.done,
-              onSubmitted: (_) => _applyVoucher(),
-              decoration: zayloInputDecoration('Enter voucher code', errorText: _voucherError),
-            ),
-          ),
-          const SizedBox(width: 10),
-          SizedBox(
-            height: 50,
-            child: OutlinedButton(
-              onPressed: _quoting ? null : _applyVoucher,
-              style: secondaryButtonStyle.copyWith(
-                padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 18)),
-              ),
-              child: const Text('APPLY'),
-            ),
-          ),
-        ]),
-      ],
-    );
   }
 
   Widget _summarySection(CheckoutQuote quote) {
