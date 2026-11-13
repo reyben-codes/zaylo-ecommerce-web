@@ -202,6 +202,24 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasRole('rider');
     }
 
+    public function isPickupRider(): bool
+    {
+        if ($this->hasRole('courier')) {
+            return true;
+        }
+
+        return $this->hasRole('rider') && ($this->rider?->isPickupRider() ?? false);
+    }
+
+    public function isDeliveryRider(): bool
+    {
+        if ($this->hasRole('courier')) {
+            return false;
+        }
+
+        return $this->hasRole('rider') && ($this->rider?->isDeliveryRider() ?? true);
+    }
+
     /**
      * The sign-in page for this account: partners have their own portals, everyone else uses the shop login.
      */

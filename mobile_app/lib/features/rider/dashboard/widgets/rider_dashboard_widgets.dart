@@ -27,7 +27,7 @@ class RiderGreetingCard extends StatelessWidget {
               child: Text('Hi, ${rider.firstName}',
                   style: TextStyle(color: ZayloColors.white, fontSize: 22, fontWeight: FontWeight.w700)),
             ),
-            _Pill(label: 'Approved rider', color: _green, light: true),
+            _Pill(label: rider.isPickupRider ? 'Pickup Rider' : 'Approved rider', color: _green, light: true),
           ]),
           const SizedBox(height: 6),
           Text('Ready to deliver today?', style: TextStyle(color: ZayloColors.onInkMuted)),

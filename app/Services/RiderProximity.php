@@ -34,7 +34,7 @@ class RiderProximity
 
         return $riders->filter(function (Rider $rider) use ($city, $province) {
             $home = $rider->user?->addresses?->sortByDesc('is_default')->first();
-            return $rider->isDeliveryRider() && $rider->is_active && $rider->status === 'approved'
+            return $rider->is_active && $rider->status === 'approved'
                 && $rider->user?->status === 'active'
                 && self::clean($home?->city) === $city
                 && ($province === '' || self::clean($home?->province ?: $home?->region_name) === $province);

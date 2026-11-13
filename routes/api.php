@@ -14,6 +14,8 @@ use App\Http\Controllers\MobileProfilePhotoController;
 use App\Http\Controllers\MobileRiderAccountController;
 use App\Http\Controllers\MobileRiderAuthenticationController;
 use App\Http\Controllers\MobileRiderDashboardController;
+use App\Http\Controllers\MobileRiderDeliveryController;
+use App\Http\Controllers\MobileRiderPickupController;
 use App\Http\Controllers\MobileRiderSupportController;
 use App\Http\Controllers\MobileRiderWalletController;
 use App\Http\Controllers\MobileShopController;
@@ -131,6 +133,20 @@ Route::prefix('mobile')->name('mobile.')->middleware('throttle:60,1')->group(fun
 
             // Complaints about deliveries the rider handled.
             $complaintRoutes();
+        });
+
+        Route::middleware(['mobile.rider', 'mobile.rider.pickup'])->prefix('rider/pickup')->name('rider.pickup.')->group(function () {
+            Route::get('/queue', [MobileRiderPickupController::class, 'queue'])->name('queue');
+            Route::post('/scan', [MobileRiderPickupController::class, 'scan'])->middleware('throttle:30,1,mobile-pickup-scan')->name('scan');
+            Route::get('/manifest', [MobileRiderPickupController::class, 'manifest'])->name('manifest');
+            Route::get('/dropoff', [MobileRiderPickupController::class, 'hubDropoff'])->name('dropoff');
+        });
+
+        Route::middleware(['mobile.rider', 'mobile.rider.delivery'])->prefix('rider/delivery')->name('rider.delivery.')->group(function () {
+            Route::get('/manifest', [MobileRiderDeliveryController::class, 'manifest'])->name('manifest');
+            Route::post('/scan', [MobileRiderDeliveryController::class, 'scan'])->middleware('throttle:30,1,mobile-delivery-scan')->name('scan');
+            Route::post('/proof/{shipment}', [MobileRiderDeliveryController::class, 'proof'])->middleware('throttle:20,1,mobile-delivery-proof')->name('proof');
+            Route::post('/fail/{shipment}', [MobileRiderDeliveryController::class, 'fail'])->name('fail');
         });
 
         Route::middleware('mobile.buyer')->group(function () use ($complaintRoutes) {

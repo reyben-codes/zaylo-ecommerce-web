@@ -38,6 +38,8 @@ return Application::configure(basePath: dirname(__DIR__))
             // Mobile app API (routes/api.php): JSON versions of the web's account checks.
             'mobile.buyer' => \App\Http\Middleware\EnsureMobileBuyer::class,
             'mobile.rider' => \App\Http\Middleware\EnsureMobileRider::class,
+            'mobile.rider.pickup' => \App\Http\Middleware\EnsurePickupRider::class,
+            'mobile.rider.delivery' => \App\Http\Middleware\EnsureDeliveryRider::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

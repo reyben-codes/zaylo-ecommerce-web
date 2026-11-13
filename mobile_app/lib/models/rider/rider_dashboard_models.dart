@@ -50,6 +50,7 @@ class RiderProfile {
     this.avatarUrl,
     this.gcashNumber,
     this.gcashName,
+    this.riderType = 'delivery',
   });
 
   final String name;
@@ -61,6 +62,11 @@ class RiderProfile {
   final String? gender;
   final String? genderLabel;
   final RiderAddress? address;
+
+  /// 'pickup' or 'delivery'
+  final String riderType;
+  bool get isPickupRider => riderType == 'pickup';
+  bool get isDeliveryRider => riderType != 'pickup';
 
   /// The logistics partner that approved the rider and assigns their parcels.
   final String? logisticsPartner;
@@ -96,6 +102,7 @@ class RiderProfile {
         avatarUrl: json['avatar_url'] as String?,
         gcashNumber: (json['gcash'] as Map<String, dynamic>?)?['number'] as String?,
         gcashName: (json['gcash'] as Map<String, dynamic>?)?['name'] as String?,
+        riderType: json['rider_type'] as String? ?? 'delivery',
       );
 }
 

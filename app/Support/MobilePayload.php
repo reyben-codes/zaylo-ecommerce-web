@@ -57,6 +57,7 @@ class MobilePayload
             'email' => $user->email,
             'phone' => $user->phone,
             'role' => User::portalOf($user->role),
+            'rider_type' => $user->isRider() ? ($user->rider?->rider_type ?? ($user->isPickupRider() ? 'pickup' : 'delivery')) : null,
             'date_of_birth' => $user->date_of_birth?->toDateString(),
             'email_verified' => $user->hasVerifiedEmail(),
             'identity_verified' => $user->isIdentityVerified(),

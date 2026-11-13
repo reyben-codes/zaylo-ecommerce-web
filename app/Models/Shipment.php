@@ -31,6 +31,11 @@ class Shipment extends Model
         'handover_confirmed_at' => 'datetime',
     ];
 
+    public function getTrackingNumberAttribute(?string $value): string
+    {
+        return $value ?? (string) ($this->attributes['tracking_code'] ?? '');
+    }
+
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);

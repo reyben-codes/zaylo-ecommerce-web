@@ -25,22 +25,71 @@ class RiderSellerPickups
 
         $query = Shipment::where('pickup_courier_id', $user->id)
             ->where('logistics_provider_id', $user->rider->logistics_provider_id);
-        $active = ShipmentWorkflow::whereStage(clone $query, ['ready', 'confirmed', 'picked_up'])->latest('updated_at')->get();
-        $recent = ShipmentWorkflow::whereStage(clone $query, ['in_transit', 'sorted', 'assigned', 'out_for_delivery', 'delivered', 'failed', 'returned'])
-            ->latest('updated_at')->limit(20)->get();
+        $active = ShipmentWorkflow::whereStage(clone $query, ['ready', 'confirmed', 'picked_up'])
+            ->whereNull('hub_received_at')
+            ->latest('updated_at')->get();
+        $recent = Shipment::where('pickup_courier_id', $user->id)
+            ->where('logistics_provider_id', $user->rider->logistics_provider_id)
+            ->whereNotNull('hub_received_at')
+            ->latest('hub_received_at')->limit(20)->get();
 
-        return $active->concat($recent)->map(function (Shipment $shipment) {
-                $parcel = \App\Support\ParcelView::for($shipment);
-                $items = $shipment->sellerOrder?->items ?? $shipment->order?->items ?? collect();
-                return [
-                    'id' => $shipment->id, 'tracking_number' => RiderDeliveries::labelCode($shipment),
-                    'order_number' => $parcel['order'], 'seller' => $parcel['seller'], 'pickup_address' => $parcel['pickup_address'],
-                    'status' => $shipment->hub_received_at ? 'handed_over' : ShipmentWorkflow::stageOf($shipment),
-                    'scanned_at' => $shipment->pickup_scanned_at?->toIso8601String(),
-                    'received_at' => $shipment->hub_received_at?->toIso8601String(),
-                    'items' => $items->map(fn ($item) => ['name' => $item->product_name, 'quantity' => (int) $item->quantity])->values(),
-                ];
-            });
+        return $active->concat($recent)->map(fn (Shipment $s) => $this->formatPickup($s));
+    }
+
+    public function assignedQueue(User $user): \Illuminate\Support\Collection
+    {
+        if (! $user->rider?->logistics_provider_id) return collect();
+
+        return ShipmentWorkflow::whereStage(
+            Shipment::where('pickup_courier_id', $user->id)
+                ->where('logistics_provider_id', $user->rider->logistics_provider_id)
+                ->whereNull('pickup_scanned_at')
+                ->whereNull('hub_received_at'),
+            ['ready', 'confirmed']
+        )->oldest('pickup_scheduled_for')->get()->map(fn (Shipment $s) => $this->formatPickup($s));
+    }
+
+    public function activeManifest(User $user): \Illuminate\Support\Collection
+    {
+        if (! $user->rider?->logistics_provider_id) return collect();
+
+        return Shipment::where('pickup_courier_id', $user->id)
+            ->where('logistics_provider_id', $user->rider->logistics_provider_id)
+            ->whereNotNull('pickup_scanned_at')
+            ->whereNull('hub_received_at')
+            ->latest('pickup_scanned_at')->get()->map(fn (Shipment $s) => $this->formatPickup($s));
+    }
+
+    public function hubDropoff(User $user): \Illuminate\Support\Collection
+    {
+        if (! $user->rider?->logistics_provider_id) return collect();
+
+        return Shipment::where('pickup_courier_id', $user->id)
+            ->where('logistics_provider_id', $user->rider->logistics_provider_id)
+            ->whereNotNull('pickup_scanned_at')
+            ->whereNotNull('hub_received_at')
+            ->latest('hub_received_at')->limit(50)->get()->map(fn (Shipment $s) => $this->formatPickup($s));
+    }
+
+    public function formatPickup(Shipment $shipment): array
+    {
+        $parcel = \App\Support\ParcelView::for($shipment);
+        $items = $shipment->sellerOrder?->items ?? $shipment->order?->items ?? collect();
+        $isArrivedAtHub = $shipment->hub_received_at !== null;
+
+        return [
+            'id' => $shipment->id,
+            'tracking_number' => RiderDeliveries::labelCode($shipment),
+            'order_number' => $parcel['order'],
+            'seller' => $parcel['seller'],
+            'pickup_address' => $parcel['pickup_address'],
+            'status' => $isArrivedAtHub ? 'arrived_at_hub' : ShipmentWorkflow::stageOf($shipment),
+            'scanned_at' => $shipment->pickup_scanned_at?->toIso8601String(),
+            'received_at' => $shipment->hub_received_at?->toIso8601String(),
+            'is_in_transit' => $shipment->pickup_scanned_at !== null && ! $isArrivedAtHub,
+            'is_completed' => $isArrivedAtHub,
+            'items' => $items->map(fn ($item) => ['name' => $item->product_name, 'quantity' => (int) $item->quantity])->values(),
+        ];
     }
 
     public function scan(User $user, string $code): Shipment

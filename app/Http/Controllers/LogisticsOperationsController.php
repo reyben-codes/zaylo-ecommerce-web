@@ -58,7 +58,7 @@ class LogisticsOperationsController extends Controller
             'tab' => $tab,
             'hub' => $hub,
             'availableCouriers' => $availableCouriers,
-            'pickupRiders' => $this->availableRiders(),
+            'pickupRiders' => $this->availableRiders('pickup'),
             'counts' => [
                 'requests' => ShipmentWorkflow::whereStage($this->parcels(), ['ready'])->count(),
                 'scheduled' => $hub ? ShipmentWorkflow::whereStage($this->parcels(), ['confirmed'])->count() : 0,
@@ -144,7 +144,7 @@ class LogisticsOperationsController extends Controller
             'tab' => $tab,
             'cases' => $cases->filter(fn (Dispute $case) => $tab === 'done' ? $done($case) : ! $done($case))->values(),
             'counts' => ['active' => $cases->reject($done)->count(), 'done' => $cases->filter($done)->count()],
-            'riders' => $this->availableRiders(),
+            'riders' => $this->availableRiders('delivery'),
         ]);
     }
 
@@ -190,7 +190,7 @@ class LogisticsOperationsController extends Controller
             'area' => $area,
             'hub' => $hub,
             'bins' => $hub ? $this->bins() : collect(),
-            'riders' => $this->availableRiders(),
+            'riders' => $this->availableRiders('delivery'),
             'workload' => $this->riderWorkload(),
         ]);
     }
@@ -257,7 +257,7 @@ class LogisticsOperationsController extends Controller
             'item' => $filters['item'] ?? '',
             'stage' => $filters['stage'] ?? '',
             'selectedRider' => $filters['rider'] ?? null,
-            'riders' => $this->availableRiders(),
+            'riders' => $this->availableRiders('delivery'),
             'stages' => ShipmentWorkflow::STAGES,
         ]);
     }
@@ -373,7 +373,7 @@ class LogisticsOperationsController extends Controller
     {
         $this->ownsParcel($shipment);
         abort_unless($this->logisticsProvider() && (int) $shipment->logistics_provider_id === (int) $this->logisticsProvider()->id, 403);
-        $rider = $this->chosenRider($request);
+        $rider = $this->chosenRider($request, 'pickup');
         $this->ensureRiderServes($rider, \App\Services\RiderSellerPickups::pickupArea($shipment));
         $this->workflow->assignPickupCourier($shipment, $rider->user, $request->user());
 
@@ -421,7 +421,7 @@ class LogisticsOperationsController extends Controller
     public function assign(Request $request, Shipment $shipment)
     {
         $this->ownsParcel($shipment);
-        $rider = $this->chosenRider($request);
+        $rider = $this->chosenRider($request, 'delivery');
         $this->ensureRiderServes($rider, \App\Services\RiderProximity::areaOf($shipment));
         $this->workflow->assign($shipment, $rider, $request->user());
 
@@ -433,7 +433,7 @@ class LogisticsOperationsController extends Controller
     {
         abort_unless(ShipmentWorkflow::hasHubSteps(), 404);
         $area = trim((string) $request->validate(['area' => ['required', 'string', 'max:120']])['area']);
-        $rider = $this->chosenRider($request);
+        $rider = $this->chosenRider($request, 'delivery');
         $parcels = $this->awaitingRiderQuery()->where('sort_area', $area)->get();
         if ($parcels->isEmpty()) {
             throw ValidationException::withMessages(['area' => 'No parcels in '.$area.' are waiting for a rider.']);
@@ -446,10 +446,10 @@ class LogisticsOperationsController extends Controller
         return back()->with('status', $parcels->count().' '.str('parcel')->plural($parcels->count()).' in '.$area.' assigned to '.$rider->user->name.'.');
     }
 
-    private function chosenRider(Request $request): Rider
+    private function chosenRider(Request $request, ?string $type = null): Rider
     {
         $data = $request->validate(['rider_id' => ['required', 'integer']], ['rider_id.required' => 'Choose a rider.']);
-        $rider = $this->availableRiders()->firstWhere('id', (int) $data['rider_id']);
+        $rider = $this->availableRiders($type)->firstWhere('id', (int) $data['rider_id']);
         if (! $rider) {
             throw ValidationException::withMessages(['rider_id' => 'That rider is not on shift. Riders can take parcels only after they time in at the hub, and not after they time out.']);
         }
@@ -633,9 +633,9 @@ class LogisticsOperationsController extends Controller
      * timed out). Every rider picker and every assignment goes through this list, so an old page cannot give a parcel
      * to a rider who has not timed in.
      */
-    private function availableRiders(): Collection
+    private function availableRiders(?string $type = null): Collection
     {
-        return RiderAttendanceClock::whereOnShift(Rider::query())
+        $riders = RiderAttendanceClock::whereOnShift(Rider::query())
             // Their home address too, to offer riders who live near a parcel first (RiderProximity).
             ->with('user.addresses')
             ->where('logistics_provider_id', $this->logisticsProvider()?->id)
@@ -643,7 +643,16 @@ class LogisticsOperationsController extends Controller
             ->where('is_active', true)
             ->whereHas('user', fn (Builder $user) => $user->where('status', 'active'))
             ->orderBy('id')
-            ->get()->filter(fn (Rider $rider) => $rider->isDeliveryRider())->values();
+            ->get();
+
+        if ($type === 'pickup') {
+            return $riders->filter(fn (Rider $rider) => $rider->isPickupRider())->values();
+        }
+        if ($type === 'delivery') {
+            return $riders->filter(fn (Rider $rider) => $rider->isDeliveryRider())->values();
+        }
+
+        return $riders;
     }
 
     private function withoutRider(Builder $query): void

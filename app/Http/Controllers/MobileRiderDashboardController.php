@@ -444,6 +444,7 @@ class MobileRiderDashboardController extends Controller
             'approved_at' => ($rider?->reviewed_at ?? $user->approved_at)?->toIso8601String(),
             'company' => $rider?->provider?->name,
             'logistics_partner' => $rider?->provider?->name,
+            'rider_type' => $rider?->rider_type ?? ($user->isPickupRider() ? 'pickup' : 'delivery'),
             'accepting_deliveries' => (bool) ($rider?->is_active ?? true),
             'vehicle_type' => $rider?->vehicle_type ? strtolower($rider->vehicle_type) : null,
             'vehicle_label' => $rider?->vehicle_type,

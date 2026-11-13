@@ -19,6 +19,22 @@ class RoleMiddleware
             return redirect()->route('login');
         }
 
+        $user = Auth::user();
+
+        if (in_array('pickup_rider', $roles, true)) {
+            if (! $user->isPickupRider()) {
+                abort(403, 'Unauthorized. This area is for pickup riders only.');
+            }
+            return $next($request);
+        }
+
+        if (in_array('delivery_rider', $roles, true)) {
+            if (! $user->isDeliveryRider()) {
+                abort(403, 'Unauthorized. This area is for delivery riders only.');
+            }
+            return $next($request);
+        }
+
         $expanded = [];
         foreach ($roles as $role) {
             $expanded[] = $role;

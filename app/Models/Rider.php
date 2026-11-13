@@ -35,7 +35,7 @@ class Rider extends Model
     ];
 
     protected $fillable = [
-        'user_id', 'logistics_provider_id', 'vehicle_type', 'plate_no', 'license_number',
+        'user_id', 'logistics_provider_id', 'vehicle_type', 'rider_type', 'plate_no', 'license_number',
         'license_expires_on', 'license_document_path', 'or_cr_document_path',
         'is_active', 'status', 'rejection_reason', 'reviewed_at', 'shift_start', 'shift_end', 'work_days',
         // Where wallet withdrawals are sent.
@@ -123,9 +123,14 @@ class Rider extends Model
         return $this->user?->hasRole('courier') ?? false;
     }
 
+    public function isPickupRider(): bool
+    {
+        return $this->rider_type === 'pickup' || $this->isCourier();
+    }
+
     public function isDeliveryRider(): bool
     {
-        return $this->user?->hasRole('rider') ?? false;
+        return $this->rider_type === 'delivery' || (! $this->isCourier() && $this->rider_type !== 'pickup');
     }
 
     public function user(): BelongsTo

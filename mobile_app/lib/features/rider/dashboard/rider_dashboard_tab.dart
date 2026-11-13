@@ -158,7 +158,182 @@ class RiderDashboardTabState extends State<RiderDashboardTab> with RiderDelivery
         },
       );
 
-  Widget _content(RiderDashboard data) => ListView(
+  Widget _content(RiderDashboard data) =>
+      data.rider.isPickupRider ? _pickupRiderContent(data) : _deliveryRiderContent(data);
+
+  Widget _pickupRiderContent(RiderDashboard data) {
+    final assignedQueue = data.sellerPickups.where((p) => p.status == 'ready' || p.status == 'confirmed').toList();
+    final inTransit = data.sellerPickups.where((p) => p.status == 'picked_up' && p.receivedAt == null).toList();
+    final atHub = data.sellerPickups.where((p) => p.receivedAt != null || p.status == 'handed_over').toList();
+
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: EdgeInsets.fromLTRB(20, 8, 20, 32 + MediaQuery.paddingOf(context).bottom),
+      children: [
+        RiderGreetingCard(rider: data.rider),
+        if (_location != null && _location != LocationAccess.granted) ...[
+          const SizedBox(height: 12),
+          RiderLocationBanner(status: _location!, onFix: _fixLocation),
+        ],
+        AnnouncementPopups(announcements: data.announcementPopups),
+        if (data.announcements.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          AnnouncementBanner(announcements: data.announcements),
+        ],
+        if (data.attendance != null) ...[
+          const SizedBox(height: 16),
+          RiderAttendanceCard(
+            attendance: data.attendance!,
+            busy: _attendanceBusy,
+            onScan: busyDeliveryId == null ? () => _scanAttendance(data.attendance!) : null,
+          ),
+        ],
+        const SizedBox(height: 16),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: busyDeliveryId == null ? scanSellerPickup : null,
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              backgroundColor: ZayloColors.ink,
+            ),
+            icon: const Icon(Icons.qr_code_scanner),
+            label: const Text('SCAN SELLER PICKUP', style: TextStyle(fontWeight: FontWeight.w700)),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Scan waybill barcode at the seller location. This moves the parcel into your active transit manifest.',
+          style: TextStyle(fontSize: 12, color: ZayloColors.muted),
+        ),
+        const SizedBox(height: 16),
+        RiderSectionHeader(title: 'Assigned Pickups Queue', count: assignedQueue.length),
+        if (assignedQueue.isEmpty)
+          const RiderEmptyCard(
+            icon: Icons.storefront_outlined,
+            message: 'No seller pickups currently assigned. Logistics partner assigns pickups based on route.',
+          )
+        else
+          for (final pickup in assignedQueue)
+            Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(pickup.trackingNumber, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: ZayloColors.ink.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(pickup.statusLabel, style: TextStyle(color: ZayloColors.ink, fontSize: 11, fontWeight: FontWeight.w600)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text('Seller: ${pickup.seller}', style: const TextStyle(fontWeight: FontWeight.w600)),
+                  Text(pickup.address, style: TextStyle(color: ZayloColors.muted, fontSize: 13)),
+                  const SizedBox(height: 8),
+                  for (final item in pickup.items)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 1),
+                      child: Text('• $item', style: const TextStyle(fontSize: 13)),
+                    ),
+                  if (pickup.canScan) ...[
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: busyDeliveryId == null ? () => scanSellerPickup(pickup) : null,
+                        icon: const Icon(Icons.qr_code_scanner),
+                        label: const Text('Scan & Handover'),
+                      ),
+                    ),
+                  ],
+                ]),
+              ),
+            ),
+        const SizedBox(height: 16),
+        RiderSectionHeader(title: 'Active Transit Manifest', count: inTransit.length),
+        if (inTransit.isEmpty)
+          const RiderEmptyCard(
+            icon: Icons.local_shipping_outlined,
+            message: 'No parcels currently in transit. Scanned pickups will remain here until received at hub.',
+          )
+        else
+          for (final pickup in inTransit)
+            Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(pickup.trackingNumber, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: ZayloColors.warning.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text('In Transit to Hub', style: TextStyle(color: ZayloColors.warning, fontSize: 11, fontWeight: FontWeight.w600)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text('Seller: ${pickup.seller}', style: const TextStyle(fontWeight: FontWeight.w500)),
+                  if (pickup.scannedAt != null)
+                    Text('Scanned: ${pickup.scannedAt}', style: TextStyle(color: ZayloColors.muted, fontSize: 12)),
+                ]),
+              ),
+            ),
+        const SizedBox(height: 16),
+        RiderSectionHeader(title: 'Hub Drop-off & Receiving', count: atHub.length),
+        if (atHub.isEmpty)
+          const RiderEmptyCard(
+            icon: Icons.warehouse_outlined,
+            message: 'No completed hub drop-offs yet.',
+          )
+        else
+          for (final pickup in atHub)
+            Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(pickup.trackingNumber, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: ZayloColors.success.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text('Received at Hub', style: TextStyle(color: ZayloColors.success, fontSize: 11, fontWeight: FontWeight.w600)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  if (pickup.receivedAt != null)
+                    Text('Received: ${pickup.receivedAt}', style: TextStyle(color: ZayloColors.muted, fontSize: 12)),
+                ]),
+              ),
+            ),
+      ],
+    );
+  }
+
+  Widget _deliveryRiderContent(RiderDashboard data) => ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.fromLTRB(20, 8, 20, 32 + MediaQuery.paddingOf(context).bottom),
         children: [
@@ -243,43 +418,14 @@ class RiderDashboardTabState extends State<RiderDashboardTab> with RiderDelivery
                       'The buyer and seller are notified automatically.',
               style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
 
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: busyDeliveryId == null ? scanSellerPickup : null,
-              icon: const Icon(Icons.qr_code_scanner),
-              label: const Text('SCAN SELLER PICKUP'),
-            ),
-            const Text('Scan a pickup assigned to you by logistics. Bring it to the hub for handover confirmation.'),
-            RiderSectionHeader(title: 'Seller pickups & handovers', count: data.sellerPickups.length),
-            if (data.sellerPickups.isEmpty)
-              const Text('No seller pickups assigned yet. Your logistics partner assigns pickup and delivery tasks separately.'),
-            for (final pickup in data.sellerPickups)
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(pickup.trackingNumber, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    Text(pickup.statusLabel),
-                    Text('Seller: ${pickup.seller}'),
-                    Text(pickup.address),
-                    for (final item in pickup.items) Text(item),
-                    if (pickup.scannedAt != null) Text('Scanned: ${pickup.scannedAt}'),
-                    if (pickup.receivedAt != null) Text('Received by hub: ${pickup.receivedAt}'),
-                    if (pickup.canScan)
-                      OutlinedButton.icon(
-                        onPressed: busyDeliveryId == null ? () => scanSellerPickup(pickup) : null,
-                        icon: const Icon(Icons.qr_code_scanner), label: const Text('Scan this pickup'),
-                      ),
-                  ]),
-                ),
-              ),
-
-            if (data.newAssignments.isNotEmpty) ...[
+          if (data.newAssignments.isNotEmpty) ...[
+            const SizedBox(height: 16),
             RiderSectionHeader(title: 'New assignments', count: data.newAssignments.length),
             for (final delivery in data.newAssignments) _card(delivery),
           ],
 
           if (data.returns.isNotEmpty) ...[
+            const SizedBox(height: 16),
             RiderSectionHeader(title: 'Returns to collect', count: data.returns.length),
             for (final item in data.returns)
               RiderReturnCard(
@@ -289,6 +435,7 @@ class RiderDashboardTabState extends State<RiderDashboardTab> with RiderDelivery
               ),
           ],
 
+          const SizedBox(height: 16),
           RiderSectionHeader(title: 'Your active deliveries', count: data.inProgress.length),
           if (data.inProgress.isEmpty)
             RiderEmptyCard(
@@ -301,6 +448,7 @@ class RiderDashboardTabState extends State<RiderDashboardTab> with RiderDelivery
             for (final delivery in data.inProgress) _card(delivery),
 
           if (data.recent.isNotEmpty) ...[
+            const SizedBox(height: 16),
             const RiderSectionHeader(title: 'Recently delivered'),
             for (final delivery in data.recent)
               RiderDeliveryCard(delivery: delivery, onTap: () => openDeliveryDetails(delivery)),

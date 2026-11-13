@@ -28,6 +28,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -311,6 +312,116 @@ class SellerController extends Controller
         return view('seller.order-history', compact('orders', 'date', 'filter', 'legacy'));
     }
 
+    public function pickups(Request $request)
+    {
+        $shopId = $this->shopId();
+        $legacy = Order::usesLegacySchema();
+
+        $readyOrders = $legacy
+            ? Order::where('seller_id', $shopId)->whereIn('status', ['confirmed', 'processing'])->latest('placed_at')->get()
+            : SellerOrder::where('seller_id', $shopId)->whereIn('status', ['accepted', 'packed'])->with('order')->latest('created_at')->get();
+
+        $shipmentsQuery = Shipment::query()->with([
+            'order.buyer', 'order.items', 'sellerOrder.items', 'provider', 'pickupCourier.rider',
+        ]);
+        if ($legacy) {
+            $shipmentsQuery->whereIn('order_id', Order::where('seller_id', $shopId)->select('id'));
+        } else {
+            $shipmentsQuery->whereIn('seller_order_id', SellerOrder::where('seller_id', $shopId)->select('id'));
+        }
+        $allShipments = $shipmentsQuery->latest('updated_at')->get();
+
+        $scheduledShipments = $allShipments->filter(fn (Shipment $s) => in_array(ShipmentWorkflow::stageOf($s), ['ready', 'confirmed'], true))->values();
+        $inTransitShipments = $allShipments->filter(fn (Shipment $s) => ShipmentWorkflow::stageOf($s) === 'picked_up' && ! $s->hub_received_at)->values();
+        $atHubShipments = $allShipments->filter(fn (Shipment $s) => (bool) $s->hub_received_at || in_array(ShipmentWorkflow::stageOf($s), ['in_transit', 'sorted', 'assigned', 'out_for_delivery', 'delivered'], true))->values();
+
+        $partners = $this->pickupPartners();
+        $suggestedPartner = $this->suggestedPartnerId($partners);
+
+        return view('seller.pickups', [
+            'readyOrders' => $readyOrders,
+            'scheduledShipments' => $scheduledShipments,
+            'inTransitShipments' => $inTransitShipments,
+            'atHubShipments' => $atHubShipments,
+            'partners' => $partners,
+            'suggestedPartner' => $suggestedPartner,
+            'legacy' => $legacy,
+        ]);
+    }
+
+    public function schedulePickup(Request $request)
+    {
+        $data = $request->validate([
+            'order_id' => ['required', 'integer'],
+            'pickup_date' => ['nullable', 'date', 'after_or_equal:today'],
+            'logistics_provider_id' => ['nullable', 'integer', 'exists:logistics_providers,id'],
+        ]);
+
+        $order = Order::findOrFail($data['order_id']);
+        $shopId = $this->shopId();
+        $isOwner = Order::usesLegacySchema()
+            ? (int) $order->seller_id === $shopId
+            : $order->sellerOrders()->where('seller_id', $shopId)->exists();
+        abort_unless($isOwner, 403);
+
+        $partner = ! empty($data['logistics_provider_id'])
+            ? LogisticsProvider::find($data['logistics_provider_id'])
+            : $this->chosenPartner($request, $order);
+
+        $date = ! empty($data['pickup_date'])
+            ? Carbon::parse($data['pickup_date'])
+            : now()->addDay();
+
+        DB::transaction(function () use ($order, $partner, $date, $shopId) {
+            $locked = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+            if (Order::usesLegacySchema()) {
+                $locked->update(['status' => 'ready_for_pickup']);
+            } else {
+                $sellerOrder = $locked->sellerOrders()->where('seller_id', $shopId)->first();
+                $sellerOrder?->update(['status' => 'ready_to_ship']);
+            }
+            if (Schema::hasTable('order_status_histories')) {
+                $locked->statusHistory()->create([
+                    'changed_by' => auth()->id(),
+                    'status' => 'ready_for_pickup',
+                    'note' => 'Pickup scheduled for '.$date->format('M j, Y').' with '.($partner?->name ?? 'Logistics').'.',
+                ]);
+            }
+
+            $shipment = $locked->deliveryShipment();
+            $code = 'ZAY-TRK-'.Str::upper(Str::random(10));
+            $stage = ShipmentWorkflow::stored('ready');
+            if (! $shipment) {
+                $sellerOrder = ! Order::usesLegacySchema() ? $locked->sellerOrders()->where('seller_id', $shopId)->first() : null;
+                $attributes = [
+                    'status' => $stage,
+                    'logistics_provider_id' => $partner?->id,
+                    'pickup_scheduled_for' => $date->toDateString(),
+                ];
+                if (Schema::hasColumn('shipments', 'tracking_code')) {
+                    $attributes['tracking_code'] = $code;
+                }
+                if (Schema::hasColumn('shipments', 'tracking_number')) {
+                    $attributes['tracking_number'] = $code;
+                }
+                if ($sellerOrder) {
+                    $attributes['seller_order_id'] = $sellerOrder->id;
+                    $shipment = Shipment::create($attributes);
+                } else {
+                    $shipment = $locked->shipment()->create($attributes);
+                }
+            } else {
+                $shipment->update([
+                    'status' => $stage,
+                    'logistics_provider_id' => $partner?->id ?? $shipment->logistics_provider_id,
+                    'pickup_scheduled_for' => $date->toDateString(),
+                ]);
+            }
+        });
+
+        return back()->with('status', 'Pickup scheduled successfully for order '.$order->order_number.'.');
+    }
+
     public function updateOrderStatus(Request $request, Order $order)
     {
         abort_unless((int) $order->seller_id === $this->shopId(), 403);
@@ -396,9 +507,13 @@ class SellerController extends Controller
      */
     public function confirmHandover(Order $order, LogisticsMessenger $messenger)
     {
-        abort_unless((int) $order->seller_id === $this->shopId(), 403);
+        $shopId = $this->shopId();
+        $isOwner = Order::usesLegacySchema()
+            ? (int) $order->seller_id === $shopId
+            : $order->sellerOrders()->where('seller_id', $shopId)->exists();
+        abort_unless($isOwner, 403);
         abort_unless(Shipment::tracksHandover(), 503, 'Handover confirmation is being set up. Please try again later.');
-        $shipment = $order->shipment;
+        $shipment = $order->deliveryShipment();
         if (! $shipment || ! in_array(ShipmentWorkflow::stageOf($shipment), self::COLLECTED_STAGES, true)) {
             throw ValidationException::withMessages(['handover' => 'Confirm the handover after your logistics partner scans the parcel at pickup.']);
         }

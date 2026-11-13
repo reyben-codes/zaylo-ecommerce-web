@@ -139,6 +139,54 @@ class RiderApi extends ApiClient {
   Future<String> scanSellerPickup(String code) async =>
       (await send('POST', '/mobile/rider/seller-pickups/scan', body: {'code': code.trim()}))['message'] as String;
 
+  /// Pickup Rider: Assigned pickup queue
+  Future<List<RiderSellerPickup>> pickupQueue() async {
+    final res = await send('GET', '/mobile/rider/pickup/queue');
+    final list = res['queue'] as List<dynamic>? ?? [];
+    return list.map((item) => RiderSellerPickup.fromJson(item as Map<String, dynamic>)).toList();
+  }
+
+  /// Pickup Rider: Scan seller parcel at seller door
+  Future<Map<String, dynamic>> scanPickup(String code) async =>
+      await send('POST', '/mobile/rider/pickup/scan', body: {'code': code.trim()});
+
+  /// Pickup Rider: Active transit manifest
+  Future<List<RiderSellerPickup>> pickupManifest() async {
+    final res = await send('GET', '/mobile/rider/pickup/manifest');
+    final list = res['manifest'] as List<dynamic>? ?? [];
+    return list.map((item) => RiderSellerPickup.fromJson(item as Map<String, dynamic>)).toList();
+  }
+
+  /// Pickup Rider: Hub dropoff list
+  Future<List<RiderSellerPickup>> hubDropoff() async {
+    final res = await send('GET', '/mobile/rider/pickup/dropoff');
+    final list = res['dropoffs'] as List<dynamic>? ?? [];
+    return list.map((item) => RiderSellerPickup.fromJson(item as Map<String, dynamic>)).toList();
+  }
+
+  /// Delivery Rider: Active delivery manifest
+  Future<List<Map<String, dynamic>>> deliveryManifest() async {
+    final res = await send('GET', '/mobile/rider/delivery/manifest');
+    final list = res['manifest'] as List<dynamic>? ?? [];
+    return list.cast<Map<String, dynamic>>();
+  }
+
+  /// Delivery Rider: Scan to start delivery or complete
+  Future<Map<String, dynamic>> scanDelivery(String code, {File? photo}) async => photo == null
+      ? await send('POST', '/mobile/rider/delivery/scan', body: {'code': code.trim()})
+      : await sendMultipart('/mobile/rider/delivery/scan', fields: {'code': code.trim()}, files: {'photo': photo});
+
+  /// Delivery Rider: Proof of delivery
+  Future<Map<String, dynamic>> uploadPod(int shipmentId, File photo) async =>
+      await sendMultipart('/mobile/rider/delivery/proof/$shipmentId', fields: const {}, files: {'photo': photo});
+
+  /// Delivery Rider: Fail delivery
+  Future<Map<String, dynamic>> failDelivery(int shipmentId, {required String reason, String? note}) async =>
+      await send('POST', '/mobile/rider/delivery/fail/$shipmentId', body: {
+        'reason': reason,
+        if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+      });
+
   /// Sends the attendance QR code shown at the logistics hub: the first scan
   /// of the day times the rider in, the next one times them out.
   Future<RiderAttendanceScanResult> scanAttendance(String code) async => RiderAttendanceScanResult.fromJson(
