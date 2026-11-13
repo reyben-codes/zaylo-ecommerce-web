@@ -113,6 +113,24 @@ mixin RiderDeliveryActions<T extends StatefulWidget> on State<T> {
     await _sendScan(code, active.where((delivery) => delivery.matchesCode(code)).firstOrNull);
   }
 
+  Future<void> scanSellerPickup() async {
+    final code = await _scan(
+      title: 'Pick up from seller',
+      hint: 'Scan the waybill on the parcel the seller is handing to you. Bring it to your hub after pickup.',
+    );
+    if (code == null || !mounted) return;
+    setState(() => busyDeliveryId = -1);
+    try {
+      final message = await riderApi.scanSellerPickup(code);
+      if (mounted) showMessage(context, message);
+    } on ApiException catch (error) {
+      if (mounted) showMessage(context, error.message);
+    } finally {
+      if (mounted) setState(() => busyDeliveryId = null);
+    }
+    if (mounted) await reloadDeliveries();
+  }
+
   /// Scans the buyer's return slip for [item] when collecting it.
   Future<void> collectReturn(RiderReturn item) async {
     final code = await _scan(

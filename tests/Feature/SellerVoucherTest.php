@@ -24,6 +24,128 @@ class SellerVoucherTest extends TestCase
 {
     use LegacyOrderTables, PsgcFixtures, RefreshDatabase, SignsInMobile;
 
+    public static function checkoutDiscounts(): array
+    {
+        $cases = [];
+        foreach (['cod', 'gcash'] as $method) {
+            $cases[$method.' percent'] = ['percent', 20, null, 100.0, $method];
+            $cases[$method.' capped percent'] = ['percent', 20, 60, 60.0, $method];
+            $cases[$method.' fixed'] = ['fixed', 75, null, 75.0, $method];
+            $cases[$method.' fixed above subtotal'] = ['fixed', 900, null, 500.0, $method];
+        }
+        return $cases;
+    }
+
+    public function test_seller_can_set_expiry_without_a_start_date_and_codes_are_case_insensitive(): void
+    {
+        $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);
+        $this->actingAs($seller)->post(route('seller.vouchers.store'), [
+            'code' => 'EXPIRYTEST', 'type' => 'fixed', 'value' => 50,
+            'expires_at' => now()->addDays(2)->timezone('Asia/Manila')->format('Y-m-d\TH:i'),
+        ])->assertSessionHasNoErrors();
+        $this->post(route('seller.vouchers.store'), [
+            'code' => 'expirytest', 'type' => 'fixed', 'value' => 50,
+        ])->assertSessionHasErrors('code');
+    }
+
+    public static function unavailableDiscounts(): array
+    {
+        return [
+            'below shop minimum' => [['min_spend' => 501]],
+            'paused' => [['is_active' => false]],
+            'not started' => [['starts_at' => 'future']],
+            'expired' => [['expires_at' => 'past']],
+            'exhausted' => [['usage_limit' => 1, 'used_count' => 1]],
+        ];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('unavailableDiscounts')]
+    public function test_unavailable_custom_voucher_is_rejected_without_claiming(array $changes): void
+    {
+        $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);
+        $product = Product::create(['seller_id' => $seller->id, 'name' => 'Eligible item', 'category' => 'storage_bins', 'price' => 500, 'stock' => 10, 'is_active' => true]);
+        $this->actingAs($seller)->post(route('seller.vouchers.store'), [
+            'code' => 'CHECKRULES', 'type' => 'percent', 'value' => 20,
+        ])->assertSessionHasNoErrors();
+        $voucher = Voucher::where('code', 'CHECKRULES')->firstOrFail();
+        if (isset($changes['starts_at'])) {
+            $changes['starts_at'] = now()->addDay();
+        }
+        if (isset($changes['expires_at'])) {
+            $changes['expires_at'] = now()->subDay();
+        }
+        $voucher->update($changes);
+        $buyer = User::factory()->create(['role' => 'buyer', 'status' => 'active']);
+        $address = $buyer->addresses()->create($this->savedAddressData());
+        $this->actingAs($buyer)->post(route('buyer.cart.add', $product), ['quantity' => 1])->assertSessionHasNoErrors();
+        $this->get(route('buyer.checkout.show', ['voucher' => $voucher->code]))->assertSessionHasErrors('voucher_code');
+        $this->post(route('buyer.checkout'), [
+            'address_id' => $address->id, 'idempotency_key' => (string) \Illuminate\Support\Str::uuid(),
+            'payment_method' => 'cod', 'voucher_code' => $voucher->code,
+        ])->assertSessionHasErrors('voucher_code');
+        $this->assertDatabaseCount('orders', 0);
+        $this->assertDatabaseMissing('voucher_claims', ['voucher_id' => $voucher->id, 'user_id' => $buyer->id]);
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('checkoutDiscounts')]
+    public function test_custom_discount_matches_quote_order_and_payment(string $type, int $value, ?int $cap, float $discount, string $method): void
+    {
+        $this->useLegacyOrderTables();
+        \Illuminate\Support\Facades\Schema::table('orders', fn (\Illuminate\Database\Schema\Blueprint $table) => $table->decimal('voucher_discount', 10, 2)->default(0));
+        \Illuminate\Support\Facades\Schema::table('payments', function (\Illuminate\Database\Schema\Blueprint $table) {
+            $table->string('currency')->default('PHP');
+            $table->string('idempotency_key')->nullable()->unique();
+            $table->json('payload')->nullable();
+        });
+        (require database_path('migrations/2026_11_07_000007_add_gcash_payment_checks.php'))->up();
+        $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);
+        $other = User::factory()->create(['role' => 'seller', 'status' => 'active']);
+        foreach ([$seller, $other] as $owner) {
+            $owner->forceFill(['gcash_number' => '09171234567', 'gcash_name' => $owner->name])->save();
+        }
+        $product = Product::create(['seller_id' => $seller->id, 'name' => 'Eligible item', 'category' => 'storage_bins', 'price' => 500, 'stock' => 10, 'is_active' => true]);
+        $unrelated = Product::create(['seller_id' => $other->id, 'name' => 'Other shop item', 'category' => 'storage_bins', 'price' => 300, 'stock' => 10, 'is_active' => true]);
+        $this->actingAs($seller)->post(route('seller.vouchers.store'), [
+            'code' => 'custom-test', 'type' => $type, 'value' => $value, 'min_spend' => 500, 'max_discount' => $cap,
+        ])->assertSessionHasNoErrors();
+        $voucher = Voucher::where('code', 'CUSTOM-TEST')->firstOrFail();
+        $buyer = User::factory()->create(['role' => 'buyer', 'status' => 'active']);
+        $address = $buyer->addresses()->create($this->savedAddressData());
+        $this->actingAs($buyer);
+        foreach ([$product, $unrelated] as $item) {
+            $this->post(route('buyer.cart.add', $item), ['quantity' => 1])->assertSessionHasNoErrors();
+        }
+        $items = $buyer->cart()->firstOrFail()->items()->with(['product', 'variant'])->get();
+        $this->post(route('buyer.cart.selection'), ['action' => 'checkout', 'cart_item_ids' => $items->modelKeys()]);
+        $this->get(route('buyer.checkout.show', ['voucher' => 'custom-test']))->assertOk()
+            ->assertSee('data-voucher-discount="'.$discount.'"', false);
+        $quote = app(\App\Services\CheckoutService::class)->quote($items, $voucher, paymentMethod: $method);
+        $this->assertSame($discount, $quote['voucher_discount']);
+        $this->assertSame(1040.0 - $discount, $quote['total']);
+        $this->post(route('buyer.checkout'), [
+            'cart_item_ids' => $items->modelKeys(), 'address_id' => $address->id,
+            'idempotency_key' => (string) \Illuminate\Support\Str::uuid(),
+            'payment_method' => $method, 'voucher_code' => 'custom-test',
+        ])->assertSessionHasNoErrors()->assertRedirect(route('buyer.orders'));
+        $orders = \App\Models\Order::with('payment')->get();
+        $eligible = $orders->firstWhere('seller_id', $product->seller_id);
+        $otherOrder = $orders->firstWhere('seller_id', $unrelated->seller_id);
+        $this->assertSame($discount, (float) $eligible->voucher_discount);
+        $this->assertSame(620.0 - $discount, $eligible->total);
+        $this->assertSame(420.0, $otherOrder->total);
+        $this->assertNull($otherOrder->voucher_code);
+        foreach ($orders as $order) {
+            $this->assertSame(120.0, (float) $order->shipping_fee);
+            $this->assertSame($order->total, $order->payment->amount);
+            if ($method === 'cod') {
+                $this->assertSame($order->total, (float) $order->payment->payload['cod_amount']);
+            }
+        }
+        $this->assertSame(1, $voucher->fresh()->used_count);
+        $this->assertNotNull($voucher->claims()->where('user_id', $buyer->id)->firstOrFail()->used_at);
+        $this->get(route('buyer.orders'))->assertOk()->assertSee('Voucher discount (CUSTOM-TEST):');
+    }
+
     public function test_shops_opt_in_and_only_their_products_get_the_discount(): void
     {
         Notification::fake();

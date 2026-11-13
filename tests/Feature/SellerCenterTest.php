@@ -259,6 +259,7 @@ class SellerCenterTest extends TestCase
                 $table->string($column);
             }
             $table->decimal('amount', 12, 2);
+            $table->json('payload')->nullable();
             $table->dateTime('paid_at')->nullable();
             $table->timestamps();
         });

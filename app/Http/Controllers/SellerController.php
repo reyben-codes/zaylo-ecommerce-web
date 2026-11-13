@@ -285,6 +285,32 @@ class SellerController extends Controller
         return view('seller.orders', compact('orders', 'filter', 'counts', 'statusLabels', 'partners', 'suggestedPartner'));
     }
 
+    public function orderHistory(Request $request)
+    {
+        $filters = $request->validate([
+            'date' => ['nullable', 'date_format:Y-m-d'],
+            'status' => ['nullable', Rule::in(['all', 'delivered', 'cancelled', 'refunded'])],
+        ]);
+        $date = $filters['date'] ?? null;
+        $filter = $filters['status'] ?? 'all';
+        $legacy = Order::usesLegacySchema();
+        $query = $legacy ? Order::where('seller_id', $this->shopId())->with(['buyer', 'payment', 'disputes', 'items'])
+            : SellerOrder::where('seller_id', $this->shopId())->with(['order.buyer', 'order.payment', 'order.disputes', 'items']);
+        if ($date) {
+            $start = CarbonImmutable::parse($date, self::REPORT_TIMEZONE)->startOfDay();
+            $query->where($legacy ? 'placed_at' : 'created_at', '>=', $start->utc())
+                ->where($legacy ? 'placed_at' : 'created_at', '<', $start->addDay()->utc());
+        }
+        if ($filter === 'refunded') {
+            $query->whereHas($legacy ? 'disputes' : 'order.disputes', fn ($q) => $q->whereNotNull('refunded_at'));
+        } elseif ($filter !== 'all') {
+            $query->whereIn('status', self::ORDER_STATUS_GROUPS[$filter]);
+        }
+        $orders = $query->latest($legacy ? 'placed_at' : 'created_at')->paginate(20)->withQueryString();
+
+        return view('seller.order-history', compact('orders', 'date', 'filter', 'legacy'));
+    }
+
     public function updateOrderStatus(Request $request, Order $order)
     {
         abort_unless((int) $order->seller_id === $this->shopId(), 403);
@@ -1067,6 +1093,10 @@ class SellerController extends Controller
         $legacy = Order::usesLegacySchema();
         $groups = $legacy ? self::ORDER_STATUS_GROUPS : self::SELLER_ORDER_STATUS_GROUPS;
         $orders = $legacy ? Order::where('seller_id', $shopId) : SellerOrder::where('seller_id', $shopId);
+        $today = CarbonImmutable::now(self::REPORT_TIMEZONE)->startOfDay();
+        $allOrders = clone $orders;
+        $orders->where($legacy ? 'placed_at' : 'created_at', '>=', $today->utc())
+            ->where($legacy ? 'placed_at' : 'created_at', '<', $today->addDay()->utc());
         $statusCounts = (clone $orders)->selectRaw('status, COUNT(*) as total')->groupBy('status')->pluck('total', 'status');
         $counts = ['all' => (int) $statusCounts->sum()];
         foreach ($groups as $group => $statuses) {
@@ -1078,7 +1108,7 @@ class SellerController extends Controller
 
         if ($legacy) {
             $revenue = (float) (clone $completed)->sum('subtotal');
-            $monthRevenue = (float) (clone $completed)->where('completed_at', '>=', $monthStart)->sum('subtotal');
+            $monthRevenue = (float) (clone $allOrders)->whereIn('status', $groups['delivered'])->where('completed_at', '>=', $monthStart)->sum('subtotal');
             $recent = (clone $orders)->with('buyer')->latest('placed_at')->limit(5)->get()
                 ->map(fn (Order $order) => [
                     'reference' => $order->order_number,
@@ -1089,7 +1119,7 @@ class SellerController extends Controller
                 ]);
         } else {
             $revenue = (clone $completed)->sum('subtotal_minor') / 100;
-            $monthRevenue = (clone $completed)->where('updated_at', '>=', $monthStart)->sum('subtotal_minor') / 100;
+            $monthRevenue = (clone $allOrders)->whereIn('status', $groups['delivered'])->where('updated_at', '>=', $monthStart)->sum('subtotal_minor') / 100;
             $recent = (clone $orders)->with('order.buyer')->latest()->limit(5)->get()
                 ->map(fn (SellerOrder $order) => [
                     'reference' => $order->order?->reference ?? '#'.$order->id,

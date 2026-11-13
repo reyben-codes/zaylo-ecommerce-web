@@ -405,6 +405,7 @@ class LogisticsOperationsController extends Controller
     {
         $this->ownsParcel($shipment);
         $rider = $this->chosenRider($request);
+        $this->ensureRiderServes($rider, \App\Services\RiderProximity::areaOf($shipment));
         $this->workflow->assign($shipment, $rider, $request->user());
 
         return back()->with('status', 'Parcel '.$this->tracking($shipment).' assigned to '.$rider->user->name.'.');
@@ -420,6 +421,7 @@ class LogisticsOperationsController extends Controller
         if ($parcels->isEmpty()) {
             throw ValidationException::withMessages(['area' => 'No parcels in '.$area.' are waiting for a rider.']);
         }
+        $this->ensureRiderServes($rider, $area);
         foreach ($parcels as $shipment) {
             $this->workflow->assign($shipment, $rider, $request->user());
         }
@@ -436,6 +438,13 @@ class LogisticsOperationsController extends Controller
         }
 
         return $rider;
+    }
+
+    private function ensureRiderServes(Rider $rider, ?string $area): void
+    {
+        if (app(\App\Services\RiderProximity::class)->serving(collect([$rider]), $area)->isEmpty()) {
+            throw ValidationException::withMessages(['rider_id' => 'That rider is not available in this location. Choose an on-shift rider with a saved address in this delivery city.']);
+        }
     }
 
     private function awaitingRiderQuery(): Builder
@@ -617,7 +626,7 @@ class LogisticsOperationsController extends Controller
             ->where('is_active', true)
             ->whereHas('user', fn (Builder $user) => $user->where('status', 'active'))
             ->orderBy('id')
-            ->get();
+            ->get()->filter(fn (Rider $rider) => $rider->isDeliveryRider())->values();
     }
 
     private function withoutRider(Builder $query): void

@@ -187,6 +187,7 @@ Route::middleware(['auth', 'active', 'verified', 'role:seller', 'nocache'])->pre
     Route::patch('/products/{product}/restore', [SellerController::class, 'restoreProduct'])->name('products.restore');
     Route::delete('/products/{product}', [SellerController::class, 'deleteProduct'])->name('products.destroy');
     Route::get('/orders', [SellerController::class, 'orders'])->name('orders');
+    Route::get('/order-history', [SellerController::class, 'orderHistory'])->name('orders.history');
     Route::patch('/orders/{order}/status', [SellerController::class, 'updateOrderStatus'])->name('orders.status');
     Route::patch('/orders/{order}/gcash', [GcashPaymentController::class, 'verify'])->middleware('throttle:60,1')->name('orders.gcash');
     Route::patch('/orders/{order}/handover', [SellerController::class, 'confirmHandover'])->name('orders.handover');

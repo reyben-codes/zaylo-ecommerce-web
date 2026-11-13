@@ -7,14 +7,31 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
 use App\Models\Voucher;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\Services\CheckoutService;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Tests\Support\PsgcFixtures;
+use Tests\Support\LegacyOrderTables;
 use Tests\TestCase;
 
 class CartCheckoutTest extends TestCase
 {
-    use RefreshDatabase, PsgcFixtures;
+    use DatabaseMigrations, PsgcFixtures, LegacyOrderTables;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->useLegacyOrderTables();
+        Schema::table('orders', fn (Blueprint $table) => $table->unsignedInteger('shipping_discount_minor')->default(0));
+        Schema::table('payments', function (Blueprint $table) {
+            $table->string('currency')->nullable();
+            $table->string('idempotency_key')->nullable();
+            $table->json('payload')->nullable();
+        });
+        Schema::table('cart_items', fn (Blueprint $table) => $table->unsignedBigInteger('product_id')->nullable());
+    }
 
     public function test_cart_selection_can_remove_multiple_items_without_affecting_other_items(): void
     {
@@ -52,7 +69,15 @@ class CartCheckoutTest extends TestCase
             ->assertRedirect(route('buyer.checkout.show'));
         $this->get(route('buyer.checkout.show', ['voucher' => 'zayloship']))
             ->assertOk()->assertSee($first->name)->assertSee($second->name)
-            ->assertDontSee($remaining->name)->assertSee('free shipping');
+            ->assertDontSee($remaining->name)->assertSee('free shipping')
+            ->assertSee('data-free-shipping-sellers="2"', false);
+
+        $items = $buyer->cart->items()->with(['product', 'variant'])->whereIn('id', $ids)->get();
+        foreach (['cod', 'gcash'] as $method) {
+            $quote = app(CheckoutService::class)->quote($items, $voucher, paymentMethod: $method);
+            $this->assertSame(240.0, $quote['shipping_discount']);
+            $this->assertSame(300.0, $quote['total']);
+        }
 
         $this->post(route('buyer.checkout'), [
             'cart_item_ids' => $ids, 'address_id' => $address->id,
@@ -83,6 +108,38 @@ class CartCheckoutTest extends TestCase
 
         $this->assertDatabaseCount('orders', 0);
         $this->assertDatabaseCount('cart_items', 1);
+    }
+
+    public function test_shop_free_shipping_only_discounts_its_seller_for_cod(): void
+    {
+        $buyer = $this->buyer();
+        $seller = $this->seller();
+        foreach ([$this->product($seller, 100), $this->product($this->seller(), 200)] as $product) {
+            $this->post(route('buyer.cart.add', $product), ['quantity' => 1])->assertSessionHasNoErrors();
+        }
+        $voucher = Voucher::create(['code' => 'SHOPSHIP', 'type' => 'free_shipping', 'seller_id' => $seller->id]);
+        $items = $buyer->cart->items()->with(['product', 'variant'])->get();
+        $quote = app(CheckoutService::class)->quote($items, $voucher);
+        $this->assertSame(120.0, $quote['shipping_discount']);
+        $this->assertSame(420.0, $quote['total']);
+
+        $this->post(route('buyer.cart.selection'), ['action' => 'checkout', 'cart_item_ids' => $items->modelKeys()]);
+        $this->get(route('buyer.checkout.show', ['voucher' => $voucher->code]))
+            ->assertOk()->assertSee('data-free-shipping-sellers="1"', false);
+
+        $address = $buyer->addresses()->create($this->savedAddressData());
+        $this->post(route('buyer.checkout'), [
+            'cart_item_ids' => $items->modelKeys(), 'address_id' => $address->id,
+            'voucher_code' => $voucher->code, 'idempotency_key' => (string) Str::uuid(),
+            'payment_method' => 'cod',
+        ])->assertSessionHasNoErrors()->assertRedirect(route('buyer.orders'));
+
+        $this->assertSame(120.0, (float) Order::sum('shipping_fee'));
+        $this->assertSame(120.0, (float) Order::sum('shipping_discount'));
+        $this->assertSame(420.0, (float) Order::sum('total'));
+        foreach (Order::with('payment')->get() as $order) {
+            $this->assertSame((float) $order->subtotal + (float) $order->shipping_fee, (float) $order->payment->payload['cod_amount']);
+        }
     }
 
     public function test_buyer_cannot_select_another_buyers_cart_item(): void

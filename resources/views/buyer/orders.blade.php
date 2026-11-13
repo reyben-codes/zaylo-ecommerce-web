@@ -304,6 +304,9 @@
                         @if($order->shipping_discount > 0)
                             <p><strong>Free shipping voucher ({{ $order->voucher_code }}):</strong> -&#8369;{{ number_format($order->shipping_discount, 2) }}</p>
                         @endif
+                        @if($order->voucher_discount > 0)
+                            <p><strong>Voucher discount ({{ $order->voucher_code }}):</strong> -&#8369;{{ number_format($order->voucher_discount, 2) }}</p>
+                        @endif
                         <p><strong>Total:</strong> &#8369;{{ number_format($order->total, 2) }}</p>
                         <h2 class="order-history-title">Status history</h2>
                         @forelse($order->statusHistory as $change)

@@ -7,6 +7,7 @@
                 ['route' => 'seller.dashboard', 'label' => 'Dashboard', 'icon' => 'fa-home'],
                 ['route' => 'seller.notifications', 'label' => 'Notifications', 'icon' => 'fa-bell', 'count' => 'notifications'],
                 ['route' => 'seller.orders', 'label' => 'Orders', 'icon' => 'fa-box', 'count' => 'orders'],
+                ['route' => 'seller.orders.history', 'label' => 'Order history', 'icon' => 'fa-clock-rotate-left'],
                 ['route' => 'seller.handover', 'label' => 'Delivery', 'icon' => 'fa-truck'],
                 ['route' => 'seller.returns', 'label' => 'Returns', 'icon' => 'fa-rotate-left', 'count' => 'returns'],
                 ['route' => 'seller.inventory', 'label' => 'Inventory', 'icon' => 'fa-warehouse'],
@@ -27,6 +28,7 @@
             @php
                 // Sub-pages (e.g. seller.products.edit) keep their section highlighted.
                 $active = request()->routeIs($item['route'], $item['route'].'.*');
+                if ($item['route'] === 'seller.orders' && request()->routeIs('seller.orders.history')) $active = false;
             @endphp
             <a
                 href="{{ route($item['route']) }}"

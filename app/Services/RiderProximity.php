@@ -24,6 +24,23 @@ class RiderProximity
         return Schema::hasColumn('riders', 'last_latitude');
     }
 
+    /** Only riders with a saved address in the delivery city can be offered for that area. */
+    public function serving(Collection $riders, ?string $area): Collection
+    {
+        [$city, $province] = self::areaParts($area);
+        if ($city === '') {
+            return collect();
+        }
+
+        return $riders->filter(function (Rider $rider) use ($city, $province) {
+            $home = $rider->user?->addresses?->sortByDesc('is_default')->first();
+            return $rider->isDeliveryRider() && $rider->is_active && $rider->status === 'approved'
+                && $rider->user?->status === 'active'
+                && self::clean($home?->city) === $city
+                && ($province === '' || self::clean($home?->province ?: $home?->region_name) === $province);
+        })->values();
+    }
+
     /** The app reported where the rider is (on shift or out for delivery). */
     public static function remember(int $userId, float $latitude, float $longitude): void
     {

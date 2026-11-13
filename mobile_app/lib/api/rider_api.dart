@@ -136,6 +136,9 @@ class RiderApi extends ApiClient {
       : await sendMultipart('/mobile/rider/returns/scan', fields: {'code': code.trim()}, files: {'photo': photo}))['message']
           as String;
 
+  Future<String> scanSellerPickup(String code) async =>
+      (await send('POST', '/mobile/rider/seller-pickups/scan', body: {'code': code.trim()}))['message'] as String;
+
   /// Sends the attendance QR code shown at the logistics hub: the first scan
   /// of the day times the rider in, the next one times them out.
   Future<RiderAttendanceScanResult> scanAttendance(String code) async => RiderAttendanceScanResult.fromJson(

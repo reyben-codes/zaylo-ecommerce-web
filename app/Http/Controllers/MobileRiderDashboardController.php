@@ -134,6 +134,17 @@ class MobileRiderDashboardController extends Controller
         ]);
     }
 
+    public function scanSellerPickup(Request $request, \App\Services\RiderSellerPickups $pickups): JsonResponse
+    {
+        $data = $request->validate(['code' => ['required', 'string', 'max:100']]);
+        $shipment = $pickups->scan($request->user(), $data['code']);
+
+        return response()->json([
+            'message' => 'Seller pickup confirmed. Bring the parcel to your logistics hub for receiving and sorting.',
+            'pickup' => ['id' => $shipment->id, 'tracking_number' => RiderDeliveries::labelCode($shipment), 'status' => 'picked_up'],
+        ]);
+    }
+
     /** The reasons a rider picks from when declining an assignment or reporting a failed attempt. */
     public static function reasons(): array
     {

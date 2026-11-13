@@ -295,7 +295,7 @@ class CheckoutService
         $subtotal = $items->sum(fn (CartItem $item) => $item->unitPrice() * $item->quantity);
         $shipping = $items->pluck('product.seller_id')->unique()->count() * $perSeller;
         // Free shipping is ZAYLO's; a discount voucher comes off the items of shops that joined it, paid by them.
-        if ($voucher?->isFreeShipping() && $paymentMethod !== 'cod') {
+        if ($voucher?->isFreeShipping()) {
             $sellerIdsInCart = $items->pluck('product.seller_id')->map(fn ($id) => (int) $id)->unique();
             $shippingDiscount = $voucher->seller_id
                 ? ($sellerIdsInCart->contains((int) $voucher->seller_id) ? $perSeller : 0)
@@ -369,9 +369,6 @@ class CheckoutService
             $this->ensureCanOrder($buyer, $itemsToOrder);
             $voucher = $this->voucher($voucherCode, lock: true);
             $this->ensureVoucherApplies($voucher, $itemsToOrder, $buyer);
-            if ($paymentMethod === 'cod' && $voucher?->isFreeShipping()) {
-                throw ValidationException::withMessages(['voucher_code' => 'Free-shipping vouchers cannot be used with Cash on Delivery because COD shipping is fixed at ₱120 per seller order.']);
-            }
             $joinedShops = $voucher ? app(Vouchers::class)->joinedShops($voucher) : [];
             $address = Address::where('user_id', $buyer->id)->whereKey($input['address_id'])->firstOrFail();
             if (! $address->isStructured()) {
@@ -415,7 +412,7 @@ class CheckoutService
                 }
 
                 $subtotal = $prepared->sum(fn ($row) => $row['unitPrice'] * $row['item']->quantity);
-                $isFreeShipping = $paymentMethod !== 'cod' && $voucher?->isFreeShipping() && (! $voucher->seller_id || (int) $sellerId === (int) $voucher->seller_id);
+                $isFreeShipping = $voucher?->isFreeShipping() && (! $voucher->seller_id || (int) $sellerId === (int) $voucher->seller_id);
                 $shippingDiscount = $isFreeShipping ? $perSeller : 0;
                 $shippingFee = $perSeller - $shippingDiscount;
                 // The shop pays a discount voucher it joined; nothing comes off shops that did not join.

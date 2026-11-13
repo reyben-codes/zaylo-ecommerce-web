@@ -92,6 +92,7 @@ Route::prefix('mobile')->name('mobile.')->middleware('throttle:60,1')->group(fun
             Route::get('/dashboard', [MobileRiderDashboardController::class, 'dashboard'])->name('dashboard');
             // Scanning a parcel label's QR code starts a delivery, and again at the door confirms it.
             Route::post('/deliveries/scan', [MobileRiderDashboardController::class, 'scan'])->middleware('throttle:30,1,mobile-rider-scan')->name('deliveries.scan');
+            Route::post('/seller-pickups/scan', [MobileRiderDashboardController::class, 'scanSellerPickup'])->middleware('throttle:30,1,mobile-rider-pickup-scan')->name('seller-pickups.scan');
             Route::post('/returns/scan', [MobileRiderDashboardController::class, 'scanReturn'])->middleware('throttle:30,1,mobile-rider-return-scan')->name('returns.scan');
             // Scanning the logistics hub's attendance QR code times the rider in, and again times them out.
             // The open app reports the rider's location while a parcel is out for delivery.

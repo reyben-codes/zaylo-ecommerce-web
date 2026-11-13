@@ -11,7 +11,10 @@
         ?? $shippingTable->sortBy(fn ($partner) => $rateTo($partner)['fee'] ?? $standardFee)->first();
     $perSeller = $selectedPartner ? ($rateTo($selectedPartner)['fee'] ?? $standardFee) : $standardFee;
     $shipping = $perSeller * $sellerCount;
-    $shippingDiscount = $voucher?->isFreeShipping() ? $shipping : 0;
+    $freeShippingSellers = $voucher?->isFreeShipping()
+        ? $items->pluck('product.seller_id')->unique()->filter(fn ($id) => ! $voucher->seller_id || (int) $id === (int) $voucher->seller_id)->count()
+        : 0;
+    $shippingDiscount = $perSeller * $freeShippingSellers;
     // A discount voucher only comes off the products of shops that joined it.
     $voucherDiscount = round(array_sum($voucherDiscounts), 2);
     $claimableVoucherCount = collect($availableVouchers ?? [])->where('can_claim', true)->count();
@@ -38,7 +41,7 @@
             <div class="checkout-voucher-applied-banner">
                 <i class="fas fa-circle-check" aria-hidden="true"></i>
                 <div class="checkout-voucher-applied-info">
-                    <strong class="checkout-voucher-applied">{{ $voucher->code }} applied: {{ $voucher->isFreeShipping() ? 'free shipping with GCash; COD shipping is fixed at ₱120 per seller order' : $voucher->describe().' on products from shops in this voucher (−₱'.number_format($voucherDiscount, 2).')' }}</strong>
+                    <strong class="checkout-voucher-applied">{{ $voucher->code }} applied: {{ $voucher->isFreeShipping() ? 'free shipping on eligible shops' : $voucher->describe().' on products from shops in this voucher (−₱'.number_format($voucherDiscount, 2).')' }}</strong>
                 </div>
                 <a href="{{ route('buyer.checkout.show') }}" class="checkout-voucher-remove-pill" title="Remove voucher"><i class="fas fa-xmark"></i> Remove</a>
             </div>
@@ -261,7 +264,7 @@
                                 <div class="gcash-pay__account">
                                     <strong>{{ $seller['shop'] }}</strong>
                                     <span>GCash <b>{{ $seller['account']['number'] }}</b> · {{ $seller['account']['name'] }}</span>
-                                    <span>Send @php($sellerDue = $seller['subtotal'] - ($voucherDiscounts[$seller['seller_id']] ?? 0))<b data-gcash-amount data-subtotal="{{ $sellerDue }}">&#8369;{{ number_format($sellerDue + $perSeller - ($voucher?->isFreeShipping() ? $perSeller : 0), 2) }}</b> <small>(items + shipping)</small></span>
+                                    <span>Send @php($sellerDue = $seller['subtotal'] - ($voucherDiscounts[$seller['seller_id']] ?? 0))@php($sellerFreeShipping = $voucher?->isFreeShipping() && (! $voucher->seller_id || (int) $seller['seller_id'] === (int) $voucher->seller_id))<b data-gcash-amount data-subtotal="{{ $sellerDue }}" data-free-shipping="{{ $sellerFreeShipping ? 1 : 0 }}">&#8369;{{ number_format($sellerDue + $perSeller - ($sellerFreeShipping ? $perSeller : 0), 2) }}</b> <small>(items + shipping)</small></span>
                                 </div>
                                 <label class="gcash-pay__reference">
                                     <span>GCash reference no.</span>
@@ -276,13 +279,13 @@
             </section>
         </div>
 
-        <aside class="checkout-card checkout-order-summary" data-checkout-summary data-subtotal="{{ $subtotal }}" data-sellers="{{ $sellerCount }}" data-standard-fee="{{ $standardFee }}" data-free-shipping="{{ $voucher?->isFreeShipping() ? 1 : 0 }}" data-voucher-discount="{{ $voucherDiscount }}">
+        <aside class="checkout-card checkout-order-summary" data-checkout-summary data-subtotal="{{ $subtotal }}" data-sellers="{{ $sellerCount }}" data-standard-fee="{{ $standardFee }}" data-free-shipping="{{ $voucher?->isFreeShipping() ? 1 : 0 }}" data-free-shipping-sellers="{{ $freeShippingSellers }}" data-voucher-discount="{{ $voucherDiscount }}">
             <h2>Order summary</h2>
             <p class="summary-row"><span>Products ({{ $items->sum('quantity') }})</span><strong>&#8369;{{ number_format($subtotal, 2) }}</strong></p>
             <p class="summary-row"><span>Shipping ({{ $sellerCount }} seller(s))</span><strong data-summary-shipping>&#8369;{{ number_format($shipping, 2) }}</strong></p>
             @if($voucher?->isFreeShipping())<p class="summary-row checkout-discount"><span>Free shipping voucher</span><strong data-summary-discount>−&#8369;{{ number_format($shippingDiscount, 2) }}</strong></p>@endif
             @if($voucherDiscount > 0)<p class="summary-row checkout-discount"><span>Voucher {{ $voucher->code }}</span><strong>−&#8369;{{ number_format($voucherDiscount, 2) }}</strong></p>@endif
-            <p class="summary-row checkout-total"><span>Total to pay</span><strong data-summary-total>&#8369;{{ number_format($subtotal + $shipping - $shippingDiscount - $voucherDiscount, 2) }}</strong></p>
+            <p class="summary-row checkout-total"><span data-summary-total-label>Total to pay</span><strong data-summary-total>&#8369;{{ number_format($subtotal + $shipping - $shippingDiscount - $voucherDiscount, 2) }}</strong></p>
             <p class="checkout-summary-note">Your final total is recalculated when you place the order if prices or stock have changed.</p>
             <button class="market-button" type="submit" @disabled($usableAddresses->isEmpty() || $identityItems->isNotEmpty())>Place order</button>
             @if($identityItems->isNotEmpty())<p class="checkout-summary-note">18+ items need an approved ID before you can order them.</p>@endif

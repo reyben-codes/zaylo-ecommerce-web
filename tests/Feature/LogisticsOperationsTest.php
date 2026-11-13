@@ -108,6 +108,8 @@ class LogisticsOperationsTest extends TestCase
 
         $fresh = $shipment->fresh();
         $this->assertSame('delivered', $fresh->status);
+        $this->assertFalse((bool) $fresh->cod_collected);
+        $fresh = app(\App\Services\CodCollections::class)->collect($fresh, $rider->user);
         $this->assertTrue((bool) $fresh->cod_collected);
         $this->assertSame(2, (int) $fresh->attempts);
         $this->assertSame('delivered', $shipment->sellerOrder->fresh()->status);
@@ -192,9 +194,9 @@ class LogisticsOperationsTest extends TestCase
 
     public function test_riders_nearest_a_parcel_are_offered_first(): void
     {
-        $far = $this->rider($this->provider, 'Cebu Rider');
+        $far = $this->rider($this->provider, 'Cebu Rider', withAddress: false);
         $far->user->addresses()->create(['label' => 'Home', 'recipient_name' => 'Cebu Rider', 'phone' => '09170000001', 'line1' => '1 Osmena Blvd', 'barangay' => 'Lahug', 'postal_code' => '6000', 'city' => 'Cebu City', 'province' => 'Cebu', 'is_default' => true]);
-        $near = $this->rider($this->provider, 'Pasig Rider');
+        $near = $this->rider($this->provider, 'Pasig Rider', withAddress: false);
         $near->user->addresses()->create(['label' => 'Home', 'recipient_name' => 'Pasig Rider', 'phone' => '09170000002', 'line1' => '2 Caruncho Ave', 'barangay' => 'Kapitolyo', 'postal_code' => '1603', 'city' => 'Pasig City', 'province' => 'Metro Manila', 'is_default' => true]);
         $this->parcel('ZX-0201', 'sorted', area: 'Pasig City, Metro Manila');
         $this->actingAs($this->owner);
@@ -202,7 +204,7 @@ class LogisticsOperationsTest extends TestCase
         // By home address: the rider living in the parcel's city comes first, labelled.
         $page = $this->get(route('logistics.assignments'))->assertOk()->getContent();
         $this->assertStringContainsString('Pasig Rider · lives in Pasig City', $page);
-        $this->assertLessThan(strpos($page, 'Cebu Rider · lives in Cebu City'), strpos($page, 'Pasig Rider · lives in Pasig City'));
+        $this->assertStringNotContainsString('value="'.$far->id.'"', $page);
 
         // A rider whose app reported a position near the buyer's pin beats both, with the distance.
         $far->forceFill(['last_latitude' => 14.5764, 'last_longitude' => 121.0851, 'last_located_at' => now()->subMinutes(5)])->save();
@@ -218,6 +220,18 @@ class LogisticsOperationsTest extends TestCase
         // The rider app's location report is kept on the rider (also while only on shift).
         RiderProximity::remember($near->user_id, 14.6, 121.1);
         $this->assertEqualsWithDelta(14.6, (float) $near->fresh()->last_latitude, 0.0001);
+    }
+
+    public function test_outside_area_riders_are_hidden_and_cannot_be_assigned_by_post(): void
+    {
+        $rider = $this->rider($this->provider, 'Outside Area Rider');
+        $rider->user->addresses()->update(['city' => 'Cebu City', 'province' => 'Cebu']);
+        $shipment = $this->parcel('LOCAL-ONLY', 'sorted', area: 'Pasig City, Metro Manila');
+        $page = $this->actingAs($this->owner)->get(route('logistics.assignments'))->assertOk();
+        $page->assertSee('No available riders in this location')->assertDontSee('value="'.$rider->id.'"', false);
+        $this->post(route('logistics.parcels.assign', $shipment), ['rider_id' => $rider->id])->assertSessionHasErrors('rider_id');
+        $this->post(route('logistics.areas.assign'), ['area' => 'Pasig City, Metro Manila', 'rider_id' => $rider->id])->assertSessionHasErrors('rider_id');
+        $this->assertNull($shipment->fresh()->rider_id);
     }
 
     public function test_delivered_parcels_can_be_searched_by_delivered_date(): void
@@ -372,10 +386,13 @@ class LogisticsOperationsTest extends TestCase
     }
 
     /** An approved rider, timed in at the hub unless [$onShift] is false (only riders on shift can take parcels). */
-    private function rider(LogisticsProvider $provider, string $name, bool $onShift = true): Rider
+    private function rider(LogisticsProvider $provider, string $name, bool $onShift = true, bool $withAddress = true): Rider
     {
         $user = User::factory()->create(['role' => 'rider', 'status' => 'active', 'name' => $name]);
         $rider = Rider::create(['user_id' => $user->id, 'logistics_provider_id' => $provider->id, 'vehicle_type' => 'Motorcycle', 'status' => 'approved', 'is_active' => true]);
+        if ($withAddress) {
+            $user->addresses()->create(['recipient' => $name, 'phone' => '09170000001', 'line1' => 'Home', 'barangay' => 'Kapitolyo', 'city' => 'Pasig City', 'province' => 'Metro Manila', 'is_default' => true]);
+        }
         if ($onShift) {
             $this->timeIn($rider);
         }

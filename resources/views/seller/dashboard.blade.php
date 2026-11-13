@@ -7,6 +7,10 @@
     <link rel="stylesheet" href="{{ asset('css/seller-dashboard.css') }}?v={{ filemtime(public_path('css/seller-dashboard.css')) }}">
 @endpush
 
+@push('scripts')
+    <script src="{{ asset('js/seller-daily-summary.js') }}" defer></script>
+@endpush
+
 @section('content')
     @php
         $openOrders = $orderCounts['to_prepare'] + $orderCounts['shipping'];
@@ -16,7 +20,7 @@
         <div>
             <p class="seller-eyebrow">{{ $storeName }}</p>
             <h1>Welcome back, {{ Str::before($user->name, ' ') ?: $user->name }}</h1>
-            <p>Here is what needs your attention today.</p>
+            <p>Today's orders reset at midnight Philippine time. Past orders remain in Order history; unfinished orders stay in Orders.</p>
         </div>
         <div class="seller-page-heading__actions">
             @if($shopPage)
@@ -31,12 +35,12 @@
 
     <section class="seller-stat-grid seller-stat-grid--five" aria-label="Shop summary">
         <a href="{{ route('seller.orders') }}" class="seller-stat">
-            <span class="seller-stat__label"><i class="fas fa-box" aria-hidden="true"></i> Open orders</span>
+            <span class="seller-stat__label"><i class="fas fa-box" aria-hidden="true"></i> Today's open orders</span>
             <strong class="seller-stat__value">{{ number_format($openOrders) }}</strong>
             <span class="seller-stat__note">{{ $orderCounts['to_prepare'] }} to prepare · {{ $orderCounts['shipping'] }} in delivery</span>
         </a>
         <a href="{{ route('seller.reports') }}" class="seller-stat">
-            <span class="seller-stat__label"><i class="fas fa-peso-sign" aria-hidden="true"></i> Delivered sales</span>
+            <span class="seller-stat__label"><i class="fas fa-peso-sign" aria-hidden="true"></i> Delivered sales from today's orders</span>
             <strong class="seller-stat__value">&#8369;{{ number_format($revenue, 2) }}</strong>
             <span class="seller-stat__note">&#8369;{{ number_format($monthRevenue, 2) }} this month</span>
         </a>
@@ -124,10 +128,10 @@
         <section class="seller-panel">
             <header class="seller-panel__header">
                 <div>
-                    <h2>Recent orders</h2>
-                    <p>{{ $orderCounts['all'] }} {{ Str::plural('order', $orderCounts['all']) }} in total</p>
+                    <h2>Today's orders</h2>
+                    <p>{{ $orderCounts['all'] }} {{ Str::plural('order', $orderCounts['all']) }} placed today</p>
                 </div>
-                <a href="{{ route('seller.orders') }}" class="seller-link">View all <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+                <a href="{{ route('seller.orders.history') }}" class="seller-link">Order history <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
             </header>
 
             @if($recentOrders->isEmpty())

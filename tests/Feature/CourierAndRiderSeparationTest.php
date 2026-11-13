@@ -204,6 +204,7 @@ class CourierAndRiderSeparationTest extends TestCase
             'status' => 'approved',
             'is_active' => true,
         ]);
+        $riderUser->addresses()->create(['recipient' => 'Rider', 'phone' => '09170000001', 'line1' => 'Home', 'barangay' => 'Central', 'city' => 'Makati', 'province' => 'Metro Manila', 'is_default' => true]);
         // Time in the rider so they can receive parcels at the hub
         $riderRecord->attendances()->create([
             'logistics_provider_id' => $this->provider->id,

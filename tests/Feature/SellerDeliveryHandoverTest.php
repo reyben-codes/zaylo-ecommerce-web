@@ -67,7 +67,7 @@ class SellerDeliveryHandoverTest extends TestCase
     {
         $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);
         $buyer = User::factory()->create(['role' => 'buyer', 'status' => 'active']);
-        $rider = User::factory()->create(['role' => 'rider', 'status' => 'active']);
+        $rider = User::factory()->create(['role' => 'courier', 'status' => 'active']);
         $order = $this->order($buyer, $seller, 'ready_for_pickup');
         $shipment = $order->shipment()->create([
             'tracking_number' => 'TRK-READY-PARCEL',
@@ -78,8 +78,8 @@ class SellerDeliveryHandoverTest extends TestCase
             ->post(route('courier.deliveries.claim', $shipment))
             ->assertSessionHasNoErrors();
 
-        $this->assertSame($rider->id, $shipment->fresh()->courier_id);
-        $this->assertSame('assigned', $shipment->fresh()->status);
+        $this->assertSame($rider->id, $shipment->fresh()->pickup_courier_id);
+        $this->assertSame('ready', $shipment->fresh()->status);
     }
 
     public function test_the_waybill_is_the_one_label_sellers_print_with_both_codes_for_the_rider(): void
@@ -136,6 +136,7 @@ class SellerDeliveryHandoverTest extends TestCase
             $table->id();
             $table->foreignId('order_id')->unique()->constrained()->cascadeOnDelete();
             $table->foreignId('courier_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('pickup_courier_id')->nullable()->index()->constrained('users')->nullOnDelete();
             $table->string('tracking_number')->unique();
             $table->string('status')->default('ready');
             $table->timestamp('picked_up_at')->nullable();

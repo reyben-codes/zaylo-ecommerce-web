@@ -243,7 +243,15 @@ class RiderDashboardTabState extends State<RiderDashboardTab> with RiderDelivery
                       'The buyer and seller are notified automatically.',
               style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
 
-          if (data.newAssignments.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: busyDeliveryId == null ? scanSellerPickup : null,
+              icon: const Icon(Icons.qr_code_scanner),
+              label: const Text('SCAN SELLER PICKUP'),
+            ),
+            const Text('Scan at the seller to collect a confirmed parcel for your logistics partner. Bring it to the hub for sorting.'),
+
+            if (data.newAssignments.isNotEmpty) ...[
             RiderSectionHeader(title: 'New assignments', count: data.newAssignments.length),
             for (final delivery in data.newAssignments) _card(delivery),
           ],

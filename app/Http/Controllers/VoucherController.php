@@ -35,6 +35,9 @@ class VoucherController extends Controller
     public function store(Request $request)
     {
         abort_unless(Vouchers::ready(), 404);
+        if (is_string($request->input('code'))) {
+            $request->merge(['code' => strtoupper(trim($request->input('code')))]);
+        }
         $data = $request->validate([
             'code' => ['required', 'string', 'min:4', 'max:30', 'regex:/^[A-Za-z0-9-]+$/D', Rule::unique('vouchers', 'code')],
             'name' => ['nullable', 'string', 'max:80'],
@@ -114,6 +117,9 @@ class VoucherController extends Controller
         $shopId = Shop::idForSeller($request->user());
         abort_unless($shopId, 403);
 
+        if (is_string($request->input('code'))) {
+            $request->merge(['code' => strtoupper(trim($request->input('code')))]);
+        }
         $data = $request->validate([
             'code' => ['required', 'string', 'min:4', 'max:30', 'regex:/^[A-Za-z0-9-]+$/D', Rule::unique('vouchers', 'code')],
             'name' => ['nullable', 'string', 'max:80'],
