@@ -43,6 +43,50 @@
     font-size: .72rem;
 }
 
+.attendance-qr__countdown {
+    width: min(320px, 100%);
+}
+
+.attendance-qr__countdown-label {
+    margin: 0 0 8px;
+    color: var(--zaylo-ink);
+    font-size: .8rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.attendance-qr__progress {
+    display: block;
+    width: 100%;
+    height: 8px;
+    overflow: hidden;
+    border: 0;
+    border-radius: 999px;
+    appearance: none;
+    background: var(--zaylo-border);
+    color: var(--zaylo-accent);
+}
+
+.attendance-qr__progress::-webkit-progress-bar {
+    border-radius: 999px;
+    background: var(--zaylo-border);
+}
+
+.attendance-qr__progress::-webkit-progress-value {
+    border-radius: 999px;
+    background: var(--zaylo-accent);
+    transition: width .1s linear;
+}
+
+.attendance-qr__progress::-moz-progress-bar {
+    border-radius: 999px;
+    background: var(--zaylo-accent);
+}
+
+.attendance-qr:fullscreen .attendance-qr__countdown-label {
+    font-size: 1rem;
+}
+
 .attendance-qr:fullscreen {
     display: grid;
     place-content: center;
@@ -228,6 +272,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+    .attendance-qr__progress::-webkit-progress-value {
+        transition: none;
+    }
+
     .attendance-qr__image {
         transition: none;
     }

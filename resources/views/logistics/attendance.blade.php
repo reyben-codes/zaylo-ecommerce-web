@@ -34,7 +34,7 @@
 
     <div class="attendance-top{{ $qr ? '' : ' attendance-top--single' }}">
         @if($qr)
-            <section class="seller-panel attendance-qr" aria-labelledby="attendance-qr-heading" data-attendance-qr data-code-url="{{ route('logistics.attendance.code') }}" data-refresh-in="{{ $qr['refresh_in'] }}">
+            <section class="seller-panel attendance-qr" aria-labelledby="attendance-qr-heading" data-attendance-qr data-code-url="{{ route('logistics.attendance.code') }}" data-refresh-in="{{ $qr['refresh_in'] }}" data-window-seconds="{{ \App\Services\RiderAttendanceClock::WINDOW_SECONDS }}">
                 <header class="seller-panel__header">
                     <div>
                         <h2 id="attendance-qr-heading">Attendance QR code</h2>
@@ -46,6 +46,10 @@
                 </header>
                 <div class="seller-panel__body attendance-qr__body">
                     <img src="{{ $qr['image'] }}" alt="Attendance QR code for {{ $provider->name }} riders" class="attendance-qr__image" width="240" height="240" data-attendance-qr-image>
+                    <div class="attendance-qr__countdown" data-attendance-countdown hidden>
+                        <p class="attendance-qr__countdown-label" role="timer" aria-live="off" data-attendance-countdown-label></p>
+                        <progress class="attendance-qr__progress" data-attendance-progress max="{{ \App\Services\RiderAttendanceClock::WINDOW_SECONDS }}" value="{{ $qr['refresh_in'] }}" aria-label="Time until the next attendance QR code"></progress>
+                    </div>
                     <p class="attendance-qr__note" role="status" data-attendance-qr-status>The code changes every {{ \App\Services\RiderAttendanceClock::WINDOW_SECONDS }} seconds, so a photo of it stops working.</p>
                 </div>
             </section>
