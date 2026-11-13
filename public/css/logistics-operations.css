@@ -123,15 +123,18 @@
 /* Sorting bins (delivery areas) */
 .parcel-bins {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+    gap: 16px;
     padding: 18px 20px;
 }
 
 .parcel-bin {
     display: grid;
-    gap: 10px;
-    padding: 14px;
+    grid-template-columns: minmax(0, 1fr);
+    align-content: space-between;
+    min-width: 0;
+    gap: 16px;
+    padding: 16px;
     border: 1px solid var(--zaylo-border);
     border-radius: 10px;
     background: var(--c-fcfaf8);
@@ -144,12 +147,14 @@
 
 .parcel-bin__head {
     display: flex;
+    flex-wrap: wrap;
     gap: 10px;
-    align-items: baseline;
+    align-items: flex-start;
     justify-content: space-between;
 }
 
 .parcel-bin__head a {
+    flex: 1 1 160px;
     min-width: 0;
     color: var(--zaylo-ink);
     font-weight: 700;
@@ -163,13 +168,46 @@
 
 .parcel-bin__count {
     flex: 0 0 auto;
+    padding: 4px 8px;
+    border: 1px solid var(--zaylo-border);
+    border-radius: 999px;
+    background: var(--c-ffffff);
+    white-space: nowrap;
     color: var(--zaylo-muted);
     font-size: .74rem;
 }
 
-.parcel-bin .parcel-inline-form select {
-    flex: 1;
+.parcel-bin .parcel-inline-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
     min-width: 0;
+}
+
+.parcel-bin .parcel-inline-form select {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    min-height: 42px;
+}
+
+.parcel-bin .parcel-inline-form .seller-button {
+    min-height: 42px;
+    white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+    .parcel-bins {
+        padding: 16px;
+    }
+
+    .parcel-bin .parcel-inline-form {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .parcel-bin .parcel-inline-form .seller-button {
+        width: 100%;
+    }
 }
 
 .parcel-empty-inline {
