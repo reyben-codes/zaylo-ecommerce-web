@@ -374,6 +374,124 @@
     align-items: start;
 }
 
+/* Size the dashboard rows to their panel, including when Riders sits alongside it. */
+.logistics-active-parcels {
+    container-type: inline-size;
+}
+
+.logistics-active-parcels .seller-panel__header {
+    flex-wrap: wrap;
+}
+
+.logistics-active-parcels .seller-table-wrap {
+    overflow: visible;
+}
+
+.logistics-active-parcels .parcel-table {
+    min-width: 0;
+    table-layout: fixed;
+}
+
+.logistics-active-parcels .parcel-table td {
+    overflow-wrap: anywhere;
+}
+
+.logistics-active-parcels .parcel-stage {
+    box-sizing: border-box;
+    max-width: 100%;
+    white-space: normal;
+}
+
+.logistics-active-parcels .parcel-actions,
+.logistics-active-parcels .parcel-actions form {
+    min-width: 0;
+    max-width: 100%;
+    flex-wrap: wrap;
+}
+
+.logistics-active-parcels .parcel-actions .seller-button,
+.logistics-active-parcels .parcel-actions input,
+.logistics-active-parcels .parcel-actions select {
+    box-sizing: border-box;
+    min-width: 0;
+    max-width: 100%;
+    white-space: normal;
+}
+
+@container (max-width: 1050px) {
+    .logistics-active-parcels .parcel-table,
+    .logistics-active-parcels .parcel-table tbody {
+        display: block;
+    }
+
+    /* Keep column headings available to assistive technology. */
+    .logistics-active-parcels .parcel-table thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+    }
+
+    .logistics-active-parcels .parcel-table tbody tr {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 18px 24px;
+        padding: 20px;
+        border-bottom: 1px solid var(--zaylo-border);
+    }
+
+    .logistics-active-parcels .parcel-table tbody tr:last-child {
+        border-bottom: 0;
+    }
+
+    .logistics-active-parcels .parcel-table td {
+        display: block;
+        min-width: 0;
+        max-width: none;
+        padding: 0;
+        border: 0;
+    }
+
+    .logistics-active-parcels .parcel-table td[data-label]::before {
+        content: attr(data-label);
+        display: block;
+        margin-bottom: 8px;
+        color: var(--zaylo-muted);
+        font-size: .63rem;
+        font-weight: 700;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+    }
+
+    .logistics-active-parcels .parcel-table td[colspan] {
+        grid-column: 1 / -1;
+    }
+
+    .logistics-active-parcels .parcel-actions {
+        justify-content: flex-start;
+    }
+
+    .logistics-active-parcels .parcel-destination .seller-cell-note {
+        display: block;
+        overflow: visible;
+        -webkit-line-clamp: unset;
+    }
+}
+
+@container (max-width: 760px) {
+    .logistics-active-parcels .parcel-table tbody tr {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@container (max-width: 480px) {
+    .logistics-active-parcels .parcel-table tbody tr {
+        grid-template-columns: minmax(0, 1fr);
+        padding: 16px;
+    }
+}
+
 .rider-paused {
     color: var(--c-8f5b17);
     font-weight: 600;

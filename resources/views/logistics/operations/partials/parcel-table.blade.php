@@ -22,7 +22,7 @@
             @forelse($shipments as $shipment)
                 @php $parcel = \App\Support\ParcelView::for($shipment); @endphp
                 <tr>
-                    <td>
+                    <td data-label="Parcel">
                         <strong class="parcel-tracking">{{ $parcel['tracking'] }}</strong>
                         <span class="seller-cell-note">Order {{ $parcel['order'] }}</span>
                         @foreach(($shipment->sellerOrder?->items ?? $shipment->order?->items ?? collect()) as $item)
@@ -30,7 +30,7 @@
                         @endforeach
                         @include('partials.waybill-queue', ['queue' => \App\Support\WaybillQueue::for($shipment), 'note' => 'Print for seller'])
                     </td>
-                    <td>
+                    <td data-label="Seller">
                         <strong>{{ $parcel['seller'] }}</strong>
                         @if($parcel['pickup_address'] && $parcel['pickup_address'] !== '—')
                             <span class="seller-cell-note"><i class="fas fa-location-dot" aria-hidden="true"></i> {{ $parcel['pickup_address'] }}</span>
@@ -39,11 +39,11 @@
                             <span class="seller-cell-note"><i class="fas fa-phone" aria-hidden="true"></i> {{ $parcel['seller_phone'] }}</span>
                         @endif
                     </td>
-                    <td class="parcel-destination">
+                    <td class="parcel-destination" data-label="Deliver to">
                         <strong>{{ $parcel['recipient'] }}</strong>
                         <span class="seller-cell-note">{{ $parcel['destination'] }}</span>
                     </td>
-                    <td>
+                    <td data-label="Step">
                         <span class="parcel-stage parcel-stage--{{ $parcel['stage'] }}">{{ $parcel['label'] }}</span>
                         @if($parcel['stage'] === 'confirmed' && $parcel['pickup_on'])
                             <span class="seller-cell-note parcel-note">Pickup {{ $parcel['pickup_on']->isToday() ? 'today' : $parcel['pickup_on']->format('D, M j') }}</span>
@@ -60,7 +60,7 @@
                             ])
                         @endif
                     </td>
-                    <td>
+                    <td data-label="Personnel">
                         @if($parcel['pickup_courier'])
                             <span class="seller-cell-note"><strong>Pickup:</strong> {{ $parcel['pickup_courier'] }}</span>
                         @endif
@@ -77,7 +77,7 @@
                         @endif
                     </td>
                     @unless($hideActions)
-                        <td>@include('logistics.operations.partials.parcel-actions', ['shipment' => $shipment, 'riders' => $riders, 'couriers' => $couriers])</td>
+                        <td data-label="Actions">@include('logistics.operations.partials.parcel-actions', ['shipment' => $shipment, 'riders' => $riders, 'couriers' => $couriers])</td>
                     @endunless
                 </tr>
             @empty

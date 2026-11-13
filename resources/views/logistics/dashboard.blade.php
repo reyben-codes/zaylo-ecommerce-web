@@ -44,7 +44,7 @@
     </section>
 
     <div class="seller-panel-grid logistics-dashboard-grid">
-        <section class="seller-panel">
+        <section class="seller-panel logistics-active-parcels">
             <header class="seller-panel__header">
                 <div><h2>Active parcels</h2><p>The latest movement across your sorting center.</p></div>
                 <a href="{{ route('logistics.deliveries') }}" class="seller-link">All deliveries <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
