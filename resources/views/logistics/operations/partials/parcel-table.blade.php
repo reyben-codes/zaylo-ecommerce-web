@@ -25,6 +25,9 @@
                     <td>
                         <strong class="parcel-tracking">{{ $parcel['tracking'] }}</strong>
                         <span class="seller-cell-note">Order {{ $parcel['order'] }}</span>
+                        @foreach(($shipment->sellerOrder?->items ?? $shipment->order?->items ?? collect()) as $item)
+                            <span class="seller-cell-note">{{ $item->product_name }} &times; {{ $item->quantity }}</span>
+                        @endforeach
                         @include('partials.waybill-queue', ['queue' => \App\Support\WaybillQueue::for($shipment), 'note' => 'Print for seller'])
                     </td>
                     <td>
@@ -60,6 +63,12 @@
                     <td>
                         @if($parcel['pickup_courier'])
                             <span class="seller-cell-note"><strong>Pickup:</strong> {{ $parcel['pickup_courier'] }}</span>
+                        @endif
+                        @if($shipment->pickup_scanned_at)
+                            <span class="seller-cell-note">Scanned {{ $shipment->pickup_scanned_at->timezone('Asia/Manila')->format('M j, g:i A') }}</span>
+                        @endif
+                        @if($shipment->hub_received_at)
+                            <span class="seller-cell-note">Handover confirmed by {{ $shipment->hubReceiver?->name }} on {{ $shipment->hub_received_at->timezone('Asia/Manila')->format('M j, g:i A') }}</span>
                         @endif
                         @if($parcel['rider'])
                             <span class="seller-cell-note"><strong>Delivery:</strong> {{ $parcel['rider'] }}</span>

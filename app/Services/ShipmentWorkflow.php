@@ -326,14 +326,22 @@ class ShipmentWorkflow
     }
 
     /** [$note] replaces the default order-history note, e.g. with the reason a delivery attempt failed. */
-    public function advance(Shipment $shipment, string $to, User $actor, ?string $note = null): void
+    public function advance(Shipment $shipment, string $to, User $actor, ?string $note = null, array $receipt = []): void
     {
-        DB::transaction(function () use ($shipment, $to, $actor, $note) {
+        DB::transaction(function () use ($shipment, $to, $actor, $note, $receipt) {
             $locked = Shipment::whereKey($shipment->id)->lockForUpdate()->firstOrFail();
             if (! array_key_exists($to, self::nextSteps($locked))) {
                 throw ValidationException::withMessages(['status' => 'This parcel can no longer move to "'.self::label($to).'". Refresh the page and try again.']);
             }
             $attributes = ['status' => self::stored($to)];
+            if ($to === 'in_transit' && $locked->pickup_scanned_at) {
+                if (! $actor->hasRole('logistics') || (int) $actor->logisticsProvider?->id !== (int) $locked->logistics_provider_id
+                    || collect(['parcel_received', 'tracking_verified', 'items_checked'])->contains(fn ($key) => ($receipt[$key] ?? false) !== true)) {
+                    throw ValidationException::withMessages(['handover' => 'Your logistics partner must complete the handover checklist before receiving this parcel.']);
+                }
+                $attributes += ['hub_received_at' => now(), 'hub_received_by' => $actor->id, 'hub_receipt_checks' => $receipt];
+                $note ??= 'Handover confirmed at hub by '.$actor->name.'; parcel received, tracking verified, and items checked.';
+            }
             // Only the deployed schema keeps step timestamps; the newer one counts attempts and COD instead.
             if ($to === 'picked_up') {
                 if (Schema::hasColumn('shipments', 'picked_up_at') && ! $locked->picked_up_at) {

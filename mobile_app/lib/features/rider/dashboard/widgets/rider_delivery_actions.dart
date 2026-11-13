@@ -113,10 +113,12 @@ mixin RiderDeliveryActions<T extends StatefulWidget> on State<T> {
     await _sendScan(code, active.where((delivery) => delivery.matchesCode(code)).firstOrNull);
   }
 
-  Future<void> scanSellerPickup() async {
+  Future<void> scanSellerPickup([RiderSellerPickup? pickup]) async {
     final code = await _scan(
       title: 'Pick up from seller',
       hint: 'Scan the waybill on the parcel the seller is handing to you. Bring it to your hub after pickup.',
+      accept: pickup == null ? null : (code) => code.trim().toUpperCase() == pickup.trackingNumber.toUpperCase()
+          ? null : 'Scan the label for ${pickup.trackingNumber}.',
     );
     if (code == null || !mounted) return;
     setState(() => busyDeliveryId = -1);

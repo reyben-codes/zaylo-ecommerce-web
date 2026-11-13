@@ -16,9 +16,29 @@
     $today = now('Asia/Manila');
     $scanned = $scanned ?? null;
     $thisParcel = (string) old('parcel') === (string) $shipment->id;
+    $localPickupRiders = isset($pickupRiders)
+        ? app(\App\Services\RiderProximity::class)->serving($pickupRiders, \App\Services\RiderSellerPickups::pickupArea($shipment))
+        : collect();
 @endphp
 
 <div class="parcel-actions">
+    @if(in_array($stage, ['ready', 'confirmed'], true) && isset($pickupRiders))
+        @if($localPickupRiders->isNotEmpty() && $shipment->logistics_provider_id)
+            <form method="POST" action="{{ route('logistics.parcels.pickup-rider', $shipment) }}" class="parcel-inline-form">
+                @csrf
+                <label for="pickup-rider-{{ $shipment->id }}">Pickup rider</label>
+                <select id="pickup-rider-{{ $shipment->id }}" name="rider_id" required>
+                    <option value="">Choose pickup rider</option>
+                    @foreach($localPickupRiders as $pickupRider)
+                        <option value="{{ $pickupRider->id }}" @selected((int) $shipment->pickup_courier_id === (int) $pickupRider->user_id)>{{ $pickupRider->user->name }}</option>
+                    @endforeach
+                </select>
+                <button type="submit" class="seller-button seller-button--small">Assign pickup rider</button>
+            </form>
+        @else
+            <span class="seller-cell-note">{{ $shipment->logistics_provider_id ? 'No on-shift pickup riders in the seller location.' : 'Confirm this pickup before assigning a rider.' }}</span>
+        @endif
+    @endif
     @if($awaitingConfirmation)
         <form method="POST" action="{{ route('logistics.parcels.pickup', $shipment) }}" class="parcel-inline-form">
             @csrf
@@ -110,6 +130,17 @@
               @if($danger) data-confirm="{{ $status === 'failed' ? 'Mark parcel '.$tracking.' as failed? The rider can try again or return it to the seller.' : 'Return parcel '.$tracking.' to the seller? This ends the delivery.' }}"
                   data-confirm-title="{{ $label }}?" data-confirm-button="{{ $label }}" data-confirm-tone="danger" @endif>
             @csrf
+            @if($status === 'in_transit' && $shipment->pickup_scanned_at)
+                <fieldset class="handover-checklist">
+                    <legend>Confirm handover from {{ $shipment->pickupCourier?->name }}</legend>
+                    <label><input type="checkbox" name="parcel_received" value="1" required> Parcel physically received</label>
+                    <label><input type="checkbox" name="tracking_verified" value="1" required> Tracking number matches {{ $tracking }}</label>
+                    <label><input type="checkbox" name="items_checked" value="1" required> Parcel and item count checked against the waybill</label>
+                </fieldset>
+                @foreach(['parcel_received', 'tracking_verified', 'items_checked', 'handover'] as $field)
+                    @error($field)<p class="seller-field__error" role="alert">{{ $message }}</p>@enderror
+                @endforeach
+            @endif
             @method('PATCH')
             <input type="hidden" name="status" value="{{ $status }}">
             <input type="hidden" name="parcel" value="{{ $shipment->id }}">

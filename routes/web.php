@@ -398,6 +398,7 @@ Route::middleware(['auth', 'active', 'verified', 'role:logistics', 'nocache'])->
     Route::get('/parcels/{shipment}/waybill/print', [WaybillController::class, 'logisticsPrint'])->middleware('throttle:120,1')->name('parcels.waybill.print');
     Route::patch('/parcels/{shipment}/pickup', [LogisticsOperationsController::class, 'pickup'])->middleware('throttle:120,1')->name('parcels.pickup');
     Route::post('/parcels/{shipment}/courier', [LogisticsOperationsController::class, 'assignCourier'])->middleware('throttle:120,1')->name('parcels.courier');
+    Route::post('/parcels/{shipment}/pickup-rider', [LogisticsOperationsController::class, 'assignPickupRider'])->middleware('throttle:120,1')->name('parcels.pickup-rider');
     Route::patch('/parcels/{shipment}/sort', [LogisticsOperationsController::class, 'sort'])->middleware('throttle:120,1')->name('parcels.sort');
     Route::patch('/parcels/{shipment}/status', [LogisticsOperationsController::class, 'advance'])->middleware('throttle:120,1')->name('parcels.advance');
     Route::patch('/returns/{dispute}/scan', [LogisticsOperationsController::class, 'updateReturnScan'])->middleware('throttle:120,1')->name('returns.scan');

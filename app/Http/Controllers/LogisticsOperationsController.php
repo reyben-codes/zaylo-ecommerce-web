@@ -58,6 +58,7 @@ class LogisticsOperationsController extends Controller
             'tab' => $tab,
             'hub' => $hub,
             'availableCouriers' => $availableCouriers,
+            'pickupRiders' => $this->availableRiders(),
             'counts' => [
                 'requests' => ShipmentWorkflow::whereStage($this->parcels(), ['ready'])->count(),
                 'scheduled' => $hub ? ShipmentWorkflow::whereStage($this->parcels(), ['confirmed'])->count() : 0,
@@ -368,6 +369,17 @@ class LogisticsOperationsController extends Controller
         return back()->with('status', 'Pickup for parcel '.$this->tracking($shipment).' assigned to courier '.$courier->name.'.');
     }
 
+    public function assignPickupRider(Request $request, Shipment $shipment)
+    {
+        $this->ownsParcel($shipment);
+        abort_unless($this->logisticsProvider() && (int) $shipment->logistics_provider_id === (int) $this->logisticsProvider()->id, 403);
+        $rider = $this->chosenRider($request);
+        $this->ensureRiderServes($rider, \App\Services\RiderSellerPickups::pickupArea($shipment));
+        $this->workflow->assignPickupCourier($shipment, $rider->user, $request->user());
+
+        return back()->with('status', 'Pickup assigned to '.$rider->user->name.'. It now appears in their Rider app.');
+    }
+
     public function sort(Request $request, Shipment $shipment)
     {
         $this->ownsParcel($shipment);
@@ -396,7 +408,12 @@ class LogisticsOperationsController extends Controller
         if ($data['status'] === 'picked_up' && strcasecmp(trim($data['tracking']), $this->tracking($shipment)) !== 0) {
             throw ValidationException::withMessages(['tracking' => 'That code does not match parcel '.$this->tracking($shipment).'. Check that you have the right parcel.']);
         }
-        $this->workflow->advance($shipment, $data['status'], $request->user());
+        $receipt = [];
+        if ($data['status'] === 'in_transit' && $shipment->pickup_scanned_at) {
+            $request->validate(['parcel_received' => 'accepted', 'tracking_verified' => 'accepted', 'items_checked' => 'accepted']);
+            $receipt = ['parcel_received' => true, 'tracking_verified' => true, 'items_checked' => true];
+        }
+        $this->workflow->advance($shipment, $data['status'], $request->user(), receipt: $receipt);
 
         return back()->with('status', 'Parcel '.$this->tracking($shipment).': '.ShipmentWorkflow::label($data['status']).'.');
     }

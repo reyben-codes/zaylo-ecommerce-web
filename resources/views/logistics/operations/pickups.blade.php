@@ -33,6 +33,7 @@
         </header>
         @error('pickup_date')<p class="seller-field__error parcel-report-error" role="alert">{{ $message }}</p>@enderror
         @error('reason')<p class="seller-field__error parcel-report-error" role="alert">{{ $message }}</p>@enderror
+        @error('rider_id')<p class="seller-field__error parcel-report-error" role="alert">{{ $message }}</p>@enderror
         @include('logistics.operations.partials.search', ['action' => route('logistics.pickups'), 'search' => $search, 'keep' => $tab === 'scheduled' ? ['tab' => 'scheduled'] : []])
         @include('logistics.operations.partials.parcel-table', [
             'shipments' => $shipments,

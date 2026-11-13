@@ -14,6 +14,7 @@ use Illuminate\Support\Str;
 class Shipment extends Model
 {
     protected $fillable = [
+        'pickup_scanned_at', 'hub_received_at', 'hub_received_by', 'hub_receipt_checks',
         'order_id', 'courier_id', 'pickup_courier_id', 'tracking_number', 'picked_up_at', 'delivered_at',
         'seller_order_id', 'logistics_provider_id', 'rider_id', 'tracking_code',
         'status', 'fee_minor', 'cod_amount_minor', 'cod_collected', 'cod_collected_at', 'cod_collected_by', 'attempts',
@@ -23,6 +24,7 @@ class Shipment extends Model
     ];
 
     protected $casts = [
+        'pickup_scanned_at' => 'datetime', 'hub_received_at' => 'datetime', 'hub_receipt_checks' => 'array',
         'cod_collected' => 'boolean', 'cod_collected_at' => 'datetime', 'picked_up_at' => 'datetime', 'delivered_at' => 'datetime',
         'rider_located_at' => 'datetime',
         'pickup_confirmed_at' => 'datetime', 'pickup_scheduled_for' => 'date', 'sorted_at' => 'datetime',
@@ -38,6 +40,11 @@ class Shipment extends Model
     public function pickupCourier(): BelongsTo
     {
         return $this->belongsTo(User::class, 'pickup_courier_id');
+    }
+
+    public function hubReceiver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'hub_received_by');
     }
 
     public function courier(): BelongsTo

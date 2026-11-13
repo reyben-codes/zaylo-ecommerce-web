@@ -249,7 +249,30 @@ class RiderDashboardTabState extends State<RiderDashboardTab> with RiderDelivery
               icon: const Icon(Icons.qr_code_scanner),
               label: const Text('SCAN SELLER PICKUP'),
             ),
-            const Text('Scan at the seller to collect a confirmed parcel for your logistics partner. Bring it to the hub for sorting.'),
+            const Text('Scan a pickup assigned to you by logistics. Bring it to the hub for handover confirmation.'),
+            RiderSectionHeader(title: 'Seller pickups & handovers', count: data.sellerPickups.length),
+            if (data.sellerPickups.isEmpty)
+              const Text('No seller pickups assigned yet. Your logistics partner assigns pickup and delivery tasks separately.'),
+            for (final pickup in data.sellerPickups)
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(pickup.trackingNumber, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text(pickup.statusLabel),
+                    Text('Seller: ${pickup.seller}'),
+                    Text(pickup.address),
+                    for (final item in pickup.items) Text(item),
+                    if (pickup.scannedAt != null) Text('Scanned: ${pickup.scannedAt}'),
+                    if (pickup.receivedAt != null) Text('Received by hub: ${pickup.receivedAt}'),
+                    if (pickup.canScan)
+                      OutlinedButton.icon(
+                        onPressed: busyDeliveryId == null ? () => scanSellerPickup(pickup) : null,
+                        icon: const Icon(Icons.qr_code_scanner), label: const Text('Scan this pickup'),
+                      ),
+                  ]),
+                ),
+              ),
 
             if (data.newAssignments.isNotEmpty) ...[
             RiderSectionHeader(title: 'New assignments', count: data.newAssignments.length),

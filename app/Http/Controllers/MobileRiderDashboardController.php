@@ -122,6 +122,7 @@ class MobileRiderDashboardController extends Controller
                 'earnings' => $this->periodTotals($completed),
             ],
             'active' => $active->map(fn (Shipment $shipment) => $this->shipmentPayload($shipment))->values(),
+            'seller_pickups' => app(\App\Services\RiderSellerPickups::class)->forRider($rider),
             // Returned items to collect from buyers and bring to the hub.
             'returns' => $this->returns->forRider($rider)->map(fn (Dispute $dispute) => ReturnPickups::riderPayload($dispute))->values(),
             'available' => [],

@@ -591,6 +591,7 @@ class RiderDashboard {
     required this.stats,
     this.attendance,
     this.returns = const [],
+    this.sellerPickups = const [],
     this.active = const [],
     this.recent = const [],
     this.deliveryModeMessage,
@@ -611,6 +612,7 @@ class RiderDashboard {
 
   /// Returned items to collect from buyers and bring to the hub.
   final List<RiderReturn> returns;
+  final List<RiderSellerPickup> sellerPickups;
   final List<RiderDelivery> recent;
 
   /// Set while sellers deliver their own orders and riders have nothing to do.
@@ -643,6 +645,8 @@ class RiderDashboard {
             ? RiderAttendance.fromJson(json['attendance'] as Map<String, dynamic>)
             : null,
         active: _deliveries(json['active']),
+        sellerPickups: (json['seller_pickups'] as List<dynamic>? ?? const [])
+            .map((item) => RiderSellerPickup.fromJson(item as Map<String, dynamic>)).toList(),
         returns: (json['returns'] as List<dynamic>? ?? const [])
             .map((item) => RiderReturn.fromJson(item as Map<String, dynamic>))
             .toList(),
@@ -653,4 +657,33 @@ class RiderDashboard {
         reasons: RiderReasons.fromJson(json['reasons'] as Map<String, dynamic>?),
         locationReportSeconds: json['location_report_seconds'] as int?,
       );
+}
+
+class RiderSellerPickup {
+  const RiderSellerPickup({required this.id, required this.trackingNumber, required this.seller,
+    required this.address, required this.status, required this.items, this.scannedAt, this.receivedAt});
+
+  final int id;
+  final String trackingNumber;
+  final String seller;
+  final String address;
+  final String status;
+  final List<String> items;
+  final DateTime? scannedAt;
+  final DateTime? receivedAt;
+  bool get canScan => status == 'confirmed';
+  String get statusLabel => switch (status) {
+    'ready' => 'Assigned · waiting for pickup confirmation',
+    'confirmed' => 'Assigned · ready to pick up',
+    'picked_up' => 'Picked up · in transit to hub',
+    'handed_over' => 'Handover confirmed by logistics',
+    _ => 'Received at hub',
+  };
+
+  factory RiderSellerPickup.fromJson(Map<String, dynamic> json) => RiderSellerPickup(
+    id: (json['id'] as num).toInt(), trackingNumber: json['tracking_number'] as String,
+    seller: json['seller'] as String? ?? 'Seller', address: json['pickup_address'] as String? ?? '',
+    status: json['status'] as String? ?? 'ready', scannedAt: _date(json['scanned_at']), receivedAt: _date(json['received_at']),
+    items: (json['items'] as List<dynamic>? ?? const []).map((item) => '${item['name']} × ${item['quantity']}').toList(),
+  );
 }
