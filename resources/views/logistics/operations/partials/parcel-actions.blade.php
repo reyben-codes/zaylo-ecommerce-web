@@ -17,7 +17,7 @@
     $scanned = $scanned ?? null;
     $thisParcel = (string) old('parcel') === (string) $shipment->id;
     $localPickupRiders = isset($pickupRiders)
-        ? app(\App\Services\RiderProximity::class)->serving($pickupRiders, \App\Services\RiderSellerPickups::pickupArea($shipment))
+        ? app(\App\Services\RiderProximity::class)->serving($pickupRiders, \App\Services\RiderSellerPickups::pickupArea($shipment), \App\Services\RiderSellerPickups::pickupAddress($shipment))
         : collect();
 @endphp
 

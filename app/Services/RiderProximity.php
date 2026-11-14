@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Address;
 use App\Models\Rider;
 use App\Models\Shipment;
 use Illuminate\Support\Collection;
@@ -25,19 +26,25 @@ class RiderProximity
     }
 
     /** Only riders with a saved address in the delivery city can be offered for that area. */
-    public function serving(Collection $riders, ?string $area): Collection
+    public function serving(Collection $riders, ?string $area, ?Address $destination = null): Collection
     {
         [$city, $province] = self::areaParts($area);
-        if ($city === '') {
+        if ($city === '' && ! $destination?->city_municipality_code) {
             return collect();
         }
 
-        return $riders->filter(function (Rider $rider) use ($city, $province) {
+        return $riders->filter(function (Rider $rider) use ($city, $province, $destination) {
             $home = $rider->user?->addresses?->sortByDesc('is_default')->first();
+            $homeCode = trim((string) $home?->city_municipality_code);
+            $destinationCode = trim((string) $destination?->city_municipality_code);
+            // PSGC identifies the city regardless of spelling, abbreviations or province display labels.
+            $sameCity = preg_match('/^\d{9,10}$/D', $homeCode) && preg_match('/^\d{9,10}$/D', $destinationCode)
+                ? $homeCode === $destinationCode
+                : ($city !== '' && self::clean($home?->city) === $city
+                    && ($province === '' || self::clean($home?->province ?: $home?->region_name) === $province));
             return $rider->is_active && $rider->status === 'approved'
                 && $rider->user?->status === 'active'
-                && self::clean($home?->city) === $city
-                && ($province === '' || self::clean($home?->province ?: $home?->region_name) === $province);
+                && $sameCity;
         })->values();
     }
 
@@ -124,7 +131,12 @@ class RiderProximity
     private static function clean(?string $name): string
     {
         $name = Str::lower(Str::ascii((string) $name));
+        $name = preg_replace('/\(\s*capital\s*\)/', '', $name);
+        $name = preg_replace('/\b(city of|city|municipality of|municipality|province of)\b/', '', $name);
+        $name = preg_replace('/[^a-z0-9\s]/', ' ', $name);
+        $name = trim(preg_replace('/\s+/', ' ', $name));
 
-        return trim(preg_replace('/\b(city of|city|municipality of)\b/', '', $name));
+        return in_array($name, ['ncr', 'national capital region', 'national capital region ncr',
+            'ncr national capital region', 'metro manila', 'metropolitan manila'], true) ? 'metro manila' : $name;
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Address;
 use App\Models\Shipment;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -12,11 +13,16 @@ class RiderSellerPickups
 {
     public static function pickupArea(Shipment $shipment): string
     {
-        $seller = $shipment->sellerOrder?->seller;
-        $owner = $seller?->owner ?? $shipment->order?->seller;
-        $address = $seller?->pickupAddress ?? $owner?->addresses()->orderByDesc('is_default')->first();
+        $address = self::pickupAddress($shipment);
 
         return collect([$address?->city, $address?->province ?: $address?->region_name])->filter()->implode(', ');
+    }
+
+    public static function pickupAddress(Shipment $shipment): ?Address
+    {
+        $seller = $shipment->sellerOrder?->seller;
+        $owner = $seller?->owner ?? $shipment->order?->seller;
+        return $seller?->pickupAddress ?? $owner?->addresses()->orderByDesc('is_default')->orderBy('id')->first();
     }
 
     public function forRider(User $user): \Illuminate\Support\Collection
@@ -108,7 +114,7 @@ class RiderSellerPickups
                 throw ValidationException::withMessages(['code' => 'This pickup is unavailable or belongs to another rider or logistics partner.']);
             }
             $area = self::pickupArea($shipment);
-            if (app(RiderProximity::class)->serving(collect([$rider]), $area)->isEmpty()) {
+            if (app(RiderProximity::class)->serving(collect([$rider]), $area, self::pickupAddress($shipment))->isEmpty()) {
                 throw ValidationException::withMessages(['code' => 'This seller pickup is outside the city in your saved address.']);
             }
             if (! array_key_exists('picked_up', ShipmentWorkflow::nextSteps($shipment))) {

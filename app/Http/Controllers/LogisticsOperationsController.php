@@ -379,7 +379,7 @@ class LogisticsOperationsController extends Controller
         $this->ownsParcel($shipment);
         abort_unless($this->logisticsProvider() && (int) $shipment->logistics_provider_id === (int) $this->logisticsProvider()->id, 403);
         $rider = $this->chosenRider($request, 'pickup');
-        $this->ensureRiderServes($rider, \App\Services\RiderSellerPickups::pickupArea($shipment));
+        $this->ensureRiderServes($rider, \App\Services\RiderSellerPickups::pickupArea($shipment), \App\Services\RiderSellerPickups::pickupAddress($shipment));
         $this->workflow->assignPickupCourier($shipment, $rider->user, $request->user());
 
         return back()->with('status', 'Pickup assigned to '.$rider->user->name.'. It now appears in their Rider app.');
@@ -462,9 +462,9 @@ class LogisticsOperationsController extends Controller
         return $rider;
     }
 
-    private function ensureRiderServes(Rider $rider, ?string $area): void
+    private function ensureRiderServes(Rider $rider, ?string $area, ?\App\Models\Address $destination = null): void
     {
-        if (app(\App\Services\RiderProximity::class)->serving(collect([$rider]), $area)->isEmpty()) {
+        if (app(\App\Services\RiderProximity::class)->serving(collect([$rider]), $area, $destination)->isEmpty()) {
             throw ValidationException::withMessages(['rider_id' => 'That rider is not available in this location. Choose an on-shift rider with a saved address in this delivery city.']);
         }
     }
