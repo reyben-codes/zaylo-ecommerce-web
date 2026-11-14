@@ -17,7 +17,7 @@ class RiderSellerPickupTest extends TestCase
 {
     use RefreshDatabase, SignsInMobile;
 
-    public function test_rider_scans_seller_pickup_only_when_local_on_shift_and_with_the_same_partner(): void
+    public function test_assigned_rider_can_scan_after_an_address_change_only_on_shift_and_with_the_same_partner(): void
     {
         $owner = User::factory()->create(['role' => 'logistics', 'status' => 'active']);
         $provider = LogisticsProvider::create(['user_id' => $owner->id, 'name' => 'Hub', 'slug' => 'pickup-hub', 'status' => 'approved']);
@@ -49,8 +49,6 @@ class RiderSellerPickupTest extends TestCase
             ->assertJsonPath('seller_pickups.0.items.0.name', 'Packed blender')->assertJsonPath('seller_pickups.0.status', 'confirmed');
         $scan('WRONG')->assertUnprocessable();
         $address->update(['city' => 'Cebu']);
-        $scan()->assertUnprocessable();
-        $address->update(['city' => 'Manila']);
         $shipment->update(['pickup_courier_id' => $owner->id]);
         $scan()->assertUnprocessable();
         $otherProvider = LogisticsProvider::create(['user_id' => User::factory()->create(['role' => 'logistics'])->id, 'name' => 'Other hub', 'slug' => 'other-hub', 'status' => 'approved']);
@@ -60,11 +58,13 @@ class RiderSellerPickupTest extends TestCase
         $shipment->update(['pickup_confirmed_at' => null]);
         $scan()->assertUnprocessable();
         $shipment->update(['pickup_confirmed_at' => now()]);
+        // Home city no longer matches the seller's city, but this is still the pickup logistics assigned.
         $scan(' pickup-code ')->assertOk()->assertJsonPath('pickup.status', 'picked_up');
         $this->assertSame($user->id, $shipment->fresh()->pickup_courier_id);
         $this->assertSame('shipped', $sellerOrder->fresh()->status);
         $this->assertNotNull($shipment->fresh()->pickup_scanned_at);
         $this->getJson('/api/mobile/rider/dashboard')->assertOk()->assertJsonPath('seller_pickups.0.status', 'picked_up');
+        $address->update(['city' => 'Manila']);
         $scan()->assertUnprocessable();
         $this->withoutToken()->actingAs($owner, 'web')->get(route('logistics.incoming'))->assertOk()
             ->assertSee('PICKUP-CODE')->assertSee($user->name)->assertSee('Packed blender')->assertSee('Parcel physically received');

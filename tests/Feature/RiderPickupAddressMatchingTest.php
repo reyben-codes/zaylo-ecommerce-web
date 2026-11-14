@@ -46,14 +46,19 @@ class RiderPickupAddressMatchingTest extends TestCase
                 ['city' => 'Cebu', 'province' => 'Cebu'],
                 ['city' => 'Manila', 'province' => 'Metro Manila'], false,
             ],
+            'rider lives at the hub city while the assigned seller is in another city' => [
+                ['city' => 'Manila', 'province' => 'Metro Manila', 'city_municipality_code' => '133901000'],
+                ['city' => 'City of Bacoor', 'province' => 'Cavite', 'city_municipality_code' => '042103000'], false,
+            ],
         ];
     }
 
     #[DataProvider('addresses')]
-    public function test_picker_assignment_and_scan_agree_on_the_seller_pickup_city(array $home, array $pickup, bool $matches): void
+    public function test_area_checks_apply_to_assignment_but_do_not_block_an_existing_pickup_assignment(array $home, array $pickup, bool $matches): void
     {
         $owner = User::factory()->create(['role' => 'logistics', 'status' => 'active']);
-        $provider = LogisticsProvider::create(['user_id' => $owner->id, 'name' => 'Pickup Hub', 'slug' => 'pickup-hub', 'status' => 'approved']);
+        $provider = LogisticsProvider::create(['user_id' => $owner->id, 'name' => 'Pickup Hub', 'slug' => 'pickup-hub', 'status' => 'approved',
+            'city_name' => $home['city'], 'city_code' => $home['city_municipality_code'] ?? null, 'province_name' => $home['province']]);
         $user = User::factory()->create(['role' => 'rider', 'status' => 'active']);
         $rider = Rider::create(['user_id' => $user->id, 'logistics_provider_id' => $provider->id,
             'rider_type' => 'pickup', 'status' => 'approved', 'is_active' => true]);
@@ -83,13 +88,10 @@ class RiderPickupAddressMatchingTest extends TestCase
         $assigned = $this->post(route('logistics.parcels.pickup-rider', $shipment), ['rider_id' => $rider->id]);
         $matches ? $assigned->assertSessionHasNoErrors() : $assigned->assertSessionHasErrors('rider_id');
 
+        // This parcel already belongs to this rider, even when a later assignment check rejects the current address.
+        $this->assertSame($user->id, $shipment->fresh()->pickup_courier_id);
         $scan = $this->signInMobile($user)->postJson('/api/mobile/rider/pickup/scan', ['code' => 'PICKUP-MATCH-CODE']);
-        if ($matches) {
-            $scan->assertOk();
-            $this->assertNotNull($shipment->fresh()->pickup_scanned_at);
-        } else {
-            $scan->assertUnprocessable()->assertJsonValidationErrors('code');
-            $this->assertNull($shipment->fresh()->pickup_scanned_at);
-        }
+        $scan->assertOk();
+        $this->assertNotNull($shipment->fresh()->pickup_scanned_at);
     }
 }

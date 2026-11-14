@@ -101,7 +101,7 @@ class RiderSellerPickups
     public function scan(User $user, string $code): Shipment
     {
         return DB::transaction(function () use ($user, $code) {
-            $rider = $user->rider()->with('user.addresses')->first();
+            $rider = $user->rider()->first();
             if (! $rider || ! $user->hasRole('rider') || $user->status !== 'active'
                 || $rider->status !== 'approved' || ! $rider->is_active || ! $rider->logistics_provider_id
                 || ! RiderAttendanceClock::whereOnShift(\App\Models\Rider::whereKey($rider->id))->exists()) {
@@ -113,10 +113,9 @@ class RiderSellerPickups
             if (! $shipment || (int) $shipment->pickup_courier_id !== $user->id) {
                 throw ValidationException::withMessages(['code' => 'This pickup is unavailable or belongs to another rider or logistics partner.']);
             }
-            $area = self::pickupArea($shipment);
-            if (app(RiderProximity::class)->serving(collect([$rider]), $area, self::pickupAddress($shipment))->isEmpty()) {
-                throw ValidationException::withMessages(['code' => 'This seller pickup is outside the city in your saved address.']);
-            }
+            // Logistics checks service-area eligibility when assigning this pickup. Once assigned,
+            // the locked parcel's rider and partner authorize collection; a home-address edit or
+            // a seller in another city must not invalidate an existing pickup assignment.
             if (! array_key_exists('picked_up', ShipmentWorkflow::nextSteps($shipment))) {
                 throw ValidationException::withMessages(['code' => 'This parcel is not confirmed for pickup, or has already been collected.']);
             }
