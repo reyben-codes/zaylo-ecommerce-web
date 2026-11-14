@@ -45,26 +45,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   String? _appliedVoucher;
   int? _addressId;
   String _payment = 'cod';
-  String? _courier;
-
-  /// The partner the buyer tapped; until then, the nearest one to the chosen address.
-  int? _pickedPartnerId;
   bool _quoting = false;
   bool _placing = false;
 
   BuyerApi get _api => AppScope.read(context).api;
 
-  /// The partner delivering the order: the buyer's pick, or the one with the lowest fee to the chosen address.
-  int? _partnerId(CheckoutQuote quote) {
-    final partners = quote.logisticsPartners;
-    if (partners.any((partner) => partner.id == _pickedPartnerId)) return _pickedPartnerId;
-    if (partners.isEmpty) return null;
-    final byFee = [...partners]
-      ..sort((a, b) => (a.rates[_addressId]?.fee ?? double.infinity).compareTo(b.rates[_addressId]?.fee ?? double.infinity));
-    return byFee.first.id;
-  }
-
-  CheckoutTotals _totals(CheckoutQuote quote) => quote.totalsFor(_partnerId(quote), _addressId);
+  CheckoutTotals _totals(CheckoutQuote quote) => quote.totals;
 
   @override
   void initState() {
@@ -94,9 +80,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         _quote = quote;
         _error = null;
         _appliedVoucher = quote.voucherCode;
-        if (quote.couriers.isNotEmpty && !quote.couriers.any((courier) => courier.key == _courier)) {
-          _courier = quote.couriers.first.key;
-        }
         final addresses = quote.addresses.where((address) => address.isStructured).toList();
         if (_addressId == null || !addresses.any((address) => address.id == _addressId)) {
           _addressId = addresses.isEmpty
@@ -197,8 +180,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         cartItemIds: widget.cartItemIds,
         addressId: addressId,
         paymentMethod: _payment,
-        courierChoice: _courier,
-        logisticsProviderId: _quote == null ? null : _partnerId(_quote!),
         idempotencyKey: _idempotencyKey,
         voucherCode: _appliedVoucher,
         notes: _notes.text,
@@ -274,14 +255,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 const SizedBox(height: 18),
                 _section('Items (${quote.items.fold<int>(0, (sum, item) => sum + item.quantity)})', _itemsSection(quote)),
                 const SizedBox(height: 18),
-                if (quote.logisticsPartners.isNotEmpty) ...[
-                  _section('Logistics partner', _partnerSection(quote)),
-                  const SizedBox(height: 18),
-                ],
-                if (quote.couriers.isNotEmpty) ...[
-                  _section('Delivery courier truck', _courierSection(quote)),
-                  const SizedBox(height: 18),
-                ],
+                _section('Delivery arrangements', const Text(
+                  'Each seller chooses an approved ZAYLO logistics partner and arranges payment to that partner. Your shipping fee is included in the order total.',
+                )),
+                const SizedBox(height: 18),
                 _section('Payment method', _paymentSection()),
                 const SizedBox(height: 18),
                 _section('Voucher', _voucherSection()),
@@ -408,51 +385,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       ]),
     );
   }
-
-  Widget _partnerSection(CheckoutQuote quote) {
-    final chosen = _partnerId(quote);
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text("The shipping fee depends on how far your address is from the partner's hub.",
-          style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
-      const SizedBox(height: 10),
-      for (final (index, partner) in quote.logisticsPartners.indexed) ...[
-        if (index > 0) const SizedBox(height: 10),
-        _PaymentOption(
-          icon: Icons.warehouse_outlined,
-          title: partner.name,
-          subtitle: [
-            if (partner.hub.isNotEmpty) 'Hub: ${partner.hub}',
-            switch (partner.rates[_addressId]) {
-              final rate? => '${peso(rate.fee)} per seller · ${rate.label}',
-              null => 'Choose an address to see the fee',
-            },
-          ].join(' · '),
-          selected: chosen == partner.id,
-          onTap: () => setState(() => _pickedPartnerId = partner.id),
-        ),
-      ],
-    ]);
-  }
-
-  Widget _courierSection(CheckoutQuote quote) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Choose which courier truck picks up from the seller and delivers to your home with parcel scanning.',
-            style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
-        const SizedBox(height: 10),
-        for (final (index, courier) in quote.couriers.indexed) ...[
-          if (index > 0) const SizedBox(height: 10),
-          _PaymentOption(
-            icon: switch (courier.key) {
-              'flash_express' => Icons.bolt_outlined,
-              'jnt_express' => Icons.local_shipping_outlined,
-              _ => Icons.local_shipping,
-            },
-            title: courier.name,
-            subtitle: courier.description,
-            selected: _courier == courier.key,
-            onTap: () => setState(() => _courier = courier.key),
-          ),
-        ],
-      ]);
 
   Widget _paymentSection() {
     final quote = _quote;

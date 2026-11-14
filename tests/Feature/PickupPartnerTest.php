@@ -84,22 +84,23 @@ class PickupPartnerTest extends TestCase
         $this->actingAs($seller)->get(route('seller.orders'))->assertSee('Collected')->assertSee('by Agila Logistics');
     }
 
-    public function test_the_partner_the_buyer_picked_at_checkout_collects_the_parcel(): void
+    public function test_seller_selection_overrides_an_earlier_buyer_partner_choice(): void
     {
         $this->addPartnerColumn();
-        $this->partner('Express Delivery');
+        [, $express] = $this->partner('Express Delivery');
         [, $agila] = $this->partner('Agila Logistics');
         $seller = $this->seller();
         $order = $this->order($this->buyer(), $seller, 'processing');
         $order->forceFill(['logistics_provider_id' => $agila->id])->save();
 
         $this->actingAs($seller)->get(route('seller.orders'))->assertOk()
-            ->assertSee('Buyer chose Agila Logistics')->assertDontSee('<select id="partner-'.$order->id.'"', false);
-        // The buyer's pick wins over another partner sent with the request.
+            ->assertDontSee('Buyer chose Agila Logistics')->assertSee('<select id="partner-'.$order->id.'"', false);
         $this->patch(route('seller.orders.status', $order), ['status' => 'ready_for_pickup', 'logistics_provider_id' => 999])
+            ->assertSessionHasErrors('logistics_provider_id');
+        $this->patch(route('seller.orders.status', $order), ['status' => 'ready_for_pickup', 'logistics_provider_id' => $express->id])
             ->assertSessionHasNoErrors()
-            ->assertSessionHas('status', 'Pickup requested from Agila Logistics. Print the waybill and attach it to the parcel.');
-        $this->assertSame($agila->id, (int) $order->fresh()->shipment->logistics_provider_id);
+            ->assertSessionHas('status', 'Pickup requested from Express Delivery. Print the waybill and attach it to the parcel.');
+        $this->assertSame($express->id, (int) $order->fresh()->shipment->logistics_provider_id);
     }
 
     public function test_a_single_partner_is_chosen_for_the_seller_and_open_requests_go_to_the_first_to_confirm(): void
@@ -108,11 +109,12 @@ class PickupPartnerTest extends TestCase
         $seller = $this->seller();
         $buyer = $this->buyer();
 
-        // No partner yet: the request names none and stays open.
+        // New pickups require a registered partner. Previously open requests remain supported.
         $early = $this->order($buyer, $seller, 'processing');
         $this->actingAs($seller)->patch(route('seller.orders.status', $early), ['status' => 'ready_for_pickup'])
-            ->assertSessionHasNoErrors()->assertSessionHas('status', 'Pickup requested. Print the waybill and attach it to the parcel.');
-        $open = $early->fresh()->shipment;
+            ->assertSessionHasErrors('logistics_provider_id');
+        $early->update(['status' => 'ready_for_pickup']);
+        $open = $early->shipment()->create(['tracking_number' => 'TRK-LEGACY-OPEN', 'status' => 'ready']);
         $this->assertNull($open->logistics_provider_id);
         $this->get(route('seller.orders'))->assertSee('Waiting for a logistics partner to set a pickup date');
 

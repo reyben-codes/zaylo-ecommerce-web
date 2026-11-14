@@ -118,10 +118,9 @@ class MobileShoppingController extends Controller
         $voucher = $this->checkout->voucher($this->checkout->normalizeVoucherCode($validated['voucher_code'] ?? null));
         $this->checkout->ensureVoucherApplies($voucher, $items);
         $addresses = $request->user()->addresses()->orderByDesc('is_default')->orderBy('id')->get();
-        $partners = $this->checkout->partners();
-        // Totals for the first usable address and its nearest partner; the app recalculates from logistics_partners.
+        // Delivery is assigned by each seller, never by the buyer or an old app's saved selection.
         $address = $addresses->first(fn ($address) => $address->isStructured());
-        $partner = $address ? ShippingRates::nearest($partners, $address) : $partners->first();
+        $partner = null;
 
         return response()->json([
             'items' => $items->map(fn (CartItem $item) => MobilePayload::cartItem($item))->values(),
@@ -132,17 +131,13 @@ class MobileShoppingController extends Controller
             'available_vouchers' => $this->checkout->availableVouchersFor($items),
             // The flat fee, which older app builds charge per seller.
             'shipping_per_seller' => CheckoutService::SHIPPING_PER_SELLER,
-            // Partners the buyer can pick, with the fee per seller to each saved address (keyed by address id). The
-            // fee depends on how far the address is from the partner's hub.
-            'logistics_partners' => ShippingRates::table($partners, $addresses->filter(fn ($address) => $address->isStructured()))
-                ->map(fn (array $row) => ['rates' => (object) $row['rates']] + $row)->values(),
-            'default_logistics_provider_id' => $partner?->id,
-            // Shipping is charged per seller: the app multiplies the chosen partner's fee by this.
+            // Empty lists keep older clients compatible while removing buyer-side delivery selection.
+            'logistics_partners' => [],
+            'default_logistics_provider_id' => null,
+            'logistics_selected_by' => 'seller',
+            // Shipping is charged once per seller.
             'seller_count' => $items->pluck('product.seller_id')->unique()->count(),
-            // The same courier trucks the website offers; the first is the default.
-            'couriers' => collect(Order::COURIERS)->map(fn (array $courier, string $key) => [
-                'key' => $key, 'name' => $courier['title'], 'description' => $courier['description'],
-            ])->values(),
+            'couriers' => [],
             // Only 18+ products need an approved ID. identity_verified stays "may order these items" so older apps,
             // which disable Place order when it is false, only block orders that hold 18+ products.
             // GCash goes to each seller's own GCash; sellers without one cannot be paid by GCash.
@@ -169,14 +164,10 @@ class MobileShoppingController extends Controller
             'notes' => 'nullable|string|max:500',
             'idempotency_key' => 'required|uuid',
             'payment_method' => ['nullable', 'string', 'in:cod,gcash'],
-            'courier_choice' => ['nullable', 'string', Rule::in(array_keys(Order::COURIERS))],
-            // Older app builds send none: the nearest partner to the address is used.
-            'logistics_provider_id' => ['nullable', 'integer'],
             'cart_item_ids' => ['required', 'array', 'min:1'],
             'cart_item_ids.*' => ['required', 'integer', 'distinct'],
             'voucher_code' => ['nullable', 'string', 'max:50'],
         ] + GcashPayments::checkoutRules());
-        $validated['courier_choice'] ??= Order::DEFAULT_COURIER;
 
         // A retried request (for example after a dropped connection) must not order twice.
         if ($this->checkout->alreadyPlaced($validated['idempotency_key'])) {

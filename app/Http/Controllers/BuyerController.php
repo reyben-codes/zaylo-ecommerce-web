@@ -472,8 +472,7 @@ class BuyerController extends Controller
         $subtotal = $items->sum(fn (CartItem $item) => $item->unitPrice() * $item->quantity);
         $sellerCount = $items->pluck('product.seller_id')->unique()->count();
         $addresses = $request->user()->addresses()->orderByDesc('is_default')->orderBy('id')->get();
-        // Each partner's fee to each address, so the page can recalculate as the buyer changes either one.
-        $shippingTable = ShippingRates::table($this->checkoutService->partners(), $addresses->filter(fn ($address) => $address->isStructured()));
+        // Delivery partners are selected by sellers during fulfilment.
 
         return view('buyer.checkout', [
             'identityVerified' => $request->user()->isIdentityVerified(),
@@ -483,7 +482,6 @@ class BuyerController extends Controller
             'items' => $items,
             'subtotal' => $subtotal,
             'sellerCount' => $sellerCount,
-            'shippingTable' => $shippingTable,
             'standardFee' => ShippingRates::STANDARD_FEE,
             'voucher' => $voucher,
             'availableVouchers' => $this->checkoutService->availableVouchersFor($items),
@@ -610,13 +608,10 @@ class BuyerController extends Controller
             'cart_item_ids' => ['nullable', 'array', 'min:1'],
             'cart_item_ids.*' => ['required', 'integer', 'distinct'],
             'voucher_code' => ['nullable', 'string', 'max:50'],
-            'courier_choice' => ['nullable', 'string', Rule::in(array_keys(Order::COURIERS))],
-            'logistics_provider_id' => ['nullable', 'integer'],
             'quoted_unit_prices' => ['nullable', 'array'],
             'quoted_unit_prices.*' => ['required', 'numeric', 'min:0', 'decimal:0,2'],
         ] + \App\Services\GcashPayments::checkoutRules());
         $validated['payment_method'] ??= 'cod';
-        $validated['courier_choice'] ??= Order::DEFAULT_COURIER;
         if ($this->checkoutService->alreadyPlaced($validated['idempotency_key'])) {
             return redirect()->route('buyer.orders')->with('status', 'This checkout was already completed.');
         }

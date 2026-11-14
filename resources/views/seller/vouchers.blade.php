@@ -2,6 +2,10 @@
 
 @section('title', 'Vouchers')
 
+@push('styles')
+    <link rel="stylesheet" href="{{ asset('css/seller-vouchers.css') }}?v={{ filemtime(public_path('css/seller-vouchers.css')) }}">
+@endpush
+
 @section('content')
     <section class="seller-page-heading">
         <div>
@@ -55,7 +59,7 @@
                         <label for="seller-voucher-max">Most it can take off (&#8369;, for %)</label>
                         <input id="seller-voucher-max" name="max_discount" type="number" step="0.01" min="1" value="{{ old('max_discount') }}" placeholder="Leave empty for no limit">
                     </div>
-                    <div class="seller-field">
+                    <div class="seller-field seller-field--full">
                         <label for="seller-voucher-limit">Uses allowed</label>
                         <input id="seller-voucher-limit" name="usage_limit" type="number" min="1" value="{{ old('usage_limit') }}" placeholder="No limit">
                     </div>
@@ -144,7 +148,7 @@
                                           data-confirm="Delete voucher {{ $voucher->code }}? This cannot be undone." data-confirm-title="Delete voucher?" data-confirm-button="Delete">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="seller-button seller-button--small seller-button--secondary" title="Delete voucher"><i class="fas fa-trash" aria-hidden="true"></i></button>
+                                        <button type="submit" class="seller-button seller-button--small seller-button--secondary" title="Delete voucher" aria-label="Delete voucher {{ $voucher->code }}"><i class="fas fa-trash" aria-hidden="true"></i></button>
                                     </form>
                                 </div>
                             </td>

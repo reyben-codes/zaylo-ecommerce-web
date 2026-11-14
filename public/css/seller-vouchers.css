@@ -1,0 +1,174 @@
+/* Seller vouchers: form, buyer preview and row actions. */
+.seller-voucher-creator-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(260px, 1fr);
+    gap: 28px;
+    align-items: start;
+    padding: 24px;
+}
+
+.seller-voucher-creator-grid .voucher-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px 18px;
+    padding: 0;
+}
+
+.voucher-form > .seller-form__actions {
+    grid-column: 1 / -1;
+    padding-top: 4px;
+}
+
+.seller-voucher-preview-container {
+    display: grid;
+    gap: 18px;
+    min-width: 0;
+    padding: 20px;
+    border: 1px solid var(--zaylo-border);
+    border-radius: 12px;
+    background: var(--zaylo-hover);
+}
+
+.seller-voucher-preview-heading h3 {
+    margin: 8px 0 6px;
+    color: var(--zaylo-ink);
+    font-size: 1.05rem;
+}
+
+.seller-voucher-preview-heading p,
+.seller-voucher-preview-card__desc {
+    margin: 0;
+    color: var(--zaylo-muted);
+    font-size: .78rem;
+    line-height: 1.5;
+}
+
+.seller-voucher-preview-card {
+    display: grid;
+    gap: 14px;
+    min-width: 0;
+    padding: 18px;
+    border: 1px solid var(--zaylo-border);
+    border-left: 4px solid var(--zaylo-accent);
+    border-radius: 10px;
+    background: var(--zaylo-surface);
+}
+
+.seller-voucher-preview-card__top,
+.seller-voucher-preview-card__meta,
+.order-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.seller-voucher-preview-card__top {
+    justify-content: space-between;
+}
+
+.seller-voucher-preview-card__badge {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    padding: 6px 10px;
+    border-radius: 6px;
+    background: var(--zaylo-accent);
+    color: var(--c-ffffff);
+    font-size: .75rem;
+    font-weight: 700;
+}
+
+.seller-voucher-preview-card__quota,
+.seller-voucher-preview-card__meta {
+    color: var(--zaylo-muted);
+    font-size: .72rem;
+    line-height: 1.5;
+}
+
+.seller-voucher-preview-card__main {
+    display: grid;
+    gap: 8px;
+    overflow-wrap: anywhere;
+}
+
+.seller-voucher-preview-card__code {
+    color: var(--zaylo-ink);
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: .04em;
+}
+
+.seller-voucher-preview-card__name {
+    margin: 0;
+    font-size: .82rem;
+    font-weight: 600;
+}
+
+.seller-voucher-preview-card__name:empty {
+    display: none;
+}
+
+.seller-voucher-preview-card__action {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 14px;
+    border-top: 1px dashed var(--zaylo-border);
+}
+
+.seller-voucher-preview-btn {
+    min-height: 36px;
+    padding: 8px 14px;
+    border: 0;
+    border-radius: 7px;
+    background: var(--zaylo-accent);
+    color: var(--c-ffffff);
+    font: inherit;
+    font-size: .75rem;
+    font-weight: 600;
+    cursor: default;
+}
+
+.order-actions form {
+    margin: 0;
+}
+
+.order-status {
+    display: inline-block;
+    padding: 5px 9px;
+    border-radius: 999px;
+    font-size: .7rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.order-status--completed {
+    color: var(--c-2d6d3e);
+    background: var(--c-e6f2e7);
+}
+
+.order-status--cancelled {
+    color: var(--zaylo-muted);
+    background: var(--zaylo-hover);
+}
+
+@media (max-width: 1100px) {
+    .seller-voucher-creator-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .seller-voucher-creator-grid {
+        gap: 24px;
+        padding: 20px 16px;
+    }
+
+    .seller-voucher-creator-grid .voucher-form {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 18px;
+    }
+
+    .seller-voucher-preview-container {
+        padding: 16px;
+    }
+}

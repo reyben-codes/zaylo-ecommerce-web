@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Schema;
 
 class Order extends Model
 {
-    /** Courier trucks a buyer can pick at checkout (web and app), with what each one offers. */
+    /** Legacy courier labels retained for older orders; new delivery partners are selected by sellers. */
     public const COURIERS = [
         'zaylo_express' => ['name' => 'ZAYLO Express', 'title' => 'ZAYLO Express (Standard Delivery)', 'description' => 'Official ZAYLO courier truck · 2–4 business days · Door-to-door barcode scan'],
         'jnt_express' => ['name' => 'J&T Express', 'title' => 'J&T Express Delivery', 'description' => 'J&T delivery truck pickup & drop · 1–3 business days · Real-time tracking scan'],
@@ -29,6 +29,20 @@ class Order extends Model
 
     public function courierName(): string
     {
+        if (! static::usesLegacySchema()) {
+            $names = $this->sellerOrders()->with('shipment.provider')->get()
+                ->map(fn ($sellerOrder) => $sellerOrder->shipment?->provider?->name)->filter()->unique();
+            if ($names->isNotEmpty()) {
+                return $names->implode(', ');
+            }
+        }
+        $partner = $this->deliveryShipment()?->provider ?? $this->logisticsProvider;
+        if ($partner) {
+            return $partner->name;
+        }
+        if (! $this->courier_choice) {
+            return 'Logistics partner chosen by seller';
+        }
         return (self::COURIERS[$this->courier_choice] ?? self::COURIERS[self::DEFAULT_COURIER])['name'];
     }
 
@@ -56,7 +70,7 @@ class Order extends Model
         return $this->belongsTo(User::class, 'seller_id');
     }
 
-    /** The logistics partner the buyer picked at checkout; it collects the parcel and sets the shipping fee. */
+    /** The registered logistics partner selected by the seller for this order. */
     public function logisticsProvider(): BelongsTo
     {
         return $this->belongsTo(LogisticsProvider::class);

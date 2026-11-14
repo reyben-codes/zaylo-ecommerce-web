@@ -2,9 +2,12 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\MassPrunable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * A checkout voucher. Shipping is funded by its creator (seller or ZAYLO); percent and fixed discounts apply only to the items
@@ -12,6 +15,23 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Voucher extends Model
 {
+    use MassPrunable;
+
+    /** Seller-created vouchers are retained for 24 hours after their expiry. */
+    public function prunable(): Builder
+    {
+        return static::query()
+            ->whereNotNull('seller_id')
+            ->where('expires_at', '<=', now()->subHours(24))
+            ->whereHas('creator', function (Builder $creator) {
+                if (Schema::hasColumn('users', 'role')) {
+                    $creator->where('role', 'seller');
+                } else {
+                    $creator->whereHas('roles', fn (Builder $role) => $role->where('name', 'seller'));
+                }
+            });
+    }
+
     public const TYPES = [
         'free_shipping' => 'Free shipping',
         'percent' => '% off (shops that join pay for it)',

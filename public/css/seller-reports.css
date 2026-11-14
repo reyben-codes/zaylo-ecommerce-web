@@ -123,6 +123,15 @@
 }
 
 @media (max-width: 640px) {
+    .report-filter .seller-filter-bar .seller-field {
+        flex: 1 1 100%;
+    }
+
+    .report-filter .seller-filter-bar > .seller-button {
+        width: 100%;
+        min-height: 44px;
+    }
+
     .report-chart {
         height: 210px;
         padding: 18px 16px 12px;

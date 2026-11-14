@@ -122,8 +122,8 @@ class ShippingRate {
       );
 }
 
-/// A logistics partner the buyer can pick at checkout. The shipping fee depends on how far the delivery address is
-/// from the partner's hub, so each partner lists its fee to every saved address.
+/// Legacy logistics-rate metadata from older servers. Delivery partners are now selected by sellers.
+/// Retained so responses from older servers can still be decoded.
 class LogisticsPartnerOption {
   const LogisticsPartnerOption({required this.id, required this.name, this.hub = '', this.rates = const {}});
 
@@ -189,13 +189,13 @@ class CheckoutQuote {
   /// The 18+ products that need the approved ID.
   final List<String> identityRequiredFor;
 
-  /// Courier trucks to choose from; the first is the default.
+  /// Legacy courier metadata; current servers send an empty list.
   final List<CourierOption> couriers;
 
-  /// Partners to choose from, with their fees; empty when the server charges a flat fee.
+  /// Legacy partner metadata; current servers leave partner selection to sellers.
   final List<LogisticsPartnerOption> logisticsPartners;
 
-  /// The partner nearest the first usable address, which [totals] were priced with.
+  /// Legacy default partner; null with seller-assigned logistics.
   final int? defaultPartnerId;
 
   /// Shipping is charged once per seller.

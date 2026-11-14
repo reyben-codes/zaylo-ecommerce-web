@@ -15,7 +15,6 @@ use App\Models\ProductVariant;
 use App\Models\SellerOrder;
 use App\Models\SellerProfile;
 use App\Models\Shipment;
-use App\Services\CheckoutService;
 use App\Services\LogisticsMessenger;
 use App\Services\OrderReceipts;
 use App\Services\SellerApplicationService;
@@ -364,9 +363,7 @@ class SellerController extends Controller
             : $order->sellerOrders()->where('seller_id', $shopId)->exists();
         abort_unless($isOwner, 403);
 
-        $partner = ! empty($data['logistics_provider_id'])
-            ? LogisticsProvider::find($data['logistics_provider_id'])
-            : $this->chosenPartner($request, $order);
+        $partner = $this->chosenPartner($request);
 
         $date = ! empty($data['pickup_date'])
             ? Carbon::parse($data['pickup_date'])
@@ -374,6 +371,11 @@ class SellerController extends Controller
 
         DB::transaction(function () use ($order, $partner, $date, $shopId) {
             $locked = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+            $sellerOrder = Order::usesLegacySchema() ? null : $locked->sellerOrders()->where('seller_id', $shopId)->firstOrFail();
+            if (! in_array($sellerOrder?->status ?? $locked->status, ['confirmed', 'processing', 'accepted', 'packed'], true)) {
+                throw ValidationException::withMessages(['order_id' => 'Only an order being prepared can be scheduled for pickup.']);
+            }
+            app(\App\Services\SellerLogistics::class)->assign($locked, $partner, $sellerOrder);
             if (Order::usesLegacySchema()) {
                 $locked->update(['status' => 'ready_for_pickup']);
             } else {
@@ -388,7 +390,7 @@ class SellerController extends Controller
                 ]);
             }
 
-            $shipment = $locked->deliveryShipment();
+            $shipment = $sellerOrder ? $sellerOrder->shipment()->first() : $locked->shipment;
             $code = 'ZAY-TRK-'.Str::upper(Str::random(10));
             $stage = ShipmentWorkflow::stored('ready');
             if (! $shipment) {
@@ -430,7 +432,7 @@ class SellerController extends Controller
         ], [
             'status.in' => 'The rider updates this parcel from here on.',
         ]);
-        $partner = $data['status'] === 'ready_for_pickup' ? $this->chosenPartner($request, $order) : null;
+        $partner = $data['status'] === 'ready_for_pickup' ? $this->chosenPartner($request) : null;
         $partnerPrints = $data['status'] === 'ready_for_pickup' && $request->boolean('partner_prints');
 
         DB::transaction(function () use ($order, $data, $partner) {
@@ -463,6 +465,7 @@ class SellerController extends Controller
 
             // Ready to ship opens the parcel for the chosen partner to pick up; its tracking number is what gets scanned.
             if ($data['status'] === 'ready_for_pickup') {
+                app(\App\Services\SellerLogistics::class)->assign($locked, $partner);
                 $locked->shipment()->firstOrCreate([], [
                     'tracking_number' => 'TRK-'.Str::upper(Str::random(12)),
                     'status' => 'ready',
@@ -552,19 +555,13 @@ class SellerController extends Controller
     }
 
     /**
-     * The partner picked on "Ready to ship": the one the buyer picked at checkout, whose distance set the shipping
-     * fee, while it still takes parcels. Otherwise the seller picks; with a single partner the choice is made for the
-     * seller, and with none the request is left open and the first partner to confirm it takes it.
+     * The seller picks an approved ZAYLO partner on "Ready to ship". A sole eligible partner is shown as the default.
      */
-    private function chosenPartner(Request $request, Order $order): ?LogisticsProvider
+    private function chosenPartner(Request $request): LogisticsProvider
     {
         $partners = $this->pickupPartners();
         if ($partners->isEmpty()) {
-            return null;
-        }
-        $buyerPick = CheckoutService::choosesPartner() ? $partners->firstWhere('id', (int) $order->logistics_provider_id) : null;
-        if ($buyerPick) {
-            return $buyerPick;
+            throw ValidationException::withMessages(['logistics_provider_id' => 'No approved logistics partner is available for pickup yet.']);
         }
         $chosen = $request->input('logistics_provider_id') ?? ($partners->count() === 1 ? $partners->first()->id : null);
         $partner = $partners->firstWhere('id', (int) $chosen);

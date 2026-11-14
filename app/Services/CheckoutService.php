@@ -24,45 +24,23 @@ use Illuminate\Validation\ValidationException;
 /**
  * Placing and cancelling orders, shared by the web storefront (BuyerController) and the mobile API,
  * so pricing (including scheduled sales), stock locking, the ID check and voucher use stay identical.
- * Shipping is charged per seller, by the distance from the hub of the logistics partner the buyer picks to the
- * delivery address (ShippingRates).
+ * Buyers pay shipping per seller. Sellers choose the registered logistics partner when preparing pickup.
  */
 class CheckoutService
 {
     /** The fee without a partner or a located address; older app builds show it. */
     public const SHIPPING_PER_SELLER = ShippingRates::STANDARD_FEE;
 
-    /** Whether orders record the buyer's logistics partner (after the 2026_11_07_000002 migration). */
+    /** Whether orders can store the logistics partner selected by the seller. */
     public static function choosesPartner(): bool
     {
         return Shipment::tracksProvider() && Schema::hasColumn('orders', 'logistics_provider_id');
     }
 
-    /** @return Collection<int, LogisticsProvider> partners a buyer can pick at checkout */
+    /** @return Collection<int, LogisticsProvider> registered partners available for fulfilment */
     public function partners(): Collection
     {
         return self::choosesPartner() ? LogisticsProvider::acceptingParcels()->get() : collect();
-    }
-
-    /**
-     * The partner for an order: the buyer's pick, or the nearest one to the address when none was sent (older app
-     * builds). Null when no partner takes parcels, and the flat fee applies.
-     */
-    public function partnerFor(mixed $partnerId, ?Address $address): ?LogisticsProvider
-    {
-        $partners = $this->partners();
-        if ($partners->isEmpty()) {
-            return null;
-        }
-        if (blank($partnerId)) {
-            return $address ? ShippingRates::nearest($partners, $address) : $partners->first();
-        }
-        $partner = $partners->firstWhere('id', (int) $partnerId);
-        if (! $partner) {
-            throw ValidationException::withMessages(['logistics_provider_id' => 'That logistics partner is not taking parcels right now. Choose another one.']);
-        }
-
-        return $partner;
     }
 
     public function normalizeVoucherCode(?string $code): string
@@ -374,7 +352,8 @@ class CheckoutService
             if (! $address->isStructured()) {
                 throw ValidationException::withMessages(['address_id' => 'Please edit this saved address and select its Philippine locations before checkout.']);
             }
-            $partner = $this->partnerFor($input['logistics_provider_id'] ?? null, $address);
+            // Buyer-supplied partner and courier fields from older clients never assign delivery.
+            $partner = null;
             $zone = ShippingRates::zone($partner, $address);
             $perSeller = ShippingRates::fee($zone);
 
@@ -426,6 +405,7 @@ class CheckoutService
                     $sellerFundsShipping ? (float) $shippingDiscount : 0,
                     $partner?->riderRate() ?? RiderWallet::COMMISSION,
                 );
+                $breakdown['logistics_selection'] = 'seller';
                 if ($breakdown['seller_earnings'] < 0) {
                     throw ValidationException::withMessages(['voucher_code' => 'Add more items from this shop to cover its free-shipping voucher, or remove the voucher.']);
                 }
@@ -441,7 +421,7 @@ class CheckoutService
                   + (Schema::hasColumn('orders', 'voucher_discount') ? ['voucher_discount' => $voucherDiscount] : [])
                   + ParcelTracking::orderPin($address) + (Schema::hasColumn('orders', 'courier_choice')
                     // Only once the 2026_10_26 migration has added the column.
-                    ? ['courier_choice' => $input['courier_choice'] ?? Order::DEFAULT_COURIER]
+                    ? ['courier_choice' => null]
                     : []) + (self::choosesPartner()
                     ? ['logistics_provider_id' => $partner?->id, 'shipping_zone' => $zone]
                     : []));

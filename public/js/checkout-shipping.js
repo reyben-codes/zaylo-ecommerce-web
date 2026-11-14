@@ -4,7 +4,6 @@
     const summary = document.querySelector('[data-checkout-summary]');
     if (!summary) return;
 
-    const partners = Array.from(document.querySelectorAll('input[name="logistics_provider_id"]'));
     const money = amount => '₱' + amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const subtotal = Number(summary.dataset.subtotal) || 0;
     const sellers = Number(summary.dataset.sellers) || 0;
@@ -19,11 +18,6 @@
         const discount = freeShipping ? standardFee * freeShippingSellers : 0;
         const total = subtotal + shipping - discount - voucherDiscount;
 
-        partners.forEach(input => {
-            const label = input.closest('label')?.querySelector('[data-shipping-rate]');
-            if (label) label.textContent = `Fixed ${money(standardFee)} per seller`;
-        });
-
         summary.querySelector('[data-summary-shipping]').textContent = money(shipping);
         const discountRow = summary.querySelector('[data-summary-discount]');
         if (discountRow) discountRow.textContent = '−' + money(discount);
@@ -37,7 +31,7 @@
         });
     };
 
-    document.querySelectorAll('input[name="address_id"], input[name="logistics_provider_id"], input[name="payment_method"]')
+    document.querySelectorAll('input[name="address_id"], input[name="payment_method"]')
         .forEach(input => input.addEventListener('change', update));
     update();
 })();

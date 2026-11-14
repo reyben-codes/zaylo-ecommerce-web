@@ -23,3 +23,6 @@ Schedule::command('orders:confirm-delivered')->hourly();
 
 // Activity log entries older than config('activity.retention_days') are removed.
 Schedule::command('model:prune', ['--model' => [App\Models\ActivityLog::class]])->daily();
+
+// Remove seller-created vouchers 24 hours after expiry; order discount snapshots are kept.
+Schedule::command('model:prune', ['--model' => [App\Models\Voucher::class]])->everyMinute()->withoutOverlapping();

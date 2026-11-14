@@ -7,10 +7,8 @@ use App\Models\LogisticsProvider;
 use Illuminate\Support\Collection;
 
 /**
- * The shipping fee of a parcel, by how far the delivery address is from the hub of the logistics partner the buyer
- * picked. Distance is measured in zones from the PSGC codes both addresses carry (same city or municipality, same
- * province, same region, same island group, or across island groups), as couriers like J&T and LBC price it.
- * Without a partner, or when either side has no PSGC codes, the old flat fee applies.
+ * Logistics routing zones based on hub and delivery-address PSGC codes. The buyer pays the nationwide standard
+ * shipping fee; the seller selects the registered partner during fulfilment.
  */
 class ShippingRates
 {

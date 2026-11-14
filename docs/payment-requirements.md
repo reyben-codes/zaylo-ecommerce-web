@@ -4,6 +4,8 @@
 
 - Admin and Logistics each receive 10% of the product value after item discounts.
 - Buyers pay shipping unless they use a free-shipping voucher.
+- Sellers choose an approved, active ZAYLO logistics partner when requesting pickup. Buyers cannot select or override a partner or courier at checkout, including through older mobile clients. Each seller's parcel is routed to that seller's chosen partner.
+- The buyer's shipping charge and confirmed order total remain fixed when the seller chooses a partner. The selected partner's rider rate is saved at the seller's first pickup request for new orders; changing the company rate later does not change that agreement. Sellers arrange partner payment using the recorded shipping and commission allocations.
 - A seller-funded shipping voucher deducts shipping from that seller's proceeds only.
 - An Admin-funded shipping voucher is an Admin expense. It does not reduce seller proceeds.
 - Logistics receives shipping revenue and pays its riders from its receipts.

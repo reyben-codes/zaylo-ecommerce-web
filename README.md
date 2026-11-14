@@ -82,6 +82,7 @@ The feature suite covers public browsing, marketplace account approval, seller o
 - Configure a real mail provider before enabling registrations.
 - Payments are cash on delivery or GCash confirmed by hand. Add an online gateway through signed, idempotent webhooks rather than trusting browser callbacks.
 - Run queue workers for email and other asynchronous work after changing `QUEUE_CONNECTION` from `sync`.
+- Run `php artisan schedule:run` every minute through the host's cron service, or keep `php artisan schedule:work` running in a dedicated worker. The scheduler deletes seller-created vouchers once they have been expired for 24 hours, including their claims and shop links; existing orders keep their voucher codes and discount amounts. Vouchers without an expiry and administrator-created vouchers are retained.
 - Do not deploy seeded credentials or the legacy root-level `zaylo` SQLite development database.
 
 ## Mobile app (development)

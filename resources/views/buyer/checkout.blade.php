@@ -5,11 +5,7 @@
     $usableAddresses = $addresses->filter(fn ($address) => $address->isStructured());
     $selectedAddress = old('address_id', session('selected_address_id', $usableAddresses->first()?->id));
     $addressTypes = ['Home' => 'fa-house', 'Work' => 'fa-briefcase', 'School' => 'fa-graduation-cap', 'Other' => 'fa-location-dot'];
-    // The partner the buyer picked, or the one with the lowest fee to the chosen address.
-    $rateTo = fn ($partner) => $partner['rates'][(int) $selectedAddress] ?? null;
-    $selectedPartner = $shippingTable->firstWhere('id', (int) old('logistics_provider_id'))
-        ?? $shippingTable->sortBy(fn ($partner) => $rateTo($partner)['fee'] ?? $standardFee)->first();
-    $perSeller = $selectedPartner ? ($rateTo($selectedPartner)['fee'] ?? $standardFee) : $standardFee;
+    $perSeller = $standardFee;
     $shipping = $perSeller * $sellerCount;
     $freeShippingSellers = $voucher?->isFreeShipping()
         ? $items->pluck('product.seller_id')->unique()->filter(fn ($id) => ! $voucher->seller_id || (int) $id === (int) $voucher->seller_id)->count()
@@ -190,66 +186,15 @@
                 <label class="checkout-notes-label">Delivery notes <span>(optional)</span><textarea name="notes" rows="3" maxlength="500" placeholder="Instructions for the seller or courier">{{ old('notes') }}</textarea></label>
             </section>
 
-            @if($shippingTable->isNotEmpty())
-                <section class="checkout-section-card" aria-labelledby="checkout-partner-title">
-                    <div class="checkout-section-heading">
-                        <span class="checkout-step">3</span>
-                        <div>
-                            <h2 id="checkout-partner-title">Logistics partner</h2>
-                            <p>The shipping fee depends on how far your address is from the partner's hub.</p>
-                        </div>
-                    </div>
-                    <fieldset class="payment-method-options courier-options">
-                        <legend class="sr-only">Choose a logistics partner</legend>
-                        @foreach($shippingTable as $partner)
-                            @php($partnerChecked = $selectedPartner && $selectedPartner['id'] === $partner['id'])
-                            @php($rate = $rateTo($partner))
-                            <label class="payment-method-option {{ $partnerChecked ? 'selected' : '' }}">
-                                <input type="radio" name="logistics_provider_id" value="{{ $partner['id'] }}" @checked($partnerChecked) data-shipping-rates="{{ json_encode($partner['rates']) }}">
-                                <span class="payment-method-option-icon"><i class="fas fa-warehouse" aria-hidden="true"></i></span>
-                                <span class="payment-method-option-content">
-                                    <span class="payment-method-option-title">{{ $partner['name'] }}</span>
-                                    <span class="payment-method-option-description">@if($partner['hub'])Hub: {{ $partner['hub'] }} · @endif<span data-shipping-rate>&#8369;{{ number_format($rate['fee'] ?? $standardFee, 2) }} per seller · {{ $rate['label'] ?? 'Standard rate' }}</span></span>
-                                </span>
-                            </label>
-                        @endforeach
-                    </fieldset>
-                </section>
-            @endif
-
-            <section class="checkout-section-card" aria-labelledby="checkout-courier-title">
+            <section class="checkout-section-card" aria-labelledby="checkout-partner-title">
                 <div class="checkout-section-heading">
-                    <span class="checkout-step">{{ $shippingTable->isNotEmpty() ? 4 : 3 }}</span>
-                    <div>
-                        <h2 id="checkout-courier-title">Delivery courier truck</h2>
-                        <p>Choose which courier truck will pick up from the seller and deliver to your home with parcel scanning.</p>
-                    </div>
+                    <span class="checkout-step">3</span>
+                    <div><h2 id="checkout-partner-title">Delivery arrangements</h2><p>Each seller chooses an approved ZAYLO logistics partner and arranges payment to that partner. Your shipping fee is included in the order total below.</p></div>
                 </div>
-                <fieldset class="payment-method-options courier-options">
-                    <legend class="sr-only">Choose delivery truck</legend>
-                    @foreach(\App\Models\Order::COURIERS as $courierKey => $courier)
-                        @php($courierChecked = old('courier_choice', \App\Models\Order::DEFAULT_COURIER) === $courierKey)
-                        @php($courierLogo = ['jnt_express' => 'images/couriers/jnt-express.png', 'flash_express' => 'images/couriers/flash-express.png'][$courierKey] ?? null)
-                        <label class="payment-method-option {{ $courierChecked ? 'selected' : '' }}">
-                            <input type="radio" name="courier_choice" value="{{ $courierKey }}" @checked($courierChecked)>
-                            <span class="payment-method-option-icon">
-                                @if($courierLogo && file_exists(public_path($courierLogo)))
-                                    <img src="{{ asset($courierLogo) }}" alt="{{ $courier['name'] }}" style="height:18px; max-width:64px; object-fit:contain; vertical-align:middle;">
-                                @else
-                                    <i class="fas {{ ['jnt_express' => 'fa-truck', 'flash_express' => 'fa-bolt-lightning'][$courierKey] ?? 'fa-truck-fast' }}" aria-hidden="true"></i>
-                                @endif
-                            </span>
-                            <span class="payment-method-option-content">
-                                <span class="payment-method-option-title">{{ $courier['title'] }}</span>
-                                <span class="payment-method-option-description">{{ $courier['description'] }}</span>
-                            </span>
-                        </label>
-                    @endforeach
-                </fieldset>
             </section>
 
             <section class="checkout-section-card" aria-labelledby="checkout-payment-title">
-                <div class="checkout-section-heading"><span class="checkout-step">{{ $shippingTable->isNotEmpty() ? 5 : 4 }}</span><div><h2 id="checkout-payment-title">Payment method</h2><p>Choose how you would like to pay.</p></div></div>
+                <div class="checkout-section-heading"><span class="checkout-step">4</span><div><h2 id="checkout-payment-title">Payment method</h2><p>Choose how you would like to pay.</p></div></div>
                 <fieldset class="payment-method-options"><legend class="sr-only">Payment method</legend>
                     <label class="payment-method-option {{ old('payment_method', 'cod') === 'cod' ? 'selected' : '' }}"><input type="radio" name="payment_method" value="cod" @checked(old('payment_method', 'cod') === 'cod')><span class="payment-method-option-icon"><i class="fas fa-money-bill-wave" aria-hidden="true"></i></span><span class="payment-method-option-content"><span class="payment-method-option-title">Cash on Delivery</span><span class="payment-method-option-description">Pay when your order arrives</span></span></label>
                     @php($gcashMissing = $gcashSellers->filter(fn ($seller) => ! $seller['account']))
