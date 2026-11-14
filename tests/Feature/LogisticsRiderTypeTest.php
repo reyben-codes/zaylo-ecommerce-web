@@ -45,8 +45,16 @@ class LogisticsRiderTypeTest extends TestCase
             $this->assertSame($type === 'delivery', $rider->fresh()->isDeliveryRider());
             $this->assertSame($type === 'pickup', $provider->couriers()->whereKey($rider->id)->exists());
             $this->assertSame($type === 'delivery', $provider->deliveryRiders()->whereKey($rider->id)->exists());
-            $this->get(route('logistics.riders', ['status' => 'approved']))->assertOk()
-                ->assertSee($rider->user->name)->assertSee('Save assignment type');
+            $this->get(route('logistics.riders'))->assertOk()
+                ->assertViewHas('status', 'approved')
+                ->assertSee($rider->user->name)->assertSee('Save assignment type')
+                ->assertSee('Riders (First &amp; Last Mile)', false);
+            if ($type === 'pickup') {
+                $this->get(route('logistics.couriers'))->assertOk()
+                    ->assertSee('Pickup fleet (First Mile)')
+                    ->assertSee(route('logistics.riders.type', $rider))
+                    ->assertSee('Save assignment type');
+            }
         }
     }
 

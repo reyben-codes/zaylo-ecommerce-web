@@ -14,6 +14,7 @@
             <p>{{ $hub ? 'Give a whole delivery area to one rider, or assign parcel by parcel.' : 'Parcels at the hub waiting for a rider.' }} {{ $riders->count() }} {{ Str::plural('rider', $riders->count()) }} on shift right now. Only riders who timed in at the hub can take parcels.</p>
         </div>
         <div class="seller-page-heading__actions">
+            <a href="{{ route('logistics.riders', ['status' => 'approved']) }}" class="seller-button seller-button--secondary">Set First / Last Mile types</a>
             <a href="{{ route('logistics.monitoring') }}" class="seller-button seller-button--secondary"><i class="fas fa-satellite-dish" aria-hidden="true"></i> Monitoring</a>
         </div>
     </section>

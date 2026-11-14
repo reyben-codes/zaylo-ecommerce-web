@@ -1,6 +1,6 @@
 @extends('layouts.workspace', ['workspace' => 'logistics'])
 
-@section('title', 'Couriers')
+@section('title', 'Pickup fleet (First Mile)')
 
 @push('styles')
     <link rel="stylesheet" href="{{ asset('css/document-viewer.css') }}?v={{ filemtime(public_path('css/document-viewer.css')) }}">
@@ -14,8 +14,11 @@
     <section class="seller-page-heading">
         <div>
             <p class="seller-eyebrow">{{ $provider->name }}</p>
-            <h1>Couriers (Pickup Fleet)</h1>
-            <p>Review courier applications and manage first-mile personnel who pick up parcels from sellers for {{ $provider->name }}.</p>
+            <h1>Pickup fleet (First Mile)</h1>
+            <p>Manage the riders and couriers who collect parcels from sellers for {{ $provider->name }}. Change a rider's assignment type below, or open All riders to assign a delivery rider to pickups.</p>
+        </div>
+        <div class="seller-page-heading__actions">
+            <a href="{{ route('logistics.riders', ['status' => 'approved']) }}" class="seller-button seller-button--secondary">All riders &amp; assignment types</a>
         </div>
     </section>
 
@@ -34,6 +37,7 @@
                     <tr>
                         <th>Courier</th>
                         <th>Vehicle</th>
+                        <th>Assignment type</th>
                         <th>Driver's license</th>
                         <th>{{ $status === 'pending' ? 'Applied' : 'Reviewed' }}</th>
                         <th>Actions</th>
@@ -59,6 +63,7 @@
                                     <span class="seller-cell-note rider-paused"><i class="fas fa-pause" aria-hidden="true"></i> Paused: no new pickups</span>
                                 @endif
                             </td>
+                            <td>@include('logistics.partials.rider-type', ['rider' => $courier])</td>
                             <td>
                                 <strong>{{ $courier->license_number ?: '—' }}</strong>
                                 @if($courier->license_expires_on)
@@ -85,7 +90,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5">
+                            <td colspan="6">
                                 <div class="seller-empty">
                                     <i class="fas fa-truck-pickup" aria-hidden="true"></i>
                                     <strong>No {{ Str::lower($statusLabels[$status]) }} couriers</strong>

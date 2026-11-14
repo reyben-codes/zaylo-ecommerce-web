@@ -57,7 +57,7 @@
 
         <section class="seller-panel">
             <header class="seller-panel__header">
-                <div><h2>Riders</h2><p>{{ $availableRiders }} available for new deliveries.</p></div>
+                <div><h2>Riders</h2><p>{{ $availableCouriers }} available for First Mile pickups; {{ $availableRiders }} for Last Mile deliveries.</p></div>
                 <a href="{{ route('logistics.riders') }}" class="seller-link">Manage <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
             </header>
             <dl class="seller-panel__body workspace-detail-list">

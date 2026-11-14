@@ -1,6 +1,6 @@
 @if($rider->user?->hasRole('rider') && in_array($rider->status, ['pending', 'approved', 'suspended'], true))
     @php $typeErrors = $errors->getBag('riderType'.$rider->id); @endphp
-    <form method="POST" action="{{ route('logistics.riders.type', $rider) }}" class="review-reason__form">
+    <form method="POST" action="{{ route('logistics.riders.type', $rider) }}" class="rider-type-form">
         @csrf
         @method('PATCH')
         <label for="rider-type-{{ $rider->id }}">Assign {{ $rider->user->name }} to</label>
@@ -10,7 +10,7 @@
             @endforeach
         </select>
         @if($typeErrors->has('rider_type'))
-            <p id="rider-type-error-{{ $rider->id }}" role="alert">{{ $typeErrors->first('rider_type') }}</p>
+            <p id="rider-type-error-{{ $rider->id }}" class="seller-field__error" role="alert">{{ $typeErrors->first('rider_type') }}</p>
         @endif
         <button type="submit" class="seller-button seller-button--small seller-button--secondary">Save assignment type</button>
     </form>

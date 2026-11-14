@@ -57,7 +57,7 @@
                                 <strong>{{ $rider->vehicle_type ?: '—' }}</strong>
                                 <span class="seller-cell-note">{{ $rider->plate_no ?: 'No plate' }}</span>
                                 @if($rider->status === 'approved' && ! $rider->is_active)
-                                    <span class="seller-cell-note rider-paused"><i class="fas fa-pause" aria-hidden="true"></i> Paused: no new deliveries</span>
+                                    <span class="seller-cell-note rider-paused"><i class="fas fa-pause" aria-hidden="true"></i> Paused: no new assignments</span>
                                 @endif
                             </td>
                             <td>@include('logistics.partials.rider-type', ['rider' => $rider])</td>

@@ -119,7 +119,8 @@ class LogisticsController extends Controller
     public function riders(Request $request)
     {
         $provider = $this->provider();
-        $status = $request->validate(['status' => ['nullable', Rule::in(array_keys(self::RIDER_STATUS_LABELS))]])['status'] ?? 'pending';
+        $status = $request->validate(['status' => ['nullable', Rule::in(array_keys(self::RIDER_STATUS_LABELS))]])['status']
+            ?? ($provider->appRiders()->where('status', 'approved')->exists() ? 'approved' : 'pending');
         $riders = $provider->appRiders()
             ->where('status', $status)
             ->with('user')
