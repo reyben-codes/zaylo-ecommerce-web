@@ -68,6 +68,10 @@ php artisan push:send-pending
 
 The sender command performs real sends for due outbox entries; use staging or deliberately queued test messages when verifying it.
 
+## Notification branding
+
+`mobile_app/android/app/src/main/res/drawable/ic_stat_zaylo.xml` contains the ZAYLO shopping-bag mark traced from `public/favicon.ico`. The favicon's white disc is omitted because Android renders small notification icons as monochrome alpha silhouettes. Both foreground notifications in `MainActivity` and background FCM notifications use this resource, including the manifest fallback. Icon changes require rebuilding and installing the APK; deploying the website alone cannot update an installed app's resources. Check a newly received notification after installing, as existing tray notifications may retain their old icon.
+
 ## Local verification
 
 - Release APK builds successfully with the existing team key and Firebase Android configuration; debug Google Services processing and Kotlin compilation also pass.
