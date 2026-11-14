@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zaylo_mobile/notifications/phone_notifications_screen.dart';
 
 import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/api/buyer_api.dart';
@@ -85,6 +86,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       appBar: AppBar(
         title: const Text('Notifications'),
         actions: [
+          IconButton(tooltip: 'Phone notifications', icon: const Icon(Icons.settings_outlined),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => PhoneNotificationsScreen(api: _api)))),
           if (feed != null && feed.unreadCount > 0)
             TextButton(onPressed: _markAllRead, child: const Text('Mark all read')),
         ],

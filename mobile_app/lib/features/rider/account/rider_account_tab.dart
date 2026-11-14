@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:zaylo_mobile/notifications/phone_notifications_screen.dart';
+import 'package:zaylo_mobile/features/rider/messages/logistics_chat_screen.dart';
 
 import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/api/rider_api.dart';
@@ -204,6 +206,14 @@ class _RiderAccountTabState extends State<RiderAccountTab> {
                   ]),
                 ),
                 const _Heading('Work'),
+                SectionCard(padding: EdgeInsets.zero, child: _Row(
+                  icon: Icons.notifications_outlined, label: 'Phone notifications', value: 'Permission and test notification', action: 'Open',
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => PhoneNotificationsScreen(api: widget.api))),
+                )),
+                SectionCard(padding: EdgeInsets.zero, child: _Row(
+                  icon: Icons.chat_bubble_outline, label: 'Logistics messages', value: 'Chat with your logistics partner', action: 'Open',
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => LogisticsChatScreen(api: widget.api))),
+                )),
                 SectionCard(
                   padding: EdgeInsets.zero,
                   child: _Row(

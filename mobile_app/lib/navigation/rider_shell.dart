@@ -15,6 +15,7 @@ import 'package:zaylo_mobile/models/rider/rider_activity_models.dart';
 import 'package:zaylo_mobile/navigation/floating_nav_bar.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 import 'package:zaylo_mobile/auth/google_auth.dart';
+import 'package:zaylo_mobile/notifications/push_notifications.dart';
 
 /// The signed-in rider app: Home, History, Chat (ZAYLO support), and Account
 /// tabs. Sign out lives in Account. [api] carries the rider's token; the
@@ -46,6 +47,7 @@ class _RiderShellState extends State<RiderShell> {
   void initState() {
     super.initState();
     widget.api.onUnauthorized = _sessionExpired;
+    if (widget.user != null) PushNotifications.instance.bind(widget.api, widget.user!.id, rider: true);
     _refreshUnread();
     _unreadPoll = Timer.periodic(const Duration(seconds: 30), (_) => _refreshUnread());
   }

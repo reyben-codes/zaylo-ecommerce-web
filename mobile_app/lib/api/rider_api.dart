@@ -6,6 +6,8 @@ import 'package:zaylo_mobile/auth/token_store.dart';
 import 'package:zaylo_mobile/components/address/ph_address_section.dart';
 import 'package:zaylo_mobile/components/chat/delivery_chat.dart';
 import 'package:zaylo_mobile/models/auth_models.dart';
+import 'package:zaylo_mobile/models/support_models.dart';
+import 'package:zaylo_mobile/notifications/push_notifications.dart';
 import 'package:zaylo_mobile/models/chat_media.dart';
 import 'package:zaylo_mobile/models/rider/rider_activity_models.dart';
 import 'package:zaylo_mobile/models/rider/rider_attendance_history.dart';
@@ -31,6 +33,7 @@ class RiderApi extends ApiClient {
 
   /// Drops the token here and on the phone.
   Future<void> forget() async {
+    await PushNotifications.instance.unbind(this, unregister: false);
     token = null;
     await _tokens.clear();
   }
@@ -43,7 +46,8 @@ class RiderApi extends ApiClient {
     if (saved == null) return false;
     token = saved;
     try {
-      await me();
+      final user = await me();
+      PushNotifications.instance.bind(this, user.id, rider: true);
     } on ApiException catch (error) {
       if (error.statusCode == 401) {
         await forget();
@@ -88,6 +92,13 @@ class RiderApi extends ApiClient {
   // ------------------------------------------- Signed-in rider (needs token)
 
   Future<RiderDashboard> dashboard() async => RiderDashboard.fromJson(await send('GET', '/mobile/rider/dashboard'));
+
+  Future<List<SupportMessage>> logisticsMessages() async =>
+      ((await send('GET', '/mobile/rider/logistics-chat'))['messages'] as List<dynamic>)
+          .map((item) => SupportMessage.fromJson(item as Map<String, dynamic>)).toList();
+
+  Future<SupportMessage> sendLogisticsMessage(String body, String clientId, ChatAttachment? attachment) async =>
+      SupportMessage.fromJson((await sendChatMessage('/mobile/rider/logistics-chat', body: body, clientId: clientId, attachment: attachment))['message'] as Map<String, dynamic>);
 
   Future<RiderAttendanceHistory> attendanceHistory({int page = 1, DateTime? from, DateTime? to}) async =>
       RiderAttendanceHistory.fromJson(await send('GET', '/mobile/rider/attendance', query: {

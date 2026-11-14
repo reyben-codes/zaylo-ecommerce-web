@@ -11,6 +11,7 @@ import 'package:zaylo_mobile/models/chat_media.dart';
 import 'package:zaylo_mobile/models/location.dart';
 import 'package:zaylo_mobile/models/support_models.dart';
 import 'package:zaylo_mobile/utils/ids.dart';
+import 'package:zaylo_mobile/notifications/push_notifications.dart';
 
 /// HTTP boundary for Laravel. The app never connects to MySQL directly.
 ///
@@ -43,7 +44,14 @@ class ApiClient {
   Future<UserProfile> me() async =>
       UserProfile.fromJson((await send('GET', '/mobile/me'))['user'] as Map<String, dynamic>);
 
-  Future<void> logout() => send('POST', '/mobile/logout');
+  Future<void> logout() async {
+    await PushNotifications.instance.unbind(this);
+    await send('POST', '/mobile/logout');
+  }
+
+  Future<void> registerPush(String pushToken) => send('PUT', '/mobile/push-device', body: {'token': pushToken, 'platform': 'android'});
+  Future<void> unregisterPush() => send('DELETE', '/mobile/push-device');
+  Future<String> testPush() async => (await send('POST', '/mobile/push-device/test'))['message'] as String;
 
   static const _githubReleasesApi = 'https://api.github.com/repos/reyben-codes/zaylo-ecommerce-web/releases/latest';
   static const _defaultApkUrl =

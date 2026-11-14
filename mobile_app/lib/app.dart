@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
+import 'package:zaylo_mobile/notifications/push_notifications.dart';
+import 'package:zaylo_mobile/notifications/push_navigation.dart';
 
 import 'package:zaylo_mobile/api/rider_api.dart';
 import 'package:zaylo_mobile/components/app_update.dart';
@@ -26,12 +29,15 @@ class ZayloApp extends StatefulWidget {
 }
 
 class _ZayloAppState extends State<ZayloApp> with WidgetsBindingObserver {
+  StreamSubscription<PushTap>? _pushTaps;
   /// Suggests updating when a newer app has been published.
   late final _updates = AppUpdatePrompt(navigatorKey: zayloNavigatorKey, load: widget.state.api.appVersion);
 
   @override
   void initState() {
     super.initState();
+    _pushTaps = PushNotifications.instance.taps.listen(_openPush);
+    WidgetsBinding.instance.addPostFrameCallback((_) => PushNotifications.instance.flushPendingTap());
     WidgetsBinding.instance.addObserver(this);
     widget.theme.addListener(_applyTheme);
     ZayloColors.use(_brightness);
@@ -46,18 +52,38 @@ class _ZayloAppState extends State<ZayloApp> with WidgetsBindingObserver {
 
   /// A rider who signed in before (and never signed out) goes straight back to the rider app.
   Future<void> _resumeRider() async {
-    final rider = widget.rider ?? RiderApi(baseUrl: widget.state.api.baseUrl);
-    if (!await rider.resume()) return;
-    zayloNavigatorKey.currentState?.push(MaterialPageRoute(builder: (_) => RiderShell(api: rider)));
+    try {
+      final rider = widget.rider ?? RiderApi(baseUrl: widget.state.api.baseUrl);
+      if (!await rider.resume()) return;
+      zayloNavigatorKey.currentState?.push(MaterialPageRoute(builder: (_) => RiderShell(api: rider)));
+    } finally {
+      PushNotifications.instance.navigationReady();
+    }
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _updates.check();
+    if (state == AppLifecycleState.resumed) {
+      _updates.check();
+      unawaited(PushNotifications.instance.sync());
+    }
+  }
+
+  Future<void> _openPush(PushTap tap) async {
+    try {
+      final destination = await pushDestination(tap, widget.state);
+      if (!mounted || destination == null || tap.session.api.token == null) return;
+      // Recheck identity after asynchronous conversation loading/account changes.
+      if (!tap.session.rider && widget.state.user?.id != tap.session.userId) return;
+      zayloNavigatorKey.currentState?.push(MaterialPageRoute(builder: (_) => destination));
+    } catch (_) {
+      // Offline/stale notifications never prevent opening the app normally.
+    }
   }
 
   @override
   void dispose() {
+    _pushTaps?.cancel();
     widget.theme.removeListener(_applyTheme);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();

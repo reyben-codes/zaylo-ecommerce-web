@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "71918808884",
+    "project_id": "zaylo-ecommerce",
+    "storage_bucket": "zaylo-ecommerce.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:71918808884:android:9f7ce710cf87b5d7a27f61",
+        "android_client_info": {
+          "package_name": "com.example.zaylo_mobile"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "71918808884-d4uh5997uq3pe2n7m4vha15ikt52vvbq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAws68fwFHX-SQokXwyD4yForlOTmLnfW4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "71918808884-d4uh5997uq3pe2n7m4vha15ikt52vvbq.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

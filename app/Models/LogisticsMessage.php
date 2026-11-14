@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class LogisticsMessage extends Model
 {
-    protected $fillable = ['logistics_thread_id', 'sender_id', 'body', 'image_path', 'video_path', 'read_at'];
+    protected $fillable = ['logistics_thread_id', 'sender_id', 'client_id', 'body', 'image_path', 'video_path', 'read_at'];
 
     protected $casts = ['read_at' => 'datetime'];
 

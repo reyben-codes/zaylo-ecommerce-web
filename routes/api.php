@@ -84,6 +84,9 @@ Route::prefix('mobile')->name('mobile.')->middleware('throttle:60,1')->group(fun
 
     Route::middleware('auth:mobile')->group(function () use ($complaintRoutes) {
         Route::get('/me', [MobileAuthenticationController::class, 'me'])->name('me');
+        Route::put('/push-device', [\App\Http\Controllers\MobilePushController::class, 'store'])->middleware('throttle:10,1,mobile-push')->name('push-device.store');
+        Route::delete('/push-device', [\App\Http\Controllers\MobilePushController::class, 'destroy'])->name('push-device.destroy');
+        Route::post('/push-device/test', [\App\Http\Controllers\MobilePushController::class, 'test'])->middleware('throttle:3,1,mobile-push-test')->name('push-device.test');
         // Questions the help bot could not match go to the AI models, within limits shared with the website.
         Route::post('/help/ask', [FaqController::class, 'ask'])->middleware(['throttle:10,1,zay-ask', 'throttle:20,1440,zay-ask-day'])->name('help.ask');
         // Profile photo, for buyers and riders alike.
@@ -93,6 +96,9 @@ Route::prefix('mobile')->name('mobile.')->middleware('throttle:60,1')->group(fun
 
         Route::middleware('mobile.rider')->prefix('rider')->name('rider.')->group(function () use ($complaintRoutes) {
             Route::get('/dashboard', [MobileRiderDashboardController::class, 'dashboard'])->name('dashboard');
+            Route::get('/logistics-chat', [\App\Http\Controllers\MobileRiderLogisticsChatController::class, 'index'])->name('logistics-chat');
+            Route::post('/logistics-chat', [\App\Http\Controllers\MobileRiderLogisticsChatController::class, 'send'])->middleware('throttle:20,1,mobile-logistics-chat')->name('logistics-chat.send');
+            Route::get('/logistics-chat/{message}/{kind}', [\App\Http\Controllers\MobileRiderLogisticsChatController::class, 'media'])->whereIn('kind', ['photo', 'video'])->name('logistics-chat.media');
             Route::get('/attendance', [MobileRiderAttendanceController::class, 'index'])->name('attendance');
             // Scanning a parcel label's QR code starts a delivery, and again at the door confirms it.
             Route::post('/deliveries/scan', [MobileRiderDashboardController::class, 'scan'])->middleware('throttle:30,1,mobile-rider-scan')->name('deliveries.scan');

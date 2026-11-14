@@ -89,6 +89,8 @@ For checkout compatibility, refund transfer records, durable uploads, the bundle
 
 ## Mobile app (development)
 
+Android tray notifications for orders, rider assignments/schedules and messages use Firebase Cloud Messaging. See [mobile push setup and phone testing](docs/mobile-push-notifications.md). A new APK is required; deploying the website alone does not update installed apps.
+
 The Flutter app is in [`mobile_app/`](mobile_app). It talks to `https://zaylo-zyl.shop/api` by default, so `flutter run` on a phone works against the live site.
 
 ```bash

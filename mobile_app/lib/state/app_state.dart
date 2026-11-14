@@ -8,6 +8,7 @@ import 'package:zaylo_mobile/models/auth_models.dart';
 import 'package:zaylo_mobile/models/buyer/cart_models.dart';
 import 'package:zaylo_mobile/models/buyer/catalog_models.dart';
 import 'package:zaylo_mobile/state/chat_head_state.dart';
+import 'package:zaylo_mobile/notifications/push_notifications.dart';
 
 /// Session, bag and saved-item state shared by every screen.
 class AppState extends ChangeNotifier {
@@ -72,6 +73,7 @@ class AppState extends ChangeNotifier {
       api.token = token;
       try {
         _user = await api.me();
+        PushNotifications.instance.bind(api, _user!.id);
         await Future.wait([refreshCart(), _loadSaved(), refreshChatUnread()]);
       } on ApiException catch (error) {
         if (error.statusCode == 401) await _clearSession();
@@ -87,6 +89,7 @@ class AppState extends ChangeNotifier {
     api.token = token;
     await _tokens.write(token);
     _user = result.user;
+    PushNotifications.instance.bind(api, _user!.id);
     notifyListeners();
     try {
       await Future.wait([refreshCart(), _loadSaved(), refreshChatUnread()]);
@@ -147,6 +150,7 @@ class AppState extends ChangeNotifier {
   Future<void> _loadSaved() async => syncSaved(await api.wishlist());
 
   Future<void> _clearSession() async {
+    await PushNotifications.instance.unbind(api, unregister: false);
     api.token = null;
     _user = null;
     _cart = const CartSummary.empty();

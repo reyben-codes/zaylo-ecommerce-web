@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
+import 'package:zaylo_mobile/notifications/push_notifications.dart';
 
 import 'package:zaylo_mobile/api/buyer_api.dart';
 import 'package:zaylo_mobile/app.dart';
@@ -11,4 +13,5 @@ void main() {
     state: AppState(api: BuyerApi())..restore(),
     theme: ThemeController()..restore(),
   ));
+  unawaited(PushNotifications.instance.initialize());
 }

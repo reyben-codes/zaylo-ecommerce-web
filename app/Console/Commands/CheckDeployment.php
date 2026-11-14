@@ -14,6 +14,13 @@ class CheckDeployment extends Command
     public function handle(Migrator $migrator): int
     {
         $errors = [];
+        if (filled(config('push.project_id')) || filled(config('push.credentials'))) {
+            try {
+                app(\App\Services\FirebaseMessaging::class)->validateConfiguration();
+            } catch (\Throwable) {
+                $errors[] = 'Firebase credential is unreadable, invalid or does not match FIREBASE_PROJECT_ID.';
+            }
+        }
         if (app()->environment('production')) {
             if (config('app.debug')) $errors[] = 'APP_DEBUG must be false.';
             foreach (['public', 'local'] as $name) {

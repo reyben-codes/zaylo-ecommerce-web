@@ -31,3 +31,8 @@ Artisan::command('payments:expire-unpaid', function (App\Services\GcashPayments 
     $this->info($payments->expireDue($checkout).' unpaid orders cancelled.');
 })->purpose('Expire unpaid GCash orders without waiting for someone to open the order list');
 Schedule::command('payments:expire-unpaid')->everyMinute()->withoutOverlapping()->onOneServer();
+
+Artisan::command('push:send-pending', function (App\Services\MobilePushNotifications $push) {
+    $this->info($push->drain().' mobile notifications delivered to Firebase.');
+})->purpose('Retry pending mobile push notifications after transient delivery failures');
+Schedule::command('push:send-pending')->everyMinute()->withoutOverlapping()->onOneServer();

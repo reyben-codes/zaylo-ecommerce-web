@@ -51,6 +51,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        foreach ([\App\Models\OrderStatusHistory::class, \App\Models\Shipment::class, \App\Models\Rider::class,
+            \App\Models\Message::class, \App\Models\SupportMessage::class, \App\Models\LogisticsMessage::class,
+            \App\Models\DeliveryMessage::class] as $model) {
+            $model::observe(\App\Observers\MobilePushObserver::class);
+        }
         // Email over Brevo's HTTPS API (config/mail.php 'brevo'), for hosts that block SMTP ports.
         Mail::extend('brevo', fn (array $config) => (new BrevoTransportFactory)->create(
             new Dsn('brevo+api', 'default', (string) ($config['key'] ?? ''))
