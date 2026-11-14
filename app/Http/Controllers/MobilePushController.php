@@ -46,7 +46,7 @@ class MobilePushController extends Controller
     {
         $sessionId = $request->user()->currentAccessToken()?->id;
         abort_unless(MobilePushDevice::active()->where('user_id', $request->user()->id)->where('mobile_token_id', $sessionId)->exists(), 422,
-            'Enable phone notifications first, then try again.');
+            'This phone is not registered with ZAYLO notifications yet. Reopen the app and try again.');
         app(\App\Services\MobilePushNotifications::class)->queue($request->user()->id, 'test-'.\Illuminate\Support\Str::uuid(),
             'ZAYLO notifications', 'Phone notifications are connected.', 'notifications', mobileTokenId: $sessionId);
         return response()->json(['message' => 'Test notification queued. Check your notification tray.'], 202);

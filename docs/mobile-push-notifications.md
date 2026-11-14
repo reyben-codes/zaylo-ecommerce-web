@@ -19,6 +19,8 @@ Keep the private JSON outside the repository. Git/Docker exclusions prevent its 
 
 Firebase Cloud Messaging API (V1) must be enabled. The service account must have permission to send FCM messages for this project. Server authentication uses a signed short-lived OAuth JWT exchanged at Google's token endpoint; credentials and device identifiers are never printed. The Firebase 17 client uses `register()`/`onRegistered` installation IDs, and the server targets the HTTP v1 `fid` field.
 
+The Android application manifest must include `firebase_messaging_installation_id_enabled=true`. Firebase's `register()` API requires this opt-in: notification permission can show **Allowed** even while installation registration fails because the flag is absent. The test button waits for successful Firebase registration and server registration before requesting a test send. Permission status is displayed separately, and registration failures remain visible on the page rather than being replaced with an instruction to enable an already allowed permission.
+
 ## Deployment
 
 1. Push the server and mobile changes together, including `google-services.json`, the dependency lockfile and the new migration. Never stage the private service-account JSON.
@@ -71,7 +73,7 @@ The sender command performs real sends for due outbox entries; use staging or de
 - Release APK builds successfully with the existing team key and Firebase Android configuration; debug Google Services processing and Kotlin compilation also pass.
 - Dart analysis of `lib` and `test` reports no issues.
 - PHP: 616 tests, 582 passing and the same 34 failing test identities as the earlier audit. All ten added server push tests pass.
-- Flutter: 123 passing and the same two existing failures (buyer-selected logistics checkout expectation and rider Account sign-out test); all three added notification tests pass.
+- Flutter after the registration fix: 125 passing and the same two existing failures (buyer-selected logistics checkout expectation and rider Account sign-out test); all five notification tests pass. They cover allowed permission with failed registration, server upload failures and waiting for registration before sending a test. The corrected release APK builds successfully, and its merged release manifest contains the installation-ID opt-in flag set to true.
 - Shell syntax and `git diff --check` pass. Database tests use isolated SQLite fixtures; transport tests use generated fixture credentials and mocked Google endpoints. No live Firebase push or production database mutation was performed during validation.
 - Physical foreground/background delivery, notification taps on a real phone, actual service-account permissions and an installed-app upgrade remain rollout acceptance checks.
 

@@ -8,6 +8,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import 'package:zaylo_mobile/api/api_client.dart';
+import 'package:zaylo_mobile/api/rider_api.dart';
+import 'package:zaylo_mobile/api/api_exception.dart';
+import 'package:zaylo_mobile/notifications/phone_notification_access.dart';
 
 /// One Android installation can retain separate buyer and rider sessions.
 class PushSession {
@@ -25,7 +28,7 @@ class PushTap {
 }
 
 /// FCM displays background notifications. Android's small native bridge handles foreground display.
-class PushNotifications {
+class PushNotifications implements PhoneNotificationAccess {
   PushNotifications._();
   static final instance = PushNotifications._();
   static const _native = MethodChannel('shop.zaylo/notifications');
@@ -41,6 +44,9 @@ class PushNotifications {
   Completer<void>? _registrationEvent;
   bool _allowed = false;
   bool _syncAgain = false;
+  ApiException? _registrationError;
+  final _uploadErrors = <ApiClient, ApiException>{};
+  final _registeredTokens = <ApiClient, String?>{};
 
   Future<void> initialize() async {
     if (_ready || _initializing || kIsWeb || !Platform.isAndroid) return;
@@ -69,6 +75,7 @@ class PushNotifications {
         }
       });
       FirebaseMessaging.instance.onRegistered.listen((token) async {
+        if (_fcmToken != token) _registeredTokens.clear();
         _fcmToken = token;
         await _registerAll();
         final event = _registrationEvent;
@@ -76,6 +83,7 @@ class PushNotifications {
       });
       FirebaseMessaging.instance.onUnregistered.listen((_) {
         _fcmToken = null;
+        _registeredTokens.clear();
       });
       final initial = await FirebaseMessaging.instance.getInitialMessage();
       final nativeInitial = await _native.invokeMethod<String>('pendingTap');
@@ -83,7 +91,8 @@ class PushNotifications {
       if (initial != null) _open(initial.data);
       if (nativeInitial != null) _open(jsonDecode(nativeInitial) as Map<String, dynamic>);
       await sync();
-    } catch (_) {
+    } catch (error) {
+      _registrationError = _registrationFailure(error);
       // A phone without Google Play services, or a missing debug config, can still use ZAYLO.
       if (kDebugMode) debugPrint('[ZAYLO] Push notification initialization is unavailable.');
     } finally {
@@ -99,6 +108,8 @@ class PushNotifications {
 
   Future<void> unbind(ApiClient api, {bool unregister = true}) async {
     _sessions.remove(api);
+    _uploadErrors.remove(api);
+    _registeredTokens.remove(api);
     // Clear previously displayed notifications on local logout, even if the network is unavailable.
     if (!_ready) return;
     try { await _native.invokeMethod<void>('clear'); } catch (_) {}
@@ -131,10 +142,12 @@ class PushNotifications {
   }
 
   Future<void> _sync() async {
+    _registrationError = null;
     try {
       final settings = await FirebaseMessaging.instance.requestPermission();
       _allowed = settings.authorizationStatus == AuthorizationStatus.authorized || settings.authorizationStatus == AuthorizationStatus.provisional;
       if (!_allowed) {
+        _registeredTokens.clear();
         for (final session in List.of(_sessions.values)) {
           try { await session.api.unregisterPush(); } catch (_) {}
         }
@@ -152,7 +165,8 @@ class PushNotifications {
           if (identical(_registrationEvent, event)) _registrationEvent = null;
         }
       }
-    } catch (_) {
+    } catch (error) {
+      _registrationError = _registrationFailure(error);
       // Retry at the next foreground transition; sign-in remains usable offline.
     }
   }
@@ -162,8 +176,51 @@ class PushNotifications {
     if (token == null || !_allowed) return;
     for (final session in List.of(_sessions.values)) {
       if (session.api.token == null) continue;
-      try { await session.api.registerPush(token); } catch (_) {}
+      final accessToken = session.api.token;
+      try {
+        await session.api.registerPush(token);
+        if (identical(_sessions[session.api], session) && session.api.token == accessToken && _fcmToken == token) {
+          _registeredTokens[session.api] = accessToken;
+          _uploadErrors.remove(session.api);
+        }
+      } on ApiException catch (error) {
+        _registeredTokens.remove(session.api);
+        _uploadErrors[session.api] = error;
+      } catch (_) {
+        _registeredTokens.remove(session.api);
+        _uploadErrors[session.api] = const ApiException('Could not connect this phone to ZAYLO. Check your connection and try again.');
+      }
     }
+  }
+
+  @override
+  Future<void> ensureRegistered(ApiClient api) async {
+    if (api.token == null) throw const ApiException('Please sign in again to connect phone notifications.');
+    // A restored offline session might not have been bound during launch. Retry it explicitly here.
+    if (!_sessions.containsKey(api)) {
+      final user = await api.me();
+      _sessions[api] = PushSession(api, user.id, rider: api is RiderApi);
+    }
+    if (!_ready) await initialize();
+    if (!_ready) throw _registrationError ?? const ApiException('Phone notifications are unavailable on this device. Check Google Play services and try again.');
+    await sync();
+    if (!_allowed) throw _registrationError ?? const ApiException('Notification permission is disabled. Enable it in phone settings.');
+    if (_uploadErrors[api] case final error?) throw error;
+    if (_registrationError != null) throw _registrationError!;
+    if (_registeredTokens[api] != api.token) {
+      throw const ApiException('This phone has not connected to ZAYLO notifications yet. Check your connection and try again.');
+    }
+  }
+
+  ApiException _registrationFailure(Object error) {
+    if (error is TimeoutException) return const ApiException('Firebase registration timed out. Check your connection and try again.');
+    if (error is FirebaseException) {
+      if ((error.message ?? '').contains('firebase_messaging_installation_id_enabled')) {
+        return const ApiException('This app version needs a notification setup update. Install the latest ZAYLO APK.');
+      }
+      return const ApiException('Could not register with Firebase. Check your internet connection and Google Play services, then try again.');
+    }
+    return const ApiException('Phone notification setup failed. Restart ZAYLO and try again.');
   }
 
   PushSession? _sessionFor(Map<String, dynamic> data) {
@@ -196,6 +253,7 @@ class PushNotifications {
     _flushTap();
   }
 
+  @override
   Future<String> permissionStatus() async {
     if (!_ready) return 'Unavailable on this device';
     try {
@@ -208,6 +266,7 @@ class PushNotifications {
     } catch (_) { return 'Unavailable on this device'; }
   }
 
+  @override
   Future<void> openSettings() async {
     if (!_ready) return;
     await _native.invokeMethod<void>('settings');
