@@ -3,12 +3,21 @@
     <form method="POST" action="{{ route('logistics.riders.type', $rider) }}" class="rider-type-form">
         @csrf
         @method('PATCH')
-        <label for="rider-type-{{ $rider->id }}">Assign {{ $rider->user->name }} to</label>
-        <select id="rider-type-{{ $rider->id }}" name="rider_type" @if($typeErrors->has('rider_type')) aria-invalid="true" aria-describedby="rider-type-error-{{ $rider->id }}" @endif>
+        <fieldset class="rider-type-options" @if($typeErrors->has('rider_type')) aria-describedby="rider-type-error-{{ $rider->id }}" @endif>
+            <legend>Assign {{ $rider->user->name }} to</legend>
             @foreach(\App\Models\Rider::TYPE_LABELS as $value => $label)
-                <option value="{{ $value }}" @selected(($rider->rider_type ?? 'delivery') === $value)>{{ $label }}</option>
+                <label class="rider-type-option">
+                    <input type="radio" name="rider_type" value="{{ $value }}" @checked(($rider->rider_type ?? 'delivery') === $value) @if($typeErrors->has('rider_type')) aria-invalid="true" @endif>
+                    <span class="rider-type-option__card">
+                        <i class="fas {{ $value === 'pickup' ? 'fa-box' : 'fa-truck' }} rider-type-option__icon" aria-hidden="true"></i>
+                        <span class="rider-type-option__text">
+                            <strong>{{ $label }}</strong>
+                            <span>{{ $value === 'pickup' ? 'Collect parcels from sellers' : 'Deliver parcels to buyers' }}</span>
+                        </span>
+                    </span>
+                </label>
             @endforeach
-        </select>
+        </fieldset>
         @if($typeErrors->has('rider_type'))
             <p id="rider-type-error-{{ $rider->id }}" class="seller-field__error" role="alert">{{ $typeErrors->first('rider_type') }}</p>
         @endif
