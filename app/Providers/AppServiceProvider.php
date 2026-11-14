@@ -11,6 +11,7 @@ use App\Services\SidebarCounts;
 use App\Services\WorkspaceNotificationFeed;
 use App\Support\SnapshotSchemaBuilder;
 use Illuminate\Auth\Events\Failed;
+use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -124,7 +125,14 @@ class AppServiceProvider extends ServiceProvider
         });
         Event::listen(function (PasswordReset $event) {
             if ($event->user instanceof User) {
+                app(\App\Services\AccountSessions::class)->revokeMobileTokens($event->user);
                 app(ActivityLogger::class)->record('auth.password_reset', 'auth', 'Reset password from the emailed link', $event->user);
+            }
+        });
+
+        Event::listen(function (Login $event) {
+            if ($event->guard === 'web' && $event->user instanceof User) {
+                app(\App\Services\AccountSessions::class)->rememberWebPassword($event->user);
             }
         });
 

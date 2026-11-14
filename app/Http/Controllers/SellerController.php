@@ -445,6 +445,7 @@ class SellerController extends Controller
             }
 
             if ($data['status'] === 'cancelled') {
+                  app(\App\Services\CheckoutService::class)->ensureUnpaidCancellation($locked);
                 $locked->load(['items', 'payment', 'shipment']);
                 foreach ($locked->items as $item) {
                     $item->product_variant_id

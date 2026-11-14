@@ -63,10 +63,14 @@ trait UpdatesAccountSettings
             'password' => ['required', 'string', 'confirmed', new StrongPassword],
         ]);
 
-        $user->forceFill([
-            'password' => $validated['password'],
-            'remember_token' => Str::random(60),
-        ])->save();
+        \Illuminate\Support\Facades\DB::transaction(function () use ($user, $validated) {
+            $user->forceFill([
+                'password' => $validated['password'],
+                'remember_token' => Str::random(60),
+            ])->save();
+            app(\App\Services\AccountSessions::class)->revokeMobileTokens($user);
+        });
+        app(\App\Services\AccountSessions::class)->rememberWebPassword($user);
 
         return back()->with('status', $hasPassword ? 'Password updated.' : 'Password created. You can now also sign in with email.');
     }

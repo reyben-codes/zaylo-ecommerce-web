@@ -72,10 +72,10 @@ class MobileAccountController extends Controller
             'password' => ['required', 'string', 'confirmed', new StrongPassword],
         ]);
 
-        $user->forceFill(['password' => $validated['password'], 'remember_token' => Str::random(60)])->save();
-
-        // Sign out every other device; this phone stays signed in.
-        $user->tokens()->whereKeyNot($user->currentAccessToken()?->getKey())->delete();
+        \Illuminate\Support\Facades\DB::transaction(function () use ($user, $validated) {
+            $user->forceFill(['password' => $validated['password'], 'remember_token' => Str::random(60)])->save();
+            app(\App\Services\AccountSessions::class)->revokeMobileTokens($user, $user->currentAccessToken()?->getKey());
+        });
 
         return response()->json([
             'message' => $hasPassword ? 'Password updated. Other devices were signed out.' : 'Password created. You can now also sign in with email.',

@@ -160,9 +160,10 @@ class GcashPayments
         }
 
         return DB::transaction(function () use ($order, $reference) {
+            $lockedOrder = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
             $payment = Payment::where('order_id', $order->id)->lockForUpdate()->firstOrFail();
-            $current = Order::whereKey($order->id)->value('status');
-            if ($current !== 'placed' || ! in_array($payment->status, [self::AWAITING, self::REJECTED], true)) {
+            $current = $lockedOrder->status;
+            if ($current !== 'placed' || $payment->paid_at !== null || ! in_array($payment->status, [self::AWAITING, self::REJECTED], true)) {
                 throw ValidationException::withMessages(['gcash_reference' => $payment->status === self::CHECKING
                     ? 'The seller is already checking your reference.'
                     : 'This order no longer needs a GCash reference.']);
@@ -181,15 +182,16 @@ class GcashPayments
         abort_unless(self::isGcash($order), 404);
 
         return DB::transaction(function () use ($order, $seller, $received, $note) {
+            $lockedOrder = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
             $payment = Payment::where('order_id', $order->id)->lockForUpdate()->firstOrFail();
-            if ($payment->status !== self::CHECKING) {
+            if ($lockedOrder->status !== 'placed' || $payment->status !== self::CHECKING || $payment->paid_at !== null) {
                 throw ValidationException::withMessages(['gcash' => 'There is no GCash reference waiting for your check on this order.']);
             }
             $payment->forceFill($received
                 ? ['status' => self::PAID, 'paid_at' => now(), 'verified_at' => now(), 'verified_by' => $seller->id, 'rejection_note' => null]
                 : ['status' => self::REJECTED, 'verified_at' => now(), 'verified_by' => $seller->id, 'rejection_note' => $note])->save();
-            $order->statusHistory()->create([
-                'changed_by' => $seller->id, 'status' => $order->status,
+            $lockedOrder->statusHistory()->create([
+                'changed_by' => $seller->id, 'status' => $lockedOrder->status,
                 'note' => $received
                     ? 'Seller received the GCash payment (ref. '.$payment->gcash_reference.').'
                     : 'Seller could not find GCash ref. '.$payment->gcash_reference.($note ? ': '.$note : '').'.',
@@ -215,14 +217,15 @@ class GcashPayments
             ->where('payment_method', 'gcash')->where('status', 'placed')
             ->where(fn ($q) => $q->where('placed_at', '<', now()->subHours(self::EXPIRE_HOURS))
                 ->orWhere(fn ($q) => $q->whereNull('placed_at')->where('created_at', '<', now()->subHours(self::EXPIRE_HOURS))))
-            ->whereHas('payment', fn ($q) => $q->where('status', '!=', self::PAID))
+            ->whereHas('payment', fn ($q) => $q->where('status', '!=', self::PAID)->whereNull('paid_at'))
             ->when($buyerId, fn ($q) => $q->where('user_id', $buyerId))
             ->when($shopId, fn ($q) => $q->where('seller_id', $shopId))
             ->limit(50)->get();
+        $cancelled = 0;
         foreach ($due as $order) {
-            $checkout->cancelUnpaid($order, 'No GCash payment was received within '.self::EXPIRE_HOURS.' hours, so the order was cancelled.');
+            $cancelled += (int) $checkout->cancelUnpaid($order, 'No GCash payment was received within '.self::EXPIRE_HOURS.' hours, so the order was cancelled.');
         }
 
-        return $due->count();
+        return $cancelled;
     }
 }

@@ -500,19 +500,36 @@ class CheckoutService
     }
 
     /** A GCash order the buyer never paid (App\Services\GcashPayments::expireDue): cancelled with its stock restored. */
-    public function cancelUnpaid(Order $order, string $note): void
+    public function cancelUnpaid(Order $order, string $note): bool
     {
-        DB::transaction(function () use ($order, $note) {
+        return DB::transaction(function () use ($order, $note) {
             $locked = Order::whereKey($order->id)->lockForUpdate()->first();
-            if ($locked && in_array($locked->status, self::BUYER_CANCELLABLE, true)) {
-                $this->cancelLocked($locked, null, $note, 'payment_issue', null);
+            if (! $locked || $locked->payment_method !== 'gcash' || ! in_array($locked->status, self::BUYER_CANCELLABLE, true)) {
+                return false;
             }
+            $payment = $locked->payment()->lockForUpdate()->first();
+            if (! $payment || $payment->status === GcashPayments::PAID || $payment->paid_at !== null) {
+                return false;
+            }
+            $this->cancelLocked($locked, null, $note, 'payment_issue', null);
+
+            return true;
         });
+    }
+
+    /** The caller locks the order first. Received money must go through a refund, never unpaid cancellation. */
+    public function ensureUnpaidCancellation(Order $order): void
+    {
+        $payment = $order->payment()->lockForUpdate()->first();
+        if ($payment && ($payment->status === GcashPayments::PAID || $payment->paid_at !== null)) {
+            throw ValidationException::withMessages(['order' => 'Payment has already been received. Use the refund process so the payment history is preserved.']);
+        }
     }
 
     /** Puts the stock back and marks the (already locked) order, its parcel and payment cancelled. */
     private function cancelLocked(Order $lockedOrder, ?int $actorId, string $note, ?string $reason, ?string $reasonNote): void
     {
+        $this->ensureUnpaidCancellation($lockedOrder);
         $lockedOrder->load(['items', 'shipment', 'payment']);
         foreach ($lockedOrder->items as $item) {
             if ($item->product_variant_id) {
