@@ -2,8 +2,8 @@ services:
   - type: web
     name: my-laravel-app
     runtime: docker
+    plan: free
     dockerfilePath: ./Dockerfile
-    preDeployCommand: php artisan migrate --force
     healthCheckPath: /up
     envVars:
       - key: APP_ENV

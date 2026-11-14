@@ -78,7 +78,7 @@ The feature suite covers public browsing, marketplace account approval, seller o
 
 ## Production notes
 
-For checkout compatibility, refund transfer records, durable uploads, the bundled Docker scheduler and Android signing safeguards, follow [the scenario-fixes deployment checklist](docs/scenario-fixes-deployment.md) before deploying. This release adds two database migrations; existing dashboard-managed hosting settings must be updated separately from pushing code.
+For checkout compatibility, refund transfer records, durable uploads, the bundled Docker scheduler and Android signing safeguards, follow [the scenario-fixes deployment checklist](docs/scenario-fixes-deployment.md) before deploying. The Docker startup applies pending migrations and logs deployment checks automatically, including on Render Free without Shell or pre-deploy commands. Existing dashboard-managed hosting settings must be updated separately from pushing code.
 
 - Set `APP_ENV=production`, `APP_DEBUG=false`, and HTTPS-only secure session cookies.
 - Configure a real mail provider before enabling registrations.

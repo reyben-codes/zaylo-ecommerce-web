@@ -18,9 +18,11 @@ These changes support both the existing deployed order tables and the normalized
 2. In the hosting environment, retain the existing database, app key, mail and URL settings. Configure all six R2 settings listed in `.env.example`: `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_ENDPOINT`, `R2_PUBLIC_BUCKET`, `R2_PRIVATE_BUCKET`, `R2_PUBLIC_URL`. Keep the private bucket private and use a separate public image bucket. Check actual credentials and permissions with synthetic public and private uploads; verify a guest cannot retrieve a private document.
 3. If uploads currently live on the old server's temporary disk, copy them before replacing that server. The existing `php artisan uploads:copy-to-r2 --dry-run` previews the copy; `php artisan uploads:copy-to-r2` performs it from a machine that still has the original files and configured R2 credentials. The Docker image intentionally excludes local uploads and recovery copies. Changing settings does not recover files already lost.
 4. Set `APP_ENV=production`, `APP_DEBUG=false`, and `CACHE_STORE=database` (or a shared Redis store). Use an always-on service/worker. A sleeping or stopped web service cannot run time-based cleanup; a free-tier sleeping service needs an independently running scheduler.
-5. Configure the host's pre-deploy command as `php artisan migrate --force`. `render.yaml` declares this and the Docker runtime. Existing dashboard-managed services must receive these settings separately; pushing a YAML file does not prove those settings were applied. Remove any Docker command override that bypasses the image's CMD, so both Apache and the scheduler start. If the hosting plan does not support pre-deploy commands, use its supported migration mechanism against the new release before starting it.
+5. `render.yaml` targets a Free Docker web service. The image's startup script runs `php artisan migrate --force --no-interaction`, then `deployment:check` and `schedule:list` before starting Apache and the scheduler. Existing dashboard-managed services must use that Docker image startup: remove any Docker command override that bypasses the image's CMD. Pushing YAML does not prove dashboard settings were applied. Startup stops on migration/check failure, and the reason appears in Render logs. This startup migration flow targets the single-instance Free service; before introducing multiple concurrent instances/deployments, move migrations to a serialized deployment job.
 
-After migration, verify on the host:
+On Render Free, open the service's **Logs** after deployment. Look for `[ZAYLO startup] Applying pending database migrations`, `Deployment configuration checks passed`, the task list, and Supervisor starting both `web` and `scheduler`. No Shell access is required. Free instances sleep after inactivity, so the scheduler cannot guarantee cleanup at the exact deadline while the service is asleep. It resumes on the next startup; an always-on scheduler is required for uninterrupted cleanup.
+
+On hosts with Shell access, the same checks can also be run manually:
 
 ```bash
 php artisan deployment:check
@@ -48,4 +50,5 @@ Android manifest/build validation could not complete offline because required An
 - [Laravel scheduling and single-server tasks](https://laravel.com/framework/docs/12.x/scheduling)
 - [Render Docker startup behavior](https://render.com/docs/docker)
 - [Render deployment and pre-deploy commands](https://render.com/docs/deploys)
+- [Render Free limits, including sleep and unavailable Shell access](https://render.com/docs/free)
 - [Android signing and update certificates](https://developer.android.com/studio/publish/app-signing)
