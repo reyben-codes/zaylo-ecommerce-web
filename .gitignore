@@ -12,6 +12,9 @@
 /.vscode
 /.zed
 /auth.json
+# Firebase server credentials (the Android google-services.json is app configuration).
+firebase-service-account.json
+*firebase-adminsdk*.json
 /node_modules
 /public/build
 /public/hot
