@@ -191,8 +191,34 @@
     margin: 0;
     padding: 0;
     transform: translateY(-50%);
+    appearance: none;
+    border: 2px solid var(--c-dcd2c8);
+    border-radius: 50%;
+    background: var(--zaylo-surface, #fff);
+    box-sizing: border-box;
     accent-color: var(--zaylo-accent, #a8795d);
     cursor: pointer;
+    transition: border-color 300ms ease-out;
+}
+
+.rider-type-option input[type="radio"]::before {
+    content: "";
+    display: block;
+    width: 8px;
+    height: 8px;
+    margin: 2px;
+    border-radius: 50%;
+    background: var(--zaylo-accent, #a8795d);
+    transform: scale(0);
+    transition: transform 300ms ease-out;
+}
+
+.rider-type-option input[type="radio"]:checked {
+    border-color: var(--zaylo-accent, #a8795d);
+}
+
+.rider-type-option input[type="radio"]:checked::before {
+    transform: scale(1);
 }
 
 .rider-type-option__card {
@@ -205,7 +231,9 @@
     border: 1px solid var(--c-dcd2c8);
     border-radius: 10px;
     background: var(--zaylo-surface, #fff);
+    box-shadow: inset 0 0 0 1px transparent;
     white-space: normal;
+    transition: background-color 300ms ease-out, border-color 300ms ease-out, box-shadow 300ms ease-out;
 }
 
 .rider-type-option__icon {
@@ -216,6 +244,7 @@
     border-radius: 8px;
     background: var(--c-fcfaf8);
     color: var(--c-4f453c);
+    transition: background-color 300ms ease-out, color 300ms ease-out;
 }
 
 .rider-type-option__text {
@@ -251,6 +280,25 @@
 .rider-type-option input:focus-visible + .rider-type-option__card {
     outline: 2px solid var(--zaylo-accent, #a8795d);
     outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rider-type-option input[type="radio"],
+    .rider-type-option input[type="radio"]::before,
+    .rider-type-option__card,
+    .rider-type-option__icon {
+        transition: none;
+    }
+}
+
+@media (forced-colors: active) {
+    .rider-type-option input[type="radio"] {
+        appearance: auto;
+    }
+
+    .rider-type-option input[type="radio"]::before {
+        display: none;
+    }
 }
 
 .review-reason__form {
