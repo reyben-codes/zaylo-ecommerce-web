@@ -238,8 +238,8 @@ mixin RiderDeliveryActions<T extends StatefulWidget> on State<T> {
           builder: (dialogContext) => AlertDialog(
             title: const Text('Confirm COD collection'),
             content: Text('Confirm that you collected ${delivery.cashToCollect.toStringAsFixed(2)} from the buyer. '
-                'You keep ${delivery.riderCommission.toStringAsFixed(2)} and hand '
-                '${delivery.amountToHandLogistics.toStringAsFixed(2)} to your logistics partner.'),
+                'Hand ${delivery.amountToHandLogistics.toStringAsFixed(2)} to your logistics partner. '
+                'Your agreed delivery earnings are recorded separately.'),
             actions: [
               TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
               TextButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Confirm collection')),
@@ -248,7 +248,7 @@ mixin RiderDeliveryActions<T extends StatefulWidget> on State<T> {
         ) ??
         false;
     if (!confirmed || !mounted) return;
-    await _run(delivery, () => riderApi.collectCod(delivery.id), 'COD collection recorded. Your ₱40.00 commission is in your wallet.');
+    await _run(delivery, () => riderApi.collectCod(delivery.id), 'COD collection recorded. Your agreed delivery earnings are in your wallet.');
   }
 
   /// Opens the camera for proof of delivery: the parcel with the recipient or

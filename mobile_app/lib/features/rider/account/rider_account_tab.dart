@@ -13,6 +13,7 @@ import 'package:zaylo_mobile/components/theme_toggle.dart';
 import 'package:zaylo_mobile/features/rider/account/rider_address_screen.dart';
 import 'package:zaylo_mobile/features/rider/account/rider_change_password_screen.dart';
 import 'package:zaylo_mobile/features/rider/dashboard/widgets/rider_dashboard_widgets.dart';
+import 'package:zaylo_mobile/features/rider/history/rider_attendance_screen.dart';
 import 'package:zaylo_mobile/features/rider/wallet/gcash_account_sheet.dart';
 import 'package:zaylo_mobile/features/rider/wallet/rider_wallet_screen.dart';
 import 'package:zaylo_mobile/models/rider/rider_dashboard_models.dart';
@@ -201,6 +202,19 @@ class _RiderAccountTabState extends State<RiderAccountTab> {
                     ),
                     _Row(icon: Icons.mail_outline, label: 'Email', value: rider.email),
                   ]),
+                ),
+                const _Heading('Work'),
+                SectionCard(
+                  padding: EdgeInsets.zero,
+                  child: _Row(
+                    icon: Icons.event_available_outlined,
+                    label: 'Attendance & schedule',
+                    value: 'Your attendance history and logistics work schedule',
+                    action: 'View',
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => RiderAttendanceScreen(api: widget.api),
+                    )),
+                  ),
                 ),
                 const _Heading('Wallet'),
                 SectionCard(

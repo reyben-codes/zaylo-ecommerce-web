@@ -38,7 +38,16 @@ class SettlementController extends Controller
         abort_unless($provider, 404);
         $settlements->settle($settlement, $provider, $request->user(), $data['seller_reference']);
 
-        return back()->with('status', 'Seller transfer recorded. This COD parcel is fully settled.');
+        return back()->with('status', 'Seller transfer recorded. The seller allocation is paid.');
+    }
+
+    public function settleAdmin(Request $request, LogisticsCodSettlement $settlement, LogisticsCodSettlements $settlements)
+    {
+        abort_unless(\Illuminate\Support\Facades\Schema::hasColumn('logistics_cod_settlements', 'admin_reference'), 503, 'Run the latest payment migrations.');
+        $data = $request->validate(['admin_reference' => ['required', 'string', 'max:100']]);
+        $settlements->settleAdmin($settlement, $request->user(), $data['admin_reference']);
+
+        return back()->with('status', 'Admin transfer recorded with its payment reference.');
     }
 
     public function recordCash(Request $request, User $rider, CashHandovers $handovers)
@@ -77,6 +86,7 @@ class SettlementController extends Controller
             'ready' => LogisticsCodSettlements::ready(),
             'rows' => $rows,
             'summary' => $settlements->sellerSummary($rows),
+            'prepaid' => app(\App\Services\Settlement::class)->prepaidForSeller($request->user(), $from->copy()->utc(), $to->copy()->utc()),
             'status' => $input['status'] ?? null,
             'statuses' => [
                 LogisticsCodSettlement::AWAITING_SELLER_TRANSFER => 'Pending settlement',

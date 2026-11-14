@@ -11,7 +11,7 @@
         <div>
             <p class="seller-eyebrow">Cash on delivery</p>
             <h1>Cash handover</h1>
-            <p>Riders retain ₱40 per COD parcel and hand the remaining cash to your hub. Count it before allocating the fixed ₱40 plus 10% product logistics share, the Admin share, and the seller's 80% product share. A parcel is fully settled only after its seller transfer is recorded.</p>
+            <p>For new orders, riders hand the full COD collection to your hub. Their delivery pay is credited separately and paid through Rider withdrawals. Admin and Logistics each receive 10% of product value; shipping funding follows the voucher used. Earlier orders keep their recorded cash-retention policy. Record each seller transfer after sending it.</p>
         </div>
     </section>
 
@@ -25,8 +25,8 @@
                         <tr>
                             <td><strong>{{ $settlement->shipment?->tracking_number ?? $settlement->shipment?->tracking_code ?? '#'.$settlement->shipment_id }}</strong><span class="seller-cell-note">{{ $settlement->seller?->name ?? 'Seller unavailable' }}</span></td>
                             <td>&#8369;{{ number_format($settlement->amount_received, 2) }}</td>
-                            <td>&#8369;{{ number_format($settlement->logistics_earnings, 2) }}</td>
-                            <td>&#8369;{{ number_format($settlement->admin_earnings, 2) }}</td>
+                            <td>&#8369;{{ number_format($settlement->logistics_earnings, 2) }}<span class="seller-cell-note">After rider allocation: &#8369;{{ number_format($settlement->rider_earnings, 2) }}</span></td>
+                            <td>&#8369;{{ number_format($settlement->admin_earnings, 2) }}@if(($settlement->settlement_breakdown['free_shipping_by_zaylo'] ?? 0) > 0)<span class="seller-cell-note">After Admin shipping subsidy: &#8369;{{ number_format($settlement->settlement_breakdown['free_shipping_by_zaylo'], 2) }}</span>@endif @include('partials.cod-admin-transfer', ['settlement' => $settlement])</td>
                             <td><strong>&#8369;{{ number_format($settlement->seller_earnings, 2) }}</strong></td>
                             <td>
                                 @if($settlement->status === \App\Models\LogisticsCodSettlement::SETTLED)

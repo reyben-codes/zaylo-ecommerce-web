@@ -135,7 +135,7 @@
                             <td><strong>{{ $voucher->code }}</strong>@if($voucher->name)<span class="seller-cell-note">{{ $voucher->name }}</span>@endif
                                 <span class="seller-cell-note">{{ $voucher->is_active ? ($voucher->isAvailable() ? 'Running' : 'Scheduled or ended') : 'Off' }}@if($voucher->expires_at) · ends {{ $voucher->expires_at->timezone('Asia/Manila')->format('M j, Y') }}@endif</span></td>
                             <td>{{ $voucher->describe() }}</td>
-                            <td>{{ $voucher->isFreeShipping() ? 'ZAYLO' : 'Shops that join' }}</td>
+                            <td>{{ $voucher->funded_by === 'seller' ? 'Seller' : ($voucher->isFreeShipping() ? 'ZAYLO' : 'Shops that join') }}</td>
                             <td>
                                 @if($voucher->seller_id)
                                     <span class="seller-cell-note"><strong>Specific:</strong> {{ app(\App\Services\Vouchers::class)->shopName($voucher->seller_id) }}</span>

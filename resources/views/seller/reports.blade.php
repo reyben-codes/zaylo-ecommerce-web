@@ -86,9 +86,9 @@
             <span class="seller-stat__note">&#8369;{{ number_format($stats['openValue'], 2) }} awaiting delivery</span>
         </article>
         <article class="seller-stat">
-            <span class="seller-stat__label"><i class="fas fa-percent" aria-hidden="true"></i> Commission ({{ $commissionPercent }}%)</span>
+            <span class="seller-stat__label"><i class="fas fa-percent" aria-hidden="true"></i> Admin commission ({{ $commissionPercent }}%)</span>
             <strong class="seller-stat__value">&#8369;{{ number_format($stats['commission'], 2) }}</strong>
-            <span class="seller-stat__note">Net &#8369;{{ number_format($stats['sales'] - $stats['commission'], 2) }}</span>
+            <span class="seller-stat__note">Logistics commission and your shipping vouchers are separate. <a href="{{ route('seller.settlement') }}">View COD net proceeds</a></span>
         </article>
     </section>
 

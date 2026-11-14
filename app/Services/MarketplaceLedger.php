@@ -177,7 +177,8 @@ class MarketplaceLedger
         return $orders->map(function (Order $order) use ($commissions, $stores) {
             $record = $commissions[$order->id] ?? null;
             $subtotal = (float) $order->subtotal;
-            $adminShare = app(Settlement::class)->forOrder($order)['admin_earnings'];
+            $split = app(Settlement::class)->forOrder($order);
+            $adminShare = ($split['policy_version'] ?? 1) >= 2 ? $split['admin_product_commission'] : $split['admin_earnings'];
             [$amount, $state] = match (true) {
                 $record !== null => [(float) $record->amount, $record->status === 'settled' ? 'settled' : 'earned'],
                 $order->status === 'cancelled' => [0.0, 'none'],
@@ -215,11 +216,11 @@ class MarketplaceLedger
             ->get()
             ->map(function (SellerOrder $sellerOrder) {
                 $status = (string) $sellerOrder->status;
-                $commission = (int) $sellerOrder->commission_minor / 100
+                $commission = $sellerOrder->settlement_breakdown['admin_product_commission'] ?? ((int) $sellerOrder->commission_minor / 100
                     ?: Settlement::breakdown(
                         (int) $sellerOrder->subtotal_minor / 100,
                         (int) $sellerOrder->shipping_fee_minor / 100,
-                    )['admin_earnings'];
+                    )['admin_earnings']);
 
                 return [
                     'order_id' => $sellerOrder->order_id,

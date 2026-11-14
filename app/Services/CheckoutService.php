@@ -294,7 +294,7 @@ class CheckoutService
         $perSeller = ShippingRates::fee($zone);
         $subtotal = $items->sum(fn (CartItem $item) => $item->unitPrice() * $item->quantity);
         $shipping = $items->pluck('product.seller_id')->unique()->count() * $perSeller;
-        // Free shipping is ZAYLO's; a discount voucher comes off the items of shops that joined it, paid by them.
+        // Funding is recorded per seller at placement; the buyer receives the same shipping discount.
         if ($voucher?->isFreeShipping()) {
             $sellerIdsInCart = $items->pluck('product.seller_id')->map(fn ($id) => (int) $id)->unique();
             $shippingDiscount = $voucher->seller_id
@@ -417,7 +417,18 @@ class CheckoutService
                 $shippingFee = $perSeller - $shippingDiscount;
                 // The shop pays a discount voucher it joined; nothing comes off shops that did not join.
                 $voucherDiscount = app(Vouchers::class)->discountFor($voucher, (int) $sellerId, (float) $subtotal, $joinedShops);
-                $usesVoucher = $voucher && ($voucher->isFreeShipping() || $voucherDiscount > 0);
+                $usesVoucher = $voucher && ($isFreeShipping || $voucherDiscount > 0);
+                $sellerFundsShipping = $isFreeShipping && $voucher->funded_by === 'seller';
+                $breakdown = Settlement::deliveryBreakdown(
+                    max(0, (float) $subtotal - (float) $voucherDiscount),
+                    (float) $shippingFee,
+                    $isFreeShipping && ! $sellerFundsShipping ? (float) $shippingDiscount : 0,
+                    $sellerFundsShipping ? (float) $shippingDiscount : 0,
+                    $partner?->riderRate() ?? RiderWallet::COMMISSION,
+                );
+                if ($breakdown['seller_earnings'] < 0) {
+                    throw ValidationException::withMessages(['voucher_code' => 'Add more items from this shop to cover its free-shipping voucher, or remove the voucher.']);
+                }
                 $order = Order::create([
                     'order_number' => 'ZAY-'.now()->format('ymd').'-'.Str::upper(Str::random(8)),
                     'user_id' => $buyer->id, 'seller_id' => $sellerId ?: null, 'status' => 'placed',
@@ -426,7 +437,8 @@ class CheckoutService
                     'payment_method' => $paymentMethod, 'recipient_name' => $address->recipient_name,
                     'phone' => $address->phone, 'shipping_address' => $address->formatted(),
                     'notes' => $input['notes'] ?? null, 'placed_at' => now(),
-                ] + (Schema::hasColumn('orders', 'voucher_discount') ? ['voucher_discount' => $voucherDiscount] : [])
+                ] + (Schema::hasColumn('orders', 'settlement_breakdown') ? ['settlement_breakdown' => $breakdown] : [])
+                  + (Schema::hasColumn('orders', 'voucher_discount') ? ['voucher_discount' => $voucherDiscount] : [])
                   + ParcelTracking::orderPin($address) + (Schema::hasColumn('orders', 'courier_choice')
                     // Only once the 2026_10_26 migration has added the column.
                     ? ['courier_choice' => $input['courier_choice'] ?? Order::DEFAULT_COURIER]
@@ -454,14 +466,10 @@ class CheckoutService
                     'currency' => 'PHP', 'idempotency_key' => $input['idempotency_key'].'-'.$order->id,
                     // The request never supplies this: it is calculated from
                     // locked product rows and the server's fixed shipping fee.
-                    'payload' => $paymentMethod === 'cod' ? [
+                    'payload' => [
                         'cod_amount' => (float) $order->total,
-                        'commission_breakdown' => Settlement::breakdown(
-                            max(0, (float) $subtotal - (float) $voucherDiscount),
-                            (float) $shippingFee,
-                            (float) $shippingDiscount,
-                        ),
-                    ] : null,
+                        'commission_breakdown' => $breakdown,
+                    ],
                 ]);
                 // GCash goes to the seller's own GCash: the reference waits for the seller's check (GcashPayments).
                 if ($paymentMethod === 'gcash' && GcashPayments::ready()) {

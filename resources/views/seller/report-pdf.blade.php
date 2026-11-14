@@ -37,7 +37,7 @@
             <td><span>Delivered sales</span><strong>&#8369;{{ number_format($stats['sales'], 2) }}</strong><em>{{ $stats['delivered'] }} delivered {{ Str::plural('order', $stats['delivered']) }}</em></td>
             <td><span>Orders placed</span><strong>{{ number_format($stats['placed']) }}</strong><em>{{ $stats['cancelled'] }} cancelled</em></td>
             <td><span>Average order</span><strong>&#8369;{{ number_format($stats['average'], 2) }}</strong><em>&#8369;{{ number_format($stats['openValue'], 2) }} awaiting delivery</em></td>
-            <td><span>Commission ({{ $commissionPercent }}%)</span><strong>&#8369;{{ number_format($stats['commission'], 2) }}</strong><em>Net &#8369;{{ number_format($stats['sales'] - $stats['commission'], 2) }}</em></td>
+            <td><span>Admin commission ({{ $commissionPercent }}%)</span><strong>&#8369;{{ number_format($stats['commission'], 2) }}</strong><em>Logistics commission and seller shipping vouchers are separate.</em></td>
         </tr>
     </table>
 

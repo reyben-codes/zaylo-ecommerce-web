@@ -156,6 +156,55 @@ class CartCheckoutTest extends TestCase
         $this->assertDatabaseHas('cart_items', ['id' => $otherItem->id]);
     }
 
+    public static function shippingFunders(): array
+    {
+        $cases = [];
+        foreach (['cod', 'gcash'] as $method) {
+            $cases[$method.' no voucher'] = ['buyer', 800.0, 100.0, 1120.0, $method];
+            $cases[$method.' seller voucher'] = ['seller', 680.0, 100.0, 1000.0, $method];
+            $cases[$method.' admin voucher'] = ['admin', 800.0, -20.0, 1000.0, $method];
+        }
+
+        return $cases;
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('shippingFunders')]
+    public function test_checkout_snapshots_the_correct_shipping_funder(string $funder, float $sellerNet, float $adminNet, float $buyerTotal, string $method): void
+    {
+        $buyer = $this->buyer();
+        $seller = $this->seller();
+        $product = $this->product($seller, 1000);
+        $this->post(route('buyer.cart.add', $product), ['quantity' => 1])->assertSessionHasNoErrors();
+        $items = $buyer->cart->items()->get();
+        $address = $buyer->addresses()->create($this->savedAddressData());
+        $voucher = $funder === 'buyer' ? null : Voucher::create([
+            'code' => 'FUNDING-TEST', 'type' => 'free_shipping', 'is_active' => true,
+            'funded_by' => $funder === 'admin' ? 'zaylo' : 'seller',
+            'seller_id' => $funder === 'seller' ? $product->seller_id : null,
+        ]);
+        $this->post(route('buyer.checkout'), [
+            'cart_item_ids' => $items->modelKeys(), 'address_id' => $address->id,
+            'idempotency_key' => (string) Str::uuid(), 'payment_method' => $method, 'voucher_code' => $voucher?->code,
+        ])->assertSessionHasNoErrors()->assertRedirect(route('buyer.orders'));
+        $order = Order::with('payment')->sole();
+        $split = app(\App\Services\Settlement::class)->forOrder($order);
+        $this->assertSame($buyerTotal, $order->total);
+        $this->assertSame($funder, $split['shipping_funded_by']);
+        $this->assertEquals($sellerNet, $split['seller_earnings']);
+        $this->assertEquals($adminNet, $split['admin_earnings']);
+        $this->assertEquals(100, $split['admin_product_commission']);
+        if ($voucher) {
+            $voucher->update(['funded_by' => $funder === 'seller' ? 'zaylo' : 'seller']);
+            $this->assertEquals($sellerNet, app(\App\Services\Settlement::class)->forOrder($order->fresh())['seller_earnings']);
+        }
+        if ($method === 'gcash') {
+            $order->update(['status' => 'delivered']);
+            $this->actingAs($seller)->get(route('seller.settlement'))->assertOk()
+                ->assertSee('GCash sales proceeds')->assertSee('Fees to remit')
+                ->assertSee('&#8369;'.number_format($sellerNet, 2), false);
+        }
+    }
+
     private function buyer(): User
     {
         $buyer = User::factory()->create(['role' => 'buyer', 'status' => 'active']);

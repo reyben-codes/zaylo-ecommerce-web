@@ -504,7 +504,9 @@ class RiderDeliveries
         $codAmount = $shipment->getAttribute('cod_amount_minor') ? $shipment->cod_amount_minor / 100 : $total;
 
         $collectionTracked = Schema::hasColumn('shipments', 'cod_collected');
-        $riderCommission = $cod ? min(RiderWallet::COMMISSION, $codAmount) : 0.0;
+        $split = app(Settlement::class)->forShipment($shipment);
+        $separatePayout = ($split['policy_version'] ?? 1) >= 2;
+        $riderCommission = $cod ? ($separatePayout ? (float) $split['rider_earnings'] : min((float) $split['rider_earnings'], $codAmount)) : 0.0;
 
         return [
             'total' => round($total, 2),
@@ -512,7 +514,9 @@ class RiderDeliveries
             'payment_method' => $order?->payment_method,
             'cash_to_collect' => $cod ? round((float) $codAmount, 2) : 0.0,
             'rider_commission' => round($riderCommission, 2),
-            'amount_to_hand_logistics' => $cod ? round(max(0, $codAmount - $riderCommission), 2) : 0.0,
+            'delivery_earnings' => (float) $split['rider_earnings'],
+            'rider_retained_cash' => $cod && ! $separatePayout ? round($riderCommission, 2) : 0.0,
+            'amount_to_hand_logistics' => $cod ? round(max(0, $codAmount - ($separatePayout ? 0 : $riderCommission)), 2) : 0.0,
             'cod_collected' => $collectionTracked && (bool) $shipment->cod_collected,
         ];
     }

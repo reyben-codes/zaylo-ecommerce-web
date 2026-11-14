@@ -58,7 +58,7 @@ class MobileRiderWalletController extends Controller
         return [
             'ready' => RiderWallet::ready(),
             ...$this->wallet->summary($rider),
-            'commission_per_parcel' => RiderWallet::COMMISSION,
+            'commission_per_parcel' => RiderWallet::rateFor($rider),
             'min_withdrawal' => RiderWallet::MIN_WITHDRAWAL,
             // Where withdrawals go; "saved" is false when it is only the account used last.
             'gcash' => $this->wallet->account($rider),
@@ -80,8 +80,8 @@ class MobileRiderWalletController extends Controller
                 'created_at' => $withdrawal->created_at?->toIso8601String(),
                 'processed_at' => $withdrawal->processed_at?->toIso8601String(),
             ])->values(),
-            'note' => 'You earn ₱'.number_format(RiderWallet::COMMISSION, 2).' for every parcel you deliver. Withdraw ₱'
-                .number_format(RiderWallet::MIN_WITHDRAWAL, 2).' or more to GCash; your logistics partner sends it, usually within 1–2 business days.',
+            'note' => 'Your logistics partner currently offers ₱'.number_format(RiderWallet::rateFor($rider), 2).' per delivery for new orders. Each order keeps its agreed rate. COD earnings are credited after cash collection is confirmed. Withdraw ₱'
+                .number_format(RiderWallet::MIN_WITHDRAWAL, 2).' or more to GCash; your logistics partner sends the payment.',
         ];
     }
 }

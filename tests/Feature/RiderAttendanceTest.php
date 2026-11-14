@@ -184,4 +184,53 @@ class RiderAttendanceTest extends TestCase
         ])->assertForbidden();
         $this->actingAs($this->partner->owner)->get(route('logistics.attendance'))->assertOk()->assertDontSee($rider->name);
     }
+
+    public function test_riders_see_their_own_attendance_and_current_schedule_with_the_original_shift(): void
+    {
+        $this->at('2026-11-02 08:10');
+        $user = $this->rider($this->partner, schedule: ['shift_start' => '08:00', 'shift_end' => '17:00', 'work_days' => ['mon']]);
+        $this->scan($user)->assertOk();
+        $this->at('2026-11-02 16:30');
+        $this->scan($user)->assertOk();
+        $other = $this->rider($this->partner, 'Another Rider');
+        $this->scan($other)->assertOk();
+        $user->rider->update(['shift_start' => '09:00', 'shift_end' => '18:00', 'work_days' => ['tue']]);
+
+        $this->signInMobile($user)->getJson(route('mobile.rider.attendance'))->assertOk()
+            ->assertJsonCount(1, 'records')
+            ->assertJsonPath('schedule.label', $user->rider->schedule_label)
+            ->assertJsonPath('schedule.provider', $this->partner->name)
+            ->assertJsonPath('schedule.days.0.working', false)
+            ->assertJsonPath('schedule.days.1.working', true)
+            ->assertJsonPath('records.0.date', '2026-11-02')
+            ->assertJsonPath('records.0.shift', Rider::shiftLabel('08:00', '17:00'))
+            ->assertJsonPath('records.0.late', true)
+            ->assertJsonPath('records.0.left_early', true)
+            ->assertJsonPath('records.0.status_label', 'Timed out')
+            ->assertJsonPath('next_page', null);
+    }
+
+    public function test_attendance_history_filters_paginates_and_marks_forgotten_time_outs(): void
+    {
+        $this->at('2026-11-02 12:00');
+        $user = $this->rider($this->partner);
+        for ($day = 1; $day <= 25; $day++) {
+            $user->rider->attendances()->create([
+                'logistics_provider_id' => $this->partner->id,
+                'work_date' => sprintf('2026-10-%02d', $day),
+                'time_in_at' => sprintf('2026-10-%02d 00:00:00', $day),
+            ]);
+        }
+        $this->signInMobile($user)->getJson(route('mobile.rider.attendance'))->assertOk()
+            ->assertJsonCount(20, 'records')->assertJsonPath('next_page', 2)
+            ->assertJsonPath('records.0.date', '2026-10-25')
+            ->assertJsonPath('records.0.status_label', 'Missing time out')
+            ->assertJsonPath('schedule.label', null);
+        $this->getJson(route('mobile.rider.attendance', ['page' => 2]))->assertOk()
+            ->assertJsonCount(5, 'records')->assertJsonPath('next_page', null);
+        $this->getJson(route('mobile.rider.attendance', ['from' => '2026-10-10', 'to' => '2026-10-12']))->assertOk()
+            ->assertJsonCount(3, 'records')->assertJsonPath('records.0.date', '2026-10-12');
+        $this->getJson(route('mobile.rider.attendance', ['from' => '2026-10-12', 'to' => '2026-10-10']))
+            ->assertUnprocessable()->assertJsonValidationErrors('to');
+    }
 }

@@ -267,7 +267,7 @@ class MobileRiderDashboardController extends Controller
         return response()->json([
             'periods' => $this->periodTotals($completed),
             'last_7_days' => $days->values(),
-            'note' => 'You earn ₱'.number_format(RiderWallet::COMMISSION, 2).' for every parcel you deliver. It goes to your wallet, where you can withdraw it to GCash.',
+            'note' => 'Your logistics partner currently offers ₱'.number_format(RiderWallet::rateFor($rider), 2).' per delivery for new orders. Existing orders keep their agreed rate. Earnings go to your wallet; your logistics partner pays your GCash withdrawals. COD earnings are credited after collection is confirmed.',
         ]);
     }
 
@@ -347,7 +347,7 @@ class MobileRiderDashboardController extends Controller
         $shipment = $this->codCollections->collect($shipment, $request->user());
 
         return response()->json([
-            'message' => 'COD payment collected. Keep ₱40.00 as your delivery commission and hand ₱'.number_format(RiderDeliveries::amounts($shipment)['amount_to_hand_logistics'], 2).' to your logistics partner.',
+            'message' => 'COD payment collected. Hand ₱'.number_format(RiderDeliveries::amounts($shipment)['amount_to_hand_logistics'], 2).' to your logistics partner. Your delivery earnings are recorded separately.',
             'delivery' => $this->shipmentPayload($shipment->load($this->relations()), withTimeline: true),
         ]);
     }

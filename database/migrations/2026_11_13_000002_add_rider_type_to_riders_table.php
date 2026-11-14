@@ -20,6 +20,7 @@ return new class extends Migration
     {
         if (Schema::hasTable('riders') && Schema::hasColumn('riders', 'rider_type')) {
             Schema::table('riders', function (Blueprint $table) {
+                $table->dropIndex(['rider_type']);
                 $table->dropColumn('rider_type');
             });
         }

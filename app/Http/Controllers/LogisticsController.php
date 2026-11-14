@@ -62,6 +62,40 @@ class LogisticsController extends Controller
         return back()->with('status', $rider->user->name.($data['available'] ? ' can take new deliveries again.' : ' is paused and will not get new deliveries.'));
     }
 
+    public function riderType(Request $request, Rider $rider)
+    {
+        abort_unless((int) $rider->logistics_provider_id === (int) $this->provider()->id, 403);
+        abort_unless($rider->user?->hasRole('rider'), 422, 'This setting is for rider app accounts.');
+        abort_unless(in_array($rider->status, ['pending', 'approved', 'suspended'], true), 422);
+        $data = $request->validateWithBag('riderType'.$rider->id, [
+            'rider_type' => ['required', Rule::in(['pickup', 'delivery'])],
+        ]);
+
+        DB::transaction(function () use ($rider, $data, $request) {
+            $locked = Rider::whereKey($rider->id)->lockForUpdate()->firstOrFail();
+            if (($locked->rider_type ?? 'delivery') === $data['rider_type']) {
+                return;
+            }
+            $hasPickups = \App\Services\ShipmentWorkflow::whereStage(
+                \App\Models\Shipment::where('pickup_courier_id', $locked->user_id)->whereNull('hub_received_at'),
+                ['ready', 'confirmed', 'picked_up', 'in_transit'],
+            )->exists();
+            if ($hasPickups || app(\App\Services\RiderDeliveries::class)->active($locked->user)->exists()) {
+                throw ValidationException::withMessages([
+                    'rider_type' => 'Finish or reassign this rider’s active pickups and deliveries before changing their assignment type.',
+                ])->errorBag('riderType'.$rider->id);
+            }
+            $previous = $locked->rider_type ?? 'delivery';
+            $locked->update($data);
+            app(\App\Services\ActivityLogger::class)->record(
+                'rider.type_updated', 'logistics', 'Changed '.$locked->user->name.' to '.Rider::TYPE_LABELS[$data['rider_type']],
+                $request->user(), $locked, ['previous' => $previous, 'rider_type' => $data['rider_type']],
+            );
+        });
+
+        return back()->with('status', $rider->user->name.' is assigned to '.Rider::TYPE_LABELS[$data['rider_type']].'.');
+    }
+
     public function couriers(Request $request)
     {
         $provider = $this->provider();
@@ -86,7 +120,7 @@ class LogisticsController extends Controller
     {
         $provider = $this->provider();
         $status = $request->validate(['status' => ['nullable', Rule::in(array_keys(self::RIDER_STATUS_LABELS))]])['status'] ?? 'pending';
-        $riders = $provider->deliveryRiders()
+        $riders = $provider->appRiders()
             ->where('status', $status)
             ->with('user')
             ->when($status === 'pending', fn ($query) => $query->oldest(), fn ($query) => $query->latest('reviewed_at'))
@@ -179,6 +213,23 @@ class LogisticsController extends Controller
         return back()->with('status', 'Company details updated.');
     }
 
+    public function updateRiderRate(Request $request)
+    {
+        abort_unless(\Illuminate\Support\Facades\Schema::hasColumn('logistics_providers', 'rider_rate_minor'), 503, 'Run the latest migrations to set rider pay.');
+        $data = $request->validate([
+            'rider_rate' => ['required', 'numeric', 'decimal:0,2', 'min:0.01', 'max:'.\App\Services\ShippingRates::STANDARD_FEE],
+        ]);
+        $provider = $this->provider();
+        $previous = $provider->riderRate();
+        $provider->update(['rider_rate_minor' => (int) round((float) $data['rider_rate'] * 100)]);
+        app(\App\Services\ActivityLogger::class)->record(
+            'logistics.rider_rate_updated', 'logistics', 'Updated rider pay for new orders.',
+            $request->user(), $provider, ['previous' => $previous, 'rate' => $provider->riderRate()],
+        );
+
+        return back()->with('status', 'Rider delivery rate updated for new orders. Existing order earnings stay the same.');
+    }
+
     /** The partner picks its own waybill design; every label it prints uses it. */
     public function updateWaybill(Request $request)
     {
@@ -225,7 +276,7 @@ class LogisticsController extends Controller
 
     private function deliveryRiderCounts(LogisticsProvider $provider): array
     {
-        $counts = $provider->deliveryRiders()->selectRaw('status, COUNT(*) as total')->groupBy('status')->pluck('total', 'status');
+        $counts = $provider->appRiders()->selectRaw('status, COUNT(*) as total')->groupBy('status')->pluck('total', 'status');
 
         return collect(array_keys(self::RIDER_STATUS_LABELS))
             ->mapWithKeys(fn (string $status) => [$status => (int) $counts->get($status, 0)])

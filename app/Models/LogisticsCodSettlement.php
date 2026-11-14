@@ -16,13 +16,13 @@ class LogisticsCodSettlement extends Model
         'shipment_id', 'rider_cash_handover_id', 'logistics_provider_id', 'order_id', 'seller_user_id',
         'product_price', 'amount_received', 'rider_earnings', 'logistics_earnings', 'admin_shipping_earnings', 'admin_product_commission',
         'admin_earnings', 'seller_earnings', 'status',
-        'seller_reference', 'recorded_by', 'settled_by', 'settled_at',
+        'seller_reference', 'recorded_by', 'settled_by', 'settled_at', 'settlement_breakdown', 'admin_reference', 'admin_settled_at', 'admin_settled_by',
     ];
 
     protected $casts = [
         'product_price' => 'float', 'amount_received' => 'float', 'rider_earnings' => 'float', 'logistics_earnings' => 'float',
         'admin_shipping_earnings' => 'float', 'admin_product_commission' => 'float', 'admin_earnings' => 'float',
-        'seller_earnings' => 'float', 'settled_at' => 'datetime',
+        'seller_earnings' => 'float', 'settled_at' => 'datetime', 'settlement_breakdown' => 'array', 'admin_settled_at' => 'datetime',
     ];
 
     public function shipment(): BelongsTo

@@ -8,6 +8,7 @@ import 'package:zaylo_mobile/components/chat/delivery_chat.dart';
 import 'package:zaylo_mobile/models/auth_models.dart';
 import 'package:zaylo_mobile/models/chat_media.dart';
 import 'package:zaylo_mobile/models/rider/rider_activity_models.dart';
+import 'package:zaylo_mobile/models/rider/rider_attendance_history.dart';
 import 'package:zaylo_mobile/models/rider/rider_dashboard_models.dart';
 import 'package:zaylo_mobile/models/rider/rider_models.dart';
 import 'package:zaylo_mobile/models/rider/rider_wallet_models.dart';
@@ -87,6 +88,16 @@ class RiderApi extends ApiClient {
   // ------------------------------------------- Signed-in rider (needs token)
 
   Future<RiderDashboard> dashboard() async => RiderDashboard.fromJson(await send('GET', '/mobile/rider/dashboard'));
+
+  Future<RiderAttendanceHistory> attendanceHistory({int page = 1, DateTime? from, DateTime? to}) async =>
+      RiderAttendanceHistory.fromJson(await send('GET', '/mobile/rider/attendance', query: {
+        'page': '$page',
+        if (from != null) 'from': _attendanceDate(from),
+        if (to != null) 'to': _attendanceDate(to),
+      }));
+
+  static String _attendanceDate(DateTime date) =>
+      '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
   /// Reports a failed delivery attempt with its [reason] (and the rider's own words in [note]); the buyer and
   /// seller are told. Starting and finishing a delivery go through [scanParcel].

@@ -92,6 +92,25 @@
                 </section>
             @endif
 
+            @if(\Illuminate\Support\Facades\Schema::hasColumn('logistics_providers', 'rider_rate_minor'))
+                <section class="seller-panel" aria-labelledby="rider-pay-heading">
+                    <header class="seller-panel__header">
+                        <div><h2 id="rider-pay-heading">Rider delivery pay</h2><p>Your company pays this amount for each eligible delivered parcel. Changes apply to new orders.</p></div>
+                    </header>
+                    <form method="POST" action="{{ route('logistics.account.rider-rate') }}" class="seller-panel__body seller-form">
+                        @csrf
+                        @method('PATCH')
+                        <div class="seller-field">
+                            <label for="rider-rate">Pay per delivery (PHP)</label>
+                            <input id="rider-rate" name="rider_rate" type="number" min="0.01" max="{{ \App\Services\ShippingRates::STANDARD_FEE }}" step="0.01" value="{{ old('rider_rate', number_format($provider->riderRate(), 2, '.', '')) }}" required aria-describedby="rider-rate-help" @error('rider_rate') aria-invalid="true" @enderror>
+                            <p class="seller-cell-note" id="rider-rate-help">Starts at &#8369;40.00. Set an amount up to the &#8369;{{ number_format(\App\Services\ShippingRates::STANDARD_FEE, 2) }} shipping budget. Rider pay is reserved from your delivery receipts, and you send it through Rider withdrawals.</p>
+                            @error('rider_rate')<p class="seller-field__error">{{ $message }}</p>@enderror
+                        </div>
+                        <div class="seller-form__actions"><button type="submit" class="seller-button">Save delivery rate</button></div>
+                    </form>
+                </section>
+            @endif
+
             @include('partials.account-settings-forms', ['user' => $user, 'routePrefix' => 'logistics.account'])
         </div>
 

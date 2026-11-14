@@ -11,7 +11,7 @@
         <div>
             <p class="seller-eyebrow">Finance</p>
             <h1>Logistics payouts</h1>
-            <p>Each logistics partner earns {{ $percent }}% of the shipping fee of every parcel it delivers; ZAYLO keeps {{ 100 - $percent }}%. Free-shipping vouchers are covered by ZAYLO, so partners are still paid the full fee's share. The rider's commission of &#8369;{{ number_format($riderCommission, 2) }} per delivered parcel is part of the partner's share: the partner sends it to the rider when they withdraw. A partner with branches is paid as one company and pays its branches itself.</p>
+            <p>For new orders, Admin and Logistics each earn {{ $percent }}% of product value. Logistics also receives shipping and pays its riders at the rate saved with each order. Seller shipping vouchers are funded by that seller; global Admin shipping vouchers are funded by ZAYLO. Gross partner payouts include rider funds. New COD allocations are handled through verified hub handovers and are not paid again here. Historical allocations retain their recorded policy.</p>
         </div>
     </section>
 
@@ -31,7 +31,7 @@
         <div class="seller-stat">
             <span class="seller-stat__label"><i class="fas fa-building" aria-hidden="true"></i> ZAYLO's share</span>
             <strong class="seller-stat__value">&#8369;{{ number_format($summary['zaylo'], 2) }}</strong>
-            <span class="seller-stat__note">{{ 100 - $percent }}% of shipping fees</span>
+            <span class="seller-stat__note">Recorded Admin earnings after shipping subsidies</span>
         </div>
         <div class="seller-stat">
             <span class="seller-stat__label"><i class="fas fa-circle-check" aria-hidden="true"></i> Paid to partners</span>
@@ -49,7 +49,7 @@
         <header class="seller-panel__header"><div><h2>By partner</h2><p>Pay a partner after sending them the money; every delivered parcel not paid yet is included.</p></div></header>
         <div class="seller-table-wrap">
             <table class="seller-table workspace-table admin-money">
-                <thead><tr><th>Partner</th><th>Delivered</th><th>Shipping fees</th><th>Partner {{ $percent }}%</th><th>Rider commissions</th><th>ZAYLO {{ 100 - $percent }}%</th><th>Paid</th><th>Owed</th><th><span class="sr-only">Pay</span></th></tr></thead>
+                <thead><tr><th>Partner</th><th>Delivered</th><th>Shipping fees</th><th>Partner gross</th><th>Rider earnings</th><th>Admin net</th><th>Paid</th><th>Owed</th><th><span class="sr-only">Pay</span></th></tr></thead>
                 <tbody>
                     @forelse($byProvider as $partner)
                         <tr>
@@ -68,11 +68,11 @@
                                           data-confirm-title="Mark as paid?" data-confirm-button="Mark as paid">
                                         @csrf
                                         <label class="sr-only" for="payout-reference-{{ $partner['provider_id'] }}">Payment reference for {{ $partner['provider'] }}</label>
-                                        <input type="text" id="payout-reference-{{ $partner['provider_id'] }}" name="reference" maxlength="100" placeholder="Reference (optional)" autocomplete="off">
+                                        <input type="text" id="payout-reference-{{ $partner['provider_id'] }}" name="reference" maxlength="100" placeholder="Transfer reference" autocomplete="off" required>
                                         <button type="submit" class="seller-button"><i class="fas fa-money-bill-transfer" aria-hidden="true"></i> Mark as paid</button>
                                     </form>
                                 @else
-                                    <span class="commission-state commission-state--settled">Paid up</span>
+                                    <span class="commission-state commission-state--settled">No batch payout due</span>
                                 @endif
                             </td>
                         </tr>

@@ -26,10 +26,15 @@ class LogisticsProvider extends Model
         'sec_registration_no', 'tin', 'contact_position', 'service_areas',
         'region_code', 'region_name', 'province_code', 'province_name', 'city_code', 'city_name', 'barangay_code', 'barangay_name',
         'street_address', 'postal_code', 'sec_certificate_path', 'bir_2303_path', 'business_permit_path', 'representative_id_path',
-        'submitted_at', 'reviewed_at',
+        'submitted_at', 'reviewed_at', 'rider_rate_minor',
     ];
 
     protected $casts = ['approved_at' => 'datetime', 'submitted_at' => 'datetime', 'reviewed_at' => 'datetime', 'service_areas' => 'array'];
+
+    public function riderRate(): float
+    {
+        return (int) ($this->rider_rate_minor ?? 4000) / 100;
+    }
 
     /** Regions a partner can serve, as shown to riders and admins. */
     public static function serviceRegions(): array
@@ -50,17 +55,25 @@ class LogisticsProvider extends Model
     /** First-mile pickup drivers (seller -> hub). */
     public function couriers(): HasMany
     {
-        return $this->hasMany(Rider::class)->whereHas('user', function ($q) {
-            if (\Illuminate\Support\Facades\Schema::hasColumn('users', 'role')) {
-                $q->where('role', 'courier');
-            } else {
-                $q->whereHas('roles', fn ($r) => $r->where('name', 'courier'));
-            }
+        return $this->hasMany(Rider::class)->where(function ($fleet) {
+            $fleet->where('rider_type', 'pickup')->orWhereHas('user', function ($q) {
+                if (\Illuminate\Support\Facades\Schema::hasColumn('users', 'role')) {
+                    $q->where('role', 'courier');
+                } else {
+                    $q->whereHas('roles', fn ($r) => $r->where('name', 'courier'));
+                }
+            });
         });
     }
 
     /** Last-mile delivery drivers (hub -> buyer). */
     public function deliveryRiders(): HasMany
+    {
+        return $this->appRiders()->where(fn ($query) => $query->where('rider_type', 'delivery')->orWhereNull('rider_type'));
+    }
+
+    /** Rider app accounts, including both First Mile and Last Mile riders. */
+    public function appRiders(): HasMany
     {
         return $this->hasMany(Rider::class)->whereHas('user', function ($q) {
             if (\Illuminate\Support\Facades\Schema::hasColumn('users', 'role')) {

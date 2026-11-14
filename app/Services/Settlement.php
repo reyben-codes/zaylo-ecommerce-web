@@ -13,9 +13,8 @@ use Illuminate\Support\Facades\Schema;
  * Server-side COD distribution and seller settlement.
  *
  * Amounts are converted to centavos before they are split, so floating point
- * math cannot introduce a cash discrepancy. A standard ₱120 shipment is split
- * ₱40 each to rider, logistics, and ZAYLO; product value is 10% logistics,
- * 10% ZAYLO, and the centavo remainder to the seller.
+ * math cannot introduce a cash discrepancy. New checkout orders save deliveryBreakdown;
+ * breakdown preserves the original policy for historical orders without a snapshot.
  */
 class Settlement
 {
@@ -29,6 +28,53 @@ class Settlement
 
     /** Orders that count once the buyer has them. */
     public const COMPLETE = ['delivered', 'completed'];
+
+    /** New orders: shipping belongs to Logistics, which pays its rider separately. */
+    public static function deliveryBreakdown(
+        float $productPrice,
+        float $shippingPaidByBuyer,
+        float $adminShippingSubsidy = 0,
+        float $sellerShippingSubsidy = 0,
+        float $riderRate = 40,
+    ): array {
+        $product = max(0, self::centavos($productPrice));
+        $buyerShipping = max(0, self::centavos($shippingPaidByBuyer));
+        $adminSubsidy = max(0, self::centavos($adminShippingSubsidy));
+        $sellerSubsidy = max(0, self::centavos($sellerShippingSubsidy));
+        $shipping = $buyerShipping + $adminSubsidy + $sellerSubsidy;
+        $adminProduct = self::percentage($product, self::PRODUCT_COMMISSION_BPS);
+        $logisticsProduct = self::percentage($product, self::PRODUCT_COMMISSION_BPS);
+        $rider = max(0, self::centavos($riderRate));
+
+        return [
+            'policy_version' => 2,
+            'shipping_funded_by' => $sellerSubsidy > 0 ? 'seller' : ($adminSubsidy > 0 ? 'admin' : 'buyer'),
+            'product_price' => self::pesos($product),
+            'shipping' => self::pesos($shipping),
+            'shipping_paid_by_buyer' => self::pesos($buyerShipping),
+            'free_shipping_by_zaylo' => self::pesos($adminSubsidy),
+            'free_shipping_by_seller' => self::pesos($sellerSubsidy),
+            'total_distribution' => self::pesos($product + $buyerShipping),
+            'rider_earnings' => self::pesos($rider),
+            'logistics_product_commission' => self::pesos($logisticsProduct),
+            'logistics_shipping_earnings' => self::pesos($shipping - $rider),
+            'logistics_gross_earnings' => self::pesos($logisticsProduct + $shipping),
+            'logistics_earnings' => self::pesos($logisticsProduct + $shipping - $rider),
+            'admin_product_commission' => self::pesos($adminProduct),
+            // A subsidy is an Admin expense, not another charge to the seller.
+            'admin_shipping_earnings' => self::pesos(-$adminSubsidy),
+            'admin_earnings' => self::pesos($adminProduct - $adminSubsidy),
+            'seller_earnings' => self::pesos($product - $adminProduct - $logisticsProduct - $sellerSubsidy),
+        ];
+    }
+
+    public static function snapshotFor(Order $order): ?array
+    {
+        $snapshot = $order->settlement_breakdown
+            ?: ($order->payment?->payload['commission_breakdown'] ?? null);
+
+        return is_array($snapshot) && ($snapshot['policy_version'] ?? null) === 2 ? $snapshot : null;
+    }
 
     /**
      * Builds the full financial split from trusted persisted prices only.
@@ -83,7 +129,7 @@ class Settlement
         $subsidy = round((float) ($order->shipping_discount ?? 0), 2);
         $voucher = Schema::hasColumn('orders', 'voucher_discount') ? round((float) $order->voucher_discount, 2) : 0.0;
         // A seller-funded voucher reduces the product amount being distributed.
-        $split = self::breakdown(max(0, $items - $voucher), $paidShipping, $subsidy);
+        $split = self::snapshotFor($order) ?? self::breakdown(max(0, $items - $voucher), $paidShipping, $subsidy);
         $buyerPaid = round($items + $paidShipping - $voucher, 2);
         $gcash = $order->payment_method === 'gcash';
         $complete = in_array($order->status, self::COMPLETE, true);
@@ -110,7 +156,7 @@ class Settlement
     public function forShipment(Shipment $shipment): array
     {
         if ($shipment->sellerOrder) {
-            return self::breakdown(
+            return $shipment->sellerOrder->settlement_breakdown ?: self::breakdown(
                 (int) $shipment->sellerOrder->subtotal_minor / 100,
                 (int) $shipment->sellerOrder->shipping_fee_minor / 100,
             );
@@ -131,6 +177,31 @@ class Settlement
         $bySeller = round($rows->sum('seller_owes_zaylo'), 2);
 
         return ['orders' => $rows, 'owed_to_seller' => $toSeller, 'owed_by_seller' => $bySeller, 'balance' => round($toSeller - $bySeller, 2)];
+    }
+
+    /** GCash is paid directly to the seller; show their proceeds and the fees they must remit. */
+    public function prepaidForSeller(User $seller, \Illuminate\Support\Carbon $from, \Illuminate\Support\Carbon $to): Collection
+    {
+        if (Order::usesLegacySchema()) {
+            $shopId = Shop::idForSeller($seller);
+            if (! $shopId) {
+                return collect();
+            }
+
+            return Order::with('payment')->where('seller_id', $shopId)->where('payment_method', 'gcash')
+                ->whereIn('status', self::COMPLETE)->whereBetween('created_at', [$from, $to])->latest('id')->get()
+                ->map(fn (Order $order) => ['number' => $order->order_number] + $this->forOrder($order));
+        }
+
+        return \App\Models\SellerOrder::with('order')->whereHas('seller', fn ($query) => $query->where('user_id', $seller->id))
+            ->whereHas('order', fn ($query) => $query->where('payment_method', 'gcash'))
+            ->whereIn('status', self::COMPLETE)->whereBetween('created_at', [$from, $to])->latest('id')->get()
+            ->map(function (\App\Models\SellerOrder $sellerOrder) {
+                $split = $sellerOrder->settlement_breakdown ?: self::breakdown((int) $sellerOrder->subtotal_minor / 100, (int) $sellerOrder->shipping_fee_minor / 100);
+
+                return ['number' => $sellerOrder->order?->order_number, ...$split,
+                    'seller_owes_zaylo' => round((int) $sellerOrder->subtotal_minor / 100 + (int) $sellerOrder->shipping_fee_minor / 100 - $split['seller_earnings'], 2)];
+            });
     }
 
     private static function centavos(float $amount): int

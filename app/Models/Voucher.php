@@ -7,13 +7,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * A checkout voucher. free_shipping is global and paid by ZAYLO; percent and fixed discounts apply only to the items
+ * A checkout voucher. Shipping is funded by its creator (seller or ZAYLO); percent and fixed discounts apply only to the items
  * of shops that joined (voucher_sellers) and are paid by those shops (App\Services\Vouchers).
  */
 class Voucher extends Model
 {
     public const TYPES = [
-        'free_shipping' => 'Free shipping (all shops, paid by ZAYLO)',
+        'free_shipping' => 'Free shipping',
         'percent' => '% off (shops that join pay for it)',
         'fixed' => '₱ off (shops that join pay for it)',
     ];

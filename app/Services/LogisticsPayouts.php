@@ -13,9 +13,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * What ZAYLO owes logistics partners: every delivered parcel earns the
- * logistics company ₱40 shipping plus 10% of product value. The rider's ₱40
- * is a separate wallet credit. The admin pays partners in batches.
+ * New orders allocate shipping and 10% of product value to Logistics, including its rider obligation.
+ * Admin pays prepaid allocations in batches. COD allocations are already handled by the hub.
+ * Historical orders retain their original recorded distribution.
  * (LogisticsPayout); a partner with several branches is paid as one company and pays its branches itself.
  */
 class LogisticsPayouts
@@ -53,13 +53,14 @@ class LogisticsPayouts
     /** Totals over rows: shipping fees, each side's share, rider commissions, and what is paid and still owed to partners. */
     public function summary(Collection $rows): array
     {
-        $unpaid = $rows->whereNull('payout_id');
+        $unpaid = $rows->where('requires_payout', true)->whereNull('payout_id');
 
         return [
             'parcels' => $rows->count(),
             'fees' => round($rows->sum('fee'), 2),
             'partner' => round($rows->sum('partner'), 2),
             'rider' => round($rows->sum('rider'), 2),
+            'company' => round($rows->sum('company'), 2),
             'zaylo' => round($rows->sum('zaylo'), 2),
             'paid' => round($rows->whereNotNull('payout_id')->sum('partner'), 2),
             'owed' => round($unpaid->sum('partner'), 2),
@@ -90,7 +91,13 @@ class LogisticsPayouts
             if ($shipments->isEmpty()) {
                 return null;
             }
-            $rows = $shipments->map(fn (Shipment $shipment) => $this->row($shipment));
+            $rows = $shipments->map(fn (Shipment $shipment) => $this->row($shipment))->where('requires_payout', true);
+            if ($rows->isEmpty()) {
+                return null;
+            }
+            if (blank($reference)) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['reference' => 'Enter the actual partner transfer reference.']);
+            }
 
             $payout = $provider->payouts()->create([
                 'parcels' => $rows->count(),
@@ -104,15 +111,20 @@ class LogisticsPayouts
                 'paid_by' => $admin->id,
                 'paid_at' => now(),
             ]);
-            Shipment::whereKey($shipments->modelKeys())->update(['logistics_payout_id' => $payout->id]);
+            Shipment::whereKey($rows->pluck('shipment_id'))->update(['logistics_payout_id' => $payout->id]);
+            app(ActivityLogger::class)->record('admin.logistics-payouts.pay', 'settlement', 'Recorded partner payout.', $admin, $payout, ['amount' => $payout->amount, 'parcels' => $payout->parcels]);
 
             return $payout;
         });
     }
 
-    /** The full shipping fee of a parcel. A free-shipping voucher is paid by ZAYLO, so the partner's share still counts it. */
+    /** The full delivery charge, including seller- or Admin-funded free shipping. */
     public static function feeOf(Shipment $shipment): float
     {
+        $snapshot = $shipment->sellerOrder?->settlement_breakdown;
+        if ($snapshot) {
+            return (float) $snapshot['shipping'];
+        }
         if ((int) $shipment->getAttribute('fee_minor') > 0) {
             return round($shipment->fee_minor / 100, 2);
         }
@@ -132,7 +144,9 @@ class LogisticsPayouts
         // completes. This keeps historical/manual shipment rows from gaining a
         // wallet credit without an assigned rider.
         $rider = RiderWallet::ready() ? round((float) ($shipment->riderCommission?->amount ?? 0), 2) : 0.0;
-        $partner = $split['logistics_earnings'];
+        $newPolicy = ($split['policy_version'] ?? 1) >= 2;
+        $partner = $split['logistics_gross_earnings'] ?? $split['logistics_earnings'];
+        $order = $shipment->order ?: $shipment->sellerOrder?->order;
 
         return [
             'shipment_id' => $shipment->id,
@@ -142,9 +156,12 @@ class LogisticsPayouts
             'delivered_at' => RiderDeliveries::deliveredAt($shipment),
             'fee' => $fee,
             'partner' => $partner,
+            'company' => round($partner - $rider, 2),
             'rider' => $rider,
             'zaylo' => $split['admin_earnings'],
             'payout_id' => $shipment->logistics_payout_id ? (int) $shipment->logistics_payout_id : null,
+            // COD money is handed to Logistics, not held by Admin. Never pay that allocation again.
+            'requires_payout' => ! ($newPolicy && $order?->payment_method === 'cod'),
         ];
     }
 

@@ -293,6 +293,7 @@ Route::middleware(['auth', 'active', 'verified', 'role:admin', 'nocache'])->pref
 
     Route::get('/commissions', [AdminFinanceController::class, 'commissions'])->name('commissions');
     Route::get('/cod-commissions', [AdminFinanceController::class, 'codCommissions'])->name('cod-commissions');
+    Route::post('/cod-commissions/{settlement}/transfer', [SettlementController::class, 'settleAdmin'])->middleware('throttle:30,1')->name('cod-commissions.transfer');
     Route::post('/commissions/record', [AdminFinanceController::class, 'recordCommissions'])->name('commissions.record');
     Route::post('/commissions/settle', [AdminFinanceController::class, 'settleCommissions'])->name('commissions.settle');
     // Logistics partners' share of the shipping fee of each parcel they delivered.
@@ -370,6 +371,7 @@ Route::middleware(['auth', 'active', 'verified', 'role:logistics', 'nocache'])->
     Route::get('/riders/{rider}/documents/{document}', [LogisticsController::class, 'riderDocument'])->name('riders.document');
     Route::patch('/riders/{rider}', [LogisticsController::class, 'updateRider'])->middleware('throttle:60,1')->name('riders.update');
     Route::patch('/riders/{rider}/availability', [LogisticsController::class, 'riderAvailability'])->name('riders.availability');
+    Route::patch('/riders/{rider}/type', [LogisticsController::class, 'riderType'])->middleware('throttle:60,1')->name('riders.type');
     Route::patch('/riders/{rider}/schedule', [LogisticsAttendanceController::class, 'updateSchedule'])->middleware('throttle:60,1')->name('riders.schedule');
     // Rider time in and time out: riders scan the hub screen's QR code, which changes every 30 seconds.
     Route::get('/attendance', [LogisticsAttendanceController::class, 'index'])->name('attendance');
@@ -393,6 +395,7 @@ Route::middleware(['auth', 'active', 'verified', 'role:logistics', 'nocache'])->
     Route::get('/cash-handovers', [SettlementController::class, 'cash'])->name('cash');
     Route::post('/cash-handovers/{rider}', [SettlementController::class, 'recordCash'])->middleware('throttle:30,1')->name('cash.record');
     Route::post('/cash-settlements/{settlement}', [SettlementController::class, 'settleCod'])->middleware('throttle:30,1')->name('cash.settlements.settle');
+    Route::post('/cash-settlements/{settlement}/admin-transfer', [SettlementController::class, 'settleAdmin'])->middleware('throttle:30,1')->name('cash.settlements.admin-transfer');
     Route::post('/rider-withdrawals/{withdrawal}/pay', [RiderWithdrawalController::class, 'pay'])->middleware('throttle:30,1')->name('rider-withdrawals.pay');
     Route::post('/rider-withdrawals/{withdrawal}/reject', [RiderWithdrawalController::class, 'reject'])->middleware('throttle:30,1')->name('rider-withdrawals.reject');
     Route::get('/reports/export', [LogisticsOperationsController::class, 'exportReport'])->name('reports.export');
@@ -412,6 +415,7 @@ Route::middleware(['auth', 'active', 'verified', 'role:logistics', 'nocache'])->
     Route::post('/messages', [LogisticsChatController::class, 'startFromLogistics'])->middleware('throttle:20,1')->name('messages.start');
     Route::get('/account', [LogisticsController::class, 'account'])->name('account');
     Route::patch('/account/company', [LogisticsController::class, 'updateCompany'])->name('account.company');
+    Route::patch('/account/rider-rate', [LogisticsController::class, 'updateRiderRate'])->middleware('throttle:30,1')->name('account.rider-rate');
     Route::patch('/account/waybill', [LogisticsController::class, 'updateWaybill'])->name('account.waybill');
     Route::get('/waybill-preview', [LogisticsController::class, 'previewWaybill'])->middleware('throttle:60,1')->name('waybill.preview');
     Route::patch('/account/profile', [LogisticsController::class, 'updateProfile'])->name('account.profile');

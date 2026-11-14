@@ -12,13 +12,14 @@
         <div>
             <p class="seller-eyebrow">{{ $provider->name }}</p>
             <h1>Earnings</h1>
-            <p>You earn {{ $percent }}% of the shipping fee of every parcel your riders deliver, including free-shipping orders (ZAYLO covers the voucher). Your rider's commission of &#8369;{{ number_format($riderCommission, 2) }} per delivered parcel is part of it: it goes to the rider's wallet, and you send it to them by GCash when they withdraw (see Rider withdrawals). ZAYLO pays your company, and you pay your branches.</p>
+            <p>For new orders, your company receives {{ $percent }}% of product value plus the shipping fee. Buyers fund normal shipping, sellers fund their own shipping vouchers, and Admin funds its global shipping vouchers. Your company pays riders from these receipts; the remainder covers your other delivery costs.</p>
+            <p>Your current rider rate is &#8369;{{ number_format($riderCommission, 2) }} per delivery for new orders. Existing orders keep their agreed rate. <a href="{{ route('logistics.account') }}" class="seller-link">Set rider pay in Account</a>. COD allocations are handled through Cash handover and are excluded from Admin payout batches.</p>
         </div>
     </section>
 
     <section class="seller-stat-grid" aria-label="Your earnings">
         <div class="seller-stat">
-            <span class="seller-stat__label"><i class="fas fa-wallet" aria-hidden="true"></i> Earned</span>
+            <span class="seller-stat__label"><i class="fas fa-wallet" aria-hidden="true"></i> Gross receipts</span>
             <strong class="seller-stat__value">&#8369;{{ number_format($summary['partner'], 2) }}</strong>
             <span class="seller-stat__note">{{ number_format($summary['parcels']) }} delivered {{ Str::plural('parcel', $summary['parcels']) }}, including &#8369;{{ number_format($summary['rider'], 2) }} rider commissions</span>
         </div>
@@ -33,9 +34,9 @@
             <span class="seller-stat__note">{{ number_format($summary['unpaidParcels']) }} {{ Str::plural('parcel', $summary['unpaidParcels']) }} not paid yet</span>
         </div>
         <div class="seller-stat">
-            <span class="seller-stat__label"><i class="fas fa-truck" aria-hidden="true"></i> Shipping fees</span>
-            <strong class="seller-stat__value">&#8369;{{ number_format($summary['fees'], 2) }}</strong>
-            <span class="seller-stat__note">ZAYLO keeps {{ 100 - $percent }}%</span>
+            <span class="seller-stat__label"><i class="fas fa-truck" aria-hidden="true"></i> After rider earnings</span>
+            <strong class="seller-stat__value">&#8369;{{ number_format($summary['company'], 2) }}</strong>
+            <span class="seller-stat__note">Before other operating costs; not profit</span>
         </div>
     </section>
 
@@ -67,7 +68,7 @@
         <header class="seller-panel__header"><div><h2>Delivered parcels</h2><p>The latest 100 parcels and what you earn from each.</p></div></header>
         <div class="seller-table-wrap">
             <table class="seller-table workspace-table admin-money">
-                <thead><tr><th>Parcel</th><th>Delivered</th><th>Shipping fee</th><th>Your {{ $percent }}%</th><th>Rider commission</th><th>Status</th></tr></thead>
+                <thead><tr><th>Parcel</th><th>Delivered</th><th>Shipping fee</th><th>Company gross</th><th>Rider earnings</th><th>Status</th></tr></thead>
                 <tbody>
                     @forelse($parcels as $parcel)
                         <tr>
@@ -77,7 +78,9 @@
                             <td>&#8369;{{ number_format($parcel['partner'], 2) }}</td>
                             <td>&#8369;{{ number_format($parcel['rider'], 2) }}</td>
                             <td>
-                                @if($parcel['payout_id'])
+                                @if(! $parcel['requires_payout'])
+                                    <a href="{{ route('logistics.cash') }}" class="seller-link">COD handover / allocation</a>
+                                @elseif($parcel['payout_id'])
                                     <span class="commission-state commission-state--settled">Paid</span>
                                 @else
                                     <span class="commission-state commission-state--pending">To be paid</span>

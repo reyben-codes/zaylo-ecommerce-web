@@ -22,6 +22,8 @@ class CodFinancialTransaction extends Model
 
     public const SELLER_SETTLEMENT = 'seller_settlement';
 
+    public const ADMIN_SETTLEMENT = 'admin_settlement';
+
     protected $fillable = [
         'order_id', 'shipment_id', 'logistics_provider_id', 'type', 'status', 'amount', 'from_user_id', 'to_user_id',
         'recorded_by', 'occurred_at', 'metadata',

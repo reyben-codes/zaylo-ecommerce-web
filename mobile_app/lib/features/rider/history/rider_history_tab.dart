@@ -5,6 +5,7 @@ import 'package:zaylo_mobile/api/rider_api.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
 import 'package:zaylo_mobile/components/layout.dart';
 import 'package:zaylo_mobile/features/rider/dashboard/rider_delivery_detail_screen.dart';
+import 'package:zaylo_mobile/features/rider/history/rider_attendance_screen.dart';
 import 'package:zaylo_mobile/features/rider/dashboard/widgets/rider_dashboard_widgets.dart';
 import 'package:zaylo_mobile/models/rider/rider_activity_models.dart';
 import 'package:zaylo_mobile/models/rider/rider_dashboard_models.dart';
@@ -111,6 +112,16 @@ class _RiderHistoryTabState extends State<RiderHistoryTab> {
 
   @override
   Widget build(BuildContext context) => Column(children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+          child: OutlinedButton.icon(
+            icon: const Icon(Icons.event_available_outlined),
+            label: const Text('Attendance & schedule'),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => RiderAttendanceScreen(api: widget.api),
+            )),
+          ),
+        ),
         SizedBox(
           height: 56,
           child: ListView(

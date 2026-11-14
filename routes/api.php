@@ -12,6 +12,7 @@ use App\Http\Controllers\MobileDeliveryChatController;
 use App\Http\Controllers\MobileOrderController;
 use App\Http\Controllers\MobileProfilePhotoController;
 use App\Http\Controllers\MobileRiderAccountController;
+use App\Http\Controllers\MobileRiderAttendanceController;
 use App\Http\Controllers\MobileRiderAuthenticationController;
 use App\Http\Controllers\MobileRiderDashboardController;
 use App\Http\Controllers\MobileRiderDeliveryController;
@@ -92,6 +93,7 @@ Route::prefix('mobile')->name('mobile.')->middleware('throttle:60,1')->group(fun
 
         Route::middleware('mobile.rider')->prefix('rider')->name('rider.')->group(function () use ($complaintRoutes) {
             Route::get('/dashboard', [MobileRiderDashboardController::class, 'dashboard'])->name('dashboard');
+            Route::get('/attendance', [MobileRiderAttendanceController::class, 'index'])->name('attendance');
             // Scanning a parcel label's QR code starts a delivery, and again at the door confirms it.
             Route::post('/deliveries/scan', [MobileRiderDashboardController::class, 'scan'])->middleware('throttle:30,1,mobile-rider-scan')->name('deliveries.scan');
             Route::post('/seller-pickups/scan', [MobileRiderDashboardController::class, 'scanSellerPickup'])->middleware('throttle:30,1,mobile-rider-pickup-scan')->name('seller-pickups.scan');

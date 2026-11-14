@@ -15,7 +15,7 @@
         <div>
             <p class="seller-eyebrow">{{ $provider->name }}</p>
             <h1>Riders</h1>
-            <p>Review rider applications and manage who can deliver for {{ $provider->name }}.</p>
+            <p>Review rider applications and assign riders to Pick-ups (First Mile) or Deliveries (Last Mile) for {{ $provider->name }}.</p>
         </div>
     </section>
 
@@ -34,6 +34,7 @@
                     <tr>
                         <th>Rider</th>
                         <th>Vehicle</th>
+                        <th>Assignment type</th>
                         <th>Driver's license</th>
                         <th>{{ $status === 'pending' ? 'Applied' : 'Reviewed' }}</th>
                         <th>Actions</th>
@@ -59,6 +60,7 @@
                                     <span class="seller-cell-note rider-paused"><i class="fas fa-pause" aria-hidden="true"></i> Paused: no new deliveries</span>
                                 @endif
                             </td>
+                            <td>@include('logistics.partials.rider-type', ['rider' => $rider])</td>
                             <td>
                                 <strong>{{ $rider->license_number ?: '—' }}</strong>
                                 @if($rider->license_expires_on)
@@ -85,7 +87,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5">
+                            <td colspan="6">
                                 <div class="seller-empty">
                                     <i class="fas fa-motorcycle" aria-hidden="true"></i>
                                     <strong>No {{ Str::lower($statusLabels[$status]) }} riders</strong>

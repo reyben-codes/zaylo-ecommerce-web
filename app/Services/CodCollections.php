@@ -62,6 +62,7 @@ class CodCollections
                     'collected_amount' => $amounts['cash_to_collect'],
                     'rider_commission' => $amounts['rider_commission'],
                     'amount_due_logistics' => $amounts['amount_to_hand_logistics'],
+                    'retained_cash' => $amounts['rider_retained_cash'],
                     'collected_by' => $rider->id,
                     'collected_at' => $now->toIso8601String(),
                 ];
@@ -77,7 +78,7 @@ class CodCollections
                     'shipment_id' => $locked->id,
                     'user_id' => $rider->id,
                     'action' => RiderDeliveryLog::COD_COLLECTED,
-                    'note' => 'Collected ₱'.number_format($amounts['cash_to_collect'], 2).'; ₱'.number_format($amounts['rider_commission'], 2).' retained for delivery.',
+                    'note' => 'Collected ₱'.number_format($amounts['cash_to_collect'], 2).'; ₱'.number_format($amounts['rider_retained_cash'], 2).' retained in cash. Delivery earnings are recorded separately.',
                 ]);
             }
 

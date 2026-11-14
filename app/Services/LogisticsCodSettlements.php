@@ -37,6 +37,9 @@ class LogisticsCodSettlements
             $split = app(Settlement::class)->forShipment($shipment);
             $received = RiderDeliveries::amounts($shipment)['amount_to_hand_logistics'];
             $distributed = round($split['logistics_earnings'] + $split['admin_earnings'] + $split['seller_earnings'], 2);
+            if (($split['policy_version'] ?? 1) >= 2) {
+                $distributed = round($distributed + $split['rider_earnings'], 2);
+            }
             if (round($received, 2) !== $distributed) {
                 throw ValidationException::withMessages(['received' => 'This parcel cannot be settled because its COD allocation does not balance.']);
             }
@@ -56,7 +59,7 @@ class LogisticsCodSettlements
                 'seller_earnings' => $split['seller_earnings'],
                 'status' => LogisticsCodSettlement::AWAITING_SELLER_TRANSFER,
                 'recorded_by' => $actor->id,
-            ]);
+            ] + (Schema::hasColumn('logistics_cod_settlements', 'settlement_breakdown') ? ['settlement_breakdown' => $split] : []));
             // The unique shipment constraint makes a retried handover harmless; the same immutable event set is kept.
             $this->history->allocation($settlement->load(['provider', 'handover']), $actor);
         }
@@ -150,6 +153,38 @@ class LogisticsCodSettlements
             'completed_count' => $settled->count(),
             'completed_earnings' => round($settled->sum('seller_earnings'), 2),
         ];
+    }
+
+    /** Record the net transfer after offsetting Admin-funded shipping against Admin's commission. */
+    public function settleAdmin(LogisticsCodSettlement $settlement, User $actor, string $reference): LogisticsCodSettlement
+    {
+        return DB::transaction(function () use ($settlement, $actor, $reference) {
+            $locked = LogisticsCodSettlement::whereKey($settlement->id)->lockForUpdate()->firstOrFail();
+            $amount = (float) $locked->admin_earnings;
+            abort_unless($amount < 0
+                ? $actor->hasRole('admin')
+                : ($actor->hasRole('logistics') && (int) $actor->logisticsProvider?->id === (int) $locked->logistics_provider_id), 403);
+            if ($locked->admin_settled_at || $amount == 0) {
+                throw ValidationException::withMessages(['admin_reference' => 'This allocation has no outstanding Admin transfer.']);
+            }
+            if (trim($reference) === '') {
+                throw ValidationException::withMessages(['admin_reference' => 'Enter the actual transfer reference.']);
+            }
+            $locked->update(['admin_reference' => trim($reference), 'admin_settled_at' => now(), 'admin_settled_by' => $actor->id]);
+            if (CodFinancialHistory::ready()) {
+                \App\Models\CodFinancialTransaction::firstOrCreate([
+                    'shipment_id' => $locked->shipment_id, 'type' => \App\Models\CodFinancialTransaction::ADMIN_SETTLEMENT,
+                ], [
+                    'order_id' => $locked->order_id, 'logistics_provider_id' => $locked->logistics_provider_id,
+                    'amount' => abs($amount), 'from_user_id' => $amount < 0 ? $actor->id : $locked->provider?->user_id,
+                    'to_user_id' => $amount < 0 ? $locked->provider?->user_id : null,
+                    'recorded_by' => $actor->id, 'occurred_at' => now(), 'status' => 'completed',
+                    'metadata' => ['reference' => trim($reference), 'direction' => $amount < 0 ? 'admin_to_logistics' : 'logistics_to_admin'],
+                ]);
+            }
+
+            return $locked->fresh();
+        });
     }
 
     /** Records the actual seller transfer. The allocated Admin share remains auditable on the same settlement row. */

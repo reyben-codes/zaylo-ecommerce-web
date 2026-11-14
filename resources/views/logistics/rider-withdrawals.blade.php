@@ -11,7 +11,7 @@
         <div>
             <p class="seller-eyebrow">{{ $provider->name }}</p>
             <h1>Rider withdrawals</h1>
-            <p>Your riders earn &#8369;{{ number_format($commission, 2) }} for every parcel they deliver. It is part of your share of the shipping fee, which ZAYLO pays you (see Earnings). They can withdraw &#8369;{{ number_format($minimum, 2) }} or more to GCash. Send the money in GCash first, then record its reference number here. Rejecting a request returns the amount to the rider's wallet.</p>
+            <p>Your company currently offers &#8369;{{ number_format($commission, 2) }} per delivery for new orders. Each existing order keeps its agreed rate. Rider earnings are reserved from your delivery receipts and credited once delivery is completed; COD also requires confirmed cash collection. Riders can withdraw &#8369;{{ number_format($minimum, 2) }} or more. Send the GCash payment first, then record its reference here. Rejecting a request restores the rider's available balance.</p>
         </div>
     </section>
 

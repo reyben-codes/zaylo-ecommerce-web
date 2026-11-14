@@ -38,6 +38,9 @@ class RiderSellerPickupTest extends TestCase
         $shift = $rider->attendances()->create(['logistics_provider_id' => $provider->id, 'work_date' => now('Asia/Manila')->toDateString(), 'time_in_at' => now()]);
         $scan()->assertUnprocessable(); // Logistics must assign the pickup first.
         $this->assertSame('Manila, Metro Manila', \App\Services\RiderSellerPickups::pickupArea($shipment->fresh()));
+        $this->withoutToken()->actingAs($owner, 'web')->post(route('logistics.parcels.pickup-rider', $shipment), ['rider_id' => $rider->id])
+            ->assertSessionHasErrors('rider_id'); // Last Mile riders cannot receive seller pickups.
+        $this->patch(route('logistics.riders.type', $rider), ['rider_type' => 'pickup'])->assertSessionHasNoErrors();
         $this->withoutToken()->actingAs($owner, 'web')->get(route('logistics.pickups', ['tab' => 'scheduled']))
             ->assertOk()->assertViewHas('pickupRiders', fn ($rows) => $rows->count() === 1)->assertViewHas('shipments', fn ($rows) => $rows->count() === 1)->assertSee('Assign pickup rider')->assertSee($user->name);
         $this->post(route('logistics.parcels.pickup-rider', $shipment), ['rider_id' => $rider->id])->assertSessionHasNoErrors();
@@ -75,12 +78,13 @@ class RiderSellerPickupTest extends TestCase
         $this->patch(route('logistics.parcels.advance', $shipment), $receive)->assertSessionHasErrors('status');
         $this->post(route('logistics.parcels.pickup-rider', $shipment), ['rider_id' => $rider->id])->assertSessionHasErrors('shipment');
         $this->signInMobile($user);
-        $this->getJson('/api/mobile/rider/dashboard')->assertOk()->assertJsonPath('seller_pickups.0.status', 'handed_over');
+        $this->getJson('/api/mobile/rider/dashboard')->assertOk()->assertJsonPath('seller_pickups.0.status', 'arrived_at_hub');
         $deliveryUser = User::factory()->create(['role' => 'rider', 'status' => 'active']);
         $deliveryRider = Rider::create(['user_id' => $deliveryUser->id, 'logistics_provider_id' => $provider->id, 'status' => 'approved', 'is_active' => true]);
         $deliveryUser->addresses()->create(['recipient' => 'Delivery rider', 'phone' => '09171234567', 'barangay' => 'Central', 'line1' => 'Home', 'city' => 'Manila', 'province' => 'Metro Manila', 'is_default' => true]);
         $deliveryRider->attendances()->create(['logistics_provider_id' => $provider->id, 'work_date' => now('Asia/Manila')->toDateString(), 'time_in_at' => now()]);
         $this->withoutToken()->actingAs($owner, 'web')->patch(route('logistics.parcels.sort', $shipment), ['area' => 'Manila, Metro Manila'])->assertSessionHasNoErrors();
+        $this->post(route('logistics.parcels.assign', $shipment), ['rider_id' => $rider->id])->assertSessionHasErrors('rider_id');
         $this->post(route('logistics.parcels.assign', $shipment), ['rider_id' => $deliveryRider->id])->assertSessionHasNoErrors();
         $this->assertSame($user->id, $shipment->fresh()->pickup_courier_id);
         $this->assertSame($deliveryRider->id, $shipment->fresh()->rider_id);

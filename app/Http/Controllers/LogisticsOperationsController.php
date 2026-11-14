@@ -329,8 +329,10 @@ class LogisticsOperationsController extends Controller
         if ($data['decision'] === 'confirm') {
             $date = Carbon::parse($data['pickup_date'], 'Asia/Manila');
             $courier = ! empty($data['courier_id']) ? User::find($data['courier_id']) : null;
-            if ($courier && ! $courier->isCourier()) {
-                throw ValidationException::withMessages(['courier_id' => 'The selected user is not a courier.']);
+            if ($courier && (! $courier->isPickupRider() || ! $courier->isActive()
+                || $courier->rider?->status !== 'approved' || ! $courier->rider?->is_active
+                || (int) $courier->rider?->logistics_provider_id !== (int) $provider?->id)) {
+                throw ValidationException::withMessages(['courier_id' => 'Choose an approved, available First Mile rider from your logistics company.']);
             }
             DB::transaction(function () use ($shipment, $date, $provider, $request, $courier) {
                 // An open request (no partner named) goes to the first partner to confirm it.
@@ -363,7 +365,10 @@ class LogisticsOperationsController extends Controller
             'courier_id.required' => 'Choose a courier to assign.',
         ]);
         $courier = User::whereKey($data['courier_id'])->firstOrFail();
-        abort_unless($courier->isCourier(), 422, 'Selected user is not a courier.');
+        abort_unless($courier->isPickupRider() && $courier->isActive()
+            && $courier->rider?->status === 'approved' && $courier->rider?->is_active
+            && (int) $courier->rider?->logistics_provider_id === (int) $this->logisticsProvider()?->id,
+            422, 'Choose an approved, available First Mile rider from your logistics company.');
         $this->workflow->assignPickupCourier($shipment, $courier, $request->user());
 
         return back()->with('status', 'Pickup for parcel '.$this->tracking($shipment).' assigned to courier '.$courier->name.'.');

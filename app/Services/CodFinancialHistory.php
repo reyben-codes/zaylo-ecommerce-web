@@ -22,7 +22,7 @@ class CodFinancialHistory
         $order = $shipment->order ?: $shipment->sellerOrder?->order;
         $base = ['order_id' => $order?->id, 'shipment_id' => $shipment->id, 'logistics_provider_id' => $shipment->logistics_provider_id, 'recorded_by' => $rider->id, 'occurred_at' => now()];
         $this->record(CodFinancialTransaction::BUYER_COLLECTION, $base + ['amount' => $amounts['cash_to_collect'], 'from_user_id' => $buyer->id, 'to_user_id' => $rider->id, 'status' => 'completed']);
-        $this->record(CodFinancialTransaction::RIDER_COMMISSION, $base + ['amount' => $amounts['rider_commission'], 'to_user_id' => $rider->id, 'status' => 'completed']);
+        $this->record(CodFinancialTransaction::RIDER_COMMISSION, $base + ['amount' => $amounts['rider_commission'], 'to_user_id' => $rider->id, 'status' => ($amounts['rider_retained_cash'] ?? 0) > 0 ? 'completed' : 'earned', 'metadata' => ['retained_cash' => $amounts['rider_retained_cash'] ?? 0]]);
     }
 
     public function allocation(LogisticsCodSettlement $settlement, User $actor): void

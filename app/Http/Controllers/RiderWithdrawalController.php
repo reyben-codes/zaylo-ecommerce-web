@@ -25,7 +25,7 @@ class RiderWithdrawalController extends Controller
         return view('logistics.rider-withdrawals', [
             'provider' => $provider,
             'ready' => $ready,
-            'commission' => RiderWallet::COMMISSION,
+            'commission' => $provider->riderRate(),
             'minimum' => RiderWallet::MIN_WITHDRAWAL,
             'pending' => $ready ? $query()->where('status', RiderWithdrawal::PENDING)->oldest('id')->get() : collect(),
             'history' => $ready ? $query()->where('status', '!=', RiderWithdrawal::PENDING)->latest('processed_at')->latest('id')->limit(50)->get() : collect(),

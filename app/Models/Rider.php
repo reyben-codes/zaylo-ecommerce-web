@@ -34,6 +34,11 @@ class Rider extends Model
         'mon' => 'Mon', 'tue' => 'Tue', 'wed' => 'Wed', 'thu' => 'Thu', 'fri' => 'Fri', 'sat' => 'Sat', 'sun' => 'Sun',
     ];
 
+    public const TYPE_LABELS = [
+        'pickup' => 'Pick-ups (First Mile)',
+        'delivery' => 'Deliveries (Last Mile)',
+    ];
+
     protected $fillable = [
         'user_id', 'logistics_provider_id', 'vehicle_type', 'rider_type', 'plate_no', 'license_number',
         'license_expires_on', 'license_document_path', 'or_cr_document_path',
@@ -130,7 +135,7 @@ class Rider extends Model
 
     public function isDeliveryRider(): bool
     {
-        return $this->rider_type === 'delivery' || (! $this->isCourier() && $this->rider_type !== 'pickup');
+        return ! $this->isCourier() && $this->rider_type !== 'pickup';
     }
 
     public function user(): BelongsTo

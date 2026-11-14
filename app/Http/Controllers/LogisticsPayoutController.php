@@ -52,7 +52,7 @@ class LogisticsPayoutController extends Controller
             'provider' => $provider,
             'ready' => LogisticsPayouts::ready(),
             'percent' => LogisticsPayouts::partnerPercent(),
-            'riderCommission' => RiderWallet::COMMISSION,
+            'riderCommission' => $provider->riderRate(),
             'summary' => $this->payouts->summary($rows),
             'parcels' => $rows->take(100),
             'history' => $this->history($provider),
