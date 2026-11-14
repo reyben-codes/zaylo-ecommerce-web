@@ -13,6 +13,10 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        if (app()->environment('production')) {
+            throw new \RuntimeException('Demo seeding is disabled in production. Provision real accounts through the application.');
+        }
+
         foreach (['buyer', 'seller', 'logistics', 'rider', 'admin'] as $role) {
             Role::firstOrCreate(['name' => $role]);
         }

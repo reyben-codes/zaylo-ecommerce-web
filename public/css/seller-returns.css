@@ -85,7 +85,8 @@
     font-weight: 600;
 }
 
-.return-refund__form input,
+.return-refund__form input:not([type="checkbox"]),
+.return-refund__form select,
 .return-refund__form textarea {
     padding: 8px 10px;
     border: 1px solid var(--c-dcd2c8);
@@ -98,6 +99,21 @@
 
 .return-refund__form .seller-button {
     justify-self: start;
+}
+
+.return-refund__form .return-refund__confirmation {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    line-height: 1.5;
+}
+
+.return-refund__confirmation input[type="checkbox"] {
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+    margin: 2px 0 0;
+    accent-color: var(--zaylo-accent);
 }
 
 @media (max-width: 640px) {

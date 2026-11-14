@@ -50,7 +50,7 @@ class Order extends Model
     {
         return static::usesLegacySchema()
             ? ['subtotal' => 'decimal:2', 'shipping_fee' => 'decimal:2', 'total' => 'decimal:2', 'placed_at' => 'datetime', 'completed_at' => 'datetime', 'delivered_at' => 'datetime', 'settlement_breakdown' => 'array']
-            : ['shipping_address' => 'array', 'settlement_breakdown' => 'array'];
+            : ['shipping_address' => 'array', 'settlement_breakdown' => 'array', 'placed_at' => 'datetime', 'completed_at' => 'datetime', 'delivered_at' => 'datetime'];
     }
 
     public function buyer(): BelongsTo
@@ -83,7 +83,9 @@ class Order extends Model
 
     public function shipment()
     {
-        return $this->hasOne(Shipment::class);
+        return static::usesLegacySchema()
+            ? $this->hasOne(Shipment::class)
+            : $this->hasOneThrough(Shipment::class, SellerOrder::class);
     }
 
     /**
@@ -124,6 +126,25 @@ class Order extends Model
     public function getOrderNumberAttribute(mixed $value): string { return static::usesLegacySchema() ? (string) $value : (string) $this->reference; }
     public function getTotalAttribute(mixed $value): float { return static::usesLegacySchema() ? (float) $value : ((int) $this->total_minor / 100); }
     public function getShippingDiscountAttribute(mixed $value): float { return static::usesLegacySchema() ? (float) ($value ?? 0) : ((int) ($this->shipping_discount_minor ?? 0) / 100); }
+    public function getUserIdAttribute(mixed $value): ?int { return static::usesLegacySchema() ? $value : $this->buyer_id; }
+    public function getSellerIdAttribute(mixed $value): ?int { return static::usesLegacySchema() ? $value : $this->sellerOrders->first()?->seller_id; }
+    public function getSubtotalAttribute(mixed $value): float { return static::usesLegacySchema() ? (float) $value : $this->sellerOrders->sum('subtotal_minor') / 100; }
+    public function getShippingFeeAttribute(mixed $value): float { return static::usesLegacySchema() ? (float) $value : $this->sellerOrders->sum('shipping_fee_minor') / 100; }
+
+    public function getStatusAttribute(mixed $value): string
+    {
+        if (static::usesLegacySchema()) return (string) $value;
+        $statuses = $this->sellerOrders->pluck('status');
+        if ($statuses->isEmpty()) return $value ?? 'placed';
+        $active = $statuses->reject(fn ($status) => $status === 'cancelled');
+        if ($active->isEmpty()) return 'cancelled';
+        // Multi-seller historical orders show their earliest unfinished stage.
+        foreach (['pending' => 'placed', 'accepted' => 'confirmed', 'packed' => 'processing', 'ready_to_ship' => 'ready_for_pickup', 'shipped' => 'in_transit', 'delivered' => 'delivered'] as $stored => $label) {
+            if ($active->contains($stored)) return $label;
+        }
+
+        return 'completed';
+    }
 
     public function formattedShippingAddress(): string
     {

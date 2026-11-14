@@ -44,13 +44,13 @@ return [
             'bucket' => env('R2_PRIVATE_BUCKET'),
             'endpoint' => env('R2_ENDPOINT'),
             'use_path_style_endpoint' => true,
-            'throw' => false,
-            'report' => false,
+            'throw' => true,
+            'report' => true,
         ] : [
             'driver' => 'local',
             'root' => storage_path('app/private'),
-            'throw' => false,
-            'report' => false,
+            'throw' => true,
+            'report' => true,
         ],
 
         'public' => env('R2_PUBLIC_BUCKET') ? [
@@ -62,15 +62,15 @@ return [
             'endpoint' => env('R2_ENDPOINT'),
             'url' => rtrim((string) env('R2_PUBLIC_URL'), '/'),
             'use_path_style_endpoint' => true,
-            'throw' => false,
-            'report' => false,
+            'throw' => true,
+            'report' => true,
         ] : [
             'driver' => 'local',
             'root' => storage_path('app/public'),
             'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
             'visibility' => 'public',
-            'throw' => false,
-            'report' => false,
+            'throw' => true,
+            'report' => true,
         ],
 
         's3' => [

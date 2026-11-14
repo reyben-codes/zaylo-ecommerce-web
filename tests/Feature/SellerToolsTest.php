@@ -154,6 +154,18 @@ class SellerToolsTest extends TestCase
             ->assertUnprocessable()->assertJsonValidationErrors('photo');
     }
 
+    public function test_refund_reference_cannot_be_used_for_two_cases(): void
+    {
+        Notification::fake();
+        $first = $this->returnCase($this->order('completed'), ['return_type' => 'refund_only']);
+        $second = $this->returnCase($this->order('completed'), ['return_type' => 'refund_only']);
+        $data = ['refund_amount' => 100, 'refund_method' => 'bank_transfer', 'refund_reference' => 'BANK-123', 'refund_sent' => '1'];
+        $this->actingAs($this->seller)->patch(route('seller.returns.refund', $first), $data)->assertSessionHasNoErrors();
+        $this->patch(route('seller.returns.refund', $second), $data)->assertSessionHasErrors('refund_reference');
+        $this->assertNull($second->fresh()->refunded_at);
+        $this->assertSame('BANK-123', $first->fresh()->refund_reference);
+    }
+
     public function test_seller_follows_a_return_confirms_it_and_records_the_refund(): void
     {
         Notification::fake();
@@ -166,7 +178,7 @@ class SellerToolsTest extends TestCase
             ->assertDontSee('Return received</button>', false);
         // Not collected from the buyer yet.
         $this->patch(route('seller.returns.receive', $case))->assertSessionHasErrors('return');
-        $this->patch(route('seller.returns.refund', $case), ['refund_amount' => 100])->assertSessionHasErrors('refund_amount');
+        $this->patch(route('seller.returns.refund', $case), ['refund_amount' => 100, 'refund_method' => 'gcash', 'refund_reference' => '1234567890123', 'refund_sent' => '1'])->assertSessionHasErrors('refund_amount');
 
         $case->update(['return_status' => 'in_transit']);
         $this->patch(route('seller.returns.receive', $case))->assertSessionHasNoErrors();
@@ -176,12 +188,17 @@ class SellerToolsTest extends TestCase
         Notification::assertSentTo($this->buyer, DisputeUpdated::class, fn ($n) => $n->event === 'return_received');
 
         $this->patch(route('seller.returns.refund', $case), ['refund_amount' => 9999])->assertSessionHasErrors('refund_amount');
-        $this->patch(route('seller.returns.refund', $case), ['refund_amount' => '450.00', 'refund_note' => 'Sent by GCash.'])->assertSessionHasNoErrors();
+        $this->patch(route('seller.returns.refund', $case), ['refund_amount' => 450])->assertSessionHasErrors(['refund_reference', 'refund_method', 'refund_sent']);
+        $this->patch(route('seller.returns.refund', $case), ['refund_amount' => '450.00', 'refund_note' => 'Sent by GCash.', 'refund_method' => 'gcash', 'refund_reference' => '1234567890123', 'refund_sent' => '1'])->assertSessionHasNoErrors();
         $case->refresh();
         $this->assertSame('450.00', $case->refund_amount);
         $this->assertSame('refunded', $case->return_status);
         $this->assertSame('resolved', $case->status);
-        $this->assertDatabaseHas('dispute_messages', ['dispute_id' => $case->id, 'sender_id' => $this->seller->id, 'body' => 'Refund of ₱450.00 issued. Sent by GCash.']);
+        $this->assertDatabaseHas('dispute_messages', ['dispute_id' => $case->id, 'sender_id' => $this->seller->id, 'body' => 'Refund of ₱450.00 recorded via gcash; transfer reference 1234567890123. Sent by GCash.']);
+        $this->assertSame('1234567890123', $case->refund_reference);
+        $this->assertEquals($this->seller->id, $case->refunded_by);
+        $this->patch(route('seller.returns.refund', $case), ['refund_amount' => 450, 'refund_method' => 'gcash', 'refund_reference' => '9876543210123', 'refund_sent' => '1'])->assertSessionHasErrors('refund_amount');
+        $this->assertSame('1234567890123', $case->fresh()->refund_reference);
         Notification::assertSentTo($this->buyer, DisputeUpdated::class, fn ($n) => $n->event === 'refunded');
 
         $this->get(route('seller.returns', ['status' => 'closed']))->assertSee('Refunded ₱450.00');

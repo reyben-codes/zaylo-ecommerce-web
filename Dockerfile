@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y \
     zip \
     unzip \
     git \
+    supervisor \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install gd exif pdo pdo_mysql \
     && rm -rf /var/lib/apt/lists/*
@@ -56,4 +57,10 @@ RUN composer dump-autoload --optimize --no-dev
 # Set permissions for Laravel storage and cache folders
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
+COPY docker/supervisord.conf /etc/supervisor/conf.d/zaylo.conf
+COPY docker/start.sh /usr/local/bin/zaylo-start
+RUN chmod +x /usr/local/bin/zaylo-start
+
 EXPOSE 80
+
+CMD ["/usr/local/bin/zaylo-start"]

@@ -65,6 +65,9 @@ class SellerReturnController extends Controller
         $maximum = $this->orderTotal($dispute->order);
         $data = $request->validate([
             'refund_amount' => ['required', 'numeric', 'decimal:0,2', 'gt:0', 'max:'.$maximum],
+            'refund_method' => ['required', Rule::in(['gcash', 'bank_transfer'])],
+            'refund_reference' => ['required', 'string', 'max:100', 'regex:/^[A-Za-z0-9-]+$/', Rule::unique('disputes', 'refund_reference')->where('refunded_by', $request->user()->id)],
+            'refund_sent' => ['accepted'],
             'refund_note' => ['nullable', 'string', 'max:500'],
         ], [
             'refund_amount.max' => 'The refund cannot be more than the order total of ₱'.number_format($maximum, 2).'.',
@@ -76,9 +79,12 @@ class SellerReturnController extends Controller
         }
 
         $amount = round((float) $data['refund_amount'], 2);
-        $note = trim('Refund of ₱'.number_format($amount, 2).' issued. '.($data['refund_note'] ?? ''));
+        $note = trim('Refund of ₱'.number_format($amount, 2).' recorded via '.$data['refund_method'].'; transfer reference '.$data['refund_reference'].'. '.($data['refund_note'] ?? ''));
         $this->disputes->sellerStep($dispute, $request->user(), 'refunded', [
             'refund_amount' => $amount,
+            'refund_method' => $data['refund_method'],
+            'refund_reference' => $data['refund_reference'],
+            'refunded_by' => $request->user()->id,
             'refunded_at' => now(),
             'return_status' => $dispute->hasReturnParcel() ? 'refunded' : $dispute->return_status,
             'status' => 'resolved',

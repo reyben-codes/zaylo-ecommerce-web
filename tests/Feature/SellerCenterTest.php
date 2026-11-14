@@ -273,6 +273,7 @@ class SellerCenterTest extends TestCase
             $table->dateTime('delivered_at')->nullable();
             $table->timestamps();
         });
+        Schema::dropIfExists('order_status_histories');
         Schema::create('order_status_histories', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('order_id');

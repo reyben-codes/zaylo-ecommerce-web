@@ -12,17 +12,22 @@ Artisan::command('inspire', function () {
 Artisan::command('registrations:prune', function (App\Services\PendingRegistrationService $registrations) {
     $this->info($registrations->prune().' unfinished sign-ups removed.');
 })->purpose('Remove sign-ups whose email code was never entered');
-Schedule::command('registrations:prune')->hourly();
+Schedule::command('registrations:prune')->hourly()->withoutOverlapping()->onOneServer();
 
 // Delivered orders the buyer has not confirmed complete on their own after the grace period (also run whenever
 // buyers or sellers open their orders, since the host may not run the scheduler).
 Artisan::command('orders:confirm-delivered', function (App\Services\OrderReceipts $receipts) {
     $this->info($receipts->autoConfirmDue().' delivered orders confirmed automatically.');
 })->purpose('Complete delivered orders whose buyers did not confirm them in time');
-Schedule::command('orders:confirm-delivered')->hourly();
+Schedule::command('orders:confirm-delivered')->hourly()->withoutOverlapping()->onOneServer();
 
 // Activity log entries older than config('activity.retention_days') are removed.
-Schedule::command('model:prune', ['--model' => [App\Models\ActivityLog::class]])->daily();
+Schedule::command('model:prune', ['--model' => [App\Models\ActivityLog::class]])->daily()->withoutOverlapping()->onOneServer();
 
 // Remove seller-created vouchers 24 hours after expiry; order discount snapshots are kept.
-Schedule::command('model:prune', ['--model' => [App\Models\Voucher::class]])->everyMinute()->withoutOverlapping();
+Schedule::command('model:prune', ['--model' => [App\Models\Voucher::class]])->everyMinute()->withoutOverlapping()->onOneServer();
+
+Artisan::command('payments:expire-unpaid', function (App\Services\GcashPayments $payments, App\Services\CheckoutService $checkout) {
+    $this->info($payments->expireDue($checkout).' unpaid orders cancelled.');
+})->purpose('Expire unpaid GCash orders without waiting for someone to open the order list');
+Schedule::command('payments:expire-unpaid')->everyMinute()->withoutOverlapping()->onOneServer();

@@ -181,12 +181,12 @@
                                            aria-label="Print waybill for order {{ $order->order_number }} (opens in a new tab)"><i class="fas fa-print" aria-hidden="true"></i> Print waybill</a>
                                     @endif
 
-                                    <details class="order-details">
+                                    <details class="order-details" data-smooth-disclosure>
                                         <summary>Details</summary>
-                                        <div class="order-details-card">
+                                        <div class="order-details-card" data-disclosure-content>
                                             <strong>Delivery details</strong>
                                             <p>{{ $order->recipient_name }} · {{ $order->phone }}</p>
-                                            <p>{{ $order->shipping_address }}</p>
+                                            <p>{{ $order->formattedShippingAddress() }}</p>
                                             @if($order->shipment?->picked_up_at)
                                                 <p>Shipped: {{ $order->shipment->picked_up_at->timezone('Asia/Manila')->format('M j, Y · g:i A') }}</p>
                                             @endif

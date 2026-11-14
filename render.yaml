@@ -1,11 +1,26 @@
 services:
   - type: web
     name: my-laravel-app
-    env: php
-    buildCommand: composer install --no-dev --optimize-autoloader
-    startCommand: heroku-php-apache2 public/
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    preDeployCommand: php artisan migrate --force
+    healthCheckPath: /up
     envVars:
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
         value: false
+      - key: CACHE_STORE
+        value: database
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_ENDPOINT
+        sync: false
+      - key: R2_PUBLIC_BUCKET
+        sync: false
+      - key: R2_PRIVATE_BUCKET
+        sync: false
+      - key: R2_PUBLIC_URL
+        sync: false

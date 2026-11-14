@@ -254,28 +254,42 @@ class SellerController extends Controller
         app(GcashPayments::class)->expireDue(app(\App\Services\CheckoutService::class), shopId: $this->shopId());
         $statusLabels = self::STATUS_LABELS;
 
-        if (! Order::usesLegacySchema()) {
-            // Checkout writes the per-seller order table; the normalized schema has no fulfilment list yet.
-            $counts = array_fill_keys(['all', ...array_keys(self::ORDER_STATUS_GROUPS)], 0);
-            $orders = new LengthAwarePaginator([], 0, 12, 1, ['path' => $request->url()]);
-
-            return view('seller.orders', compact('orders', 'filter', 'counts', 'statusLabels'));
-        }
-
-        $baseQuery = Order::where('seller_id', $this->shopId());
-        $statusCounts = (clone $baseQuery)
+        $legacy = Order::usesLegacySchema();
+        $shopId = $this->shopId();
+        $normalizedStatuses = ['pending' => 'placed', 'accepted' => 'confirmed', 'packed' => 'processing', 'ready_to_ship' => 'ready_for_pickup', 'shipped' => 'in_transit', 'delivered' => 'delivered', 'completed' => 'completed', 'cancelled' => 'cancelled'];
+        $baseQuery = $legacy ? Order::where('seller_id', $shopId)
+            : Order::whereHas('sellerOrders', fn ($query) => $query->where('seller_id', $shopId));
+        $countQuery = $legacy ? clone $baseQuery : SellerOrder::where('seller_id', $shopId);
+        $statusCounts = $countQuery
             ->selectRaw('status, COUNT(*) as total')
             ->groupBy('status')
             ->pluck('total', 'status');
+        if (! $legacy) {
+            $statusCounts = $statusCounts->mapWithKeys(fn ($count, $status) => [$normalizedStatuses[$status] ?? $status => $count]);
+        }
         $counts = ['all' => $statusCounts->sum()];
 
         foreach (self::ORDER_STATUS_GROUPS as $group => $statuses) {
             $counts[$group] = collect($statuses)->sum(fn ($status) => (int) $statusCounts->get($status, 0));
         }
 
+        if (! $legacy) {
+            $baseQuery->with(['sellerOrders' => fn ($query) => $query->where('seller_id', $shopId)]);
+        }
         $orders = $baseQuery
-            ->with(['buyer', 'items.product.images', 'payment', Shipment::tracksProvider() ? 'shipment.provider' : 'shipment', 'statusHistory' => fn ($query) => $query->oldest()])
-            ->when($filter !== 'all', fn ($query) => $query->whereIn('status', self::ORDER_STATUS_GROUPS[$filter]))
+            ->with(['buyer', 'items' => function ($query) use ($legacy, $shopId) {
+                $query->with('product.images');
+                if (! $legacy) $query->where('seller_orders.seller_id', $shopId);
+            }, 'payment', Shipment::tracksProvider() ? 'shipment.provider' : 'shipment', 'statusHistory' => fn ($query) => $query->oldest()])
+            ->when($filter !== 'all', function ($query) use ($legacy, $filter, $shopId, $normalizedStatuses) {
+                $statuses = self::ORDER_STATUS_GROUPS[$filter];
+                if ($legacy) {
+                    $query->whereIn('status', $statuses);
+                } else {
+                    $query->whereHas('sellerOrders', fn ($sellerOrders) => $sellerOrders->where('seller_id', $shopId)
+                        ->whereIn('status', array_keys(array_intersect($normalizedStatuses, $statuses))));
+                }
+            })
             ->latest('placed_at')
             ->paginate(12)
             ->withQueryString();
@@ -458,6 +472,11 @@ class SellerController extends Controller
             }
 
             $locked->update(['status' => $data['status']]);
+            $sellerOrder = Order::usesLegacySchema() ? null : $locked->sellerOrders()->where('seller_id', $this->shopId())->firstOrFail();
+            $sellerOrder?->update(['status' => match ($data['status']) {
+                'confirmed' => 'accepted', 'processing' => 'packed', 'ready_for_pickup' => 'ready_to_ship',
+                default => $data['status'],
+            }]);
             $locked->statusHistory()->create([
                 'changed_by' => auth()->id(),
                 'status' => $data['status'],
@@ -466,11 +485,13 @@ class SellerController extends Controller
 
             // Ready to ship opens the parcel for the chosen partner to pick up; its tracking number is what gets scanned.
             if ($data['status'] === 'ready_for_pickup') {
-                app(\App\Services\SellerLogistics::class)->assign($locked, $partner);
-                $locked->shipment()->firstOrCreate([], [
-                    'tracking_number' => 'TRK-'.Str::upper(Str::random(12)),
-                    'status' => 'ready',
-                ])->update(['status' => 'ready'] + (Shipment::tracksProvider() ? ['logistics_provider_id' => $partner?->id] : []));
+                app(\App\Services\SellerLogistics::class)->assign($locked, $partner, $sellerOrder);
+                $relation = $sellerOrder ? $sellerOrder->shipment() : $locked->shipment();
+                $relation->firstOrCreate([], [
+                    $sellerOrder ? 'tracking_code' : 'tracking_number' => 'TRK-'.Str::upper(Str::random(12)),
+                    'status' => ShipmentWorkflow::stored('ready'),
+                ] + (Shipment::tracksProvider() ? ['logistics_provider_id' => $partner?->id] : []))
+                    ->update(['status' => ShipmentWorkflow::stored('ready')] + (Shipment::tracksProvider() ? ['logistics_provider_id' => $partner?->id] : []));
             }
         });
         // No printer: the partner prints the waybill; the seller writes the queue number and colour on the parcel.

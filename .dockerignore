@@ -20,6 +20,12 @@ tests
 *.apk
 
 # Local runtime data: uploads, logs, caches and sessions from this computer
+storage/app/*
+!storage/app/.gitignore
+!storage/app/public/
+!storage/app/private/
+zaylo
+*.sql
 storage/app/public/*
 !storage/app/public/.gitignore
 storage/app/private/*

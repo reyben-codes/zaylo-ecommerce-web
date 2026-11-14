@@ -218,8 +218,9 @@ class GcashPayments
             ->where(fn ($q) => $q->where('placed_at', '<', now()->subHours(self::EXPIRE_HOURS))
                 ->orWhere(fn ($q) => $q->whereNull('placed_at')->where('created_at', '<', now()->subHours(self::EXPIRE_HOURS))))
             ->whereHas('payment', fn ($q) => $q->where('status', '!=', self::PAID)->whereNull('paid_at'))
-            ->when($buyerId, fn ($q) => $q->where('user_id', $buyerId))
-            ->when($shopId, fn ($q) => $q->where('seller_id', $shopId))
+            ->when($buyerId, fn ($q) => $q->where(Order::usesLegacySchema() ? 'user_id' : 'buyer_id', $buyerId))
+            ->when($shopId, fn ($q) => Order::usesLegacySchema() ? $q->where('seller_id', $shopId)
+                : $q->whereHas('sellerOrders', fn ($sellerOrders) => $sellerOrders->where('seller_id', $shopId)))
             ->limit(50)->get();
         $cancelled = 0;
         foreach ($due as $order) {

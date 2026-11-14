@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
+
 use App\Services\BuyAgain;
 use App\Support\BuyerOrderTabs;
 use App\Http\Controllers\Concerns\UpdatesAccountSettings;
@@ -612,22 +614,25 @@ class BuyerController extends Controller
             'quoted_unit_prices.*' => ['required', 'numeric', 'min:0', 'decimal:0,2'],
         ] + \App\Services\GcashPayments::checkoutRules());
         $validated['payment_method'] ??= 'cod';
-        if ($this->checkoutService->alreadyPlaced($validated['idempotency_key'])) {
-            return redirect()->route('buyer.orders')->with('status', 'This checkout was already completed.');
-        }
-        $cart = Cart::where('user_id', auth()->id())->with(['items.product', 'items.variant'])->first();
-        if (! $cart || $cart->items->isEmpty()) {
-            return back()->withErrors(['cart' => 'Your cart is empty.']);
-        }
+        return DB::transaction(function () use ($request, $validated) {
+            User::whereKey($request->user()->id)->lockForUpdate()->firstOrFail();
+            if ($this->checkoutService->alreadyPlaced($validated['idempotency_key'], $request->user())) {
+                return redirect()->route('buyer.orders')->with('status', 'This checkout was already completed.');
+            }
+            $cart = Cart::where('user_id', auth()->id())->with(['items.product', 'items.variant'])->first();
+            if (! $cart || $cart->items->isEmpty()) {
+                return back()->withErrors(['cart' => 'Your cart is empty.']);
+            }
 
-        $selectedIds = $validated['cart_item_ids'] ?? $request->session()->get('checkout_cart_item_ids') ?? $cart->items->pluck('id')->all();
-        $voucherCode = Str::upper(trim((string) ($validated['voucher_code'] ?? '')));
+            $selectedIds = $validated['cart_item_ids'] ?? $request->session()->get('checkout_cart_item_ids') ?? $cart->items->pluck('id')->all();
+            $voucherCode = Str::upper(trim((string) ($validated['voucher_code'] ?? '')));
 
-        $this->checkoutService->place($request->user(), array_map('intval', $selectedIds), $validated, $voucherCode);
+            $this->checkoutService->place($request->user(), array_map('intval', $selectedIds), $validated, $voucherCode);
 
-        $request->session()->forget('checkout_cart_item_ids');
+            $request->session()->forget('checkout_cart_item_ids');
 
-        return redirect()->route('buyer.orders')->with('status', 'Order placed successfully.');
+            return redirect()->route('buyer.orders')->with('status', 'Order placed successfully.');
+        });
     }
 
     public function wishlist()

@@ -58,7 +58,7 @@ class Dispute extends Model
         'category', 'evidence', 'resolved_at',
         'return_type', 'return_method', 'return_courier', 'pickup_date', 'pickup_slot',
         'dropoff_location', 'dropoff_deadline', 'return_tracking_number', 'return_status',
-        'return_received_at', 'refund_amount', 'refunded_at',
+        'return_received_at', 'refund_amount', 'refunded_at', 'refund_method', 'refund_reference', 'refunded_by',
         'return_rider_id', 'return_assigned_at', 'return_picked_up_at', 'return_at_hub_at',
         'return_pickup_photo_path', 'return_hub_photo_path',
     ];

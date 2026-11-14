@@ -61,6 +61,7 @@ class ScheduledSaleCheckoutTest extends TestCase
             $table->decimal('amount', 12, 2);
             $table->timestamps();
         });
+        Schema::dropIfExists('order_status_histories');
         Schema::create('order_status_histories', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('order_id');

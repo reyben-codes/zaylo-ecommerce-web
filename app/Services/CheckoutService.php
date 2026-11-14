@@ -294,9 +294,15 @@ class CheckoutService
         ];
     }
 
-    public function alreadyPlaced(string $idempotencyKey): bool
+    public function ordersForKey(User $buyer, string $idempotencyKey): Collection
     {
-        return Payment::where('idempotency_key', 'like', $idempotencyKey.'%')->exists();
+        return $buyer->orders()->whereHas('payment', fn ($query) => $query
+            ->where('idempotency_key', 'like', $idempotencyKey.'-%'))->orderBy('id')->get();
+    }
+
+    public function alreadyPlaced(string $idempotencyKey, User $buyer): bool
+    {
+        return $this->ordersForKey($buyer, $idempotencyKey)->isNotEmpty();
     }
 
     /**
@@ -339,6 +345,11 @@ class CheckoutService
 
         return DB::transaction(function () use ($buyer, $selectedIds, $input, $voucherCode, $paymentMethod) {
             User::whereKey($buyer->id)->lockForUpdate()->firstOrFail();
+            // Recheck after serializing this buyer's requests, before reading a possibly emptied cart.
+            $existing = $this->ordersForKey($buyer, $input['idempotency_key']);
+            if ($existing->isNotEmpty()) {
+                return $existing;
+            }
             $cart = Cart::where('user_id', $buyer->id)->with(['items.product', 'items.variant'])->firstOrFail();
             $itemsToOrder = $cart->items->whereIn('id', $selectedIds);
             if ($itemsToOrder->isEmpty() || $itemsToOrder->count() !== count($selectedIds)) {
@@ -409,7 +420,7 @@ class CheckoutService
                 if ($breakdown['seller_earnings'] < 0) {
                     throw ValidationException::withMessages(['voucher_code' => 'Add more items from this shop to cover its free-shipping voucher, or remove the voucher.']);
                 }
-                $order = Order::create([
+                $attributes = [
                     'order_number' => 'ZAY-'.now()->format('ymd').'-'.Str::upper(Str::random(8)),
                     'user_id' => $buyer->id, 'seller_id' => $sellerId ?: null, 'status' => 'placed',
                     'subtotal' => $subtotal, 'shipping_fee' => $shippingFee, 'total' => $subtotal + $shippingFee - $voucherDiscount,
@@ -424,24 +435,53 @@ class CheckoutService
                     ? ['courier_choice' => null]
                     : []) + (self::choosesPartner()
                     ? ['logistics_provider_id' => $partner?->id, 'shipping_zone' => $zone]
-                    : []));
+                    : []);
+                $legacy = Order::usesLegacySchema();
+                if (! $legacy) {
+                    $attributes = array_diff_key($attributes, array_flip([
+                        'order_number', 'user_id', 'seller_id', 'subtotal', 'shipping_fee', 'total', 'shipping_discount',
+                    ])) + [
+                        'reference' => $attributes['order_number'], 'buyer_id' => $buyer->id,
+                        'total_minor' => (int) round(($subtotal + $shippingFee - $voucherDiscount) * 100),
+                        'shipping_discount_minor' => (int) round($shippingDiscount * 100),
+                    ];
+                    $attributes['shipping_address'] = [
+                        'address' => $address->formatted(), 'recipient' => $address->recipient_name, 'phone' => $address->phone,
+                    ];
+                }
+                $order = Order::create($attributes);
+                $sellerOrder = $legacy ? null : $order->sellerOrders()->create([
+                    'seller_id' => $sellerId, 'subtotal_minor' => (int) round($subtotal * 100),
+                    'shipping_fee_minor' => (int) round($shippingFee * 100),
+                    'commission_minor' => (int) round(($breakdown['admin_earnings'] ?? 0) * 100),
+                    'status' => 'pending', 'settlement_breakdown' => $breakdown,
+                ]);
 
                 foreach ($prepared as $row) {
                     ['item' => $item, 'product' => $product, 'variant' => $variant, 'unitPrice' => $unitPrice] = $row;
-                    $order->items()->create([
+                    $itemAttributes = [
                         'product_id' => $product->id, 'product_variant_id' => $variant?->id,
                         'seller_id' => $product->seller_id,
                         'product_name' => $product->name.($variant ? ' — '.$variant->name : ''),
                         'sku' => $variant?->sku ?? $product->sku, 'unit_price' => $unitPrice,
                         'quantity' => $item->quantity, 'line_total' => $unitPrice * $item->quantity,
-                    ]);
+                    ];
+                    if ($sellerOrder) {
+                        $itemAttributes = array_diff_key($itemAttributes, array_flip(['seller_id', 'sku', 'unit_price', 'line_total'])) + [
+                            'variant_name' => $variant?->name ?? 'Standard',
+                            'unit_price_minor' => (int) round($unitPrice * 100),
+                        ];
+                        $sellerOrder->items()->create($itemAttributes);
+                    } else {
+                        $order->items()->create($itemAttributes);
+                    }
                     $variant ? $variant->decrement('stock', $item->quantity) : $product->decrement('stock', $item->quantity);
                     if ($variant) {
                         Product::syncStockFromVariants($product->id);
                     }
                 }
 
-                $payment = $order->payment()->create([
+                $paymentAttributes = [
                     'provider' => $paymentMethod, 'status' => 'pending', 'amount' => $order->total,
                     'currency' => 'PHP', 'idempotency_key' => $input['idempotency_key'].'-'.$order->id,
                     // The request never supplies this: it is calculated from
@@ -450,7 +490,12 @@ class CheckoutService
                         'cod_amount' => (float) $order->total,
                         'commission_breakdown' => $breakdown,
                     ],
-                ]);
+                ];
+                if (! $legacy) {
+                    unset($paymentAttributes['amount']);
+                    $paymentAttributes += ['method' => $paymentMethod, 'amount_minor' => (int) round($order->total * 100)];
+                }
+                $payment = $order->payment()->create($paymentAttributes);
                 // GCash goes to the seller's own GCash: the reference waits for the seller's check (GcashPayments).
                 if ($paymentMethod === 'gcash' && GcashPayments::ready()) {
                     $reference = GcashPayments::normalize($input['gcash_references'][$sellerId] ?? null);
@@ -540,6 +585,9 @@ class CheckoutService
             }
         }
         $lockedOrder->update(['status' => 'cancelled']);
+        if (! Order::usesLegacySchema()) {
+            $lockedOrder->sellerOrders()->update(['status' => 'cancelled']);
+        }
         // The reason (BuyerOrderTabs::CANCEL_REASONS) and when, which later moves it to Purchase history.
         if (Schema::hasColumn('orders', 'cancel_reason')) {
             $lockedOrder->forceFill(['cancel_reason' => $reason, 'cancel_note' => $reasonNote, 'cancelled_at' => now()])->save();

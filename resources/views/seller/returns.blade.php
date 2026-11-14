@@ -87,6 +87,9 @@
                 </details>
 
                 @if($case->refunded_at)
+                    @if($case->refund_reference)
+                        <p class="seller-cell-note">{{ $case->refund_method === 'gcash' ? 'GCash' : 'Bank transfer' }} reference: {{ $case->refund_reference }}</p>
+                    @endif
                     <p class="return-case__refunded"><i class="fas fa-circle-check" aria-hidden="true"></i> Refunded ₱{{ number_format((float) $case->refund_amount, 2) }} on {{ $case->refunded_at->timezone('Asia/Manila')->format('M j, Y · g:i A') }}</p>
                 @endif
 
@@ -106,7 +109,7 @@
                 @if($tracksRefunds && $case->canRefund())
                     @php $retry = (string) old('refund_case') === (string) $case->id; @endphp
                     <details class="return-refund" data-smooth-disclosure @if($retry) open @endif>
-                        <summary><i class="fas fa-money-bill-transfer" aria-hidden="true"></i> Issue refund</summary>
+                        <summary><i class="fas fa-money-bill-transfer" aria-hidden="true"></i> Record sent refund</summary>
                         <div data-disclosure-content>
                             <form method="POST" action="{{ route('seller.returns.refund', $case) }}" class="return-refund__form">
                                 @csrf
@@ -115,6 +118,19 @@
                                 <label>Refund amount (₱)
                                     <input type="number" name="refund_amount" min="0.01" step="0.01" required
                                            value="{{ $retry ? old('refund_amount') : number_format((float) ($case->order?->total ?? (($case->order?->total_minor ?? 0) / 100)), 2, '.', '') }}">
+                                </label>
+                                <label>Transfer method
+                                    <select name="refund_method" required>
+                                        <option value="gcash" @selected($retry && old('refund_method') === 'gcash')>GCash</option>
+                                        <option value="bank_transfer" @selected($retry && old('refund_method') === 'bank_transfer')>Bank transfer</option>
+                                    </select>
+                                </label>
+                                <label>Transfer reference
+                                    <input type="text" name="refund_reference" maxlength="100" pattern="[A-Za-z0-9-]+" required value="{{ $retry ? old('refund_reference') : '' }}" placeholder="Reference from the completed transfer">
+                                </label>
+                                <label class="return-refund__confirmation">
+                                    <input type="checkbox" name="refund_sent" value="1" required @checked($retry && old('refund_sent'))>
+                                    I have already sent this amount to the buyer. Recording it here does not transfer money.
                                 </label>
                                 <label>Note to the buyer (optional)
                                     <textarea name="refund_note" rows="2" maxlength="500" placeholder="e.g. Sent through GCash to the number on the order.">{{ $retry ? old('refund_note') : '' }}</textarea>

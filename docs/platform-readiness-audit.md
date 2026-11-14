@@ -22,6 +22,8 @@ Deployment: these are server-side changes and require no database migration or m
 
 ## Verification performed
 
+Follow-up scenario fixes now add fresh-schema checkout and seller fulfillment, buyer-scoped retry handling, refund transfer records, production demo-seeding protection, a bundled Docker scheduler, upload deployment checks and Android signing safeguards. The final follow-up PHP run has 572 passing tests and the same 34 failing test identities (606 total, 7,541 assertions); all nine added scenario tests pass. See [the deployment guide](scenario-fixes-deployment.md) for the two required migrations, hosting settings and remaining staging checks. The findings and verification table below describe the original audit baseline.
+
 | Check | Result | Scope |
 | --- | --- | --- |
 | Complete PHP test suite | 553 passed, 34 failed; 7,416 assertions; 587 tests total | In-memory SQLite; approximately 285 seconds |

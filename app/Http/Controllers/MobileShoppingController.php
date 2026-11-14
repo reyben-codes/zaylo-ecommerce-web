@@ -170,7 +170,7 @@ class MobileShoppingController extends Controller
         ] + GcashPayments::checkoutRules());
 
         // A retried request (for example after a dropped connection) must not order twice.
-        if ($this->checkout->alreadyPlaced($validated['idempotency_key'])) {
+        if ($this->checkout->alreadyPlaced($validated['idempotency_key'], $request->user())) {
             return response()->json([
                 'message' => 'This checkout was already completed.',
                 'already_placed' => true,
@@ -222,9 +222,7 @@ class MobileShoppingController extends Controller
 
     private function ordersForKey(Request $request, string $key): Collection
     {
-        return $request->user()->orders()
-            ->whereHas('payment', fn ($query) => $query->where('idempotency_key', 'like', $key.'%'))
-            ->with('items.product.images')->get()
+        return $this->checkout->ordersForKey($request->user(), $key)->load('items.product.images')
             ->map(fn (Order $order) => MobilePayload::order($order))->values();
     }
 

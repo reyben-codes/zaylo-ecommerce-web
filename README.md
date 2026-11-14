@@ -78,6 +78,8 @@ The feature suite covers public browsing, marketplace account approval, seller o
 
 ## Production notes
 
+For checkout compatibility, refund transfer records, durable uploads, the bundled Docker scheduler and Android signing safeguards, follow [the scenario-fixes deployment checklist](docs/scenario-fixes-deployment.md) before deploying. This release adds two database migrations; existing dashboard-managed hosting settings must be updated separately from pushing code.
+
 - Set `APP_ENV=production`, `APP_DEBUG=false`, and HTTPS-only secure session cookies.
 - Configure a real mail provider before enabling registrations.
 - Payments are cash on delivery or GCash confirmed by hand. Add an online gateway through signed, idempotent webhooks rather than trusting browser callbacks.

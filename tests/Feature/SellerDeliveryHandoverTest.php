@@ -144,6 +144,7 @@ class SellerDeliveryHandoverTest extends TestCase
             $table->timestamps();
         });
 
+        Schema::dropIfExists('order_status_histories');
         Schema::create('order_status_histories', function (Blueprint $table) {
             $table->id();
             $table->foreignId('order_id')->constrained()->cascadeOnDelete();
@@ -157,16 +158,16 @@ class SellerDeliveryHandoverTest extends TestCase
             $table->string('order_number')->nullable()->unique();
             $table->unsignedBigInteger('user_id')->nullable();
             $table->unsignedBigInteger('seller_id')->nullable();
-            $table->string('status')->default('placed');
+            if (! Schema::hasColumn('orders', 'status')) $table->string('status')->default('placed');
             $table->decimal('subtotal', 12, 2)->default(0);
             $table->decimal('shipping_fee', 12, 2)->default(0);
             $table->decimal('total', 12, 2)->default(0);
             $table->string('currency', 3)->default('PHP');
-            $table->string('recipient_name')->nullable();
-            $table->string('phone', 30)->nullable();
-            $table->text('notes')->nullable();
-            $table->timestamp('placed_at')->nullable();
-            $table->timestamp('completed_at')->nullable();
+            if (! Schema::hasColumn('orders', 'recipient_name')) $table->string('recipient_name')->nullable();
+            if (! Schema::hasColumn('orders', 'phone')) $table->string('phone', 30)->nullable();
+            if (! Schema::hasColumn('orders', 'notes')) $table->text('notes')->nullable();
+            if (! Schema::hasColumn('orders', 'placed_at')) $table->timestamp('placed_at')->nullable();
+            if (! Schema::hasColumn('orders', 'completed_at')) $table->timestamp('completed_at')->nullable();
             $table->decimal('shipping_discount', 12, 2)->default(0);
         });
 

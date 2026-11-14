@@ -90,7 +90,18 @@ class DisputeService
      */
     public function sellerStep(Dispute $dispute, User $seller, string $event, array $changes, string $note): void
     {
-        DB::transaction(function () use ($dispute, $seller, $changes, $note) {
+        DB::transaction(function () use ($dispute, $seller, $event, $changes, $note) {
+            // Serialize transfers recorded by this seller and recheck the case after locking.
+            if ($event === 'refunded') {
+                User::whereKey($seller->id)->lockForUpdate()->firstOrFail();
+                $locked = Dispute::whereKey($dispute->id)->lockForUpdate()->firstOrFail();
+                if (! $locked->canRefund()) {
+                    throw \Illuminate\Validation\ValidationException::withMessages(['refund_amount' => 'This case cannot be refunded again.']);
+                }
+                if (Dispute::where('refunded_by', $seller->id)->where('refund_reference', $changes['refund_reference'])->exists()) {
+                    throw \Illuminate\Validation\ValidationException::withMessages(['refund_reference' => 'This transfer reference has already been recorded.']);
+                }
+            }
             $dispute->update($changes);
             $dispute->messages()->create(['sender_id' => $seller->id, 'body' => $note]);
         });

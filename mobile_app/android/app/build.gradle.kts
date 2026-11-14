@@ -1,3 +1,6 @@
+import java.security.KeyStore
+import java.security.MessageDigest
+
 plugins {
     id("com.android.application")
     // gradle.properties turns off AGP's built-in Kotlin (android.builtInKotlin=false), so the
@@ -44,7 +47,7 @@ android {
 
     // The release workflow names the team's keystore in ZAYLO_KEYSTORE. Relying on the default debug key there made
     // the build machine sign each release with a new random key, which Google sign-in rejects and phones cannot
-    // install as an update. Local builds keep using this computer's debug key.
+    // install as an update. Debug builds keep using this computer's debug key; releases require the team key.
     signingConfigs {
         System.getenv("ZAYLO_KEYSTORE")?.takeIf { it.isNotBlank() }?.let { path ->
             create("team") {
@@ -58,9 +61,28 @@ android {
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.findByName("team") ?: signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.findByName("team")
         }
     }
+}
+
+val verifyReleaseKey by tasks.registering {
+    doLast {
+        val path = System.getenv("ZAYLO_KEYSTORE")?.takeIf { it.isNotBlank() }
+            ?: throw GradleException("Release builds require ZAYLO_KEYSTORE pointing to the existing team signing key. Debug-key fallback is disabled.")
+        val keystore = KeyStore.getInstance(file(path), "android".toCharArray())
+        val certificate = keystore.getCertificate("androiddebugkey")
+            ?: throw GradleException("The configured keystore does not contain the team signing certificate.")
+        val sha1 = MessageDigest.getInstance("SHA-1").digest(certificate.encoded)
+            .joinToString(":") { "%02X".format(it.toInt() and 0xff) }
+        if (sha1 != "76:70:DD:8F:BA:94:A9:5E:16:10:34:D3:11:69:A1:50:D3:B3:4B:37") {
+            throw GradleException("Release signing certificate does not match the existing app. Refusing an incompatible update.")
+        }
+    }
+}
+
+tasks.matching { it.name == "preReleaseBuild" }.configureEach {
+    dependsOn(verifyReleaseKey)
 }
 
 kotlin {
