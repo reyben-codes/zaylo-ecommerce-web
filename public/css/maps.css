@@ -27,6 +27,7 @@
 .track-map-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0; padding: 0; list-style: none; font-size: .85rem; }
 .track-map-legend span { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
 .track-map-legend .is-home { background: #2f2a26; }
+.track-map-legend .is-route { width: 24px; height: 5px; border-radius: 3px; background: #2563eb; vertical-align: 2px; }
 .track-map-legend .is-rider { width: 18px; height: 18px; vertical-align: -4px; background: url('../images/map-rider.png') center / contain no-repeat; }
 .track-map-note { margin: 0; font-size: .85rem; color: var(--c-6b5f54, #6b5f54); }
 

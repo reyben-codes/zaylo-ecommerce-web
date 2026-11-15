@@ -5,6 +5,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:zaylo_mobile/models/map_point.dart';
+import 'package:zaylo_mobile/components/map/road_route.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 
 export 'package:latlong2/latlong.dart' show LatLng;
@@ -51,6 +52,9 @@ class ZayloMap extends StatelessWidget {
     this.zoom = 16,
     this.fit,
     this.onTap,
+    this.routeFrom,
+    this.routeTo,
+    this.onRoute,
   });
 
   /// Widget tests turn this off: they cannot load map tiles.
@@ -67,6 +71,9 @@ class ZayloMap extends StatelessWidget {
   /// Frames these points when there are two or more, instead of [center].
   final List<LatLng>? fit;
   final void Function(LatLng point)? onTap;
+  final LatLng? routeFrom;
+  final LatLng? routeTo;
+  final ValueChanged<List<LatLng>>? onRoute;
 
   @override
   Widget build(BuildContext context) {
@@ -88,6 +95,7 @@ class ZayloMap extends StatelessWidget {
             urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
             userAgentPackageName: 'com.example.zaylo_mobile',
           ),
+        RoadRouteLayer(from: routeFrom, to: routeTo, onRoute: onRoute),
         MarkerLayer(markers: markers),
         // OpenStreetMap's required credit, kept small so it never crowds a narrow map.
         Align(

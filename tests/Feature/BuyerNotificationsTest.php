@@ -44,6 +44,7 @@ class BuyerNotificationsTest extends TestCase
             ->assertSee('SOONSHIP')
             ->assertSee('expires soon')
             ->assertSee('ZAY-BUYER')
+            ->assertSee('Order in transit')
             ->assertDontSee('ZAY-OTHER')
             ->assertSee('3 unread')
             ->assertSee('data-notification-count', false);

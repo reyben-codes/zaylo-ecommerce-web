@@ -52,6 +52,7 @@ class MainActivity : FlutterActivity() {
                         val notification = builder.setSmallIcon(R.drawable.ic_stat_zaylo)
                             .setContentTitle(call.argument<String>("title") ?: "ZAYLO")
                             .setContentText(call.argument<String>("body") ?: "You have an update.")
+                            .setStyle(Notification.BigTextStyle().bigText(call.argument<String>("body") ?: "You have an update."))
                             .setContentIntent(pending).setAutoCancel(true)
                             .setVisibility(Notification.VISIBILITY_PRIVATE)
                             .setCategory(Notification.CATEGORY_MESSAGE)

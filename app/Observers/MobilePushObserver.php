@@ -10,6 +10,7 @@ use App\Models\Rider;
 use App\Models\Shipment;
 use App\Models\SupportMessage;
 use App\Services\MobilePushNotifications;
+use App\Support\OrderNotificationText;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
@@ -20,8 +21,10 @@ class MobilePushObserver
         $push = app(MobilePushNotifications::class);
         if ($model instanceof OrderStatusHistory) {
             $order = $model->order;
-            $push->queue($order?->buyer?->id, 'order-history-'.$model->id, 'Order update',
-                'Your order has an update. Open ZAYLO to view the details.', 'order', $order?->id ?? 0);
+            $text = OrderNotificationText::forStatus($model->status, $model->note);
+            $reference = $order?->order_number;
+            $push->queue($order?->buyer?->id, 'order-history-'.$model->id, $text['title'],
+                Str::limit(($reference ? 'Order '.$reference.': ' : '').$text['message'], 300), 'order', $order?->id ?? 0);
         } elseif ($model instanceof Message) {
             $conversation = $model->conversation;
             if ($conversation && (int) $model->sender_id !== (int) $conversation->buyer_id) {
@@ -70,12 +73,12 @@ class MobilePushObserver
             $recipient = $shipment->rider?->user_id ?? $shipment->courier_id;
             if ($recipient) {
                 app(MobilePushNotifications::class)->queue($recipient, 'delivery-assigned-'.Str::uuid(), 'New delivery assignment',
-                    'Your logistics partner assigned you a parcel. Open ZAYLO to review it.', 'delivery', $shipment->id);
+                    'Your logistics partner assigned you parcel '.($shipment->tracking_number ?: '#'.$shipment->id).'. Open ZAYLO to review it.', 'delivery', $shipment->id);
             }
         }
         if (($created || $shipment->wasChanged('pickup_courier_id')) && $shipment->pickup_courier_id) {
             app(MobilePushNotifications::class)->queue($shipment->pickup_courier_id, 'pickup-assigned-'.Str::uuid(), 'New pickup assignment',
-                'Your logistics partner assigned you a seller pickup.', 'rider_pickups');
+                'Collect parcel '.($shipment->tracking_number ?: '#'.$shipment->id).' from the seller. Open ZAYLO to review the pickup.', 'rider_pickups');
         }
     }
 }

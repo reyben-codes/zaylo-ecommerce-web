@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const stage = root.querySelector('[data-tracking-stage]');
     const message = root.querySelector('[data-tracking-message]');
     const updated = root.querySelector('[data-tracking-updated]');
+    const route = ZayloMap.roadRoute(map, root.querySelector('[data-tracking-route]'));
     let home = null;
     let rider = null;
     let fitted = false;
@@ -34,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
         message.textContent = tracking.message;
         home = show(home, tracking.destination, 'home', 'Your delivery pin');
         rider = show(rider, tracking.rider, 'rider', 'Your rider');
+        route.update(tracking.rider, tracking.destination);
         updated.textContent = tracking.rider?.updated_at
             ? 'Rider location updated ' + new Date(tracking.rider.updated_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
             : '';

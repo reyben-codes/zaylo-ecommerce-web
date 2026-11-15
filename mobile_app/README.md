@@ -32,3 +32,14 @@ and API clients are in `lib/api/`.
 
 Buyer and rider sessions use separate Sanctum bearer tokens kept in secure
 storage.
+
+Delivery maps highlight a suggested driving route along roads using OSRM. The
+rider map updates from the phone's location every 15 seconds while open; tap
+**WHERE AM I** to grant location access if needed. Routes require both location
+pins and an internet connection. A route failure keeps the pins usable and
+offers a retry. These are suggested routes, not the rider's recorded journey.
+
+Routing defaults to the public `https://router.project-osrm.org` service. For a
+dedicated OSRM deployment, build with
+`--dart-define=ZAYLO_ROUTING_URL=https://your-routing-host`. Route requests send
+the origin and destination coordinates to that service without account tokens.

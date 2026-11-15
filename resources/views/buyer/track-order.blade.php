@@ -15,11 +15,13 @@
                 <p class="track-map-note" data-tracking-updated></p>
             </div>
         </div>
-        <div class="zaylo-map zaylo-map--tall" data-map role="img" aria-label="Map of your delivery pin and your rider's location"></div>
+        <div class="zaylo-map zaylo-map--tall" data-map role="img" aria-label="Map of your delivery pin, your rider's location, and the suggested road route"></div>
         <ul class="track-map-legend">
             <li><span class="is-home" aria-hidden="true"></span>Your delivery pin</li>
             <li><span class="is-rider" aria-hidden="true"></span>Your rider</li>
+            <li><span class="is-route" aria-hidden="true"></span>Suggested road route</li>
         </ul>
+        <p class="track-map-note" data-tracking-route role="status" aria-live="polite"></p>
         @unless($tracking['destination'])
             <p class="track-map-note">This order has no pinned location, so the rider uses the written address. Pin your saved addresses in <a href="{{ route('addresses.index') }}">Saved addresses</a> for your next orders.</p>
         @endunless

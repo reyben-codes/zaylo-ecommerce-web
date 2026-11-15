@@ -31,6 +31,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
   late ParcelTracking _tracking = widget.initial;
   late final AppLifecycleListener _lifecycle;
   Timer? _timer;
+  List<LatLng> _road = [];
 
   @override
   void initState() {
@@ -72,6 +73,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
   }
 
   List<LatLng> get _points => [
+        if (_tracking.rider != null && _tracking.destination != null) ..._road,
         if (_tracking.destination != null) _tracking.destination!.latLng,
         if (_tracking.rider != null) _tracking.rider!.point.latLng,
       ];
@@ -119,6 +121,9 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
               controller: _map,
               fit: _points,
               zoom: 16,
+              routeFrom: rider?.point.latLng,
+              routeTo: tracking.destination?.latLng,
+              onRoute: (points) => _road = points,
               markers: [
                 if (tracking.destination != null) mapMarker(tracking.destination!.latLng, MapPinKind.home),
                 if (rider != null) mapMarker(rider.point.latLng, MapPinKind.rider),

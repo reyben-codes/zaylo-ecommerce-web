@@ -75,24 +75,7 @@ class BuyerNotificationFeed
                 ]);
             });
 
-        $statusMessages = [
-            'placed' => 'Your order was placed and is waiting for the seller.',
-            'confirmed' => 'The seller confirmed your order.',
-            'processing' => 'The seller is preparing your order.',
-            'ready_for_pickup' => 'Your order is packed and ready to ship.',
-            'assigned' => 'A courier has been assigned to your order.',
-            'picked_up' => 'The seller shipped your order.',
-            'in_transit' => 'Your order is on its way.',
-            'out_for_delivery' => 'Your order is out for delivery.',
-            'completed' => 'Your order is complete.',
-            'delivered' => 'Your order was delivered. Confirm you received it.',
-            'failed' => 'The rider could not deliver your order.',
-            'cancelled' => 'Your order was cancelled.',
-        ];
-        // A failed attempt carries the rider's reason in its note ("Delivery attempt failed: …").
-        $messageFor = fn (string $status, ?string $note) => $status === 'failed' && $note
-            ? $note
-            : ($statusMessages[$status] ?? 'Your order status was updated.');
+        $textFor = fn (string $status, ?string $note) => \App\Support\OrderNotificationText::forStatus($status, $note);
 
         // Delivery events belong to the newer schema, where parcels hang off seller orders.
         if (Schema::hasTable('delivery_events') && Schema::hasColumn('shipments', 'seller_order_id')) {
@@ -102,13 +85,14 @@ class BuyerNotificationFeed
                 ->where('occurred_at', '>=', $cutoff)
                 ->latest('occurred_at')
                 ->get()
-                ->each(function (DeliveryEvent $history) use ($notifications, $messageFor) {
+                ->each(function (DeliveryEvent $history) use ($notifications, $textFor) {
                     $order = $history->shipment->sellerOrder->order;
+                    $text = $textFor($history->status, $history->note);
                     $notifications->push([
                         'key' => 'order:'.$history->id,
                         'type' => 'order',
-                        'title' => 'Order '.$order->reference.' update',
-                        'message' => $messageFor($history->status, $history->note),
+                        'title' => $text['title'].' · '.$order->reference,
+                        'message' => $text['message'],
                         'url' => route('buyer.orders'),
                         'action' => 'View orders',
                         'at' => $history->occurred_at,
@@ -121,12 +105,13 @@ class BuyerNotificationFeed
                 ->where('created_at', '>=', $cutoff)
                 ->latest()
                 ->get()
-                ->each(function (OrderStatusHistory $history) use ($notifications, $messageFor) {
+                ->each(function (OrderStatusHistory $history) use ($notifications, $textFor) {
+                    $text = $textFor($history->status, $history->note);
                     $notifications->push([
                         'key' => 'order:'.$history->id,
                         'type' => 'order',
-                        'title' => 'Order '.$history->order->order_number.' update',
-                        'message' => $messageFor($history->status, $history->note),
+                        'title' => $text['title'].' · '.$history->order->order_number,
+                        'message' => $text['message'],
                         'url' => route('buyer.orders'),
                         'action' => 'View orders',
                         'at' => $history->created_at,

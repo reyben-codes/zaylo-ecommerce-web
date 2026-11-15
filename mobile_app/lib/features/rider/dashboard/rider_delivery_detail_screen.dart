@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 
@@ -143,23 +145,50 @@ class _DestinationMap extends StatefulWidget {
 class _DestinationMapState extends State<_DestinationMap> {
   final _map = MapController();
   LatLng? _me;
+  List<LatLng> _road = [];
   bool _locating = false;
+  Timer? _locationTimer;
+  late final AppLifecycleListener _lifecycle;
 
-  Future<void> _showMe() async {
+  @override
+  void initState() {
+    super.initState();
+    _lifecycle = AppLifecycleListener(onShow: _startLocation, onHide: () => _locationTimer?.cancel());
+    WidgetsBinding.instance.addPostFrameCallback((_) { if (mounted) _startLocation(); });
+  }
+
+  void _startLocation() {
+    _locationTimer?.cancel();
+    _showMe(ask: false);
+    _locationTimer = Timer.periodic(const Duration(seconds: 15), (_) => _showMe(ask: false));
+  }
+
+  @override
+  void dispose() {
+    _locationTimer?.cancel();
+    _lifecycle.dispose();
+    _map.dispose();
+    super.dispose();
+  }
+
+  Future<void> _showMe({bool ask = true}) async {
+    if (_locating) return;
     setState(() => _locating = true);
     try {
-      final here = await DeviceLocation.current();
+      final here = await DeviceLocation.current(ask: ask);
       if (!mounted) return;
       setState(() => _me = here);
-      _map.fitCamera(CameraFit.bounds(
-        bounds: LatLngBounds.fromPoints([here, widget.destination.latLng]),
-        padding: const EdgeInsets.all(40),
-        maxZoom: 17,
-      ));
+      if (ask) {
+        _map.fitCamera(CameraFit.bounds(
+          bounds: LatLngBounds.fromPoints([here, ..._road, widget.destination.latLng]),
+          padding: const EdgeInsets.all(40),
+          maxZoom: 17,
+        ));
+      }
     } on LocationUnavailable catch (error) {
-      if (mounted) showMessage(context, error.message);
+      if (mounted && ask) showMessage(context, error.message);
     } on Exception {
-      if (mounted) showMessage(context, 'Could not get your location.');
+      if (mounted && ask) showMessage(context, 'Could not get your location.');
     } finally {
       if (mounted) setState(() => _locating = false);
     }
@@ -185,6 +214,9 @@ class _DestinationMapState extends State<_DestinationMap> {
                   controller: _map,
                   center: widget.destination.latLng,
                   zoom: 16,
+                  routeFrom: _me,
+                  routeTo: widget.destination.latLng,
+                  onRoute: (points) => _road = points,
                   markers: [
                     mapMarker(widget.destination.latLng, MapPinKind.home),
                     if (_me != null) mapMarker(_me!, MapPinKind.me),
