@@ -17,7 +17,7 @@ The app is not on the Play Store yet, so Google Play Protect may show a warning 
 
 - Public product catalog, filtering, search, product details, reviews, and shop pages
 - Persistent buyer cart and wishlist, shop following, and ID verification
-- Checkout with cash on delivery or GCash (manual, confirmed by the team), address and price snapshots, idempotency, and transactional stock reduction
+- Checkout with cash on delivery or configured GCash hosted checkout, payment holds until confirmed delivery, address and price snapshots, idempotency, and transactional stock reduction
 - Buyer order tracking, cancellation with stock restoration, and complaints with photo evidence
 - Seller applications, product management with options and listing review, inventory alerts, reports, and printable waybills
 - Logistics partners: pickups, sorting, rider assignment, deliveries, and monitoring; riders scan waybills in the app to start and confirm each delivery
@@ -78,11 +78,13 @@ The feature suite covers public browsing, marketplace account approval, seller o
 
 ## Production notes
 
+For the November 15 payment, rider salary, commission and badge revision, follow [the settlement workflow setup](docs/settlement-workflow-setup.md). GCash stays unavailable until merchant credentials and the webhook are configured. Historical direct-to-seller GCash records keep their original accounting.
+
 For checkout compatibility, refund transfer records, durable uploads, the bundled Docker scheduler and Android signing safeguards, follow [the scenario-fixes deployment checklist](docs/scenario-fixes-deployment.md) before deploying. The Docker startup applies pending migrations and logs deployment checks automatically, including on Render Free without Shell or pre-deploy commands. Existing dashboard-managed hosting settings must be updated separately from pushing code.
 
 - Set `APP_ENV=production`, `APP_DEBUG=false`, and HTTPS-only secure session cookies.
 - Configure a real mail provider before enabling registrations.
-- Payments are cash on delivery or GCash confirmed by hand. Add an online gateway through signed, idempotent webhooks rather than trusting browser callbacks.
+- New payments are cash on delivery or configured GCash hosted checkout. Gateway payment confirmation uses signed webhooks; historical manual GCash records remain supported. Withdrawals stay pending until an actual transfer is recorded.
 - Run queue workers for email and other asynchronous work after changing `QUEUE_CONNECTION` from `sync`.
 - Run `php artisan schedule:run` every minute through the host's cron service, or keep `php artisan schedule:work` running in a dedicated worker. The scheduler deletes seller-created vouchers once they have been expired for 24 hours, including their claims and shop links; existing orders keep their voucher codes and discount amounts. Vouchers without an expiry and administrator-created vouchers are retained.
 - Do not deploy seeded credentials or the legacy root-level `zaylo` SQLite development database.

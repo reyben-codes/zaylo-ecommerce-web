@@ -24,8 +24,8 @@ class MobileOrderPushObserverTest extends TestCase
         $history->id = 7;
         $history->setRelation('order', $order);
 
-        $this->mock(MobilePushNotifications::class)->shouldReceive('queue')->once()->with(
-            12, 'order-history-7', 'Order placed',
+        $this->mock(\App\Services\AccountUpdates::class)->shouldReceive('send')->once()->with(
+            12, 'order-history-7', 'orders', 'Order placed',
             'Order ZAY-123: Your order was placed and is waiting for the seller.', 'order', 42,
         );
 

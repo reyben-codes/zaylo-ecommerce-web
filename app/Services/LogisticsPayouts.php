@@ -81,6 +81,7 @@ class LogisticsPayouts
      */
     public function pay(LogisticsProvider $provider, User $admin, ?string $reference = null): ?LogisticsPayout
     {
+        $reference = \App\Support\TransferReference::check((string) $reference);
         if (! self::ready()) {
             return null;
         }
@@ -112,6 +113,9 @@ class LogisticsPayouts
                 'paid_at' => now(),
             ]);
             Shipment::whereKey($rows->pluck('shipment_id'))->update(['logistics_payout_id' => $payout->id]);
+            app(AccountUpdates::class)->send($provider->user_id, 'partner-payout-'.$payout->id, 'wallet', 'Logistics payment settled',
+                'PHP '.number_format($payout->amount, 2).' was settled for '.$payout->parcels.' parcels. Ref. '.$reference.'.');
+            app(AccountUpdates::class)->admins('partner-payout-'.$payout->id, 'Logistics payout settled', 'PHP '.number_format($payout->amount, 2).' settled to '.$provider->name.'. Ref. '.$reference.'.');
             app(ActivityLogger::class)->record('admin.logistics-payouts.pay', 'settlement', 'Recorded partner payout.', $admin, $payout, ['amount' => $payout->amount, 'parcels' => $payout->parcels]);
 
             return $payout;
@@ -144,6 +148,7 @@ class LogisticsPayouts
         // completes. This keeps historical/manual shipment rows from gaining a
         // wallet credit without an assigned rider.
         $rider = RiderWallet::ready() ? round((float) ($shipment->riderCommission?->amount ?? 0), 2) : 0.0;
+        if (Schema::hasTable('rider_leg_commissions')) $rider += (float) \App\Models\RiderLegCommission::where('shipment_id', $shipment->id)->sum('amount');
         $newPolicy = ($split['policy_version'] ?? 1) >= 2;
         $partner = $split['logistics_gross_earnings'] ?? $split['logistics_earnings'];
         $order = $shipment->order ?: $shipment->sellerOrder?->order;
@@ -161,7 +166,7 @@ class LogisticsPayouts
             'zaylo' => $split['admin_earnings'],
             'payout_id' => $shipment->logistics_payout_id ? (int) $shipment->logistics_payout_id : null,
             // COD money is handed to Logistics, not held by Admin. Never pay that allocation again.
-            'requires_payout' => ! ($newPolicy && $order?->payment_method === 'cod'),
+            'requires_payout' => ! ($newPolicy && $order?->payment_method === 'cod') && ! ($order && EscrowPayments::forOrder($order)),
         ];
     }
 

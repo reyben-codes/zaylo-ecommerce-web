@@ -19,6 +19,7 @@ class RequireAndroidApp
      */
     private const OPEN_PATHS = [
         'get-the-app', 'rider/get-the-app', 'up', 'storage/*', 'auth/google', 'auth/google/*',
+        'payments/return/*',
         'seller', 'seller/*', 'logistics', 'logistics/*', 'admin', 'admin/*', 'sorting-center', 'sorting-center/*',
         'policies/*', 'terms', 'forgot-password', 'reset-password/*', 'email/verify', 'email/verify/*',
     ];

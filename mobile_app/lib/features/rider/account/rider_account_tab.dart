@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zaylo_mobile/notifications/account_update_badge.dart';
 import 'package:zaylo_mobile/notifications/phone_notifications_screen.dart';
 import 'package:zaylo_mobile/features/rider/messages/logistics_chat_screen.dart';
 
@@ -227,7 +228,7 @@ class _RiderAccountTabState extends State<RiderAccountTab> {
                   ),
                 ),
                 const _Heading('Wallet'),
-                SectionCard(
+                AccountUpdateBadge(api: widget.api, section: 'wallet', child: SectionCard(
                   padding: EdgeInsets.zero,
                   child: _Row(
                     icon: Icons.account_balance_wallet_outlined,
@@ -238,7 +239,7 @@ class _RiderAccountTabState extends State<RiderAccountTab> {
                       builder: (_) => RiderWalletScreen(api: widget.api),
                     )),
                   ),
-                ),
+                )),
                 const SizedBox(height: 10),
                 SectionCard(
                   padding: EdgeInsets.zero,

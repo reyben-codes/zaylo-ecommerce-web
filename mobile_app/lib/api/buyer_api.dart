@@ -17,6 +17,8 @@ import 'package:zaylo_mobile/utils/ids.dart';
 /// Buyer endpoints: catalog, sign-in, bag, checkout, orders and account.
 /// The token is set by [AppState] after sign-in and cleared on sign-out.
 class BuyerApi extends ApiClient {
+  Future<String> gatewayCheckout(int orderId) async =>
+      (await send('POST', '/mobile/orders/$orderId/gateway'))['checkout_url'] as String;
   BuyerApi({super.baseUrl});
 
   // ---------------------------------------------------------------- Catalog

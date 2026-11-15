@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'package:zaylo_mobile/api/api_exception.dart';
@@ -15,9 +16,11 @@ import 'package:zaylo_mobile/utils/formatters.dart';
 /// Same groups as the web "My Orders" tabs.
 const _orderTabs = {
   'all': 'All',
+  'to_pay': 'To pay',
   'to_ship': 'To ship',
-  'shipped': 'Shipped',
-  'delivered': 'Delivered',
+  'shipped': 'In transit / Out for delivery',
+  'to_receive': 'To receive',
+  'delivered': 'Completed',
   'cancelled': 'Cancelled',
   // Cancelled orders move here after a couple of days.
   'history': 'Purchase history',
@@ -43,6 +46,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
   bool _loading = false;
   Object? _error;
   int _generation = 0;
+  Timer? _countsPoll;
 
   @override
   void initState() {
@@ -51,11 +55,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
       if (_scroll.position.extentAfter < 400) _loadMore();
     });
     WidgetsBinding.instance.addPostFrameCallback((_) => _reload());
+    _countsPoll = Timer.periodic(const Duration(seconds: 15), (_) => _refreshCounts());
   }
 
   @override
   void dispose() {
     _scroll.dispose();
+    _countsPoll?.cancel();
     super.dispose();
   }
 
@@ -69,6 +75,14 @@ class _OrdersScreenState extends State<OrdersScreen> {
       _error = null;
     });
     await _loadMore();
+  }
+
+  Future<void> _refreshCounts() async {
+    if (!mounted || ModalRoute.of(context)?.isCurrent == false || WidgetsBinding.instance.lifecycleState == AppLifecycleState.paused) return;
+    try {
+      final page = await AppScope.read(context).api.orders(status: _tab, page: 1);
+      if (mounted) setState(() => _counts = page.counts);
+    } on ApiException { /* Retry at the next refresh. */ }
   }
 
   Future<void> _loadMore() async {
@@ -113,7 +127,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: ChoiceChip(
-                      label: Text(_counts[entry.key] == null ? entry.value : '${entry.value} (${_counts[entry.key]})'),
+                      label: Row(mainAxisSize: MainAxisSize.min, children: [Text(entry.value), const SizedBox(width: 8),
+                        Badge(label: Text('${_counts[entry.key] ?? 0}'))]),
                       selected: _tab == entry.key,
                       showCheckmark: false,
                       selectedColor: ZayloColors.ink,

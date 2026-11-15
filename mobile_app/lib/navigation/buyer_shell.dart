@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zaylo_mobile/notifications/account_update_badge.dart';
 
 import 'package:zaylo_mobile/components/cart_flight.dart';
 import 'package:zaylo_mobile/components/cart_icon.dart';
@@ -110,9 +111,9 @@ class _BuyerShellState extends State<BuyerShell> {
                 ),
                 label: 'Cart',
               ),
-              const NavigationDestination(
-                icon: Icon(Icons.person_outline),
-                selectedIcon: Icon(Icons.person),
+              NavigationDestination(
+                icon: state.signedIn ? AccountUpdateBadge(api: state.api, child: const Icon(Icons.person_outline)) : const Icon(Icons.person_outline),
+                selectedIcon: state.signedIn ? AccountUpdateBadge(api: state.api, child: const Icon(Icons.person)) : const Icon(Icons.person),
                 label: 'Account',
               ),
             ],

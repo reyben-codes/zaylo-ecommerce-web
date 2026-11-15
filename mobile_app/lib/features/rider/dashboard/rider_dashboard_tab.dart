@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:zaylo_mobile/features/rider/dashboard/widgets/parcel_handover_button.dart';
 
 import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/api/rider_api.dart';
@@ -291,6 +292,8 @@ class RiderDashboardTabState extends State<RiderDashboardTab> with RiderDelivery
                   Text('Seller: ${pickup.seller}', style: const TextStyle(fontWeight: FontWeight.w500)),
                   if (pickup.scannedAt != null)
                     Text('Scanned: ${pickup.scannedAt}', style: TextStyle(color: ZayloColors.muted, fontSize: 12)),
+                  ParcelHandoverButton(api: widget.api, shipmentId: pickup.id, enabled: pickup.canConfirmHandover,
+                      confirmed: pickup.handoverConfirmed, onChanged: reloadDeliveries),
                 ]),
               ),
             ),

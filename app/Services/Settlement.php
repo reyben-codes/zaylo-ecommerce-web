@@ -132,6 +132,7 @@ class Settlement
         $split = self::snapshotFor($order) ?? self::breakdown(max(0, $items - $voucher), $paidShipping, $subsidy);
         $buyerPaid = round($items + $paidShipping - $voucher, 2);
         $gcash = $order->payment_method === 'gcash';
+        $escrow = $gcash ? EscrowPayments::forOrder($order) : null;
         $complete = in_array($order->status, self::COMPLETE, true);
 
         return [
@@ -146,9 +147,9 @@ class Settlement
             'partner_share' => $split['logistics_earnings'],
             'seller_keeps' => $split['seller_earnings'],
             'zaylo_keeps' => $split['admin_earnings'],
-            'collected_by' => $gcash ? 'seller' : 'rider',
+            'collected_by' => $escrow ? 'platform_gateway' : ($gcash ? 'seller' : 'rider'),
             'zaylo_owes_seller' => $complete && ! $gcash ? $split['seller_earnings'] : 0.0,
-            'seller_owes_zaylo' => $complete && $gcash ? round($buyerPaid - $split['seller_earnings'], 2) : 0.0,
+            'seller_owes_zaylo' => $complete && $gcash && ! $escrow ? round($buyerPaid - $split['seller_earnings'], 2) : 0.0,
         ];
     }
 
@@ -156,13 +157,23 @@ class Settlement
     public function forShipment(Shipment $shipment): array
     {
         if ($shipment->sellerOrder) {
-            return $shipment->sellerOrder->settlement_breakdown ?: self::breakdown(
+            $split = $shipment->sellerOrder->settlement_breakdown ?: self::breakdown(
                 (int) $shipment->sellerOrder->subtotal_minor / 100,
                 (int) $shipment->sellerOrder->shipping_fee_minor / 100,
             );
+        } else {
+            $split = $this->forOrder($shipment->order);
         }
-
-        return $this->forOrder($shipment->order);
+        if ($quote = $shipment->rider_fee_quote) {
+            $gross = $split['logistics_gross_earnings'] ?? ($split['logistics_earnings'] + $split['rider_earnings']);
+            $split['policy_version'] = 3;
+            $split['rider_earnings'] = $quote['total'];
+            $split['pickup_rider_earnings'] = $quote['pickup_amount'];
+            $split['delivery_rider_earnings'] = $quote['delivery_amount'];
+            $split['logistics_gross_earnings'] = $gross;
+            $split['logistics_earnings'] = round($gross - $quote['total'], 2);
+        }
+        return $split;
     }
 
     /** @return array{orders: Collection, owed_to_seller: float, owed_by_seller: float, balance: float} */

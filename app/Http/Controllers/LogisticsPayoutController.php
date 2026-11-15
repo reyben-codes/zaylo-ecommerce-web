@@ -34,7 +34,7 @@ class LogisticsPayoutController extends Controller
 
     public function pay(Request $request, LogisticsProvider $provider)
     {
-        $data = $request->validate(['reference' => ['nullable', 'string', 'max:100']]);
+        $data = $request->validate(['reference' => \App\Support\TransferReference::rules()]);
         $payout = $this->payouts->pay($provider, $request->user(), $data['reference'] ?? null);
 
         return back()->with('status', $payout

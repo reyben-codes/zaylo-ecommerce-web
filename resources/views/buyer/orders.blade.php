@@ -40,12 +40,12 @@
         ];
     @endphp
 
-    <nav class="order-tabs" aria-label="Filter orders by status">
+    <nav class="order-tabs" aria-label="Filter orders by status" data-order-counts-url="{{ route('buyer.order-counts') }}">
         @foreach($tabs as $key => $label)
             <a href="{{ route('buyer.orders', $key === 'all' ? [] : ['status' => $key]) }}"
                class="order-tab {{ $filter === $key ? 'is-active' : '' }}"
                @if($filter === $key) aria-current="page" @endif>
-                {{ $label }} <span class="order-tab-count">{{ $counts[$key] }}</span>
+                {{ $label }} <span class="order-tab-count" data-order-count="{{ $key }}">{{ $counts[$key] }}</span>
             </a>
         @endforeach
     </nav>
@@ -57,7 +57,7 @@
                     <strong>Order {{ $order->order_number }}</strong>
                     <p>Placed {{ $order->placed_at?->format('M j, Y · g:i A') }}</p>
                 </div>
-                <span class="status-pill status-{{ $order->status }}">{{ str($order->status)->replace('_', ' ')->title() }}</span>
+                <span class="status-pill status-{{ $order->status }}">{{ $order->status === 'placed' && $order->payment_method === 'gcash' && $order->payment?->status === 'paid' ? 'To ship' : str($order->status)->replace('_', ' ')->title() }}</span>
             </header>
 
             <p class="order-status-message">{{ $statusMessages[$order->status] ?? 'Your order status has been updated.' }}</p>

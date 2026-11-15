@@ -96,7 +96,7 @@ class _RiderWalletScreenState extends State<RiderWalletScreen> {
                       Text(peso(wallet.balance),
                           style: TextStyle(color: ZayloColors.white, fontSize: 30, fontWeight: FontWeight.w800)),
                       const SizedBox(height: 4),
-                      Text('${peso(wallet.commissionPerParcel)} for every parcel you deliver',
+                      Text('Earnings vary by road distance, parcel weight, and pickup or delivery leg',
                           style: TextStyle(color: ZayloColors.white)),
                       const SizedBox(height: 16),
                       SizedBox(
@@ -151,7 +151,15 @@ class _RiderWalletScreenState extends State<RiderWalletScreen> {
                   else
                     SectionCard(
                       padding: EdgeInsets.zero,
-                      child: Column(children: [for (final withdrawal in wallet.withdrawals) _WithdrawalTile(withdrawal)]),
+                      child: Column(children: [for (final withdrawal in wallet.withdrawals) ...[
+                        _WithdrawalTile(withdrawal),
+                        if (withdrawal.status == 'released')
+                          Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 12), child: FilledButton.icon(
+                            icon: const Icon(Icons.task_alt),
+                            label: const Text('Salary Received'),
+                            onPressed: () => _confirmSalary(withdrawal),
+                          )),
+                      ]]),
                     ),
                   const SizedBox(height: 22),
                   _heading(context, 'Commissions'),
@@ -165,7 +173,7 @@ class _RiderWalletScreenState extends State<RiderWalletScreen> {
                           ListTile(
                             dense: true,
                             leading: const Icon(Icons.inventory_2_outlined),
-                            title: Text(commission.trackingNumber ?? 'Delivered parcel'),
+                            title: Text('${commission.leg == "pickup" ? "Pickup" : "Delivery"} · ${commission.trackingNumber ?? "Parcel"}'),
                             subtitle: commission.createdAt == null ? null : Text(shortDate(commission.createdAt)),
                             trailing: Text('+${peso(commission.amount)}',
                                 style: TextStyle(fontWeight: FontWeight.w700, color: ZayloColors.success)),
@@ -187,6 +195,25 @@ class _RiderWalletScreenState extends State<RiderWalletScreen> {
         padding: const EdgeInsets.only(bottom: 10),
         child: Text(text, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
       );
+
+  final Set<int> _confirming = {};
+
+  Future<void> _confirmSalary(RiderWithdrawalEntry withdrawal) async {
+    if (_confirming.contains(withdrawal.id)) return;
+    final confirmed = await showDialog<bool>(context: context, builder: (dialogContext) => AlertDialog(
+      title: const Text('Confirm salary received?'),
+      content: Text('Confirm that ${peso(withdrawal.amount)} has arrived in your GCash account. Ref. ${withdrawal.reference ?? ""}'),
+      actions: [TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Not yet')),
+        FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('I received it'))],
+    ));
+    if (confirmed != true || !mounted || !_confirming.add(withdrawal.id)) return;
+    try {
+      final wallet = await widget.api.confirmSalaryReceived(withdrawal.id);
+      if (mounted) { _show(wallet); showMessage(context, 'Salary receipt confirmed.'); }
+    } on ApiException catch (error) {
+      if (mounted) showMessage(context, error.message);
+    } finally { _confirming.remove(withdrawal.id); }
+  }
 }
 
 class _Stat extends StatelessWidget {
@@ -231,12 +258,12 @@ class _WithdrawalTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = switch (withdrawal.status) {
-      'paid' => ZayloColors.success,
+      'paid' || 'released' => ZayloColors.success,
       'rejected' => ZayloColors.danger,
       _ => ZayloColors.warning,
     };
     final detail = switch (withdrawal.status) {
-      'paid' when withdrawal.reference != null => 'Ref. ${withdrawal.reference}',
+      'paid' || 'released' when withdrawal.reference != null => 'Ref. ${withdrawal.reference}',
       'rejected' when withdrawal.rejectionReason != null => '${withdrawal.rejectionReason} The amount is back in your wallet.',
       _ => 'Your logistics partner will send it soon.',
     };

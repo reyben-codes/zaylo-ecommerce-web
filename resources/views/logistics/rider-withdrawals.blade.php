@@ -11,7 +11,7 @@
         <div>
             <p class="seller-eyebrow">{{ $provider->name }}</p>
             <h1>Rider withdrawals</h1>
-            <p>Your company currently offers &#8369;{{ number_format($commission, 2) }} per delivery for new orders. Each existing order keeps its agreed rate. Rider earnings are reserved from your delivery receipts and credited once delivery is completed; COD also requires confirmed cash collection. Riders can withdraw &#8369;{{ number_format($minimum, 2) }} or more. Send the GCash payment first, then record its reference here. Rejecting a request restores the rider's available balance.</p>
+            <p>New parcel earnings use each leg's road distance and parcel weight. Pickup earnings credit after scanned hub handover and receipt; delivery earnings credit after proof of delivery. Validate and send the daily salary, then record its 13-character transfer reference. The request remains Released until the rider confirms Salary Received. Rejecting a pending request restores the balance.</p>
         </div>
     </section>
 
@@ -60,7 +60,7 @@
                                       data-confirm-title="Mark as sent?" data-confirm-button="Mark as sent">
                                     @csrf
                                     <label class="sr-only" for="withdrawal-reference-{{ $withdrawal->id }}">GCash reference number</label>
-                                    <input type="text" id="withdrawal-reference-{{ $withdrawal->id }}" name="reference" maxlength="100" placeholder="GCash reference no." autocomplete="off" required>
+                                    <input type="text" id="withdrawal-reference-{{ $withdrawal->id }}" name="reference" minlength="13" maxlength="13" pattern="[A-Z0-9]{13}" title="13 uppercase letters or numbers" placeholder="REF20261115AB" autocomplete="off" required>
                                     <button type="submit" class="seller-button"><i class="fas fa-paper-plane" aria-hidden="true"></i> Mark as sent</button>
                                 </form>
                                 <form method="POST" action="{{ route('logistics.rider-withdrawals.reject', $withdrawal) }}" class="payout-form"
@@ -94,8 +94,9 @@
                             <td>{{ $withdrawal->formattedNumber() }}<span class="seller-cell-note">{{ $withdrawal->gcash_name }}</span></td>
                             <td>&#8369;{{ number_format($withdrawal->amount, 2) }}</td>
                             <td>
-                                @if($withdrawal->status === \App\Models\RiderWithdrawal::PAID)
-                                    <span class="commission-state commission-state--settled">Sent</span><span class="seller-cell-note">Ref. {{ $withdrawal->reference }}</span>
+                                @if(in_array($withdrawal->status, [\App\Models\RiderWithdrawal::PAID, \App\Models\RiderWithdrawal::RELEASED], true))
+                                    <span class="commission-state commission-state--settled">{{ $withdrawal->statusLabel() }}</span><span class="seller-cell-note">Ref. {{ $withdrawal->reference }}</span>
+                                    @if($withdrawal->received_at)<span class="seller-cell-note">Receipt confirmed {{ $withdrawal->received_at->timezone('Asia/Manila')->format('M j, g:i A') }}</span>@endif
                                 @else
                                     <span class="commission-state">Rejected</span><span class="seller-cell-note">{{ $withdrawal->rejection_reason }}</span>
                                 @endif

@@ -258,6 +258,11 @@ class RiderApi extends ApiClient {
       send('POST', '/mobile/rider/location', body: {'latitude': latitude, 'longitude': longitude});
 
   Future<RiderWallet> wallet() async => RiderWallet.fromJson(await send('GET', '/mobile/rider/wallet'));
+  Future<String> confirmParcelHandover(int id) async =>
+      (await send('POST', '/mobile/rider/parcels/$id/handover'))['message'] as String;
+
+  Future<RiderWallet> confirmSalaryReceived(int id) async => RiderWallet.fromJson(
+      await send('POST', '/mobile/rider/wallet/withdrawals/$id/received'));
 
   /// Asks for [amount] to be sent to the rider's saved GCash account. Returns the confirmation and the updated wallet.
   Future<(String, RiderWallet)> withdraw({required double amount}) async {

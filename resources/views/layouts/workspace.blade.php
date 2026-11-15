@@ -26,6 +26,7 @@
                 ['route' => 'admin.commissions', 'label' => 'Commission', 'icon' => 'fa-percent'],
                 ['route' => 'admin.cod-commissions', 'label' => 'COD commissions', 'icon' => 'fa-cash-register'],
                 ['route' => 'admin.logistics-payouts', 'label' => 'Logistics payouts', 'icon' => 'fa-money-bill-transfer'],
+                ['route' => 'admin.seller-withdrawals', 'label' => 'Seller payouts', 'icon' => 'fa-wallet'],
                 ['route' => 'admin.reports', 'label' => 'Reports', 'icon' => 'fa-chart-column'],
                 ['heading' => 'Platform'],
                 ['route' => 'admin.settings', 'label' => 'Settings', 'icon' => 'fa-sliders'],
@@ -160,5 +161,6 @@
     <script src="{{ asset('js/confirm-dialog.js') }}?v={{ filemtime(public_path('js/confirm-dialog.js')) }}" defer></script>
     <script src="{{ asset('js/print.js') }}?v={{ filemtime(public_path('js/print.js')) }}" defer></script>
     @include('partials.faq-bot')
+    @include('partials.account-updates')
 </body>
 </html>

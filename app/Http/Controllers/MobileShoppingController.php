@@ -140,13 +140,10 @@ class MobileShoppingController extends Controller
             'couriers' => [],
             // Only 18+ products need an approved ID. identity_verified stays "may order these items" so older apps,
             // which disable Place order when it is false, only block orders that hold 18+ products.
-            // GCash goes to each seller's own GCash; sellers without one cannot be paid by GCash.
-            'gcash_sellers' => GcashPayments::ready()
-                ? app(GcashPayments::class)->sellersFor($items)->map(fn (array $seller) => $seller + [
-                    // The voucher discount this shop gives, which the buyer does not send.
-                    'discount' => app(Vouchers::class)->cartDiscounts($voucher, $items)[$seller['seller_id']] ?? 0,
-                ])->values()
-                : [],
+            // New checkouts never expose seller transfer instructions, including to older app builds.
+            'gcash_sellers' => [],
+            'gcash_gateway' => true,
+            'gcash_available' => \App\Services\EscrowPayments::configured(),
             'identity_verified' => ($adultItems = $this->checkout->itemsNeedingIdentity($request->user(), $items))->isEmpty(),
             'identity_required_for' => $adultItems->pluck('product.name')->unique()->values(),
             'estimated_delivery' => [

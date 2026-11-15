@@ -22,7 +22,7 @@ class RiderWallet
 {
     public const COMMISSION = Settlement::RIDER_SHIPPING_MINOR / 100;
 
-    public const MIN_WITHDRAWAL = 100.00;
+    public const MIN_WITHDRAWAL = 0.01;
 
     public static function rateFor(User $rider): float
     {
@@ -31,6 +31,7 @@ class RiderWallet
 
     public static function earningsFor(Shipment $shipment): float
     {
+        if ($shipment->rider_fee_quote) return (float) $shipment->rider_fee_quote['delivery_amount'];
         // The order snapshot protects an agreed earning from subsequent company rate changes.
         $split = app(Settlement::class)->forShipment($shipment);
 
@@ -50,6 +51,11 @@ class RiderWallet
     public function credit(Shipment $shipment, User $rider): ?RiderCommission
     {
         if (! self::ready()) {
+            return null;
+        }
+        if ($shipment->rider_fee_quote) {
+            // New policy credits at POD, including COD, independently of later cash remittance.
+            app(RiderLegEarnings::class)->credit($shipment, $rider, 'delivery');
             return null;
         }
 
@@ -74,6 +80,7 @@ class RiderWallet
             return 0.0;
         }
         $earned = (float) RiderCommission::where('user_id', $rider->id)->sum('amount');
+        if (Schema::hasTable('rider_leg_commissions')) $earned += (float) \App\Models\RiderLegCommission::where('user_id', $rider->id)->sum('amount');
         $withdrawn = (float) RiderWithdrawal::where('user_id', $rider->id)->where('status', '!=', RiderWithdrawal::REJECTED)->sum('amount');
 
         return round($earned - $withdrawn, 2);
@@ -90,19 +97,21 @@ class RiderWallet
 
         return [
             'balance' => $this->balance($rider),
-            'earned' => round((float) (clone $commissions)->sum('amount'), 2),
+            'earned' => round((float) (clone $commissions)->sum('amount') + (Schema::hasTable('rider_leg_commissions') ? (float) \App\Models\RiderLegCommission::where('user_id', $rider->id)->sum('amount') : 0), 2),
             'pending' => $withdrawals(RiderWithdrawal::PENDING),
-            'withdrawn' => $withdrawals(RiderWithdrawal::PAID),
-            'parcels' => (clone $commissions)->count(),
+            'withdrawn' => round($withdrawals(RiderWithdrawal::PAID) + $withdrawals(RiderWithdrawal::RELEASED), 2),
+            'parcels' => (clone $commissions)->count() + (Schema::hasTable('rider_leg_commissions') ? \App\Models\RiderLegCommission::where('user_id', $rider->id)->count() : 0),
         ];
     }
 
     /** @return Collection<int, RiderCommission> newest first */
     public function commissions(User $rider, int $limit = 30): Collection
     {
-        return self::ready()
+        $legacy = self::ready()
             ? RiderCommission::where('user_id', $rider->id)->with('shipment')->latest('id')->limit($limit)->get()
             : collect();
+        $legs = Schema::hasTable('rider_leg_commissions') ? \App\Models\RiderLegCommission::where('user_id', $rider->id)->with('shipment')->latest('id')->limit($limit)->get() : collect();
+        return $legacy->concat($legs)->sortByDesc('created_at')->take($limit)->values();
     }
 
     /** @return Collection<int, RiderWithdrawal> newest first */
@@ -208,12 +217,33 @@ class RiderWallet
     /** The logistics partner sent the money: records the GCash reference. */
     public function markPaid(RiderWithdrawal $withdrawal, User $processor, string $reference): RiderWithdrawal
     {
+        $reference = \App\Support\TransferReference::check($reference);
         $reference = trim($reference);
         if ($reference === '') {
             throw ValidationException::withMessages(['reference' => 'Enter the GCash reference number of the transfer.']);
         }
 
-        return $this->process($withdrawal, $processor, ['status' => RiderWithdrawal::PAID, 'reference' => $reference]);
+        return $this->process($withdrawal, $processor, ['status' => RiderWithdrawal::RELEASED, 'reference' => $reference]);
+    }
+
+    public function confirmReceived(RiderWithdrawal $withdrawal, User $rider): RiderWithdrawal
+    {
+        return DB::transaction(function () use ($withdrawal, $rider) {
+            $locked = RiderWithdrawal::whereKey($withdrawal->id)->lockForUpdate()->firstOrFail();
+            abort_unless((int) $locked->user_id === (int) $rider->id, 403);
+            if ($locked->status === RiderWithdrawal::PAID && $locked->received_at) return $locked;
+            if ($locked->status !== RiderWithdrawal::RELEASED || ! $locked->processed_by || ! $locked->processed_at || ! $locked->reference) {
+                throw ValidationException::withMessages(['salary' => 'Logistics must validate and release this payout before you confirm receipt.']);
+            }
+            $locked->update(['status' => RiderWithdrawal::PAID, 'received_at' => now()]);
+            app(ActivityLogger::class)->record('rider.salary_received', 'settlement', 'Rider confirmed salary received.', $rider, $locked, ['amount' => $locked->amount, 'reference' => $locked->reference]);
+            $updates = app(AccountUpdates::class);
+            $body = 'Salary of PHP '.number_format($locked->amount, 2).' was confirmed received. Ref. '.$locked->reference.'.';
+            $updates->send($rider->id, 'salary-received-'.$locked->id, 'wallet', 'Salary received', $body);
+            $updates->send($locked->provider?->user_id, 'salary-received-'.$locked->id, 'withdrawals', 'Rider confirmed salary received', $rider->name.': '.$body);
+            $updates->admins('salary-received-'.$locked->id, 'Rider salary settled', $rider->name.': '.$body);
+            return $locked;
+        });
     }
 
     /** The logistics partner turned the request down: the amount goes back to the rider's balance. */
@@ -232,10 +262,16 @@ class RiderWallet
         return DB::transaction(function () use ($withdrawal, $processor, $changes) {
             // Locked so the request cannot be processed twice at once.
             $locked = RiderWithdrawal::whereKey($withdrawal->id)->lockForUpdate()->firstOrFail();
+            abort_unless((int) $processor->logisticsProvider?->id === (int) $locked->logistics_provider_id && $processor->hasRole('logistics'), 403);
             if ($locked->status !== RiderWithdrawal::PENDING) {
                 throw ValidationException::withMessages(['withdrawal' => 'This withdrawal was already '.strtolower($locked->statusLabel()).'.']);
             }
             $locked->update($changes + ['processed_by' => $processor->id, 'processed_at' => now()]);
+            app(ActivityLogger::class)->record('logistics.salary_'.($locked->status === RiderWithdrawal::RELEASED ? 'released' : 'rejected'), 'settlement', 'Logistics processed rider salary.', $processor, $locked, ['amount' => $locked->amount, 'reference' => $locked->reference]);
+            if ($locked->status === RiderWithdrawal::RELEASED) {
+                app(AccountUpdates::class)->send($locked->user_id, 'salary-released-'.$locked->id, 'wallet', 'Salary released by logistics',
+                    'PHP '.number_format($locked->amount, 2).' was released to your GCash. Check the transfer, then tap Salary Received. Ref. '.$locked->reference.'.');
+            }
 
             return $locked;
         });

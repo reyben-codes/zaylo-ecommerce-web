@@ -20,7 +20,17 @@ class MobileRiderWalletController extends Controller
 
     public function show(Request $request): JsonResponse
     {
-        return response()->json($this->payload($request->user()));
+        $updates = app(\App\Services\AccountUpdates::class);
+        $seen = $updates->payload($request->user())['through'];
+        $payload = $this->payload($request->user());
+        $updates->read($request->user(), 'wallet', $seen);
+        return response()->json($payload);
+    }
+
+    public function received(Request $request, RiderWithdrawal $withdrawal): JsonResponse
+    {
+        $this->wallet->confirmReceived($withdrawal, $request->user());
+        return response()->json(['message' => 'Salary receipt confirmed and logged.'] + $this->payload($request->user()));
     }
 
     public function withdraw(Request $request): JsonResponse
@@ -62,9 +72,10 @@ class MobileRiderWalletController extends Controller
             'min_withdrawal' => RiderWallet::MIN_WITHDRAWAL,
             // Where withdrawals go; "saved" is false when it is only the account used last.
             'gcash' => $this->wallet->account($rider),
-            'commissions' => $this->wallet->commissions($rider)->map(fn (RiderCommission $commission) => [
+            'commissions' => $this->wallet->commissions($rider)->map(fn ($commission) => [
                 'id' => $commission->id,
                 'amount' => $commission->amount,
+                'leg' => $commission->leg ?? 'delivery',
                 'tracking_number' => $commission->shipment ? RiderDeliveries::labelCode($commission->shipment) : null,
                 'created_at' => $commission->created_at?->toIso8601String(),
             ])->values(),
@@ -80,8 +91,7 @@ class MobileRiderWalletController extends Controller
                 'created_at' => $withdrawal->created_at?->toIso8601String(),
                 'processed_at' => $withdrawal->processed_at?->toIso8601String(),
             ])->values(),
-            'note' => 'Your logistics partner currently offers ₱'.number_format(RiderWallet::rateFor($rider), 2).' per delivery for new orders. Each order keeps its agreed rate. COD earnings are credited after cash collection is confirmed. Withdraw ₱'
-                .number_format(RiderWallet::MIN_WITHDRAWAL, 2).' or more to GCash; your logistics partner sends the payment.',
+            'note' => 'New parcel earnings use each leg’s road distance and parcel weight. Pickup earnings credit after scanned hub handover and logistics receipt; delivery earnings credit after proof of delivery. Request your daily salary from your available balance. Logistics releases it first, then you confirm Salary Received. Historical parcels retain their recorded rates.',
         ];
     }
 }

@@ -23,6 +23,9 @@ import 'package:zaylo_mobile/notifications/push_notifications.dart';
 /// server message, so the console shows which call broke and why. Request
 /// bodies and tokens are never logged.
 class ApiClient {
+  Future<Map<String, dynamic>> accountUpdates() => send('GET', '/mobile/updates');
+  Future<Map<String, dynamic>> readAccountUpdates({required int through, String? section}) =>
+      send('POST', '/mobile/updates/read', body: {'through': through, if (section != null) 'section': section});
   ApiClient({String? baseUrl})
       : baseUrl = (baseUrl ??
                 // The live site by default, so a plain `flutter run` on a phone works. For a local

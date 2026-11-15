@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zaylo_mobile/notifications/account_update_badge.dart';
 
 import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/components/app_update.dart';
@@ -132,7 +133,7 @@ class _AccountScreenState extends State<AccountScreen> {
           ),
           const SizedBox(height: 22),
           Row(children: [
-            const Expanded(child: Eyebrow('My orders')),
+            Expanded(child: AccountUpdateBadge(api: state.api, section: 'orders', child: const Eyebrow('My orders'))),
             TextButton(
               onPressed: () => _push(const OrdersScreen()),
               child: const Text('View all  →'),
@@ -141,10 +142,10 @@ class _AccountScreenState extends State<AccountScreen> {
           SectionCard(
             padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
             child: Row(children: [
+              _OrderShortcut(Icons.payments_outlined, 'To pay', () => _push(const OrdersScreen(initialTab: 'to_pay'))),
               _OrderShortcut(Icons.inventory_2_outlined, 'To ship', () => _push(const OrdersScreen(initialTab: 'to_ship'))),
-              _OrderShortcut(Icons.local_shipping_outlined, 'Shipped', () => _push(const OrdersScreen(initialTab: 'shipped'))),
-              _OrderShortcut(Icons.task_alt, 'Delivered', () => _push(const OrdersScreen(initialTab: 'delivered'))),
-              _OrderShortcut(Icons.cancel_outlined, 'Cancelled', () => _push(const OrdersScreen(initialTab: 'cancelled'))),
+              _OrderShortcut(Icons.local_shipping_outlined, 'In transit', () => _push(const OrdersScreen(initialTab: 'shipped'))),
+              _OrderShortcut(Icons.task_alt, 'To receive', () => _push(const OrdersScreen(initialTab: 'to_receive'))),
             ]),
           ),
           const SizedBox(height: 22),

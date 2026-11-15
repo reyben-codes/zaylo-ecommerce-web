@@ -203,12 +203,14 @@ class LogisticsController extends Controller
             'company_name' => 'required|string|min:2|max:150',
             'contact_phone' => ['required', 'regex:/^09[0-9]{9}$/'],
             'service_area' => 'nullable|string|max:150',
+            ...\App\Services\ParcelTracking::pinRules('hub_latitude', 'hub_longitude'),
         ], ['contact_phone.regex' => 'Enter 11 digits starting with 09.']);
 
         $this->provider()->update([
             'name' => $data['company_name'],
             'contact_phone' => $data['contact_phone'],
             'service_area' => $data['service_area'] ?? null,
+            'hub_latitude' => $data['hub_latitude'] ?? null, 'hub_longitude' => $data['hub_longitude'] ?? null,
         ]);
 
         return back()->with('status', 'Company details updated.');

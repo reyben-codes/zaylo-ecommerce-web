@@ -40,6 +40,7 @@ class OrderReceipts
         if (! self::awaitingBuyer($order)) {
             return null;
         }
+        if (EscrowPayments::forOrder($order)) return $order->returnDeadline();
         $deliveredAt = Order::usesLegacySchema()
             ? ($order->delivered_at ?? $order->shipment?->delivered_at ?? $order->updated_at)
             : Carbon::parse($order->sellerOrders()->where('status', 'delivered')->max('delivered_at') ?? $order->updated_at);
@@ -56,7 +57,7 @@ class OrderReceipts
     /** Completes delivered orders whose grace period ended; returns how many. */
     public function autoConfirmDue(): int
     {
-        $cutoff = now()->subDays(self::graceDays());
+        $cutoff = now()->subDays(min(1, self::graceDays()));
         $due = Order::usesLegacySchema()
             ? Order::where('status', 'delivered')->where(fn (Builder $query) => Schema::hasColumn('orders', 'delivered_at')
                 ? $query->where('delivered_at', '<=', $cutoff)->orWhere(fn ($undated) => $undated->whereNull('delivered_at')->where('updated_at', '<=', $cutoff))
@@ -69,6 +70,7 @@ class OrderReceipts
 
         $completed = 0;
         foreach ($due->limit(200)->get() as $order) {
+            if (self::autoConfirmAt($order)?->isFuture()) continue;
             try {
                 $this->complete($order, null, 'Delivery confirmed automatically '.self::graceDays().' days after the rider delivered it.');
                 $completed++;
@@ -87,10 +89,11 @@ class OrderReceipts
             if (! self::awaitingBuyer($locked)) {
                 throw ValidationException::withMessages(['order' => 'This order is not waiting for you to confirm delivery.']);
             }
+            if ($actor) abort_unless((int) $locked->buyer?->id === (int) $actor->id, 403);
 
             if (Order::usesLegacySchema()) {
                 $locked->update(['status' => 'completed', 'completed_at' => now()]);
-                $locked->payment?->update(['status' => 'paid', 'paid_at' => now()]);
+                $locked->payment?->update(['status' => 'paid', 'paid_at' => $locked->payment?->paid_at ?? now()]);
                 if ($locked->seller_id && Schema::hasTable('commissions')) {
                     $settlement = app(Settlement::class)->forOrder($locked);
                     DB::table('commissions')->updateOrInsert(['order_id' => $locked->id], [
@@ -102,6 +105,8 @@ class OrderReceipts
             } else {
                 $locked->sellerOrders()->where('status', 'delivered')->update(['status' => 'completed', 'updated_at' => now()]);
             }
+
+            app(EscrowPayments::class)->release($locked->fresh());
 
             if (Schema::hasTable('order_status_histories')) {
                 $locked->statusHistory()->create(['changed_by' => $actor?->id, 'status' => 'completed', 'note' => $note]);

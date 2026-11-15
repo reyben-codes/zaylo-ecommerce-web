@@ -25,5 +25,4 @@
             </div>
         </div>
     </div>
-    <a href="{{ route('products.index', ['gender' => 'kids']) }}" class="{{ in_array(request('gender'), ['kids', 'girls', 'boys'], true) ? 'active-link' : '' }}">Kids</a>
 </nav>

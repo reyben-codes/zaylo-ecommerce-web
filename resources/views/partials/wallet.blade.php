@@ -1,6 +1,6 @@
 {{--
     Logistics partners' wallet credits and cash-outs to GCash (Logistics Center > Earnings).
-    Expects $wallet (App\Services\Wallet::summary), $cashouts and $cashOutRoute. The transfer is simulated.
+    Expects $wallet (App\Services\Wallet::summary), $cashouts and $cashOutRoute. Transfers require Admin confirmation.
 --}}
 @php
     $canCashOut = \App\Services\Wallet::ready() && $wallet['balance'] >= \App\Services\Wallet::MINIMUM;
@@ -12,7 +12,7 @@
             <h2 id="wallet-title"><i class="fas fa-wallet" aria-hidden="true"></i> Wallet</h2>
             <p>{{ $wallet['source'] }} goes into your wallet. Cash them out to GCash anytime.</p>
         </div>
-        <span class="wallet-demo"><i class="fas fa-flask" aria-hidden="true"></i> Demo GCash: no real money is sent</span>
+        <span class="wallet-demo">{{ config('escrow.live') ? 'Transfers require Admin confirmation' : 'Test payment mode — no real funds' }}</span>
     </header>
 
     <div class="wallet-panel__body">
@@ -35,7 +35,7 @@
             <p class="wallet-note">Cash-outs turn on after the latest database update (php artisan migrate).</p>
         @else
             <form method="POST" action="{{ route($cashOutRoute) }}" class="wallet-form" novalidate
-                  data-confirm="Send this amount from your wallet to the GCash number you entered? This is a demo transfer: no real money is sent." data-confirm-title="Cash out to GCash?" data-confirm-button="Cash out">
+                  data-confirm="Request this amount from your wallet? Admin must send and record the transfer before it is marked paid." data-confirm-title="Request cash-out?" data-confirm-button="Request payout">
                 @csrf
                 <div class="wallet-field">
                     <label for="wallet-amount">Amount (&#8369;)</label>
@@ -79,7 +79,7 @@
                     <span>{{ $cashout->gcash_name }} · {{ $cashout->reference }}</span>
                 </div>
                 <div class="wallet-history__meta">
-                    <span class="wallet-status"><i class="fas fa-circle-check" aria-hidden="true"></i> Sent</span>
+                    <span class="wallet-status"><i class="fas fa-circle-check" aria-hidden="true"></i> {{ in_array($cashout->status, ['paid', 'sent'], true) ? 'Sent' : 'Pending transfer' }}</span>
                     <time datetime="{{ $cashout->created_at?->toIso8601String() }}">{{ $cashout->created_at?->timezone('Asia/Manila')->format('M j, Y g:i A') }}</time>
                 </div>
             </div>

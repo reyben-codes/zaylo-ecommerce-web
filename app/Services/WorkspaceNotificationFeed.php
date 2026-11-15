@@ -285,6 +285,7 @@ class WorkspaceNotificationFeed
 
     private function withReadState(User $user, Collection $items): Collection
     {
+        $items = $items->concat(app(AccountUpdates::class)->feed($user));
         $items = $items->sortByDesc(fn (array $item) => $item['at']->getTimestamp())->values();
         $read = $items->isNotEmpty() && Schema::hasTable('buyer_notification_reads')
             ? array_fill_keys(DB::table('buyer_notification_reads')->where('user_id', $user->id)->whereIn('notification_key', $items->pluck('key'))->pluck('notification_key')->all(), true)

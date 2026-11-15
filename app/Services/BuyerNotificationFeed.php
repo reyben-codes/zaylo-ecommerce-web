@@ -139,7 +139,7 @@ class BuyerNotificationFeed
                 });
         }
 
-        $notifications = $notifications->sortByDesc(fn ($item) => $item['at']->getTimestamp())->values();
+        $notifications = $notifications->concat(app(AccountUpdates::class)->feed($buyer))->unique('key')->sortByDesc(fn ($item) => $item['at']->getTimestamp())->values();
         if ($notifications->isEmpty()) {
             return $notifications;
         }
@@ -150,7 +150,7 @@ class BuyerNotificationFeed
         $read = array_fill_keys($readKeys->all(), true);
 
         return $notifications->map(function ($item) use ($read) {
-            $item['read'] = isset($read[$item['key']]);
+            $item['read'] = ($item['seen'] ?? false) || isset($read[$item['key']]);
 
             return $item;
         });

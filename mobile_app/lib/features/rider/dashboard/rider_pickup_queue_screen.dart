@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zaylo_mobile/features/rider/dashboard/widgets/parcel_handover_button.dart';
 import 'package:zaylo_mobile/api/rider_api.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
 import 'package:zaylo_mobile/features/rider/dashboard/widgets/rider_delivery_actions.dart';
@@ -37,6 +38,8 @@ class _RiderPickupQueueScreenState extends State<RiderPickupQueueScreen> with Ri
               Text(pickup.trackingNumber, style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8), Text(pickup.seller), Text(pickup.address),
               const SizedBox(height: 8), Text(pickup.statusLabel),
+              ParcelHandoverButton(api: widget.api, shipmentId: pickup.id, enabled: pickup.canConfirmHandover,
+                  confirmed: pickup.handoverConfirmed, onChanged: reloadDeliveries),
             ],
           ))),
         ],

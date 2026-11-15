@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zaylo_mobile/features/buyer/orders/gateway_payment.dart';
 import 'package:flutter/services.dart';
 
 import 'package:zaylo_mobile/api/api_exception.dart';
@@ -192,6 +193,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       );
       await state.refreshCart().catchError((_) {});
       if (!mounted) return;
+      if (_payment == 'gcash' && orders.isNotEmpty && orders.first.gcash?.canPay == true) {
+        await openGatewayPayment(context, orders.first.id);
+        if (!mounted) return;
+      }
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => OrderSuccessScreen(orders: orders, paymentMethod: _payment)),
         (route) => route.isFirst,
@@ -390,7 +395,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final quote = _quote;
     final sellers = quote?.gcashSellers ?? const <GcashSeller>[];
     // Older servers send no GCash accounts: keep the plain option.
-    final gcashKnown = sellers.isNotEmpty;
+    final gateway = quote?.gcashGateway == true;
+    final gcashKnown = gateway || sellers.isNotEmpty;
     final gcashOk = !gcashKnown || quote!.gcashAvailable;
     final missing = sellers.where((seller) => seller.number == null).map((seller) => seller.shop).join(', ');
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -411,7 +417,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         child: _PaymentOption(
           icon: Icons.phone_android_outlined,
           title: 'GCash',
-          subtitle: gcashOk ? "Send to each seller's GCash, then enter the reference number" : '$missing has not set up GCash yet',
+          subtitle: gateway
+              ? (gcashOk ? 'Pay securely through the gateway. Funds release after delivery confirmation.' : 'GCash gateway is not configured yet')
+              : (gcashOk ? "Send to each seller's GCash, then enter the reference number" : '$missing has not set up GCash yet'),
           selected: _payment == 'gcash',
           onTap: gcashOk
               ? () {
@@ -422,7 +430,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               : null,
         ),
       ),
-      if (_payment == 'gcash' && gcashKnown && gcashOk) ...[
+      if (_payment == 'gcash' && !gateway && gcashKnown && gcashOk) ...[
         const SizedBox(height: 12),
         _gcashSellers(quote!, sellers),
       ],

@@ -59,8 +59,8 @@
                 <section class="seller-panel" aria-labelledby="gcash-heading">
                     <header class="seller-panel__header">
                         <div>
-                            <h2 id="gcash-heading">GCash for buyer payments</h2>
-                            <p>Buyers who choose GCash send their payment to this account, then give you the reference number to check before you confirm the order.{{ auth()->user()->gcash_number ? '' : ' Until you add it, buyers can only pay your orders by cash on delivery.' }}</p>
+                            <h2 id="gcash-heading">Saved GCash account</h2>
+                            <p>Keep your account details up to date. New buyer payments go through the secure gateway; proceeds appear in Wallet / Payouts after delivery confirmation. Historical direct payments keep their original reference checks.</p>
                         </div>
                     </header>
                     <form method="POST" action="{{ route('seller.account.gcash') }}" class="seller-panel__body seller-form">

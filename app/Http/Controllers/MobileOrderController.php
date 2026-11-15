@@ -24,6 +24,10 @@ use Illuminate\Validation\Rule;
  */
 class MobileOrderController extends Controller
 {
+    public function counts(Request $request): JsonResponse
+    {
+        return response()->json(['counts' => BuyerOrderTabs::counts($request->user()->orders()->getQuery())]);
+    }
     public function index(Request $request, OrderReceipts $receipts): JsonResponse
     {
         $filter = $request->validate([
@@ -31,6 +35,8 @@ class MobileOrderController extends Controller
         ])['status'] ?? 'all';
         $receipts->autoConfirmDue();
         app(\App\Services\GcashPayments::class)->expireDue(app(CheckoutService::class), buyerId: $request->user()->id);
+        $updates = app(\App\Services\AccountUpdates::class);
+        $seen = $updates->payload($request->user())['through'];
 
         $counts = BuyerOrderTabs::counts($request->user()->orders()->getQuery());
 
@@ -41,6 +47,7 @@ class MobileOrderController extends Controller
             ->orderByDesc('placed_at')
             ->paginate(10);
 
+        $updates->read($request->user(), 'orders', $seen);
         return response()->json([
             'counts' => $counts,
             'cancel_reasons' => collect(BuyerOrderTabs::CANCEL_REASONS)->map(fn ($label, $key) => ['key' => $key, 'label' => $label])->values(),

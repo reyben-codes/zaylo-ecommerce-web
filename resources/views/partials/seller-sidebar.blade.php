@@ -15,6 +15,7 @@
                 ['route' => 'seller.products', 'label' => 'Products', 'icon' => 'fa-shopping-bag', 'count' => 'products'],
                 ['route' => 'seller.vouchers', 'label' => 'Vouchers', 'icon' => 'fa-ticket', 'count' => 'vouchers'],
                 ['route' => 'seller.settlement', 'label' => 'Settlement', 'icon' => 'fa-scale-balanced'],
+                ['route' => 'seller.wallet', 'label' => 'Wallet / Payouts', 'icon' => 'fa-wallet'],
                 ['route' => 'seller.reports', 'label' => 'Reports', 'icon' => 'fa-chart-bar'],
                 ['route' => 'seller.chat', 'label' => 'Messages', 'icon' => 'fa-comment', 'count' => 'chat'],
                 ['route' => 'seller.logistics-messages', 'label' => 'Logistics chat', 'icon' => 'fa-truck-fast', 'count' => 'logistics_chat'],

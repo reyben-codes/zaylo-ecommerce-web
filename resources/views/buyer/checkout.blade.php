@@ -197,30 +197,9 @@
                 <div class="checkout-section-heading"><span class="checkout-step">4</span><div><h2 id="checkout-payment-title">Payment method</h2><p>Choose how you would like to pay.</p></div></div>
                 <fieldset class="payment-method-options"><legend class="sr-only">Payment method</legend>
                     <label class="payment-method-option {{ old('payment_method', 'cod') === 'cod' ? 'selected' : '' }}"><input type="radio" name="payment_method" value="cod" @checked(old('payment_method', 'cod') === 'cod')><span class="payment-method-option-icon"><i class="fas fa-money-bill-wave" aria-hidden="true"></i></span><span class="payment-method-option-content"><span class="payment-method-option-title">Cash on Delivery</span><span class="payment-method-option-description">Pay when your order arrives</span></span></label>
-                    @php($gcashMissing = $gcashSellers->filter(fn ($seller) => ! $seller['account']))
-                    <label class="payment-method-option {{ old('payment_method') === 'gcash' ? 'selected' : '' }} {{ $gcashMissing->isNotEmpty() ? 'is-unavailable' : '' }}"><input type="radio" name="payment_method" value="gcash" @checked(old('payment_method') === 'gcash') @disabled($gcashMissing->isNotEmpty())><span class="payment-method-option-icon"><i class="fas fa-mobile-alt" aria-hidden="true"></i></span><span class="payment-method-option-content"><span class="payment-method-option-title">GCash</span><span class="payment-method-option-description">{{ $gcashMissing->isNotEmpty() ? $gcashMissing->pluck('shop')->join(', ').' has not set up GCash yet' : "Send to each seller's GCash, then enter the reference number" }}</span></span></label>
+                    @php($gatewayReady = \App\Services\EscrowPayments::configured())
+                    <label class="payment-method-option {{ old('payment_method') === 'gcash' ? 'selected' : '' }} {{ $gatewayReady ? '' : 'is-unavailable' }}"><input type="radio" name="payment_method" value="gcash" @checked(old('payment_method') === 'gcash') @disabled(! $gatewayReady)><span class="payment-method-option-icon"><i class="fas fa-mobile-alt" aria-hidden="true"></i></span><span class="payment-method-option-content"><span class="payment-method-option-title">GCash</span><span class="payment-method-option-description">{{ $gatewayReady ? 'Pay through the secure gateway. Funds release after delivery confirmation.' : 'GCash gateway is not configured yet. Please use Cash on Delivery.' }}</span></span></label>
                 </fieldset>
-                @if($gcashSellers->isNotEmpty() && $gcashMissing->isEmpty())
-                    {{-- Shown when GCash is chosen (checkout-gcash.js). Each seller has their own GCash and their own order. --}}
-                    <div class="gcash-pay" data-gcash-pay @if(old('payment_method') !== 'gcash') hidden @endif>
-                        <p class="gcash-pay__intro"><i class="fas fa-circle-info" aria-hidden="true"></i> Send each seller's amount to their GCash, then type the 13-digit reference number from your GCash receipt. You can also add it later from My Orders. Unpaid GCash orders are cancelled after {{ \App\Services\GcashPayments::EXPIRE_HOURS }} hours.</p>
-                        @foreach($gcashSellers as $seller)
-                            <div class="gcash-pay__seller">
-                                <div class="gcash-pay__account">
-                                    <strong>{{ $seller['shop'] }}</strong>
-                                    <span>GCash <b>{{ $seller['account']['number'] }}</b> · {{ $seller['account']['name'] }}</span>
-                                    <span>Send @php($sellerDue = $seller['subtotal'] - ($voucherDiscounts[$seller['seller_id']] ?? 0))@php($sellerFreeShipping = $voucher?->isFreeShipping() && (! $voucher->seller_id || (int) $seller['seller_id'] === (int) $voucher->seller_id))<b data-gcash-amount data-subtotal="{{ $sellerDue }}" data-free-shipping="{{ $sellerFreeShipping ? 1 : 0 }}">&#8369;{{ number_format($sellerDue + $perSeller - ($sellerFreeShipping ? $perSeller : 0), 2) }}</b> <small>(items + shipping)</small></span>
-                                </div>
-                                <label class="gcash-pay__reference">
-                                    <span>GCash reference no.</span>
-                                    <input type="text" name="gcash_references[{{ $seller['seller_id'] }}]" value="{{ old('gcash_references.'.$seller['seller_id']) }}"
-                                           inputmode="numeric" autocomplete="off" maxlength="13" minlength="13" placeholder="13-digit reference no." pattern="[0-9]{13}">
-                                </label>
-                            </div>
-                        @endforeach
-                        @error('gcash_references.*')<p class="gcash-pay__error" role="alert">{{ $message }}</p>@enderror
-                    </div>
-                @endif
             </section>
         </div>
 

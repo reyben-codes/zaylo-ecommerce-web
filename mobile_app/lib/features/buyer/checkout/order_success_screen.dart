@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:zaylo_mobile/components/buttons.dart';
 import 'package:zaylo_mobile/components/layout.dart';
 import 'package:zaylo_mobile/features/buyer/orders/orders_screen.dart';
+import 'package:zaylo_mobile/features/buyer/orders/gateway_payment.dart';
 import 'package:zaylo_mobile/features/buyer/widgets/shop_actions.dart';
 import 'package:zaylo_mobile/models/buyer/order_models.dart';
 import 'package:zaylo_mobile/theme/zaylo_theme.dart';
@@ -33,7 +34,7 @@ class OrderSuccessScreen extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               paymentMethod == 'gcash'
-                  ? 'Thank you! Your GCash payment will be confirmed by the seller before your order ships.'
+                  ? 'Complete payment through the gateway. Paid orders move to To Ship after verification; funds release after delivery confirmation.'
                   : 'Thank you! Please prepare ${peso(total)} for cash on delivery.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium,
@@ -66,6 +67,10 @@ class OrderSuccessScreen extends StatelessWidget {
                 ),
               ),
             const SizedBox(height: 18),
+            for (final order in orders.where((order) => order.gcash?.canPay == true))
+              Padding(padding: const EdgeInsets.only(bottom: 10), child: FilledButton(
+                onPressed: () => openGatewayPayment(context, order.id), child: Text('Pay ${order.orderNumber} with GCash'),
+              )),
             PrimaryButton(
               label: 'TRACK MY ORDERS',
               onPressed: () => Navigator.of(context).pushReplacement(

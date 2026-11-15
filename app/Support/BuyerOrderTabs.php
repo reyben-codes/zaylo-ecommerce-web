@@ -18,9 +18,11 @@ final class BuyerOrderTabs
 
     public const LABELS = [
         'all' => 'All orders',
+        'to_pay' => 'To pay',
         'to_ship' => 'To ship',
-        'shipped' => 'Shipped',
-        'delivered' => 'Delivered',
+        'shipped' => 'In transit / Out for delivery',
+        'to_receive' => 'To receive',
+        'delivered' => 'Completed',
         'cancelled' => 'Cancelled',
         'history' => 'Purchase history',
     ];
@@ -45,10 +47,28 @@ final class BuyerOrderTabs
     {
         return match ($tab) {
             'all' => $orders,
+            'to_pay' => $orders->where('status', 'placed')->where('payment_method', 'gcash')
+                ->whereHas('payment', fn ($payment) => $payment->where('status', '!=', 'paid')->whereNull('paid_at')),
+            'to_ship' => self::status($orders, MobilePayload::STATUS_GROUPS['to_ship'])
+                ->where(fn ($q) => $q->where('payment_method', '!=', 'gcash')->orWhereHas('payment', fn ($payment) => $payment->where('status', 'paid'))),
+            'to_receive' => self::status($orders, ['delivered']),
+            'delivered' => self::status($orders, ['completed']),
             'cancelled' => $orders->where('status', 'cancelled')->where(self::cancelledColumn(), '>=', self::cutoff()),
             'history' => $orders->where('status', 'cancelled')->where(self::cancelledColumn(), '<', self::cutoff()),
-            default => $orders->whereIn('status', MobilePayload::STATUS_GROUPS[$tab] ?? []),
+            default => self::status($orders, MobilePayload::STATUS_GROUPS[$tab] ?? []),
         };
+    }
+
+    private static function status(Builder $orders, array $statuses): Builder
+    {
+        if (Order::usesLegacySchema()) return $orders->whereIn('status', $statuses);
+        $map = ['placed' => 'pending', 'confirmed' => 'accepted', 'processing' => 'packed', 'ready_for_pickup' => 'ready_to_ship',
+            'assigned' => 'shipped', 'picked_up' => 'shipped', 'in_transit' => 'shipped', 'out_for_delivery' => 'shipped',
+            'delivered' => 'delivered', 'completed' => 'completed'];
+        // Rider assignment means shipped on the normalized schema, so it belongs under In Transit.
+        if (in_array('placed', $statuses, true)) $statuses = array_diff($statuses, ['assigned']);
+        $stored = array_values(array_unique(array_map(fn ($s) => $map[$s] ?? $s, $statuses)));
+        return $orders->whereHas('sellerOrders', fn ($q) => $q->whereIn('status', $stored));
     }
 
     /** @return array<string, int> tab => number of the buyer's orders in it */

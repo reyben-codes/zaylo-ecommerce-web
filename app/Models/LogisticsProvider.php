@@ -22,6 +22,7 @@ class LogisticsProvider extends Model
     public const SEC_PATTERN = '/^[A-Z]{2}[0-9]{9}$/D';
 
     protected $fillable = [
+        'hub_latitude', 'hub_longitude',
         'user_id', 'name', 'slug', 'status', 'rejection_reason', 'contact_phone', 'service_area', 'approved_at',
         'sec_registration_no', 'tin', 'contact_position', 'service_areas',
         'region_code', 'region_name', 'province_code', 'province_name', 'city_code', 'city_name', 'barangay_code', 'barangay_name',

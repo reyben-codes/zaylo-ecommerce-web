@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:zaylo_mobile/features/rider/dashboard/widgets/parcel_handover_button.dart';
 import 'package:flutter_map/flutter_map.dart';
 
 import 'package:zaylo_mobile/api/rider_api.dart';
@@ -89,6 +90,9 @@ class _RiderDeliveryDetailScreenState extends State<RiderDeliveryDetailScreen>
                   ),
                   if (shown.destination case final destination? when shown.status != 'delivered')
                     _DestinationMap(destination: destination, recipient: shown.recipientName),
+                  if (!['delivered', 'returned', 'cancelled'].contains(shown.status))
+                    ParcelHandoverButton(api: widget.api, shipmentId: shown.id, enabled: shown.canConfirmHandover,
+                        confirmed: shown.handoverConfirmed, onChanged: _reload),
                   if (delivery != null && (delivery.canAddDeliveryPhoto || delivery.hasDeliveryPhoto))
                     Padding(
                       padding: const EdgeInsets.only(top: 12),

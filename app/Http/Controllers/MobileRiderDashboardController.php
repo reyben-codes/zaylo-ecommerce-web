@@ -476,6 +476,9 @@ class MobileRiderDashboardController extends Controller
         return [
             'id' => $shipment->id,
             'tracking_number' => $parcel['tracking'],
+            'handover_confirmed' => $shipment->delivery_handover_confirmed_at !== null,
+            'can_confirm_handover' => $shipment->delivery_scanned_at !== null && ! $shipment->delivery_handover_confirmed_at && ShipmentWorkflow::stageOf($shipment) === 'out_for_delivery',
+            'earning_quote' => $shipment->rider_fee_quote,
             'status' => $stage,
             'status_label' => RiderDeliveries::STATUS_LABELS[$stage] ?? $parcel['label'],
             'next_status' => $next[0] ?? null,

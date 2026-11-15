@@ -335,6 +335,9 @@ class ShipmentWorkflow
             }
             $attributes = ['status' => self::stored($to)];
             if ($to === 'in_transit' && $locked->pickup_scanned_at) {
+                if ($locked->rider_fee_quote && ! $locked->rider_handover_confirmed_at) {
+                    throw ValidationException::withMessages(['handover' => 'The pickup rider must confirm the scanned parcel handover first.']);
+                }
                 if (! $actor->hasRole('logistics') || (int) $actor->logisticsProvider?->id !== (int) $locked->logistics_provider_id
                     || collect(['parcel_received', 'tracking_verified', 'items_checked'])->contains(fn ($key) => ($receipt[$key] ?? false) !== true)) {
                     throw ValidationException::withMessages(['handover' => 'Your logistics partner must complete the handover checklist before receiving this parcel.']);
@@ -359,6 +362,10 @@ class ShipmentWorkflow
             }
             $locked->update($attributes);
             $this->syncOrder($locked, $to, $actor, $note);
+            if ($to === 'in_transit' && $locked->pickup_courier_id && $locked->hub_received_at) {
+                $pickupRider = User::find($locked->pickup_courier_id);
+                if ($pickupRider) app(RiderLegEarnings::class)->credit($locked, $pickupRider, 'pickup');
+            }
         });
     }
 

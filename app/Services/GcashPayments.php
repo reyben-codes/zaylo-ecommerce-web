@@ -84,7 +84,7 @@ class GcashPayments
             return null;
         }
 
-        return Product::usesLegacySchema()
+        return Order::usesLegacySchema()
             ? User::find((int) $order->seller_id)
             : \App\Models\Seller::with('owner')->find((int) $order->seller_id)?->owner;
     }
@@ -119,6 +119,19 @@ class GcashPayments
     /** What the buyer's order page and the app show about the payment. */
     public static function forBuyer(Order $order): ?array
     {
+        if ($escrow = EscrowPayments::forOrder($order)) {
+            return [
+                'gateway' => true, 'status' => $escrow->status,
+                'status_label' => match ($escrow->status) {
+                    'held' => 'Paid — held until delivery confirmation', 'released' => 'Payment settled',
+                    'review_required' => 'Payment requires support review', default => 'Awaiting gateway payment',
+                },
+                'reference' => $escrow->gateway_payment, 'rejection_note' => null, 'amount' => $order->total,
+                'seller_account' => null, 'can_submit' => false, 'expires_at' => null,
+                'can_pay' => $escrow->status === 'pending' && $order->status === 'placed',
+                'test_mode' => ! $escrow->livemode,
+            ];
+        }
         if (! self::isGcash($order) || ! $order->payment) {
             return null;
         }
@@ -153,6 +166,7 @@ class GcashPayments
 
     public function submit(Order $order, User $buyer, string $reference): Payment
     {
+        abort_if(EscrowPayments::forOrder($order) !== null, 422, 'Pay this order through the payment gateway; manual references are not accepted.');
         abort_unless(self::isGcash($order) && (int) $order->user_id === (int) $buyer->id, 404);
         $reference = self::normalize($reference);
         if (! preg_match(self::REFERENCE_PATTERN, $reference)) {
@@ -179,6 +193,7 @@ class GcashPayments
     /** The seller found the money in their GCash (received), or did not (with a note for the buyer). */
     public function verify(Order $order, User $seller, bool $received, ?string $note = null): Payment
     {
+        abort_if(EscrowPayments::forOrder($order) !== null, 422, 'Gateway payments are verified automatically.');
         abort_unless(self::isGcash($order), 404);
 
         return DB::transaction(function () use ($order, $seller, $received, $note) {

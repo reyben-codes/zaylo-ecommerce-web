@@ -87,6 +87,7 @@ class MobileRiderDeliveryController extends Controller
         $old = $shipment->delivery_proof_path;
         $path = $photos->store($request->file('photo'), 'delivery-proof/'.$shipment->id);
         $shipment->update(['delivery_proof_path' => $path]);
+        app(\App\Services\RiderLegEarnings::class)->credit($shipment, $request->user(), 'delivery');
         if ($old) {
             Storage::disk('local')->delete($old);
         }

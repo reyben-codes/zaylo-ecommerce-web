@@ -158,6 +158,7 @@ class LogisticsCodSettlements
     /** Record the net transfer after offsetting Admin-funded shipping against Admin's commission. */
     public function settleAdmin(LogisticsCodSettlement $settlement, User $actor, string $reference): LogisticsCodSettlement
     {
+        $reference = \App\Support\TransferReference::check($reference, 'admin_reference');
         return DB::transaction(function () use ($settlement, $actor, $reference) {
             $locked = LogisticsCodSettlement::whereKey($settlement->id)->lockForUpdate()->firstOrFail();
             $amount = (float) $locked->admin_earnings;
@@ -171,6 +172,10 @@ class LogisticsCodSettlements
                 throw ValidationException::withMessages(['admin_reference' => 'Enter the actual transfer reference.']);
             }
             $locked->update(['admin_reference' => trim($reference), 'admin_settled_at' => now(), 'admin_settled_by' => $actor->id]);
+            $updates = app(AccountUpdates::class);
+            $body = 'COD allocation for parcel #'.$locked->shipment_id.' settled. PHP '.number_format(abs($amount), 2).'. Ref. '.$reference.'.';
+            $updates->admins('cod-admin-settled-'.$locked->id, 'COD remittance settled', $body);
+            $updates->send($locked->provider?->user_id, 'cod-admin-settled-'.$locked->id, 'wallet', 'COD remittance settled', $body);
             if (CodFinancialHistory::ready()) {
                 \App\Models\CodFinancialTransaction::firstOrCreate([
                     'shipment_id' => $locked->shipment_id, 'type' => \App\Models\CodFinancialTransaction::ADMIN_SETTLEMENT,
@@ -190,6 +195,7 @@ class LogisticsCodSettlements
     /** Records the actual seller transfer. The allocated Admin share remains auditable on the same settlement row. */
     public function settle(LogisticsCodSettlement $settlement, LogisticsProvider $provider, User $actor, string $reference): LogisticsCodSettlement
     {
+        $reference = \App\Support\TransferReference::check($reference, 'seller_reference');
         abort_unless((int) $settlement->logistics_provider_id === (int) $provider->id, 403);
         $reference = trim($reference);
         if ($reference === '') {
@@ -213,6 +219,12 @@ class LogisticsCodSettlements
                 'settled_at' => now(),
             ]);
             $this->history->sellerSettlement($locked->load('provider'), $actor);
+            $updates = app(AccountUpdates::class);
+            $body = 'Seller proceeds of PHP '.number_format($locked->seller_earnings, 2).' settled for parcel #'.$locked->shipment_id.'. Ref. '.$reference.'.';
+            $updates->send($locked->seller_user_id, 'cod-seller-settled-'.$locked->id, 'wallet', 'COD payment settled', $body);
+            $updates->send($provider->user_id, 'cod-seller-settled-'.$locked->id, 'wallet', 'Seller payout settled', $body);
+            $updates->send($locked->order?->buyer?->id, 'cod-seller-settled-'.$locked->id, 'orders', 'Order payment settled', $body, 'order', (int) $locked->order_id);
+            $updates->admins('cod-seller-settled-'.$locked->id, 'Seller payout settled', $body);
             app(ActivityLogger::class)->record(
                 'logistics.cod_settled', 'settlement', 'COD seller transfer recorded for parcel #'.$locked->shipment_id.'.',
                 $actor, $locked, ['seller_earnings' => $locked->seller_earnings, 'admin_earnings' => $locked->admin_earnings, 'reference' => $locked->seller_reference],

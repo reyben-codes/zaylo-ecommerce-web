@@ -343,6 +343,10 @@ class CheckoutService
     {
         $paymentMethod = $input['payment_method'] ?? 'cod';
 
+        if ($paymentMethod === 'gcash' && ! EscrowPayments::configured()) {
+            throw ValidationException::withMessages(['payment_method' => 'GCash gateway is not configured yet. Choose Cash on Delivery.']);
+        }
+
         return DB::transaction(function () use ($buyer, $selectedIds, $input, $voucherCode, $paymentMethod) {
             User::whereKey($buyer->id)->lockForUpdate()->firstOrFail();
             // Recheck after serializing this buyer's requests, before reading a possibly emptied cart.
@@ -370,9 +374,6 @@ class CheckoutService
 
             $orders = collect();
             foreach ($itemsToOrder->groupBy(fn ($item) => $item->product->seller_id ?? 0) as $sellerId => $items) {
-                if ($paymentMethod === 'gcash' && GcashPayments::ready() && ! GcashPayments::account(GcashPayments::sellerUser($items->first()->product))) {
-                    throw ValidationException::withMessages(['payment_method' => 'The seller of '.$items->first()->product->name.' has not set up GCash yet. Choose Cash on Delivery for this order.']);
-                }
                 $prepared = collect();
                 foreach ($items as $item) {
                     $product = Product::whereKey($item->product->getKey())->lockForUpdate()->firstOrFail();
@@ -496,10 +497,8 @@ class CheckoutService
                     $paymentAttributes += ['method' => $paymentMethod, 'amount_minor' => (int) round($order->total * 100)];
                 }
                 $payment = $order->payment()->create($paymentAttributes);
-                // GCash goes to the seller's own GCash: the reference waits for the seller's check (GcashPayments).
-                if ($paymentMethod === 'gcash' && GcashPayments::ready()) {
-                    $reference = GcashPayments::normalize($input['gcash_references'][$sellerId] ?? null);
-                    $payment->forceFill(GcashPayments::checkoutPayment($reference !== '' ? $reference : null))->save();
+                if ($paymentMethod === 'gcash') {
+                    EscrowPayments::reserve($order);
                 }
                 $order->statusHistory()->create([
                     'changed_by' => $buyer->id, 'status' => 'placed', 'note' => 'Order placed by buyer.',

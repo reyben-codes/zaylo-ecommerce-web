@@ -6,7 +6,7 @@ use App\Models\WalletCashout;
 use App\Services\Wallet;
 use Illuminate\Http\Request;
 
-/** Logistics partners cash out their wallet to GCash from Logistics Center > Earnings (simulated; see App\Services\Wallet). */
+/** Logistics partners request cash-outs from Earnings; Admin records the actual transfer. */
 class WalletController extends Controller
 {
     public function __construct(private readonly Wallet $wallet) {}
@@ -19,8 +19,8 @@ class WalletController extends Controller
         return back()->with('status', $this->sentMessage($cashout));
     }
 
-    private function sentMessage(WalletCashout $cashout): string
+    private function sentMessage(\App\Models\SellerWithdrawal $cashout): string
     {
-        return '₱'.number_format($cashout->amount, 2).' was sent to GCash '.$cashout->masked_number.' (demo transfer, reference '.$cashout->reference.').';
+        return 'PHP '.number_format($cashout->amount, 2).' requested for GCash '.$cashout->masked_number.'. The payout stays pending until Admin records the transfer.';
     }
 }

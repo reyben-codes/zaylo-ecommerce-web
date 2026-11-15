@@ -62,6 +62,6 @@ class GcashPaymentController extends Controller
         ], ['gcash_number.regex' => 'Enter the 11-digit GCash mobile number, starting with 09.']);
         $request->user()->forceFill(['gcash_number' => $data['gcash_number'], 'gcash_name' => trim($data['gcash_name'])])->save();
 
-        return back()->with('status', 'GCash account saved. Buyers who pay by GCash send the money there.');
+        return back()->with('status', 'GCash account saved. New buyer payments use secure gateway checkout.');
     }
 }

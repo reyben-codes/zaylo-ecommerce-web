@@ -260,6 +260,14 @@ class RiderDeliveries
         }
 
         if ($to !== 'delivered' || ! Shipment::tracksDeliveryProof()) {
+            if ($to === 'out_for_delivery' && Schema::hasColumn('shipments', 'rider_fee_quote')) {
+                DB::transaction(function () use ($shipment) {
+                    $locked = Shipment::whereKey($shipment->id)->lockForUpdate()->firstOrFail();
+                    app(RiderLegEarnings::class)->quote($locked);
+                    $locked->update(['delivery_scanned_at' => now()]);
+                });
+                $shipment->refresh();
+            }
             return [$this->advance($shipment, $rider, $to, scanned: true), $to];
         }
         if (! $photo) {
@@ -267,13 +275,16 @@ class RiderDeliveries
         }
         $path = $this->photos->store($photo, 'delivery-proof/'.$shipment->id);
         try {
-            $shipment = $this->advance($shipment, $rider, $to, scanned: true);
+            $shipment = DB::transaction(function () use ($shipment, $rider, $to, $path) {
+                $delivered = $this->advance($shipment, $rider, $to, scanned: true);
+                $delivered->update(['delivery_proof_path' => $path]);
+                app(RiderLegEarnings::class)->credit($delivered, $rider, 'delivery');
+                return $delivered;
+            });
         } catch (\Throwable $error) {
             Storage::disk('local')->delete($path);
             throw $error;
         }
-        $shipment->update(['delivery_proof_path' => $path]);
-
         return [$shipment, $to];
     }
 
@@ -292,6 +303,9 @@ class RiderDeliveries
         }
         if (in_array($to, self::SCAN_STEPS, true) && ! $scanned) {
             throw ValidationException::withMessages(['status' => 'Scan the QR code or barcode on the waybill to continue.']);
+        }
+        if ($to === 'delivered' && $shipment->rider_fee_quote && ! $shipment->delivery_handover_confirmed_at) {
+            throw ValidationException::withMessages(['handover' => 'Confirm the scanned hub handover before delivering this parcel.']);
         }
         if ($to === 'failed' && ! isset(self::FAILED_REASONS[$reason ?? ''])) {
             throw ValidationException::withMessages(['reason' => 'Choose why the parcel could not be delivered.']);
@@ -507,6 +521,7 @@ class RiderDeliveries
         $split = app(Settlement::class)->forShipment($shipment);
         $separatePayout = ($split['policy_version'] ?? 1) >= 2;
         $riderCommission = $cod ? ($separatePayout ? (float) $split['rider_earnings'] : min((float) $split['rider_earnings'], $codAmount)) : 0.0;
+        if ($shipment->rider_fee_quote) $riderCommission = (float) $shipment->rider_fee_quote['delivery_amount'];
 
         return [
             'total' => round($total, 2),
@@ -514,7 +529,7 @@ class RiderDeliveries
             'payment_method' => $order?->payment_method,
             'cash_to_collect' => $cod ? round((float) $codAmount, 2) : 0.0,
             'rider_commission' => round($riderCommission, 2),
-            'delivery_earnings' => (float) $split['rider_earnings'],
+            'delivery_earnings' => (float) ($shipment->rider_fee_quote['delivery_amount'] ?? $split['rider_earnings']),
             'rider_retained_cash' => $cod && ! $separatePayout ? round($riderCommission, 2) : 0.0,
             'amount_to_hand_logistics' => $cod ? round(max(0, $codAmount - ($separatePayout ? 0 : $riderCommission)), 2) : 0.0,
             'cod_collected' => $collectionTracked && (bool) $shipment->cod_collected,

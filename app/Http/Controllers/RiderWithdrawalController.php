@@ -30,14 +30,14 @@ class RiderWithdrawalController extends Controller
             'pending' => $ready ? $query()->where('status', RiderWithdrawal::PENDING)->oldest('id')->get() : collect(),
             'history' => $ready ? $query()->where('status', '!=', RiderWithdrawal::PENDING)->latest('processed_at')->latest('id')->limit(50)->get() : collect(),
             'pendingTotal' => $ready ? (float) $query()->where('status', RiderWithdrawal::PENDING)->sum('amount') : 0.0,
-            'paidTotal' => $ready ? (float) $query()->where('status', RiderWithdrawal::PAID)->sum('amount') : 0.0,
+            'paidTotal' => $ready ? (float) $query()->whereIn('status', [RiderWithdrawal::PAID, RiderWithdrawal::RELEASED])->sum('amount') : 0.0,
         ]);
     }
 
     public function pay(Request $request, RiderWithdrawal $withdrawal)
     {
         $this->ownWithdrawal($withdrawal);
-        $data = $request->validate(['reference' => ['required', 'string', 'max:100']], [
+        $data = $request->validate(['reference' => \App\Support\TransferReference::rules()], [
             'reference.required' => 'Enter the GCash reference number of the transfer.',
         ]);
         $this->wallet->markPaid($withdrawal, $request->user(), $data['reference']);

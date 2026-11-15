@@ -68,7 +68,7 @@
                                           data-confirm-title="Mark as paid?" data-confirm-button="Mark as paid">
                                         @csrf
                                         <label class="sr-only" for="payout-reference-{{ $partner['provider_id'] }}">Payment reference for {{ $partner['provider'] }}</label>
-                                        <input type="text" id="payout-reference-{{ $partner['provider_id'] }}" name="reference" maxlength="100" placeholder="Transfer reference" autocomplete="off" required>
+                            <input type="text" id="payout-reference-{{ $partner['provider_id'] }}" name="reference" minlength="13" maxlength="13" pattern="[A-Z0-9]{13}" title="13 uppercase letters or numbers" placeholder="REF20261115AB" autocomplete="off" required>
                                         <button type="submit" class="seller-button"><i class="fas fa-money-bill-transfer" aria-hidden="true"></i> Mark as paid</button>
                                     </form>
                                 @else

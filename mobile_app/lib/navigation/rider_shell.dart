@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'package:zaylo_mobile/notifications/account_update_badge.dart';
+import 'package:zaylo_mobile/notifications/account_updates_screen.dart';
 
 import 'package:flutter/material.dart';
 
@@ -144,6 +146,8 @@ class _RiderShellState extends State<RiderShell> {
           appBar: AppBar(
             backgroundColor: ZayloColors.white,
             automaticallyImplyLeading: false,
+            actions: [IconButton(tooltip: 'Notifications', icon: AccountUpdateBadge(api: widget.api, child: const Icon(Icons.notifications_outlined)),
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => AccountUpdatesScreen(api: widget.api))))],
             centerTitle: _tab == _homeTab,
             title: _tab == _homeTab
                 ? Image.asset(ZayloAssets.logo,
@@ -197,8 +201,9 @@ class _RiderShellState extends State<RiderShell> {
                 selectedIcon: const Icon(Icons.chat_bubble),
                 label: 'Chat',
               ),
-              const NavigationDestination(
-                  icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Account'),
+              NavigationDestination(
+                  icon: AccountUpdateBadge(api: widget.api, section: 'wallet', child: const Icon(Icons.person_outline)),
+                  selectedIcon: AccountUpdateBadge(api: widget.api, section: 'wallet', child: const Icon(Icons.person)), label: 'Account'),
             ],
           ),
         ),

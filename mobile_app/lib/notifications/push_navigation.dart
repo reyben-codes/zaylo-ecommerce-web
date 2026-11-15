@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zaylo_mobile/features/rider/wallet/rider_wallet_screen.dart';
 
 import 'package:zaylo_mobile/api/rider_api.dart';
 import 'package:zaylo_mobile/components/chat/support_chat.dart';
@@ -20,6 +21,7 @@ Future<Widget?> pushDestination(PushTap tap, AppState state) async {
     final api = tap.session.api;
     if (api is! RiderApi || api.token == null) return null;
     return switch (tap.kind) {
+      'wallet' => RiderWalletScreen(api: api),
       'delivery' when tap.entityId > 0 => RiderDeliveryDetailScreen(api: api, deliveryId: tap.entityId),
       'rider_schedule' => RiderAttendanceScreen(api: api),
       'logistics_chat' => LogisticsChatScreen(api: api),

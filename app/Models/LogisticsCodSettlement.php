@@ -30,6 +30,8 @@ class LogisticsCodSettlement extends Model
         return $this->belongsTo(Shipment::class);
     }
 
+    public function order(): BelongsTo { return $this->belongsTo(Order::class); }
+
     public function handover(): BelongsTo
     {
         return $this->belongsTo(RiderCashHandover::class, 'rider_cash_handover_id');

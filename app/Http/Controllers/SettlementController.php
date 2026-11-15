@@ -33,7 +33,7 @@ class SettlementController extends Controller
 
     public function settleCod(Request $request, LogisticsCodSettlement $settlement, LogisticsCodSettlements $settlements)
     {
-        $data = $request->validate(['seller_reference' => ['required', 'string', 'max:100']]);
+        $data = $request->validate(['seller_reference' => \App\Support\TransferReference::rules()]);
         $provider = $request->user()->logisticsProvider;
         abort_unless($provider, 404);
         $settlements->settle($settlement, $provider, $request->user(), $data['seller_reference']);
@@ -44,7 +44,7 @@ class SettlementController extends Controller
     public function settleAdmin(Request $request, LogisticsCodSettlement $settlement, LogisticsCodSettlements $settlements)
     {
         abort_unless(\Illuminate\Support\Facades\Schema::hasColumn('logistics_cod_settlements', 'admin_reference'), 503, 'Run the latest payment migrations.');
-        $data = $request->validate(['admin_reference' => ['required', 'string', 'max:100']]);
+        $data = $request->validate(['admin_reference' => \App\Support\TransferReference::rules()]);
         $settlements->settleAdmin($settlement, $request->user(), $data['admin_reference']);
 
         return back()->with('status', 'Admin transfer recorded with its payment reference.');

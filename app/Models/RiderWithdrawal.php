@@ -12,17 +12,20 @@ class RiderWithdrawal extends Model
 
     public const PAID = 'paid';
 
+    public const RELEASED = 'released';
+
     public const REJECTED = 'rejected';
 
     public const STATUS_LABELS = [
         self::PENDING => 'Processing',
-        self::PAID => 'Sent to GCash',
+        self::RELEASED => 'Released — confirm receipt',
+        self::PAID => 'Salary received',
         self::REJECTED => 'Rejected',
     ];
 
-    protected $fillable = ['user_id', 'logistics_provider_id', 'amount', 'gcash_number', 'gcash_name', 'status', 'reference', 'rejection_reason', 'processed_by', 'processed_at'];
+    protected $fillable = ['user_id', 'logistics_provider_id', 'amount', 'gcash_number', 'gcash_name', 'status', 'reference', 'rejection_reason', 'processed_by', 'processed_at', 'received_at'];
 
-    protected $casts = ['amount' => 'float', 'processed_at' => 'datetime'];
+    protected $casts = ['amount' => 'float', 'processed_at' => 'datetime', 'received_at' => 'datetime'];
 
     public function rider(): BelongsTo
     {

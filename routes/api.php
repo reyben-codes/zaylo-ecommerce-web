@@ -25,6 +25,8 @@ use App\Http\Controllers\MobileStorefrontController;
 use App\Http\Controllers\ShopController;
 use Illuminate\Support\Facades\Route;
 
+Route::post('/webhooks/paymongo', [\App\Http\Controllers\EscrowPaymentController::class, 'webhook'])->middleware('throttle:120,1')->name('escrow.webhook');
+
 /*
 |--------------------------------------------------------------------------
 | Mobile app API (/api/mobile/...)
@@ -83,6 +85,9 @@ Route::prefix('mobile')->name('mobile.')->middleware('throttle:60,1')->group(fun
     });
 
     Route::middleware('auth:mobile')->group(function () use ($complaintRoutes) {
+        Route::get('/updates', [\App\Http\Controllers\AccountUpdateController::class, 'index'])->name('updates');
+        Route::post('/updates/read', [\App\Http\Controllers\AccountUpdateController::class, 'read'])->name('updates.read');
+        Route::post('/orders/{order}/gateway', [\App\Http\Controllers\EscrowPaymentController::class, 'pay'])->middleware('mobile.buyer')->name('escrow.pay');
         Route::get('/me', [MobileAuthenticationController::class, 'me'])->name('me');
         Route::put('/push-device', [\App\Http\Controllers\MobilePushController::class, 'store'])->middleware('throttle:10,1,mobile-push')->name('push-device.store');
         Route::delete('/push-device', [\App\Http\Controllers\MobilePushController::class, 'destroy'])->name('push-device.destroy');
@@ -95,6 +100,7 @@ Route::prefix('mobile')->name('mobile.')->middleware('throttle:60,1')->group(fun
         Route::post('/logout', [MobileAuthenticationController::class, 'logout'])->name('logout');
 
         Route::middleware('mobile.rider')->prefix('rider')->name('rider.')->group(function () use ($complaintRoutes) {
+            Route::post('/parcels/{shipment}/handover', [\App\Http\Controllers\RiderHandoverController::class, 'confirm'])->middleware('throttle:30,1,mobile-handover')->name('handover');
             Route::get('/dashboard', [MobileRiderDashboardController::class, 'dashboard'])->name('dashboard');
             Route::get('/logistics-chat', [\App\Http\Controllers\MobileRiderLogisticsChatController::class, 'index'])->name('logistics-chat');
             Route::post('/logistics-chat', [\App\Http\Controllers\MobileRiderLogisticsChatController::class, 'send'])->middleware('throttle:20,1,mobile-logistics-chat')->name('logistics-chat.send');
@@ -125,6 +131,7 @@ Route::prefix('mobile')->name('mobile.')->middleware('throttle:60,1')->group(fun
             Route::get('/earnings', [MobileRiderDashboardController::class, 'earnings'])->name('earnings');
             // The rider's wallet: a commission per delivered parcel, withdrawn to GCash.
             Route::get('/wallet', [MobileRiderWalletController::class, 'show'])->name('wallet');
+            Route::post('/wallet/withdrawals/{withdrawal}/received', [MobileRiderWalletController::class, 'received'])->middleware('throttle:20,1,mobile-salary-received')->name('wallet.received');
             Route::put('/wallet/gcash', [MobileRiderWalletController::class, 'updateAccount'])->middleware('throttle:20,1,mobile-rider-gcash')->name('wallet.gcash');
             Route::post('/wallet/withdrawals', [MobileRiderWalletController::class, 'withdraw'])->middleware('throttle:10,1,mobile-rider-withdraw')->name('wallet.withdraw');
             Route::get('/reports', [MobileRiderDashboardController::class, 'reports'])->name('reports');

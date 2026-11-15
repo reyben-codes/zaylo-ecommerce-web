@@ -627,9 +627,10 @@ class BuyerController extends Controller
             $selectedIds = $validated['cart_item_ids'] ?? $request->session()->get('checkout_cart_item_ids') ?? $cart->items->pluck('id')->all();
             $voucherCode = Str::upper(trim((string) ($validated['voucher_code'] ?? '')));
 
-            $this->checkoutService->place($request->user(), array_map('intval', $selectedIds), $validated, $voucherCode);
+            $placedOrders = $this->checkoutService->place($request->user(), array_map('intval', $selectedIds), $validated, $voucherCode);
 
             $request->session()->forget('checkout_cart_item_ids');
+            if ($validated['payment_method'] === 'gcash' && $placedOrders->isNotEmpty()) return redirect()->route('escrow.start', $placedOrders->first());
 
             return redirect()->route('buyer.orders')->with('status', 'Order placed successfully.');
         });

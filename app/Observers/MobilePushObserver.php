@@ -20,10 +20,11 @@ class MobilePushObserver
     {
         $push = app(MobilePushNotifications::class);
         if ($model instanceof OrderStatusHistory) {
+            if (str_starts_with((string) $model->note, 'GCash gateway payment verified;')) return;
             $order = $model->order;
             $text = OrderNotificationText::forStatus($model->status, $model->note);
             $reference = $order?->order_number;
-            $push->queue($order?->buyer?->id, 'order-history-'.$model->id, $text['title'],
+            app(\App\Services\AccountUpdates::class)->send($order?->buyer?->id, 'order-history-'.$model->id, 'orders', $text['title'],
                 Str::limit(($reference ? 'Order '.$reference.': ' : '').$text['message'], 300), 'order', $order?->id ?? 0);
         } elseif ($model instanceof Message) {
             $conversation = $model->conversation;

@@ -14,6 +14,7 @@ class OrderNotificationText
 
         // Several events keep the order's status unchanged. Their history note identifies what happened.
         foreach ([
+            'GCash gateway payment verified;' => ['GCash payment verified', 'Your payment was verified by the gateway. Your order is now To Ship; funds remain held until delivery confirmation.'],
             'Seller received the GCash payment' => ['GCash payment confirmed', 'The seller confirmed receiving your GCash payment.'],
             'Seller could not find GCash ref.' => ['GCash payment not verified', 'The seller could not find your GCash payment. Open the order to review the payment details.'],
             'Pickup confirmed by logistics' => ['Pickup confirmed', 'The logistics partner confirmed pickup from the seller.'],

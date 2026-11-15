@@ -1,12 +1,19 @@
 {{-- A GCash order the buyer paid straight to the seller: check the reference in GCash before confirming the order. --}}
 @php
     $payment = $order->payment;
+    $gatewayPayment = \App\Services\EscrowPayments::forOrder($order);
     $status = $payment?->status;
     $noteError = $errors->has('note') && (int) old('gcash_order') === $order->id;
 @endphp
 <div class="gcash-check gcash-check--{{ str_replace('_', '-', (string) $status) }}">
     <strong><i class="fas fa-mobile-screen" aria-hidden="true"></i> GCash &#8369;{{ number_format($order->total, 2) }}</strong>
-    @if($status === \App\Services\GcashPayments::CHECKING)
+    @if($gatewayPayment)
+        @if(in_array($gatewayPayment->status, ['held', 'released'], true))
+            <span><i class="fas fa-circle-check" aria-hidden="true"></i> Paid through gateway · {{ $gatewayPayment->status === 'released' ? 'settled to your wallet' : 'held until delivery confirmation' }}. Do not collect cash from the buyer.</span>
+        @else
+            <span>{{ $gatewayPayment->status === 'review_required' ? 'Payment requires Admin reconciliation.' : 'Waiting for the buyer to authorize gateway payment.' }}</span>
+        @endif
+    @elseif($status === \App\Services\GcashPayments::CHECKING)
         <span>Reference <b>{{ $payment->gcash_reference }}</b>. Find it in your GCash app before confirming.</span>
         <div class="gcash-check__actions">
             <form method="POST" action="{{ route('seller.orders.gcash', $order) }}"

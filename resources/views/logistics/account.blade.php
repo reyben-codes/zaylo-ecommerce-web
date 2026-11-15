@@ -44,6 +44,8 @@
                             <input id="service-area" name="service_area" maxlength="150" value="{{ old('service_area', $provider->service_area) }}" placeholder="e.g. Metro Manila, Cavite">
                             @error('service_area')<p class="seller-field__error">{{ $message }}</p>@enderror
                         </div>
+                        <div class="seller-field"><label for="hub-latitude">Hub latitude</label><input id="hub-latitude" name="hub_latitude" type="number" step="0.0000001" min="4" max="21.5" value="{{ old('hub_latitude', $provider->hub_latitude) }}"><p class="seller-field__help">The exact hub pin is used to calculate each rider leg's road distance.</p></div>
+                        <div class="seller-field"><label for="hub-longitude">Hub longitude</label><input id="hub-longitude" name="hub_longitude" type="number" step="0.0000001" min="116" max="127.5" value="{{ old('hub_longitude', $provider->hub_longitude) }}"></div>
                     </div>
                     <div class="seller-form__actions">
                         <button type="submit" class="seller-button"><i class="fas fa-check" aria-hidden="true"></i> Save company details</button>
@@ -95,19 +97,9 @@
             @if(\Illuminate\Support\Facades\Schema::hasColumn('logistics_providers', 'rider_rate_minor'))
                 <section class="seller-panel" aria-labelledby="rider-pay-heading">
                     <header class="seller-panel__header">
-                        <div><h2 id="rider-pay-heading">Rider delivery pay</h2><p>Your company pays this amount for each eligible delivered parcel. Changes apply to new orders.</p></div>
+                        <div><h2 id="rider-pay-heading">Rider earnings policy</h2><p>New scanned parcels use each leg's road distance and parcel weight. Saved quotes do not change when rates change.</p></div>
                     </header>
-                    <form method="POST" action="{{ route('logistics.account.rider-rate') }}" class="seller-panel__body seller-form">
-                        @csrf
-                        @method('PATCH')
-                        <div class="seller-field">
-                            <label for="rider-rate">Pay per delivery (PHP)</label>
-                            <input id="rider-rate" name="rider_rate" type="number" min="0.01" max="{{ \App\Services\ShippingRates::STANDARD_FEE }}" step="0.01" value="{{ old('rider_rate', number_format($provider->riderRate(), 2, '.', '')) }}" required aria-describedby="rider-rate-help" @error('rider_rate') aria-invalid="true" @enderror>
-                            <p class="seller-cell-note" id="rider-rate-help">Starts at &#8369;40.00. Set an amount up to the &#8369;{{ number_format(\App\Services\ShippingRates::STANDARD_FEE, 2) }} shipping budget. Rider pay is reserved from your delivery receipts, and you send it through Rider withdrawals.</p>
-                            @error('rider_rate')<p class="seller-field__error">{{ $message }}</p>@enderror
-                        </div>
-                        <div class="seller-form__actions"><button type="submit" class="seller-button">Save delivery rate</button></div>
-                    </form>
+                    <div class="seller-panel__body"><p>Per leg: PHP {{ number_format(config('rider_fees.base_per_leg'), 2) }} + PHP {{ number_format(config('rider_fees.per_km'), 2) }}/km + PHP {{ number_format(config('rider_fees.per_kg'), 2) }}/kg. Combined pickup and delivery earnings are capped at {{ config('rider_fees.shipping_budget_percent') }}% of funded shipping.</p><p>Platform rates are configured by the administrator. Historical parcels retain their saved earnings.</p></div>
                 </section>
             @endif
 

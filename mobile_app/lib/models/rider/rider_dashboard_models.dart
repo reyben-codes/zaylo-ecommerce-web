@@ -327,10 +327,15 @@ class RiderDelivery {
     this.timeline = const [],
     this.hasDeliveryPhoto = false,
     this.canAddDeliveryPhoto = false,
+      this.canConfirmHandover = false,
+      this.handoverConfirmed = false,
   });
 
   final int id;
   final String trackingNumber;
+
+  final bool canConfirmHandover;
+  final bool handoverConfirmed;
 
   /// The tracking number in the waybill's barcode and QR code.
   final String scanCode;
@@ -436,6 +441,8 @@ class RiderDelivery {
             .toList(),
         hasDeliveryPhoto: json['has_delivery_photo'] as bool? ?? false,
         canAddDeliveryPhoto: json['can_add_delivery_photo'] as bool? ?? false,
+        canConfirmHandover: json['can_confirm_handover'] as bool? ?? false,
+        handoverConfirmed: json['handover_confirmed'] as bool? ?? false,
       );
 }
 
@@ -668,7 +675,8 @@ class RiderDashboard {
 
 class RiderSellerPickup {
   const RiderSellerPickup({required this.id, required this.trackingNumber, required this.seller,
-    required this.address, required this.status, required this.items, this.scannedAt, this.receivedAt});
+    required this.address, required this.status, required this.items, this.scannedAt, this.receivedAt,
+    this.canConfirmHandover = false, this.handoverConfirmed = false});
 
   final int id;
   final String trackingNumber;
@@ -678,6 +686,8 @@ class RiderSellerPickup {
   final List<String> items;
   final DateTime? scannedAt;
   final DateTime? receivedAt;
+  final bool canConfirmHandover;
+  final bool handoverConfirmed;
   bool get canScan => status == 'confirmed';
   String get statusLabel => switch (status) {
     'ready' => 'Assigned · waiting for pickup confirmation',
@@ -691,6 +701,8 @@ class RiderSellerPickup {
     id: (json['id'] as num).toInt(), trackingNumber: json['tracking_number'] as String,
     seller: json['seller'] as String? ?? 'Seller', address: json['pickup_address'] as String? ?? '',
     status: json['status'] as String? ?? 'ready', scannedAt: _date(json['scanned_at']), receivedAt: _date(json['received_at']),
+    canConfirmHandover: json['can_confirm_handover'] as bool? ?? false,
+    handoverConfirmed: json['handover_confirmed'] as bool? ?? false,
     items: (json['items'] as List<dynamic>? ?? const []).map((item) => '${item['name']} × ${item['quantity']}').toList(),
   );
 }

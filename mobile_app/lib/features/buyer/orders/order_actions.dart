@@ -5,6 +5,7 @@ import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/components/buttons.dart';
 import 'package:zaylo_mobile/components/feedback.dart';
 import 'package:zaylo_mobile/features/buyer/orders/complaint_form_screen.dart';
+import 'package:zaylo_mobile/features/buyer/orders/gateway_payment.dart';
 import 'package:zaylo_mobile/features/buyer/orders/review_form_screen.dart';
 import 'package:zaylo_mobile/features/buyer/widgets/shop_actions.dart';
 import 'package:zaylo_mobile/models/buyer/order_models.dart';
@@ -180,6 +181,10 @@ class _OrderActionsState extends State<OrderActions> {
         _ActionButton(label: 'Buy again', icon: Icons.replay, busy: _busy == 'again', onPressed: busy ? null : _buyAgain),
     ];
     final gcash = order.gcash;
+    if (gcash?.canPay == true) {
+      buttons.add(_ActionButton(label: 'Pay with GCash', icon: Icons.payments_outlined,
+          onPressed: busy ? null : () => openGatewayPayment(context, order.id), primary: true));
+    }
     final gcashNote = gcash != null && order.status != 'cancelled' && gcash.status != 'paid'
         ? Padding(
             padding: const EdgeInsets.only(bottom: 8),

@@ -282,6 +282,8 @@ class OrderGcash {
     this.sellerNumber,
     this.sellerName,
     this.expiresAt,
+    this.gateway = false,
+    this.canPay = false,
   });
 
   /// awaiting_reference, pending_verification, paid or rejected.
@@ -291,6 +293,8 @@ class OrderGcash {
 
   /// The buyer can enter (or re-enter) the reference number.
   final bool canSubmit;
+  final bool gateway;
+  final bool canPay;
   final String? reference;
   final String? rejectionNote;
   final String? sellerNumber;
@@ -306,6 +310,8 @@ class OrderGcash {
       statusLabel: json['status_label'] as String? ?? 'GCash',
       amount: parseMoney(json['amount']),
       canSubmit: json['can_submit'] as bool? ?? false,
+      gateway: json['gateway'] as bool? ?? false,
+      canPay: json['can_pay'] as bool? ?? false,
       reference: json['reference'] as String?,
       rejectionNote: json['rejection_note'] as String?,
       sellerNumber: account?['number'] as String?,

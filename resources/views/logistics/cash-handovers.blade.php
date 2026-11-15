@@ -45,7 +45,7 @@
                                           data-confirm="Confirm that ₱{{ number_format($settlement->seller_earnings, 2) }} was transferred to {{ $settlement->seller?->name ?? 'the seller' }}?" data-confirm-title="Record seller transfer?" data-confirm-button="Record transfer">
                                         @csrf
                                         <label class="sr-only" for="seller-reference-{{ $settlement->id }}">Seller transfer reference</label>
-                                        <input id="seller-reference-{{ $settlement->id }}" name="seller_reference" maxlength="100" placeholder="Transfer reference" required>
+                                        <input id="seller-reference-{{ $settlement->id }}" name="seller_reference" minlength="13" maxlength="13" pattern="[A-Z0-9]{13}" title="13 uppercase letters or numbers" placeholder="REF20261115AB" required>
                                         <button type="submit" class="seller-button seller-button--small">Settle</button>
                                     </form>
                                 @endif

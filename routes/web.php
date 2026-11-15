@@ -52,6 +52,21 @@ use App\Models\Product;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::middleware(['auth', 'active', 'verified', 'role:seller'])->group(function () {
+    Route::get('/seller/wallet', [\App\Http\Controllers\SellerWalletController::class, 'index'])->name('seller.wallet');
+    Route::post('/seller/wallet/withdrawals', [\App\Http\Controllers\SellerWalletController::class, 'request'])->name('seller.wallet.request');
+});
+Route::middleware(['auth', 'active', 'verified', 'role:admin'])->group(function () {
+    Route::get('/admin/seller-withdrawals', [\App\Http\Controllers\SellerWalletController::class, 'index'])->name('admin.seller-withdrawals');
+    Route::post('/admin/seller-withdrawals/{withdrawal}/sent', [\App\Http\Controllers\SellerWalletController::class, 'sent'])->name('admin.seller-withdrawals.sent');
+});
+Route::get('/payments/return/{order}', [\App\Http\Controllers\EscrowPaymentController::class, 'returned'])->name('escrow.return');
+Route::middleware(['auth', 'active', 'verified'])->group(function () {
+    Route::get('/account/updates', [\App\Http\Controllers\AccountUpdateController::class, 'index'])->name('account.updates');
+    Route::post('/account/updates/read', [\App\Http\Controllers\AccountUpdateController::class, 'read'])->name('account.updates.read');
+    Route::post('/orders/{order}/gateway', [\App\Http\Controllers\EscrowPaymentController::class, 'pay'])->middleware('throttle:10,1')->name('escrow.pay');
+    Route::get('/buyer/payments/{order}', [\App\Http\Controllers\EscrowPaymentController::class, 'start'])->name('escrow.start');
+});
 // Uploaded photos saved as "/storage/..." links: redirected to Cloudflare R2, or sent from storage/app/public.
 Route::get('/storage/{path}', PublicFileController::class)->where('path', '.*')->name('storage.public');
 // Shoppers on Android land here instead of the web store (App\Http\Middleware\RequireAndroidApp).
@@ -120,6 +135,7 @@ Route::post('/email/verification-notification', [AuthController::class, 'resendV
 Route::post('/register/cancel', [AuthController::class, 'cancelRegistration'])->name('registration.cancel');
 
 Route::middleware(['auth', 'active', 'verified', 'role:buyer', 'nocache'])->prefix('buyer')->name('buyer.')->group(function () {
+Route::get('/order-counts', [\App\Http\Controllers\MobileOrderController::class, 'counts'])->name('order-counts');
     Route::get('/dashboard', [BuyerController::class, 'dashboard'])->name('dashboard');
     Route::get('/notifications', [BuyerNotificationController::class, 'index'])->name('notifications');
     Route::post('/notifications/open', [BuyerNotificationController::class, 'open'])->name('notifications.open');

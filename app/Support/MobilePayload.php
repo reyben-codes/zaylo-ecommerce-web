@@ -182,8 +182,9 @@ class MobilePayload
             'id' => $order->id,
             'order_number' => $order->order_number,
             'status' => $order->status,
-            'status_label' => Str::headline($order->status),
-            'status_message' => self::STATUS_MESSAGES[$order->status] ?? 'Your order status was updated.',
+            'status_label' => $order->status === 'placed' && $order->payment_method === 'gcash' && $order->payment?->status === 'paid' ? 'To ship' : Str::headline($order->status),
+            'status_message' => $order->status === 'placed' && $order->payment_method === 'gcash' && $order->payment?->status === 'paid'
+                ? 'Payment verified. Waiting for the seller to prepare your parcel.' : (self::STATUS_MESSAGES[$order->status] ?? 'Your order status was updated.'),
             'can_cancel' => in_array($order->status, CheckoutService::BUYER_CANCELLABLE, true),
             // Shown as a disabled Cancel button with this reason once the seller confirmed the order.
             'cancel_locked_reason' => self::cancelLockedReason($order),

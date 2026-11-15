@@ -12,7 +12,7 @@
         <form method="POST" action="{{ route($fromAdmin ? 'admin.cod-commissions.transfer' : 'logistics.cash.settlements.admin-transfer', $settlement) }}" class="payout-form">
             @csrf
             <label class="sr-only" for="admin-reference-{{ $settlement->id }}">Admin transfer reference</label>
-            <input id="admin-reference-{{ $settlement->id }}" name="admin_reference" maxlength="100" placeholder="Reference after sending" required>
+            <input id="admin-reference-{{ $settlement->id }}" name="admin_reference" minlength="13" maxlength="13" pattern="[A-Z0-9]{13}" title="13 uppercase letters or numbers" placeholder="REF20261115AB" required>
             <button type="submit" class="seller-button seller-button--small">Record sent transfer</button>
         </form>
     @endif

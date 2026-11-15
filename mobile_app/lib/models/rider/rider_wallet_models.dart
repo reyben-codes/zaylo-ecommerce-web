@@ -5,18 +5,20 @@ import 'package:zaylo_mobile/models/json_parsing.dart';
 
 /// The commission one delivered parcel earned.
 class RiderCommissionEntry {
-  const RiderCommissionEntry({required this.id, required this.amount, this.trackingNumber, this.createdAt});
+  const RiderCommissionEntry({required this.id, required this.amount, this.trackingNumber, this.createdAt, this.leg = 'delivery'});
 
   final int id;
   final double amount;
   final String? trackingNumber;
   final DateTime? createdAt;
+  final String leg;
 
   factory RiderCommissionEntry.fromJson(Map<String, dynamic> json) => RiderCommissionEntry(
         id: json['id'] as int,
         amount: parseMoney(json['amount']),
         trackingNumber: json['tracking_number'] as String?,
         createdAt: parseDate(json['created_at']),
+        leg: json['leg'] as String? ?? 'delivery',
       );
 }
 
