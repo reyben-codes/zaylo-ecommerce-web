@@ -12,7 +12,7 @@
             <h2 id="wallet-title"><i class="fas fa-wallet" aria-hidden="true"></i> Wallet</h2>
             <p>{{ $wallet['source'] }} goes into your wallet. Cash them out to GCash anytime.</p>
         </div>
-        <span class="wallet-demo">{{ config('escrow.live') ? 'Transfers require Admin confirmation' : 'Test payment mode — no real funds' }}</span>
+        <span class="wallet-demo">{{ config('escrow.live') || \App\Services\DemoPayments::enabled() ? 'Transfers require Admin confirmation' : 'Test payment mode — no real funds' }}</span>
     </header>
 
     <div class="wallet-panel__body">

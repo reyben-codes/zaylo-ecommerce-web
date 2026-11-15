@@ -21,6 +21,7 @@ class MobilePushObserver
         $push = app(MobilePushNotifications::class);
         if ($model instanceof OrderStatusHistory) {
             if (str_starts_with((string) $model->note, 'GCash gateway payment verified;')) return;
+            if (str_starts_with((string) $model->note, 'Payment authorized; funds held')) return;
             $order = $model->order;
             $text = OrderNotificationText::forStatus($model->status, $model->note);
             $reference = $order?->order_number;

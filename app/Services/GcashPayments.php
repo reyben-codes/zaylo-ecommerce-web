@@ -130,6 +130,7 @@ class GcashPayments
                 'seller_account' => null, 'can_submit' => false, 'expires_at' => null,
                 'can_pay' => $escrow->status === 'pending' && $order->status === 'placed',
                 'test_mode' => ! $escrow->livemode,
+                'local_checkout' => DemoPayments::isDemo($escrow),
             ];
         }
         if (! self::isGcash($order) || ! $order->payment) {

@@ -14,6 +14,24 @@
 
 ## Deploy and configure
 
+### School demonstration without a payment provider
+
+The local authorization adapter supports the complete order/hold/release flow without a PayMongo account, API keys, webhook, GCash credentials, or real transfers. Enable it deliberately in the hosting environment:
+
+```dotenv
+PAYMENT_DEMO_ENABLED=true
+PAYMONGO_LIVE=false
+ESCROW_ADMIN_USER_ID=<existing administrator user ID>
+```
+
+Save and redeploy. The existing settlement migration must already be applied; this adapter adds no database migration. Install the APK built from this change: the mobile checkout now permits short-lived signed payment links on the API server as well as PayMongo's checkout host.
+
+Use demonstration accounts for the buyer, seller, logistics partner, and administrator. Choose GCash, then Pay on the ZAYLO authorization page. Cancel payment leaves the order under To Pay and allows retrying. Approval moves it to To Ship; complete the usual scans, POD and buyer receipt to release the wallet allocation. Normal checkout wording is used, with no extra demo banners. The page does not impersonate GCash/PayMongo or collect a phone number, MPIN, OTP, password or bank details.
+
+Simulation remains explicit internally: sessions have a `demo_` identifier, `livemode` stays false, authorization actions log `simulation: true`, and resulting wallet credits remain outside the live balance. PayMongo webhooks ignore local sessions. Live gateway sessions cannot be authorized by the local adapter, and setting `PAYMONGO_LIVE=true` while the demo flag is enabled makes checkout unavailable. Keep `PAYMENT_DEMO_ENABLED=false` for a real gateway deployment. Outgoing bank/GCash payments are not performed by this adapter.
+
+### PayMongo integration
+
 1. Back up the database. Rehearse the new forward-only migration on a staging copy, then run `php artisan migrate --force`. Do not use `migrate:fresh` on an existing database. The financial migration deliberately preserves its records when application code is rolled back.
 2. Add server environment values from `.env.example`:
 

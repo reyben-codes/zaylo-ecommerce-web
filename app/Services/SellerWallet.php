@@ -41,6 +41,7 @@ class SellerWallet
     public function sent(SellerWithdrawal $withdrawal, User $admin, string $reference): void
     {
         abort_unless($admin->hasRole('admin'), 403);
+        abort_if(DemoPayments::enabled() && $withdrawal->livemode, 409, 'Live payouts are unavailable in this environment.');
         TransferReference::check($reference);
         DB::transaction(function () use ($withdrawal, $admin, $reference) {
             $locked = SellerWithdrawal::whereKey($withdrawal->id)->lockForUpdate()->firstOrFail();
@@ -48,7 +49,7 @@ class SellerWallet
             if (SellerWithdrawal::where('reference', $reference)->exists()) throw ValidationException::withMessages(['reference' => 'This reference is already recorded for another transfer.']);
             // This action records a verified manual transfer. It never simulates a gateway payout.
             $locked->update(['status' => 'paid', 'reference' => $reference, 'processed_by' => $admin->id, 'processed_at' => now()]);
-            $body = ($locked->livemode ? '' : 'TEST payout record; no real funds moved. ').'PHP '.number_format($locked->amount_minor / 100, 2).' allocated to your '.$locked->method.' account. Ref. '.$reference.'.';
+            $body = ($locked->livemode || DemoPayments::enabled() ? '' : 'TEST payout record; no real funds moved. ').'PHP '.number_format($locked->amount_minor / 100, 2).' allocated to your '.$locked->method.' account. Ref. '.$reference.'.';
             app(AccountUpdates::class)->send($locked->user_id, 'seller-withdrawal-paid-'.$locked->id, 'wallet', 'Seller payout settled', $body);
             app(AccountUpdates::class)->admins('seller-withdrawal-paid-'.$locked->id, 'Seller payout settled', $body);
             app(ActivityLogger::class)->record('admin.seller_withdrawal_sent', 'settlement', 'Recorded seller wallet transfer.', $admin, $locked, ['reference' => $reference, 'amount_minor' => $locked->amount_minor]);

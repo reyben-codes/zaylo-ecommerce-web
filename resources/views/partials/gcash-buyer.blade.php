@@ -14,7 +14,7 @@
             <p class="gcash-status__note"><strong>Seller's note:</strong> {{ $gcash['rejection_note'] }}</p>
         @endif
         @if(($gcash['gateway'] ?? false) && ($gcash['can_pay'] ?? false))
-            <p class="gcash-status__note">Pay securely through the gateway. Your payment is held until delivery is confirmed.@if($gcash['test_mode']) Test payment — no real funds move.@endif</p>
+            <p class="gcash-status__note">Continue to payment. Your payment is held until delivery is confirmed.@if($gcash['test_mode'] && ! ($gcash['local_checkout'] ?? false)) Test payment — no real funds move.@endif</p>
             <form method="POST" action="{{ route('escrow.pay', $order) }}">@csrf<button class="market-button" type="submit">Continue to GCash</button></form>
         @elseif($gcash['can_submit'])
             <p class="gcash-status__note">

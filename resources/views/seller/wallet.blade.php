@@ -2,11 +2,11 @@
 @section('title', $admin ? 'Seller payouts' : 'Seller wallet')
 @section('content')
 <section class="seller-page-heading"><div><h1>{{ $admin ? 'Seller payouts' : 'Seller wallet' }}</h1><p>Escrow proceeds become available after delivery confirmation and fee deductions. Withdrawals stay pending until funds are transferred.</p></div></section>
-@if(! config('escrow.live'))<aside class="seller-notice"><p>Test payment mode. Sandbox balances do not represent real money. Do not send real transfers for test payments.</p></aside>@endif
+@if(! config('escrow.live') && ! \App\Services\DemoPayments::enabled())<aside class="seller-notice"><p>Test payment mode. Sandbox balances do not represent real money. Do not send real transfers for test payments.</p></aside>@endif
 @if($errors->any())<p role="alert">{{ $errors->first() }}</p>@endif
 @if($admin)
 <section class="seller-panel"><header class="seller-panel__header"><h2>Gateway payment holds</h2></header><div class="seller-table-wrap"><table class="seller-table"><thead><tr><th>Order</th><th>Amount</th><th>Gateway fee</th><th>State</th><th>Gateway reference</th></tr></thead><tbody>
-@forelse($escrows as $escrow)<tr><td>{{ $escrow->order?->order_number }}<span class="seller-cell-note">{{ $escrow->livemode ? 'Live' : 'Test' }}</span></td><td>PHP {{ number_format($escrow->amount_minor / 100, 2) }}</td><td>PHP {{ number_format($escrow->gateway_fee_minor / 100, 2) }}</td><td>{{ str_replace('_', ' ', $escrow->status) }}</td><td>{{ $escrow->gateway_payment ?? 'Pending payment' }}</td></tr>@empty<tr><td colspan="5">No gateway payments yet.</td></tr>@endforelse
+@forelse($escrows as $escrow)<tr><td>{{ $escrow->order?->order_number }}<span class="seller-cell-note">{{ \App\Services\DemoPayments::isDemo($escrow) ? 'GCash' : ($escrow->livemode ? 'Live' : 'Test') }}</span></td><td>PHP {{ number_format($escrow->amount_minor / 100, 2) }}</td><td>PHP {{ number_format($escrow->gateway_fee_minor / 100, 2) }}</td><td>{{ str_replace('_', ' ', $escrow->status) }}</td><td>{{ $escrow->gateway_payment ?? 'Pending payment' }}</td></tr>@empty<tr><td colspan="5">No gateway payments yet.</td></tr>@endforelse
 </tbody></table></div></section>
 @endif
 @unless($admin)
@@ -21,7 +21,7 @@
 @endunless
 <section class="seller-panel"><div class="seller-table-wrap"><table class="seller-table"><thead><tr><th>Seller / date</th><th>Amount</th><th>Destination</th><th>Status</th><th>Reference</th></tr></thead><tbody>
 @forelse($withdrawals as $withdrawal)<tr>
-<td>{{ $withdrawal->user?->name }}<span class="seller-cell-note">{{ $withdrawal->livemode ? 'Live payout' : 'TEST — no real funds' }} · {{ $withdrawal->created_at->timezone('Asia/Manila')->format('M j, g:i A') }}</span></td>
+<td>{{ $withdrawal->user?->name }}<span class="seller-cell-note">{{ \App\Services\DemoPayments::enabled() && ! $withdrawal->livemode ? 'Wallet payout' : ($withdrawal->livemode ? 'Live payout' : 'TEST — no real funds') }} · {{ $withdrawal->created_at->timezone('Asia/Manila')->format('M j, g:i A') }}</span></td>
 <td>PHP {{ number_format($withdrawal->amount_minor / 100, 2) }}</td><td>{{ strtoupper($withdrawal->method) }} {{ $withdrawal->account_number }}<span class="seller-cell-note">{{ $withdrawal->account_name }}</span></td><td>{{ ucfirst($withdrawal->status) }}</td>
 <td>@if($admin && $withdrawal->status === 'pending')
 <form method="POST" action="{{ route('admin.seller-withdrawals.sent', $withdrawal) }}" class="seller-form">@csrf

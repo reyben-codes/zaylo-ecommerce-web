@@ -12,7 +12,8 @@ class EscrowPaymentController extends Controller
     public function start(Request $request, Order $order)
     {
         abort_unless(OrderParties::for($order)['buyer'] === (int) $request->user()->id, 404);
-        return view('buyer.gateway-checkout', ['order' => $order, 'testMode' => ! (bool) config('escrow.live')]);
+        $payment = EscrowPayments::forOrder($order);
+        return view('buyer.gateway-checkout', ['order' => $order, 'testMode' => ! (bool) config('escrow.live') && ! ($payment && \App\Services\DemoPayments::isDemo($payment))]);
     }
     public function pay(Request $request, Order $order, EscrowPayments $payments)
     {

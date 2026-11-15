@@ -61,6 +61,8 @@ Route::middleware(['auth', 'active', 'verified', 'role:admin'])->group(function 
     Route::post('/admin/seller-withdrawals/{withdrawal}/sent', [\App\Http\Controllers\SellerWalletController::class, 'sent'])->name('admin.seller-withdrawals.sent');
 });
 Route::get('/payments/return/{order}', [\App\Http\Controllers\EscrowPaymentController::class, 'returned'])->name('escrow.return');
+Route::get('/payments/checkout/{escrow}', [\App\Http\Controllers\DemoPaymentController::class, 'show'])->middleware(['signed', 'throttle:30,1'])->name('payment.checkout');
+Route::post('/payments/checkout/{escrow}/authorize', [\App\Http\Controllers\DemoPaymentController::class, 'confirm'])->middleware(['signed', 'throttle:10,1'])->name('payment.authorize');
 Route::middleware(['auth', 'active', 'verified'])->group(function () {
     Route::get('/account/updates', [\App\Http\Controllers\AccountUpdateController::class, 'index'])->name('account.updates');
     Route::post('/account/updates/read', [\App\Http\Controllers\AccountUpdateController::class, 'read'])->name('account.updates.read');

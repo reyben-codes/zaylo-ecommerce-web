@@ -14,6 +14,9 @@ class EscrowPayments
 {
     public static function configured(): bool
     {
+        if (config('escrow.demo_enabled')) {
+            return DemoPayments::enabled() && filled(config('escrow.admin_user_id')) && Schema::hasTable('escrow_payments');
+        }
         $key = (string) config('escrow.secret_key');
         return str_starts_with($key, config('escrow.live') ? 'sk_live_' : 'sk_test_')
             && filled(config('escrow.webhook_secret')) && filled(config('escrow.admin_user_id')) && Schema::hasTable('escrow_payments');
@@ -28,6 +31,7 @@ class EscrowPayments
     {
         return EscrowPayment::firstOrCreate(['order_id' => $order->id], [
             'amount_minor' => (int) round($order->total * 100), 'livemode' => (bool) config('escrow.live'),
+            'checkout_session' => DemoPayments::enabled() ? 'demo_'.\Illuminate\Support\Str::uuid() : null,
         ]);
     }
 
@@ -39,6 +43,11 @@ class EscrowPayments
             $locked = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
             abort_unless($locked->payment_method === 'gcash' && $locked->status === 'placed', 422, 'This order is not awaiting payment.');
             $escrow = EscrowPayment::where('order_id', $locked->id)->lockForUpdate()->firstOrFail();
+            if (DemoPayments::isDemo($escrow)) {
+                abort_unless(DemoPayments::enabled(), 409, 'This checkout is unavailable.');
+                return app(DemoPayments::class)->checkoutUrl($escrow);
+            }
+            abort_if(config('escrow.demo_enabled'), 409, 'This order uses a different payment provider. Create a new order for the current checkout.');
             abort_unless($escrow->status === 'pending', 422, 'This payment is no longer pending.');
             abort_unless($escrow->livemode === (bool) config('escrow.live'), 409, 'Payment mode has changed. Contact support.');
             if ($escrow->checkout_url) return $escrow->checkout_url;
@@ -92,7 +101,7 @@ class EscrowPayments
         $sessionId = data_get($session, 'id');
         if (! is_string($sessionId)) return;
         $candidate = EscrowPayment::where('checkout_session', $sessionId)->first();
-        if (! $candidate) return;
+        if (! $candidate || DemoPayments::isDemo($candidate)) return;
         DB::transaction(function () use ($candidate, $session, $attributes) {
             // Same order-first lock ordering as cancellation, delivery confirmation and release.
             $order = Order::whereKey($candidate->order_id)->lockForUpdate()->firstOrFail();
@@ -137,6 +146,7 @@ class EscrowPayments
             $locked = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
             $escrow = EscrowPayment::whereKey($candidate->id)->lockForUpdate()->firstOrFail();
             if ($escrow->status === 'released') return;
+            if (DemoPayments::isDemo($escrow)) abort_unless(DemoPayments::enabled(), 409, 'This payment cannot be released in the current environment.');
             if ($locked->status !== 'completed' || $escrow->status !== 'held') {
                 throw ValidationException::withMessages(['escrow' => 'Funds release only after a verified payment and confirmed delivery.']);
             }
