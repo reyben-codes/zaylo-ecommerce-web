@@ -676,7 +676,7 @@ class RiderDashboard {
 class RiderSellerPickup {
   const RiderSellerPickup({required this.id, required this.trackingNumber, required this.seller,
     required this.address, required this.status, required this.items, this.scannedAt, this.receivedAt,
-    this.canConfirmHandover = false, this.handoverConfirmed = false});
+    this.canConfirmHandover = false, this.handoverConfirmed = false, this.commissionPending = false});
 
   final int id;
   final String trackingNumber;
@@ -688,6 +688,7 @@ class RiderSellerPickup {
   final DateTime? receivedAt;
   final bool canConfirmHandover;
   final bool handoverConfirmed;
+  final bool commissionPending;
   bool get canScan => status == 'confirmed';
   String get statusLabel => switch (status) {
     'ready' => 'Assigned · waiting for pickup confirmation',
@@ -703,6 +704,7 @@ class RiderSellerPickup {
     status: json['status'] as String? ?? 'ready', scannedAt: _date(json['scanned_at']), receivedAt: _date(json['received_at']),
     canConfirmHandover: json['can_confirm_handover'] as bool? ?? false,
     handoverConfirmed: json['handover_confirmed'] as bool? ?? false,
+    commissionPending: json['commission_pending'] as bool? ?? false,
     items: (json['items'] as List<dynamic>? ?? const []).map((item) => '${item['name']} × ${item['quantity']}').toList(),
   );
 }

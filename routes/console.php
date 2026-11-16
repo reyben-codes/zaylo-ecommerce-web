@@ -36,3 +36,8 @@ Artisan::command('push:send-pending', function (App\Services\MobilePushNotificat
     $this->info($push->drain().' mobile notifications delivered to Firebase.');
 })->purpose('Retry pending mobile push notifications after transient delivery failures');
 Schedule::command('push:send-pending')->everyMinute()->withoutOverlapping()->onOneServer();
+
+Artisan::command('rider-earnings:reconcile', function (App\Services\RiderLegEarnings $earnings) {
+    $this->info($earnings->reconcile().' pending rider commissions credited.');
+})->purpose('Retry completed rider legs after missing commission setup is corrected');
+Schedule::command('rider-earnings:reconcile')->everyFiveMinutes()->withoutOverlapping()->onOneServer();

@@ -37,6 +37,8 @@ class MobileRiderPickupController extends Controller
 
         return response()->json([
             'message' => 'Parcel scanned at seller. It has been added to your active transit manifest.',
+            'commission_pending' => ! $shipment->rider_fee_quote,
+            'commission_message' => $shipment->rider_fee_quote ? null : 'Pickup recorded. Commission is pending until logistics completes the map pins, parcel weight and route calculation.',
             'status' => 'picked_up_in_transit',
             'pickup' => [
                 'id' => $shipment->id,

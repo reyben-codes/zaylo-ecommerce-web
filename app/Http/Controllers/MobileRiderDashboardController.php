@@ -141,7 +141,10 @@ class MobileRiderDashboardController extends Controller
         $shipment = $pickups->scan($request->user(), $data['code']);
 
         return response()->json([
-            'message' => 'Seller pickup confirmed. Bring the parcel to your logistics hub for receiving and sorting.',
+            'message' => $shipment->rider_fee_quote
+                ? 'Seller pickup confirmed. Bring the parcel to your logistics hub for receiving and sorting.'
+                : 'Pickup recorded. Bring the parcel to the hub. Commission is pending location, weight or route setup by logistics.',
+            'commission_pending' => ! $shipment->rider_fee_quote,
             'pickup' => ['id' => $shipment->id, 'tracking_number' => RiderDeliveries::labelCode($shipment), 'status' => 'picked_up'],
         ]);
     }

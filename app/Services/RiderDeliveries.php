@@ -263,7 +263,7 @@ class RiderDeliveries
             if ($to === 'out_for_delivery' && Schema::hasColumn('shipments', 'rider_fee_quote')) {
                 DB::transaction(function () use ($shipment) {
                     $locked = Shipment::whereKey($shipment->id)->lockForUpdate()->firstOrFail();
-                    app(RiderLegEarnings::class)->quote($locked);
+                    app(RiderLegEarnings::class)->quoteOrDefer($locked);
                     $locked->update(['delivery_scanned_at' => now()]);
                 });
                 $shipment->refresh();

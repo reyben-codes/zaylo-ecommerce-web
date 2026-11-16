@@ -837,3 +837,26 @@
     align-items: flex-start;
     gap: 0.5rem;
 }
+
+/* Pickup rows expose one management control and one print action. */
+.parcel-actions--pickup { display: grid; gap: 8px; width: 250px; max-width: 100%; min-width: 210px; margin-left: auto; align-items: stretch; }
+.parcel-actions--pickup > .seller-button { justify-content: center; width: 100%; }
+.parcel-table:has(.parcel-actions--pickup) td { vertical-align: top; }
+.parcel-pickup-panel { width: 100%; text-align: left; }
+.parcel-pickup-panel > summary { display: flex; justify-content: space-between; width: 100%; gap: 14px; list-style: none; cursor: pointer; }
+.parcel-pickup-panel > summary::-webkit-details-marker { display: none; }
+.parcel-pickup-panel > summary .fa-chevron-down { transition: transform 300ms ease-out; font-size: 10px; }
+.parcel-pickup-panel[open] > summary .fa-chevron-down { transform: rotate(180deg); }
+.parcel-pickup-panel__body { display: grid; gap: 16px; padding: 16px 12px; margin-top: 8px; border: 1px solid var(--c-dcd2c8); border-radius: 10px; background: var(--c-faf7f2); }
+.parcel-pickup-panel__body .parcel-inline-form,
+.parcel-pickup-panel__body form:has(.parcel-code-input) { display: grid; gap: 8px; align-items: stretch; }
+.parcel-pickup-panel__body .parcel-inline-form input,
+.parcel-pickup-panel__body .parcel-inline-form select,
+.parcel-pickup-panel__body .parcel-code-input { width: 100%; min-width: 0; }
+.parcel-pickup-panel__body .seller-button { justify-content: center; white-space: normal; }
+.parcel-pickup-panel__body label { font-size: 12px; font-weight: 600; }
+.parcel-pickup-panel__body > form + form,
+.parcel-pickup-panel__body > .parcel-decline { padding-top: 12px; border-top: 1px solid var(--c-dcd2c8); }
+.parcel-actions--pickup summary:focus-visible { outline: 2px solid var(--zaylo-accent); outline-offset: 3px; }
+@media (max-width: 760px) { .parcel-actions--pickup { width: 100%; min-width: 0; margin-left: 0; } }
+@media (prefers-reduced-motion: reduce) { .parcel-pickup-panel > summary .fa-chevron-down { transition: none; } }

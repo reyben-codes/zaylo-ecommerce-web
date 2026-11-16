@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:zaylo_mobile/api/rider_api.dart';
 import 'package:zaylo_mobile/features/rider/dashboard/widgets/parcel_handover_button.dart';
 import 'package:zaylo_mobile/models/buyer/order_models.dart';
+import 'package:zaylo_mobile/models/rider/rider_dashboard_models.dart';
 import 'package:zaylo_mobile/notifications/account_update_badge.dart';
 
 class FakeSettlementApi extends RiderApi {
@@ -14,6 +15,13 @@ class FakeSettlementApi extends RiderApi {
 }
 
 void main() {
+  test('a collected pickup exposes pending commission without relocking handover', () {
+    final pickup = RiderSellerPickup.fromJson({'id': 1, 'tracking_number': 'TRK-1', 'status': 'picked_up',
+      'commission_pending': true, 'can_confirm_handover': true, 'items': []});
+    expect(pickup.commissionPending, isTrue);
+    expect(pickup.canConfirmHandover, isTrue);
+    expect(pickup.canScan, isFalse);
+  });
   test('gateway payments never ask buyers for a manual reference', () {
     final payment = OrderGcash.fromJson({'gateway': true, 'status': 'pending', 'can_submit': false, 'can_pay': true, 'amount': 1120});
     expect(payment.gateway, isTrue);

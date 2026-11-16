@@ -97,6 +97,7 @@ class RiderSellerPickups
             'handover_confirmed' => $shipment->rider_handover_confirmed_at !== null,
             'can_confirm_handover' => $shipment->pickup_scanned_at !== null && ! $isArrivedAtHub && ! $shipment->rider_handover_confirmed_at,
             'earning_quote' => $shipment->rider_fee_quote,
+            'commission_pending' => ! $shipment->rider_fee_quote && $shipment->pickup_scanned_at !== null,
             'items' => $items->map(fn ($item) => ['name' => $item->product_name, 'quantity' => (int) $item->quantity])->values(),
         ];
     }
@@ -122,7 +123,7 @@ class RiderSellerPickups
             if (! array_key_exists('picked_up', ShipmentWorkflow::nextSteps($shipment))) {
                 throw ValidationException::withMessages(['code' => 'This parcel is not confirmed for pickup, or has already been collected.']);
             }
-            if (Schema::hasColumn('shipments', 'rider_fee_quote')) app(RiderLegEarnings::class)->quote($shipment);
+            if (Schema::hasColumn('shipments', 'rider_fee_quote')) app(RiderLegEarnings::class)->quoteOrDefer($shipment);
             $shipment->update(['pickup_courier_id' => $user->id] + (Schema::hasColumn('shipments', 'pickup_scanned_at') ? ['pickup_scanned_at' => now()] : []));
             app(ShipmentWorkflow::class)->advance($shipment, 'picked_up', $user, 'Collected from seller by rider '.$user->name.' after scanning the waybill.');
 

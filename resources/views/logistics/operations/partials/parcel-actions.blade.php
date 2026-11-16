@@ -10,6 +10,7 @@
     $awaitingConfirmation = $workflow::awaitingPickupConfirmation($shipment);
     $awaitingSort = $workflow::awaitingSort($shipment);
     $stage = $workflow::stageOf($shipment);
+    $managePickup = in_array($stage, ['ready', 'confirmed'], true);
     $riders = $riders ?? null;
     $couriers = $couriers ?? null;
     $tracking = $shipment->tracking_number ?? $shipment->tracking_code;
@@ -21,11 +22,22 @@
         : collect();
 @endphp
 
-<div class="parcel-actions">
+<div class="parcel-actions{{ $managePickup ? ' parcel-actions--pickup' : '' }}">
+    @if($managePickup)
+        <details class="parcel-pickup-panel" data-smooth-disclosure @if($thisParcel && $errors->any()) open @endif>
+            <summary class="seller-button seller-button--small">
+                {{ $awaitingConfirmation ? 'Review pickup' : ($shipment->pickup_courier_id ? 'Manage pickup' : 'Assign pickup rider') }}
+                <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                <span class="sr-only"> for {{ $tracking }}</span>
+            </summary>
+            <div data-disclosure-content>
+                <div class="parcel-pickup-panel__body">
+    @endif
     @if(in_array($stage, ['ready', 'confirmed'], true) && isset($pickupRiders))
         @if($localPickupRiders->isNotEmpty() && $shipment->logistics_provider_id)
             <form method="POST" action="{{ route('logistics.parcels.pickup-rider', $shipment) }}" class="parcel-inline-form">
                 @csrf
+                <input type="hidden" name="parcel" value="{{ $shipment->id }}">
                 <label for="pickup-rider-{{ $shipment->id }}">Pickup rider</label>
                 <select id="pickup-rider-{{ $shipment->id }}" name="rider_id" required>
                     <option value="">Choose pickup rider</option>
@@ -33,7 +45,7 @@
                         <option value="{{ $pickupRider->id }}" @selected((int) $shipment->pickup_courier_id === (int) $pickupRider->user_id)>{{ $pickupRider->user->name }}</option>
                     @endforeach
                 </select>
-                <button type="submit" class="seller-button seller-button--small">Assign pickup rider</button>
+                <button type="submit" class="seller-button seller-button--small">{{ $shipment->pickup_courier_id ? 'Update pickup rider' : 'Assign pickup rider' }}</button>
             </form>
         @else
             <span class="seller-cell-note">{{ $shipment->logistics_provider_id ? 'No on-shift pickup riders in the seller location.' : 'Confirm this pickup before assigning a rider.' }}</span>
@@ -60,7 +72,7 @@
         </form>
     @endif
 
-    @if($stage === 'confirmed' && isset($couriers) && $couriers->isNotEmpty())
+    @if($stage === 'confirmed' && ! isset($pickupRiders) && isset($couriers) && $couriers->isNotEmpty())
         <form method="POST" action="{{ route('logistics.parcels.courier', $shipment) }}" class="parcel-inline-form">
             @csrf
             <label class="sr-only" for="assign-courier-{{ $shipment->id }}">Assign courier</label>
@@ -173,6 +185,11 @@
         <span class="seller-cell-note parcel-declined"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ $deliveries::failureSummary($failure->reason, $failure->note) }}</span>
     @endif
 
+    @if($managePickup)
+                </div>
+            </div>
+        </details>
+    @endif
     @if(\App\Support\Waybill::available($shipment))
         <a href="{{ route('logistics.parcels.waybill.print', $shipment) }}" class="seller-button seller-button--small seller-button--secondary" target="_blank" rel="noopener"
            aria-label="Print waybill for parcel {{ $tracking }} (opens in a new tab)"><i class="fas fa-print" aria-hidden="true"></i> Print waybill</a>

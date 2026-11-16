@@ -59,7 +59,10 @@ class RiderSellerPickupTest extends TestCase
         $scan()->assertUnprocessable();
         $shipment->update(['pickup_confirmed_at' => now()]);
         // Home city no longer matches the seller's city, but this is still the pickup logistics assigned.
-        $scan(' pickup-code ')->assertOk()->assertJsonPath('pickup.status', 'picked_up');
+        $scan(' pickup-code ')->assertOk()->assertJsonPath('pickup.status', 'picked_up')->assertJsonPath('commission_pending', true);
+        $this->assertNull($shipment->fresh()->rider_fee_quote);
+        $this->assertDatabaseCount('rider_leg_commissions', 0);
+        $this->postJson('/api/mobile/rider/parcels/'.$shipment->id.'/handover')->assertOk();
         $this->assertSame($user->id, $shipment->fresh()->pickup_courier_id);
         $this->assertSame('shipped', $sellerOrder->fresh()->status);
         $this->assertNotNull($shipment->fresh()->pickup_scanned_at);

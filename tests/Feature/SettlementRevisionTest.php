@@ -275,6 +275,42 @@ class SettlementRevisionTest extends TestCase
         Http::assertSentCount(2);
     }
 
+    public function test_pending_commission_retries_after_setup_and_routing_are_fixed_without_duplicate_credit(): void
+    {
+        $f = $this->parcel();
+        $rider = User::factory()->create(['role' => 'rider', 'status' => 'active']);
+        $f['shipment']->update(['pickup_courier_id' => $rider->id, 'pickup_scanned_at' => now(),
+            'rider_handover_confirmed_at' => now(), 'hub_received_at' => now()]);
+        $service = app(\App\Services\RiderLegEarnings::class);
+        Http::preventStrayRequests();
+        $this->assertNull($service->quoteOrDefer($f['shipment']->fresh()));
+        $this->assertSame(0, $service->reconcile());
+        $this->assertDatabaseCount('rider_leg_commissions', 0);
+        $this->assertSame(1, AccountUpdate::where('user_id', $f['owner']->id)
+            ->where('event_key', 'commission-setup-'.$f['shipment']->id)->count());
+        $f['provider']->update(['hub_latitude' => 14.22, 'hub_longitude' => 121.16]);
+        $f['order']->update(['delivery_latitude' => 14.24, 'delivery_longitude' => 121.17]);
+        $f['seller']->addresses()->create(['recipient_name' => 'Seller', 'phone' => '09171234567', 'line1' => '1 Seller St',
+            'barangay' => 'Test Barangay', 'city' => 'Calamba', 'province' => 'Laguna', 'country_code' => 'PH', 'latitude' => 14.21, 'longitude' => 121.15]);
+        $product = \App\Models\Product::create(['seller_id' => $f['sellerOrder']->seller_id, 'name' => 'Weighted Parcel',
+            'category_id' => \App\Models\Category::create(['name' => 'Storage bins', 'slug' => 'storage-bins'])->id,
+            'price' => 1000, 'stock' => 3, 'weight_grams' => 1000]);
+        $f['sellerOrder']->items()->create(['product_id' => $product->id, 'product_variant_id' => $product->defaultVariant->id,
+            'product_name' => 'Weighted Parcel', 'variant_name' => 'Default', 'quantity' => 2, 'unit_price_minor' => 100000]);
+        $routingOffline = true;
+        Http::fake(function () use (&$routingOffline) {
+            if ($routingOffline) throw new \Illuminate\Http\Client\ConnectionException('Routing offline');
+            return Http::response(['code' => 'Ok', 'routes' => [['distance' => 5000]]]);
+        });
+        $this->assertSame(0, $service->reconcile());
+        $this->assertDatabaseCount('rider_leg_commissions', 0);
+        $routingOffline = false;
+        $this->assertSame(1, $service->reconcile());
+        $this->assertSame(0, $service->reconcile());
+        $this->assertDatabaseCount('rider_leg_commissions', 1);
+        $this->assertDatabaseHas('rider_leg_commissions', ['shipment_id' => $f['shipment']->id, 'user_id' => $rider->id, 'leg' => 'pickup', 'amount' => 26]);
+    }
+
     public function test_legacy_order_schema_uses_the_same_verified_release_and_wallet_rules(): void
     {
         $this->useLegacyOrderTables();

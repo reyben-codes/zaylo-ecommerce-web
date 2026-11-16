@@ -290,6 +290,11 @@ class RiderDashboardTabState extends State<RiderDashboardTab> with RiderDelivery
                   ),
                   const SizedBox(height: 6),
                   Text('Seller: ${pickup.seller}', style: const TextStyle(fontWeight: FontWeight.w500)),
+                  if (pickup.commissionPending)
+                    const Padding(padding: EdgeInsets.only(top: 6), child: Text(
+                      'Commission pending: logistics needs to complete location, weight or route details.',
+                      style: TextStyle(fontSize: 12),
+                    )),
                   if (pickup.scannedAt != null)
                     Text('Scanned: ${pickup.scannedAt}', style: TextStyle(color: ZayloColors.muted, fontSize: 12)),
                   ParcelHandoverButton(api: widget.api, shipmentId: pickup.id, enabled: pickup.canConfirmHandover,
@@ -329,6 +334,11 @@ class RiderDashboardTabState extends State<RiderDashboardTab> with RiderDelivery
                   const SizedBox(height: 6),
                   if (pickup.receivedAt != null)
                     Text('Received: ${pickup.receivedAt}', style: TextStyle(color: ZayloColors.muted, fontSize: 12)),
+                  if (pickup.commissionPending)
+                    const Padding(padding: EdgeInsets.only(top: 6), child: Text(
+                      'Commission pending setup. It will be credited after the required details are completed.',
+                      style: TextStyle(fontSize: 12),
+                    )),
                 ]),
               ),
             ),

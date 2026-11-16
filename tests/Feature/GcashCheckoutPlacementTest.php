@@ -50,6 +50,13 @@ class GcashCheckoutPlacementTest extends TestCase
 
     public function test_gcash_checkout_is_not_placed_until_payment_is_confirmed(): void
     {
+        // Reproduce the older deployed schema rather than the nullable fresh-install schema.
+        Schema::table('orders', fn (Blueprint $table) => $table->timestamp('placed_at')->nullable(false)->change());
+        $this->assertFalse(collect(Schema::getColumns('orders'))->firstWhere('name', 'placed_at')['nullable']);
+        $repair = require database_path('migrations/2026_11_15_235959_allow_unpaid_checkouts_without_placement_timestamp.php');
+        $repair->up();
+        $repair->up();
+        $this->assertTrue(collect(Schema::getColumns('orders'))->firstWhere('name', 'placed_at')['nullable']);
         $buyer = $this->buyer();
         $seller = $this->seller();
         $admin = User::factory()->create(['role' => 'admin', 'status' => 'active']);
