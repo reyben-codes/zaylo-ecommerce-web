@@ -6,6 +6,7 @@
     $value = fn (string $field) => old($field, $provider?->{$field});
     $networkKey = old('network', $selectedNetworkKey ?? $provider?->network_brand);
     $network = \App\Support\LogisticsNetworks::find($networkKey);
+    $mainAddress = $network ? \App\Support\LogisticsNetworks::mainHubAddressFor($network['key']) : null;
     $branchName = old('branch_name', $provider?->branch_name);
     $companyName = old('company_name', $provider?->name);
     $chosenAreas = (array) old('service_areas', $provider?->service_areas ?? []);
@@ -17,7 +18,14 @@
     ];
 @endphp
 
-<div class="seller-application" data-business-application>
+<div class="seller-application" data-business-application
+     @if($mainAddress)
+         data-main-street="{{ $mainAddress['street_address'] ?? '' }}"
+         data-main-city="{{ $mainAddress['city_code'] ?? '' }}"
+         data-main-barangay="{{ $mainAddress['barangay_code'] ?? '' }}"
+         data-main-network="{{ $network['short_name'] ?? 'Main' }}"
+     @endif
+>
     @if($network)
         <div class="network-selection-banner">
             <div class="network-selection-meta">
@@ -90,6 +98,9 @@
 
     <fieldset class="seller-application__group" data-wizard-step data-step-title="Office address" data-address-form data-locations-url="{{ url('/api/locations') }}" data-location-ready-text="Locations loaded. Choose your office location.">
         <legend>Office address</legend>
+        @if($network)
+            <p class="field-note">Provide the physical address of this branch hub. It must be located at a different address from the {{ $network['short_name'] }} main hub.</p>
+        @endif
         <div class="form-row">
             <div class="form-group">
                 <label for="region_code">Region</label>
@@ -118,6 +129,7 @@
             <div class="form-group">
                 <label for="street_address">Street address</label>
                 <input id="street_address" name="street_address" value="{{ $value('street_address') }}" maxlength="255" autocomplete="address-line1" placeholder="House, unit or lot number and street" required>
+                <p class="field-note field-note--error" data-hub-address-warning hidden></p>
             </div>
             <div class="form-group seller-application__postal">
                 <label for="postal_code">Postal code</label>

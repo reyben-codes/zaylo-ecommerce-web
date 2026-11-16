@@ -73,6 +73,79 @@
             input.addEventListener('input', updatePreview);
             if (input.value) updatePreview();
         });
+
+        // Hub address validation against main network hub
+        const mainStreet = root.dataset.mainStreet;
+        const mainCity = root.dataset.mainCity;
+        const mainBrgy = root.dataset.mainBarangay;
+        const mainNetwork = root.dataset.mainNetwork || 'main';
+
+        if (mainStreet && mainCity) {
+            const streetInput = root.querySelector('input[name="street_address"]');
+            const citySelect = root.querySelector('select[name="city_code"]');
+            const brgySelect = root.querySelector('select[name="barangay_code"]');
+            const warning = root.querySelector('[data-hub-address-warning]');
+
+            const normalize = (str) => {
+                if (!str) return '';
+                return str.toLowerCase()
+                    .replace(/\bstreet\b/g, 'st')
+                    .replace(/\bavenue\b/g, 'ave')
+                    .replace(/\broad\b/g, 'rd')
+                    .replace(/\bdrive\b/g, 'dr')
+                    .replace(/\bbuilding\b/g, 'bldg')
+                    .replace(/\bbarangay\b/g, 'brgy')
+                    .replace(/\bpoblacion\b/g, 'pob')
+                    .replace(/\bhighway\b/g, 'hwy')
+                    .replace(/\bblock\b/g, 'blk')
+                    .replace(/\blot\b/g, 'lt')
+                    .replace(/\bfloor\b/g, 'flr')
+                    .replace(/\bunit\b/g, 'unit')
+                    .replace(/[^a-z0-9]/g, '');
+            };
+
+            const normMain = normalize(mainStreet);
+
+            const checkAddress = () => {
+                if (!streetInput) return;
+                const currentStreet = streetInput.value.trim();
+                const currentCity = citySelect ? citySelect.value : '';
+                const currentBrgy = brgySelect ? brgySelect.value : '';
+
+                if (!currentStreet || !currentCity) {
+                    streetInput.setCustomValidity('');
+                    if (warning) {
+                        warning.hidden = true;
+                        warning.textContent = '';
+                    }
+                    return;
+                }
+
+                const normCurrent = normalize(currentStreet);
+                const cityMatch = currentCity === mainCity;
+                const brgyMatch = !mainBrgy || !currentBrgy || currentBrgy === mainBrgy;
+                const streetMatch = normCurrent === normMain || normCurrent.includes(normMain) || normMain.includes(normCurrent);
+
+                if (cityMatch && brgyMatch && streetMatch) {
+                    const msg = `This address matches the ${mainNetwork} main network hub. Regional branch hubs must be located at a different address.`;
+                    streetInput.setCustomValidity(msg);
+                    if (warning) {
+                        warning.textContent = msg;
+                        warning.hidden = false;
+                    }
+                } else {
+                    streetInput.setCustomValidity('');
+                    if (warning) {
+                        warning.hidden = true;
+                        warning.textContent = '';
+                    }
+                }
+            };
+
+            streetInput?.addEventListener('input', checkAddress);
+            citySelect?.addEventListener('change', checkAddress);
+            brgySelect?.addEventListener('change', checkAddress);
+        }
     });
 
     init(document);

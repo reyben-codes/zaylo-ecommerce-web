@@ -28,6 +28,11 @@ class LogisticsNetworkBranchApplicationTest extends TestCase
             'status' => 'approved',
             'approved_at' => now(),
             'contact_phone' => '09170000001',
+            'street_address' => 'Zaylo Central Hub, Km 18 West Service Road',
+            'region_code' => '130000000',
+            'city_code' => '137404000',
+            'barangay_code' => '137404001',
+            'postal_code' => '1105',
         ]);
 
         $jntOwner = User::factory()->create(['role' => 'logistics', 'status' => 'active']);
@@ -40,6 +45,11 @@ class LogisticsNetworkBranchApplicationTest extends TestCase
             'status' => 'approved',
             'approved_at' => now(),
             'contact_phone' => '09170000002',
+            'street_address' => 'Purok 1',
+            'region_code' => '040000000',
+            'city_code' => '043415000',
+            'barangay_code' => '043415004',
+            'postal_code' => '4007',
         ]);
 
         $flashOwner = User::factory()->create(['role' => 'logistics', 'status' => 'active']);
@@ -52,6 +62,11 @@ class LogisticsNetworkBranchApplicationTest extends TestCase
             'status' => 'approved',
             'approved_at' => now(),
             'contact_phone' => '09170000003',
+            'street_address' => 'Rizal Street, Highway',
+            'region_code' => '040000000',
+            'city_code' => '043422000',
+            'barangay_code' => '043422005',
+            'postal_code' => '4010',
         ]);
 
         return [$zaylo, $jnt, $flash];
@@ -177,5 +192,80 @@ class LogisticsNetworkBranchApplicationTest extends TestCase
         $this->assertSame('jnt_express', $jntBranch->network_brand);
         $this->assertSame($jntParent->id, $jntBranch->parent_id);
         $this->assertSame('jnt_express', $jntBranch->waybill_layout);
+    }
+
+    public function test_registering_hub_cannot_pick_same_address_as_main_hub(): void
+    {
+        Storage::fake('local');
+        Notification::fake();
+        [$zayloParent] = $this->createParentNetworkProviders();
+
+        // Submitting with the exact same address as the Zaylo main hub
+        $response = $this->post(route('register'), [
+            'role' => 'logistics',
+            'network' => 'zaylo_express',
+            'branch_name' => 'Duplicate Hub Address',
+            'sec_registration_no' => 'CS202699999',
+            'tin' => '111-222-333-000',
+            'contact_position' => 'Hub Manager',
+            'first_name' => 'Juan',
+            'last_name' => 'Cruz',
+            'email' => 'juan.cruz@duplicate-hub.ph',
+            'phone' => '09171239999',
+            'password' => 'SecurePass123!@#',
+            'password_confirmation' => 'SecurePass123!@#',
+            'terms' => '1',
+            'region_code' => '130000000',
+            'city_code' => '137404000',
+            'barangay_code' => '137404001',
+            'street_address' => 'Zaylo Central Hub, Km 18 West Service Road',
+            'postal_code' => '1105',
+            'service_areas' => ['NCR'],
+            'sec_certificate' => UploadedFile::fake()->create('sec.pdf', 500, 'application/pdf'),
+            'bir_2303' => UploadedFile::fake()->create('bir.pdf', 500, 'application/pdf'),
+            'business_permit' => UploadedFile::fake()->create('permit.pdf', 500, 'application/pdf'),
+            'representative_id' => UploadedFile::fake()->create('id.jpg', 500, 'image/jpeg'),
+        ]);
+
+        $response->assertSessionHasErrors('street_address');
+        $this->assertDatabaseMissing('users', ['email' => 'juan.cruz@duplicate-hub.ph']);
+    }
+
+    public function test_jnt_hub_cannot_pick_same_address_as_jnt_main_hub(): void
+    {
+        Storage::fake('local');
+        Notification::fake();
+        [$zaylo, $jntParent] = $this->createParentNetworkProviders();
+
+        // Submitting with the same address as J&T main hub (Purok 1, Baanan, Magdalena)
+        $response = $this->post(route('register'), [
+            'role' => 'logistics',
+            'network' => 'jnt_express',
+            'branch_name' => 'Duplicate J&T Hub',
+            'sec_registration_no' => 'CS202677777',
+            'tin' => '333-444-555-000',
+            'contact_position' => 'Hub Manager',
+            'first_name' => 'Mario',
+            'last_name' => 'Reyes',
+            'email' => 'mario.reyes@duplicate-jnt.ph',
+            'phone' => '09175556677',
+            'password' => 'SecurePass123!@#',
+            'password_confirmation' => 'SecurePass123!@#',
+            'terms' => '1',
+            'region_code' => '040000000',
+            'province_code' => '043400000',
+            'city_code' => '043415000',
+            'barangay_code' => '043415004',
+            'street_address' => 'Purok 1',
+            'postal_code' => '4007',
+            'service_areas' => ['IV-A'],
+            'sec_certificate' => UploadedFile::fake()->create('sec.pdf', 500, 'application/pdf'),
+            'bir_2303' => UploadedFile::fake()->create('bir.pdf', 500, 'application/pdf'),
+            'business_permit' => UploadedFile::fake()->create('permit.pdf', 500, 'application/pdf'),
+            'representative_id' => UploadedFile::fake()->create('id.jpg', 500, 'image/jpeg'),
+        ]);
+
+        $response->assertSessionHasErrors('street_address');
+        $this->assertDatabaseMissing('users', ['email' => 'mario.reyes@duplicate-jnt.ph']);
     }
 }

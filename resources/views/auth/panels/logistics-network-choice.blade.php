@@ -49,3 +49,4 @@
         <p>Already have an approved account? <a href="{{ route('logistics.login') }}">Logistics Center sign in</a></p>
     </footer>
 </div>
+

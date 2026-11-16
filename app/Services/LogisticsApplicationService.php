@@ -50,7 +50,7 @@ class LogisticsApplicationService
             'branch_name' => ['nullable', 'string', 'min:2', 'max:100'],
             'company_name' => ['required', 'string', 'min:2', 'max:150', function (string $attribute, mixed $value, \Closure $fail) use ($existing) {
                 if (is_string($value) && $this->companyNameTaken($value, $existing?->id)) {
-                    $fail('This company or branch hub name is already registered.');
+                    $fail('This company name is already registered.');
                 }
             }],
             'sec_registration_no' => ['required', 'string', 'regex:'.LogisticsProvider::SEC_PATTERN,
@@ -66,7 +66,23 @@ class LogisticsApplicationService
             'province_code' => ['nullable', 'regex:/^[0-9]{9}$/D'],
             'city_code' => ['required', 'regex:/^[0-9]{9}$/D'],
             'barangay_code' => ['required', 'regex:/^[0-9]{9}$/D'],
-            'street_address' => ['required', 'string', 'max:255'],
+            'street_address' => [
+                'required',
+                'string',
+                'max:255',
+                function (string $attribute, mixed $value, \Closure $fail) use ($existing) {
+                    $networkKey = request()->input('network', $existing?->network_brand ?? \App\Support\LogisticsNetworks::ZAYLO_EXPRESS);
+                    $hubAddress = [
+                        'street_address' => $value,
+                        'barangay_code' => request()->input('barangay_code'),
+                        'city_code' => request()->input('city_code'),
+                        'region_code' => request()->input('region_code'),
+                    ];
+                    if (\App\Support\LogisticsNetworks::isSameAddressAsMain((string) $networkKey, $hubAddress)) {
+                        $fail('A regional branch hub cannot use the same address as the main network hub. Please specify your branch hub\'s unique location.');
+                    }
+                },
+            ],
             'postal_code' => ['required', 'regex:/^[0-9]{4}$/D'],
             'service_areas' => ['required', 'array', 'min:1'],
             'service_areas.*' => ['required', 'string', Rule::in(array_keys(LogisticsProvider::serviceRegions()))],
