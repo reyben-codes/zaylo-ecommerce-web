@@ -136,6 +136,22 @@
                 <input id="postal_code" name="postal_code" value="{{ $value('postal_code') }}" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" title="Enter a 4-digit postal code" autocomplete="postal-code" data-digits-only required>
             </div>
         </div>
+
+        @if(\App\Services\ParcelTracking::pinsAddresses())
+            <fieldset class="map-pin" data-map-pin data-marker-icon="hub" data-pin-title="Hub location">
+                <legend>Exact Hub Location on Map <span>(optional)</span></legend>
+                <p class="field-note">Pin your sorting hub or warehouse on the map. Drag the pin or use your current location to mark the exact spot.</p>
+                <div class="zaylo-map" data-map role="application" aria-label="Map for pinning the exact hub location"></div>
+                <div class="map-pin__actions">
+                    <button class="text-button" type="button" data-map-locate><i class="fas fa-location-crosshairs" aria-hidden="true"></i> Use my current location</button>
+                    <button class="text-button" type="button" data-map-clear><i class="fas fa-xmark" aria-hidden="true"></i> Remove pin</button>
+                </div>
+                <p role="status" aria-live="polite" data-map-status></p>
+                <input type="hidden" name="hub_latitude" value="{{ $value('hub_latitude') }}">
+                <input type="hidden" name="hub_longitude" value="{{ $value('hub_longitude') }}">
+                <noscript><p class="field-note">Turn on JavaScript to pin your location on the map.</p></noscript>
+            </fieldset>
+        @endif
     </fieldset>
 
     <fieldset class="seller-application__group" data-wizard-step data-step-title="Business documents">

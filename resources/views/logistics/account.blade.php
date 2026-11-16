@@ -2,6 +2,8 @@
 
 @section('title', 'Account')
 
+@include('partials.leaflet-assets')
+
 @push('styles')
     <link rel="stylesheet" href="{{ asset('css/admin-modules.css') }}?v={{ filemtime(public_path('css/admin-modules.css')) }}">
 @endpush
@@ -44,8 +46,60 @@
                             <input id="service-area" name="service_area" maxlength="150" value="{{ old('service_area', $provider->service_area) }}" placeholder="e.g. Metro Manila, Cavite">
                             @error('service_area')<p class="seller-field__error">{{ $message }}</p>@enderror
                         </div>
-                        <div class="seller-field"><label for="hub-latitude">Hub latitude</label><input id="hub-latitude" name="hub_latitude" type="number" step="0.0000001" min="4" max="21.5" value="{{ old('hub_latitude', $provider->hub_latitude) }}"><p class="seller-field__help">The exact hub pin is used to calculate each rider leg's road distance.</p></div>
-                        <div class="seller-field"><label for="hub-longitude">Hub longitude</label><input id="hub-longitude" name="hub_longitude" type="number" step="0.0000001" min="116" max="127.5" value="{{ old('hub_longitude', $provider->hub_longitude) }}"></div>
+
+                        <div class="seller-field seller-field--full" data-address-form data-locations-url="{{ url('/api/locations') }}">
+                            <label>Hub Office Address</label>
+                            <p class="seller-field__help">Your physical sorting hub or warehouse address.</p>
+                            <div class="seller-address-nested-grid">
+                                <div class="seller-field">
+                                    <label for="hub-region">Region</label>
+                                    <select id="hub-region" name="region_code" data-location="region" data-selected="{{ old('region_code', $provider->region_code) }}">
+                                        <option value="">Choose a region</option>
+                                    </select>
+                                </div>
+                                <div class="seller-field">
+                                    <label for="hub-province">Province</label>
+                                    <select id="hub-province" name="province_code" data-location="province" data-selected="{{ old('province_code', $provider->province_code) }}" disabled>
+                                        <option value="">Choose a region first</option>
+                                    </select>
+                                </div>
+                                <div class="seller-field">
+                                    <label for="hub-city">City / Municipality</label>
+                                    <select id="hub-city" name="city_code" data-location="city" data-selected="{{ old('city_code', $provider->city_code) }}" disabled>
+                                        <option value="">Choose a province first</option>
+                                    </select>
+                                </div>
+                                <div class="seller-field">
+                                    <label for="hub-barangay">Barangay</label>
+                                    <select id="hub-barangay" name="barangay_code" data-location="barangay" data-selected="{{ old('barangay_code', $provider->barangay_code) }}" disabled>
+                                        <option value="">Choose a city first</option>
+                                    </select>
+                                </div>
+                                <div class="seller-field seller-field--full">
+                                    <label for="hub-street">Street address</label>
+                                    <input id="hub-street" name="street_address" value="{{ old('street_address', $provider->street_address) }}" maxlength="255" placeholder="House, unit or lot number and street">
+                                    @error('street_address')<p class="seller-field__error">{{ $message }}</p>@enderror
+                                </div>
+                                <div class="seller-field">
+                                    <label for="hub-postal">Postal code</label>
+                                    <input id="hub-postal" name="postal_code" value="{{ old('postal_code', $provider->postal_code) }}" inputmode="numeric" maxlength="4" pattern="[0-9]{4}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <fieldset class="map-pin seller-field seller-field--full" data-map-pin data-marker-icon="hub" data-pin-title="Hub sorting location">
+                            <legend>Exact Hub Location on Map <span>(optional)</span></legend>
+                            <p class="seller-field__help">Pin your exact sorting hub or warehouse location on the map. The exact coordinates pin is used to calculate each rider leg's road distance.</p>
+                            <div class="zaylo-map" data-map role="application" aria-label="Map for pinning the exact hub location"></div>
+                            <div class="map-pin__actions">
+                                <button class="text-button" type="button" data-map-locate><i class="fas fa-location-crosshairs" aria-hidden="true"></i> Use my current location</button>
+                                <button class="text-button" type="button" data-map-clear><i class="fas fa-xmark" aria-hidden="true"></i> Remove pin</button>
+                            </div>
+                            <p role="status" aria-live="polite" data-map-status></p>
+                            <input type="hidden" name="hub_latitude" value="{{ old('hub_latitude', $provider->hub_latitude) }}">
+                            <input type="hidden" name="hub_longitude" value="{{ old('hub_longitude', $provider->hub_longitude) }}">
+                            <noscript><p>Turn on JavaScript to pin your location on the map.</p></noscript>
+                        </fieldset>
                     </div>
                     <div class="seller-form__actions">
                         <button type="submit" class="seller-button"><i class="fas fa-check" aria-hidden="true"></i> Save company details</button>
@@ -118,3 +172,8 @@
         </div>
     </div>
 @endsection
+
+@push('scripts')
+    <script src="{{ asset('js/address-selector.js') }}?v={{ filemtime(public_path('js/address-selector.js')) }}" defer></script>
+    <script src="{{ asset('js/map-pin.js') }}?v={{ filemtime(public_path('js/map-pin.js')) }}" defer></script>
+@endpush

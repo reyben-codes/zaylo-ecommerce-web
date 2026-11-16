@@ -201,21 +201,63 @@ class LogisticsController extends Controller
 
     public function updateCompany(Request $request)
     {
+        $provider = $this->provider();
         $data = $request->validate([
             'company_name' => 'required|string|min:2|max:150',
             'contact_phone' => ['required', 'regex:/^09[0-9]{9}$/'],
             'service_area' => 'nullable|string|max:150',
+            'region_code' => ['nullable', 'regex:/^[0-9]{9}$/D'],
+            'province_code' => ['nullable', 'regex:/^[0-9]{9}$/D'],
+            'city_code' => ['nullable', 'regex:/^[0-9]{9}$/D'],
+            'barangay_code' => ['nullable', 'regex:/^[0-9]{9}$/D'],
+            'street_address' => [
+                'nullable',
+                'string',
+                'max:255',
+                function (string $attribute, mixed $value, \Closure $fail) use ($provider) {
+                    if (blank($value)) return;
+                    $networkKey = $provider->network_brand ?? \App\Support\LogisticsNetworks::ZAYLO_EXPRESS;
+                    $address = [
+                        'street_address' => $value,
+                        'barangay_code' => request()->input('barangay_code', $provider->barangay_code),
+                        'city_code' => request()->input('city_code', $provider->city_code),
+                        'region_code' => request()->input('region_code', $provider->region_code),
+                    ];
+                    if ($provider->isBranch() && \App\Support\LogisticsNetworks::isSameAddressAsMain((string) $networkKey, $address)) {
+                        $fail('A regional branch hub cannot use the same address as the main network hub. Please specify your branch hub\'s unique location.');
+                    }
+                },
+            ],
+            'postal_code' => ['nullable', 'regex:/^[0-9]{4}$/D'],
             ...\App\Services\ParcelTracking::pinRules('hub_latitude', 'hub_longitude'),
         ], ['contact_phone.regex' => 'Enter 11 digits starting with 09.']);
 
-        $this->provider()->update([
+        $updates = [
             'name' => $data['company_name'],
             'contact_phone' => $data['contact_phone'],
             'service_area' => $data['service_area'] ?? null,
-            'hub_latitude' => $data['hub_latitude'] ?? null, 'hub_longitude' => $data['hub_longitude'] ?? null,
-        ]);
+            'hub_latitude' => $data['hub_latitude'] ?? null,
+            'hub_longitude' => $data['hub_longitude'] ?? null,
+        ];
 
-        return back()->with('status', 'Company details updated.');
+        if (! empty($data['street_address']) && ! empty($data['city_code'])) {
+            $updates['region_code'] = $data['region_code'] ?? $provider->region_code;
+            $updates['province_code'] = $data['province_code'] ?? null;
+            $updates['city_code'] = $data['city_code'];
+            $updates['barangay_code'] = $data['barangay_code'] ?? $provider->barangay_code;
+            $updates['street_address'] = trim($data['street_address']);
+            $updates['postal_code'] = $data['postal_code'] ?? $provider->postal_code;
+
+            $names = app(\App\Services\LogisticsApplicationService::class)->addressNames($data);
+            $updates['region_name'] = $names['region_name'] ?? $provider->region_name;
+            $updates['province_name'] = $names['province_name'] ?? $provider->province_name;
+            $updates['city_name'] = $names['city_name'] ?? $provider->city_name;
+            $updates['barangay_name'] = $names['barangay_name'] ?? $provider->barangay_name;
+        }
+
+        $provider->update($updates);
+
+        return back()->with('status', 'Company and hub details updated.');
     }
 
     public function updateRiderRate(Request $request)

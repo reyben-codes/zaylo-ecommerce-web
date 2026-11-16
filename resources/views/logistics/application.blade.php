@@ -2,6 +2,8 @@
 
 @section('title', 'Logistics application · ZAYLO')
 
+@include('partials.leaflet-assets')
+
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/seller-application.css') }}?v={{ filemtime(public_path('css/seller-application.css')) }}">
 @endpush
@@ -63,6 +65,9 @@
                 <div><dt>TIN</dt><dd>{{ $provider->tin }}</dd></div>
                 <div><dt>Contact person</dt><dd>{{ $user->name }} · {{ $provider->contact_position }}</dd></div>
                 <div><dt>Office address</dt><dd>{{ $provider->formatted_address }}</dd></div>
+                @if($provider->hub_latitude && $provider->hub_longitude)
+                    <div><dt>Pinned Location</dt><dd>{{ $provider->hub_latitude }}, {{ $provider->hub_longitude }}</dd></div>
+                @endif
                 <div><dt>Service areas</dt><dd>{{ collect($provider->service_areas)->map(fn ($key) => $regions[$key] ?? $key)->implode('; ') }}</dd></div>
                 <div><dt>Documents</dt><dd>{{ collect($provider->documents())->keys()->map(fn ($field) => \App\Models\LogisticsProvider::DOCUMENTS[$field])->implode(', ') ?: 'None' }}</dd></div>
                 <div><dt>Submitted</dt><dd>{{ $provider->submitted_at?->timezone('Asia/Manila')->format('M j, Y g:i A') }}</dd></div>
@@ -93,4 +98,5 @@
 @push('scripts')
 <script src="{{ asset('js/address-selector.js') }}?v={{ filemtime(public_path('js/address-selector.js')) }}" defer></script>
 <script src="{{ asset('js/seller-application.js') }}?v={{ filemtime(public_path('js/seller-application.js')) }}" defer></script>
+<script src="{{ asset('js/map-pin.js') }}?v={{ filemtime(public_path('js/map-pin.js')) }}" defer></script>
 @endpush

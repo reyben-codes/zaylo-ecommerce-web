@@ -86,6 +86,7 @@ class LogisticsApplicationService
             'postal_code' => ['required', 'regex:/^[0-9]{4}$/D'],
             'service_areas' => ['required', 'array', 'min:1'],
             'service_areas.*' => ['required', 'string', Rule::in(array_keys(LogisticsProvider::serviceRegions()))],
+            ...\App\Services\ParcelTracking::pinRules('hub_latitude', 'hub_longitude'),
         ];
 
         foreach (array_keys(LogisticsProvider::DOCUMENTS) as $document) {
@@ -182,6 +183,8 @@ class LogisticsApplicationService
             'barangay_code' => $data['barangay_code'],
             'street_address' => trim($data['street_address']),
             'postal_code' => $data['postal_code'],
+            'hub_latitude' => $data['hub_latitude'] ?? $existing?->hub_latitude,
+            'hub_longitude' => $data['hub_longitude'] ?? $existing?->hub_longitude,
             'status' => 'pending',
             'rejection_reason' => null,
             'submitted_at' => now(),

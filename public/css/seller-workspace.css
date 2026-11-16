@@ -548,6 +548,19 @@ details.seller-panel[open] .seller-panel__chevron {
     grid-column: 1 / -1;
 }
 
+.seller-address-nested-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 10px;
+}
+
+@media (max-width: 640px) {
+    .seller-address-nested-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 .seller-field > label,
 .seller-field__label {
     color: var(--c-4f453c);

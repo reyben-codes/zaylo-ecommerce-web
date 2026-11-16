@@ -65,3 +65,4 @@ return new class extends Migration
         // Safe no-op on down
     }
 };
+
