@@ -17,7 +17,7 @@
 
     <nav class="role-choices" aria-label="Account types">
         @foreach($roles as $key => $role)
-            <a href="{{ route('register', ['role' => $key]) }}" class="role-choice" data-role-choice="{{ $key }}">
+            <a href="{{ $key === 'logistics' ? route('logistics.apply') : route('register', ['role' => $key]) }}" class="role-choice" data-role-choice="{{ $key }}">
                 <span class="role-choice__icon" aria-hidden="true"><i class="fas {{ $role['icon'] }}"></i></span>
                 <span class="role-choice__body">
                     <span class="role-choice__title">{{ $role['name'] }}</span>

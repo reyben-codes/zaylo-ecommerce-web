@@ -4,6 +4,9 @@
 @php
     $provider = $provider ?? null;
     $value = fn (string $field) => old($field, $provider?->{$field});
+    $networkKey = old('network', $selectedNetworkKey ?? $provider?->network_brand);
+    $network = \App\Support\LogisticsNetworks::find($networkKey);
+    $branchName = old('branch_name', $provider?->branch_name);
     $companyName = old('company_name', $provider?->name);
     $chosenAreas = (array) old('service_areas', $provider?->service_areas ?? []);
     $documentNotes = [
@@ -15,13 +18,44 @@
 @endphp
 
 <div class="seller-application" data-business-application>
-    <fieldset class="seller-application__group" data-wizard-step data-step-title="Your company">
-        <legend>Your company</legend>
-        <div class="form-group">
-            <label for="company_name">Company name</label>
-            <input id="company_name" name="company_name" value="{{ $companyName }}" autocomplete="organization" minlength="2" maxlength="150" required>
-            <p class="field-note">As registered with the SEC. It must not be used by another logistics partner.</p>
+    @if($network)
+        <div class="network-selection-banner">
+            <div class="network-selection-meta">
+                @if(file_exists(public_path($network['logo'])))
+                    <img src="{{ asset($network['logo']) }}" alt="{{ $network['name'] }}" class="network-selection-logo">
+                @else
+                    <span class="role-choice__icon"><i class="fas {{ $network['icon'] }}"></i></span>
+                @endif
+                <div class="network-selection-info">
+                    <strong>{{ $network['name'] }}</strong>
+                    <span>Applying as an authorized branch hub &bull; <span class="network-badge network-badge--{{ $network['badge_class'] ?? 'official' }}">{{ $network['badge'] }}</span></span>
+                </div>
+            </div>
+            <a href="{{ route('logistics.apply') }}" class="network-selection-change">Change Partner</a>
         </div>
+        <input type="hidden" name="network" value="{{ $network['key'] }}">
+    @endif
+
+    <fieldset class="seller-application__group" data-wizard-step data-step-title="Your company">
+        <legend>Your company @if($network)<small class="text-muted">({{ $network['short_name'] }} Branch Hub)</small>@endif</legend>
+        @if($network)
+            <div class="form-group">
+                <label for="branch_name">Branch / Hub Name</label>
+                <input id="branch_name" name="branch_name" value="{{ $branchName }}" placeholder="e.g. Cavite Central Hub, Lipa Sorting Hub" minlength="2" maxlength="100" required data-branch-name data-network-prefix="{{ $network['hub_prefix'] }}">
+                <p class="field-note">Enter your designated city, province or hub location.</p>
+                <div class="branch-preview-box">
+                    <span>Registered Hub Identity: </span>
+                    <strong data-branch-preview>{{ $companyName ?: $network['hub_prefix'].' - ' }}</strong>
+                </div>
+                <input type="hidden" id="company_name" name="company_name" value="{{ $companyName }}">
+            </div>
+        @else
+            <div class="form-group">
+                <label for="company_name">Company name</label>
+                <input id="company_name" name="company_name" value="{{ $companyName }}" autocomplete="organization" minlength="2" maxlength="150" required>
+                <p class="field-note">As registered with the SEC. It must not be used by another logistics partner.</p>
+            </div>
+        @endif
         <div class="form-row">
             <div class="form-group">
                 <label for="sec_registration_no">SEC registration no.</label>
@@ -36,7 +70,7 @@
         </div>
         <div class="form-group">
             <label for="contact_position">Contact person's position</label>
-            <input id="contact_position" name="contact_position" value="{{ $value('contact_position') }}" maxlength="100" autocomplete="organization-title" placeholder="e.g. Operations Manager" required>
+            <input id="contact_position" name="contact_position" value="{{ $value('contact_position') }}" maxlength="100" autocomplete="organization-title" placeholder="e.g. Branch Manager" required>
             <p class="field-note">The contact person is the name you entered above.</p>
         </div>
     </fieldset>

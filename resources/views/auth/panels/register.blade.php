@@ -28,8 +28,10 @@
             'note' => 'The logistics partner you choose reviews your application. You can sign in on the ZAYLO app to start delivering once approved.',
         ],
         'logistics' => [
-            'title' => 'Become a logistics partner',
-            'subtitle' => 'Register your delivery company and manage your own couriers and riders on ZAYLO.',
+            'title' => !empty($selectedNetwork) ? 'Apply as a '.$selectedNetwork['short_name'].' Branch' : 'Become a logistics partner',
+            'subtitle' => !empty($selectedNetwork)
+                ? 'Register your regional sorting hub under '.$selectedNetwork['name'].' and manage hub-to-hub and local parcel operations.'
+                : 'Register your delivery company and manage your own couriers and riders on ZAYLO.',
             'note' => 'Logistics partner accounts require email verification and administrator approval. Once approved, couriers and riders can apply to your company.',
         ],
     ][$selectedRole];
@@ -43,11 +45,19 @@
     <header class="auth-panel__header">
         @php $chosen = \App\Support\SignUpRoles::all()[$selectedRole]; @endphp
         {{-- Back to the account-type cards; anything typed here is left behind. --}}
-        <a href="{{ route('register') }}" class="role-switch" aria-label="Signing up as {{ $chosen['name'] }}. Change account type">
-            <span class="role-switch__icon" aria-hidden="true"><i class="fas {{ $chosen['icon'] }}"></i></span>
-            <span>Signing up as <strong>{{ $chosen['name'] }}</strong></span>
-            <span class="role-switch__change" aria-hidden="true">Change</span>
-        </a>
+        @if($selectedRole === 'logistics' && !empty($selectedNetwork))
+            <a href="{{ route('register', ['role' => 'logistics']) }}" class="role-switch" aria-label="Change logistics partner network">
+                <span class="role-switch__icon" aria-hidden="true"><i class="fas fa-truck-fast"></i></span>
+                <span>Branch Hub for <strong>{{ $selectedNetwork['short_name'] }}</strong></span>
+                <span class="role-switch__change" aria-hidden="true">Change Network</span>
+            </a>
+        @else
+            <a href="{{ route('register') }}" class="role-switch" aria-label="Signing up as {{ $chosen['name'] }}. Change account type">
+                <span class="role-switch__icon" aria-hidden="true"><i class="fas {{ $chosen['icon'] }}"></i></span>
+                <span>Signing up as <strong>{{ $chosen['name'] }}</strong></span>
+                <span class="role-switch__change" aria-hidden="true">Change</span>
+            </a>
+        @endif
         <h2 class="auth-panel__title" id="auth-modal-title" tabindex="-1">{{ $roleCopy['title'] }}</h2>
         <p class="auth-panel__subtitle">{{ $roleCopy['subtitle'] }}</p>
     </header>

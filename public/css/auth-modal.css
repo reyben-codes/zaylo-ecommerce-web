@@ -228,6 +228,141 @@ html.auth-modal-open, html.auth-modal-open body { overflow: hidden; }
 .role-switch:hover { border-color: var(--ink); background: var(--cream); }
 .role-switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
+/* Logistics Partner Network Chooser */
+.role-choice__title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.logistics-network-icon {
+    padding: 6px;
+    background: #ffffff;
+    border: 1px solid var(--border);
+}
+
+.logistics-network-img {
+    max-width: 32px;
+    max-height: 32px;
+    object-fit: contain;
+}
+
+.network-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.network-badge--official {
+    background: #f1f5f9;
+    color: #0f172a;
+    border: 1px solid #cbd5e1;
+}
+
+.network-badge--jnt {
+    background: #ffe4e6;
+    color: #e11d48;
+    border: 1px solid #fecdd3;
+}
+
+.network-badge--flash {
+    background: #fef3c7;
+    color: #b45309;
+    border: 1px solid #fde68a;
+}
+
+.logistics-choice-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.auth-back-link {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.825rem;
+    font-weight: 500;
+}
+
+.auth-back-link:hover {
+    color: var(--ink);
+    text-decoration: underline;
+}
+
+.network-selection-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 20px;
+}
+
+.network-selection-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.network-selection-logo {
+    width: 38px;
+    height: 38px;
+    object-fit: contain;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 3px;
+    border: 1px solid #e2e8f0;
+}
+
+.network-selection-info strong {
+    display: block;
+    font-size: 0.9375rem;
+    color: #0f172a;
+    line-height: 1.3;
+}
+
+.network-selection-info span {
+    font-size: 0.775rem;
+    color: #64748b;
+}
+
+.network-selection-change {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #2563eb;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    white-space: nowrap;
+}
+
+.network-selection-change:hover {
+    color: #1d4ed8;
+}
+
+.branch-preview-box {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: #f8fafc;
+    border-radius: 6px;
+    border-left: 3px solid #2563eb;
+    font-size: 0.8125rem;
+    color: #334155;
+}
+
+.branch-preview-box strong {
+    color: #0f172a;
+}
+
+
 .auth-panel__alerts:empty { display: none; }
 .auth-alert { margin: 0 0 20px; padding: 12px 16px; border: 1px solid var(--border); border-radius: 10px; font-size: .85rem; line-height: 1.55; animation: auth-step-in .24s ease-out; }
 .auth-alert p { margin: 0; }

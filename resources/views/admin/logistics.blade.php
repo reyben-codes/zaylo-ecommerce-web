@@ -32,7 +32,12 @@
                     @forelse($partners as $partner)
                         <tr>
                             <td>
-                                <strong>{{ $partner->name }}</strong>
+                                <div>
+                                    <strong>{{ $partner->name }}</strong>
+                                    @if($partner->network_brand)
+                                        <span class="network-badge network-badge--{{ \App\Support\LogisticsNetworks::find($partner->network_brand)['badge_class'] ?? 'official' }}">{{ \App\Support\LogisticsNetworks::find($partner->network_brand)['short_name'] ?? $partner->network_brand }}</span>
+                                    @endif
+                                </div>
                                 <span class="seller-cell-note">{{ $partner->service_area ? 'Serves '.$partner->service_area : 'No service area given' }}</span>
                                 <a href="{{ route('admin.logistics.show', $partner) }}" class="workspace-link">Review application <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
                             </td>

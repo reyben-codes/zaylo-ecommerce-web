@@ -258,13 +258,19 @@ class PendingRegistrationService
         if ($role === 'logistics' && isset($data['sec_registration_no']) && $this->logisticsApplications->available()) {
             $this->logisticsApplications->save($user, null, $data, $data['pickup_names'] ?? [], null, $documents);
         } elseif ($role === 'logistics') {
+            $network = $data['network'] ?? null;
+            $parent = $network ? \App\Support\LogisticsNetworks::parentProviderFor($network) : null;
             LogisticsProvider::create([
                 'user_id' => $user->id,
+                'parent_id' => $parent?->id,
+                'network_brand' => $network,
+                'branch_name' => $data['branch_name'] ?? null,
                 'name' => $data['company_name'],
                 'slug' => Str::slug($data['company_name']).'-'.Str::lower(Str::random(6)),
                 'status' => 'pending',
                 'contact_phone' => $data['phone'],
                 'service_area' => $data['service_area'] ?? null,
+                'waybill_layout' => $network ?: 'zaylo_express',
             ]);
         }
 

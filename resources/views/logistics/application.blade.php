@@ -52,7 +52,13 @@
         <section class="application-summary" aria-labelledby="application-summary-title">
             <h2 id="application-summary-title">What you submitted</h2>
             <dl>
-                <div><dt>Company name</dt><dd>{{ $provider->name }}</dd></div>
+                @if($provider->network_brand)
+                    <div><dt>Logistics Network</dt><dd><strong>{{ \App\Support\LogisticsNetworks::find($provider->network_brand)['name'] ?? Str::headline($provider->network_brand) }}</strong></dd></div>
+                @endif
+                @if($provider->branch_name)
+                    <div><dt>Branch / Hub</dt><dd>{{ $provider->branch_name }}</dd></div>
+                @endif
+                <div><dt>Registered Name</dt><dd>{{ $provider->name }}</dd></div>
                 <div><dt>SEC registration no.</dt><dd>{{ $provider->sec_registration_no }}</dd></div>
                 <div><dt>TIN</dt><dd>{{ $provider->tin }}</dd></div>
                 <div><dt>Contact person</dt><dd>{{ $user->name }} · {{ $provider->contact_position }}</dd></div>

@@ -30,15 +30,27 @@ class LogisticsApplicationService
         if (is_string($request->input('sec_registration_no'))) {
             $request->merge(['sec_registration_no' => strtoupper(preg_replace('/\s+/', '', $request->input('sec_registration_no')))]);
         }
+        $network = $request->input('network');
+        $branchName = $request->input('branch_name');
+        if (\App\Support\LogisticsNetworks::isValid($network) && filled($branchName)) {
+            $formattedCompany = \App\Support\LogisticsNetworks::formatBranchCompanyName($network, trim((string) $branchName));
+            $request->merge([
+                'company_name' => $formattedCompany,
+                'branch_name' => trim((string) $branchName),
+                'network' => $network,
+            ]);
+        }
     }
 
     /** Validation rules. Documents already on file may be kept when resubmitting. */
     public function rules(?LogisticsProvider $existing = null): array
     {
         $rules = [
+            'network' => ['nullable', 'string', Rule::in(\App\Support\LogisticsNetworks::keys())],
+            'branch_name' => ['nullable', 'string', 'min:2', 'max:100'],
             'company_name' => ['required', 'string', 'min:2', 'max:150', function (string $attribute, mixed $value, \Closure $fail) use ($existing) {
                 if (is_string($value) && $this->companyNameTaken($value, $existing?->id)) {
-                    $fail('This company name is already registered.');
+                    $fail('This company or branch hub name is already registered.');
                 }
             }],
             'sec_registration_no' => ['required', 'string', 'regex:'.LogisticsProvider::SEC_PATTERN,
@@ -131,8 +143,16 @@ class LogisticsApplicationService
 
         $regions = LogisticsProvider::serviceRegions();
         $areas = array_values(array_intersect(array_keys($regions), $data['service_areas']));
+        $network = $data['network'] ?? $existing?->network_brand;
+        $branchName = $data['branch_name'] ?? $existing?->branch_name;
+        $parent = $network ? \App\Support\LogisticsNetworks::parentProviderFor($network) : null;
+
         $provider->fill([
             'name' => trim($data['company_name']),
+            'network_brand' => $network,
+            'branch_name' => $branchName,
+            'parent_id' => $parent?->id ?? $existing?->parent_id,
+            'waybill_layout' => $network ?: ($existing?->waybill_layout ?? 'zaylo_express'),
             'sec_registration_no' => $data['sec_registration_no'],
             'tin' => $data['tin'],
             'contact_phone' => $owner->phone,

@@ -51,7 +51,12 @@
                             </td>
                             <td><span class="role-pill">{{ $roleLabels[$applicant->role] ?? Str::headline($applicant->role) }}</span></td>
                             <td>
-                                <strong>{{ $business ?: '—' }}</strong>
+                                <div>
+                                    <strong>{{ $business ?: '—' }}</strong>
+                                    @if($applicant->role === 'logistics' && $applicant->logisticsProvider?->network_brand)
+                                        <span class="network-badge network-badge--{{ \App\Support\LogisticsNetworks::find($applicant->logisticsProvider->network_brand)['badge_class'] ?? 'official' }}">{{ \App\Support\LogisticsNetworks::find($applicant->logisticsProvider->network_brand)['short_name'] ?? $applicant->logisticsProvider->network_brand }}</span>
+                                    @endif
+                                </div>
                                 @if($applicant->role === 'logistics' && $applicant->logisticsProvider?->service_area)
                                     <span class="seller-cell-note">Serves {{ $applicant->logisticsProvider->service_area }}</span>
                                 @endif

@@ -43,7 +43,13 @@
             <section class="seller-panel" aria-labelledby="business-heading">
                 <header class="seller-panel__header"><div><h2 id="business-heading">Company and business</h2></div></header>
                 <dl class="seller-panel__body workspace-detail-list">
-                    <div><dt>Company name</dt><dd>{{ $provider->name }}</dd></div>
+                    @if($provider->network_brand)
+                        <div><dt>Logistics Network</dt><dd><strong>{{ \App\Support\LogisticsNetworks::find($provider->network_brand)['name'] ?? Str::headline($provider->network_brand) }}</strong> <span class="network-badge network-badge--{{ \App\Support\LogisticsNetworks::find($provider->network_brand)['badge_class'] ?? 'official' }}">{{ \App\Support\LogisticsNetworks::find($provider->network_brand)['badge'] ?? '' }}</span></dd></div>
+                    @endif
+                    @if($provider->branch_name)
+                        <div><dt>Branch / Hub</dt><dd><strong>{{ $provider->branch_name }}</strong></dd></div>
+                    @endif
+                    <div><dt>Registered name</dt><dd>{{ $provider->name }}</dd></div>
                     <div><dt>SEC registration no.</dt><dd>{{ $provider->sec_registration_no }}</dd></div>
                     <div><dt>TIN</dt><dd>{{ $provider->tin }}</dd></div>
                     <div><dt>Office address</dt><dd>{{ $provider->formatted_address }}</dd></div>

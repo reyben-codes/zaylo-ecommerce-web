@@ -187,11 +187,40 @@ class AuthController extends Controller
             return AuthModal::respond($request, 'register-choice', [], 'ZAYLO · Create new account');
         }
 
+        // If explicitly requesting the network chooser for logistics (e.g. choose_network=1)
+        if ($role === 'logistics' && $request->has('choose_network') && ! $request->session()->has('errors')) {
+            return AuthModal::respond($request, 'logistics-network-choice', [
+                'networks' => \App\Support\LogisticsNetworks::all(),
+            ], 'ZAYLO · Choose Logistics Network');
+        }
+
+        $network = $request->query('network', $request->old('network'));
+        if ($role === 'logistics' && ! \App\Support\LogisticsNetworks::isValid($network)) {
+            $network = \App\Support\LogisticsNetworks::ZAYLO_EXPRESS;
+        }
+
+        $selectedNetwork = ($role === 'logistics' && \App\Support\LogisticsNetworks::isValid($network))
+            ? \App\Support\LogisticsNetworks::find($network)
+            : null;
+
         return AuthModal::respond($request, 'register', [
             'logisticsPartners' => Schema::hasTable('logistics_providers')
                 ? LogisticsProvider::acceptingRiders()->get(['id', 'name', 'service_area'])
                 : collect(),
+            'selectedNetwork' => $selectedNetwork,
+            'selectedNetworkKey' => $network,
         ], 'ZAYLO · Create new account');
+    }
+
+    public function applyLogistics(Request $request)
+    {
+        $network = $request->query('network');
+        if (\App\Support\LogisticsNetworks::isValid($network)) {
+            return redirect()->route('register', ['role' => 'logistics', 'network' => $network]);
+        }
+        return AuthModal::respond($request, 'logistics-network-choice', [
+            'networks' => \App\Support\LogisticsNetworks::all(),
+        ], 'ZAYLO · Choose Logistics Network');
     }
 
     public function register(Request $request, SellerApplicationService $sellerApplications, LogisticsApplicationService $logisticsApplications, PendingRegistrationService $registrations)

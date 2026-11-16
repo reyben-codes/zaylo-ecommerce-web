@@ -23,14 +23,34 @@ class LogisticsProvider extends Model
 
     protected $fillable = [
         'hub_latitude', 'hub_longitude',
-        'user_id', 'name', 'slug', 'status', 'rejection_reason', 'contact_phone', 'service_area', 'approved_at',
+        'user_id', 'parent_id', 'network_brand', 'branch_name', 'name', 'slug', 'status', 'rejection_reason', 'contact_phone', 'service_area', 'approved_at',
         'sec_registration_no', 'tin', 'contact_position', 'service_areas',
         'region_code', 'region_name', 'province_code', 'province_name', 'city_code', 'city_name', 'barangay_code', 'barangay_name',
         'street_address', 'postal_code', 'sec_certificate_path', 'bir_2303_path', 'business_permit_path', 'representative_id_path',
-        'submitted_at', 'reviewed_at', 'rider_rate_minor',
+        'submitted_at', 'reviewed_at', 'rider_rate_minor', 'waybill_layout',
     ];
 
     protected $casts = ['approved_at' => 'datetime', 'submitted_at' => 'datetime', 'reviewed_at' => 'datetime', 'service_areas' => 'array'];
+
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_id');
+    }
+
+    public function branches(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_id');
+    }
+
+    public function isBranch(): bool
+    {
+        return filled($this->parent_id);
+    }
+
+    public function networkDetails(): ?array
+    {
+        return \App\Support\LogisticsNetworks::find($this->network_brand);
+    }
 
     public function riderRate(): float
     {

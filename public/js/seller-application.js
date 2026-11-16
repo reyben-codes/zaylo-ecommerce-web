@@ -58,6 +58,21 @@
                 if (message) input.reportValidity();
             });
         });
+
+        // Branch Hub preview update
+        root.querySelectorAll('[data-branch-name]').forEach((input) => {
+            const prefix = input.dataset.networkPrefix || 'Logistics';
+            const preview = root.querySelector('[data-branch-preview]');
+            const companyInput = root.querySelector('input[name="company_name"]');
+            const updatePreview = () => {
+                const branch = input.value.trim();
+                const full = branch ? `${prefix} - ${branch}` : `${prefix} - `;
+                if (preview) preview.textContent = full;
+                if (companyInput) companyInput.value = branch ? full : '';
+            };
+            input.addEventListener('input', updatePreview);
+            if (input.value) updatePreview();
+        });
     });
 
     init(document);
