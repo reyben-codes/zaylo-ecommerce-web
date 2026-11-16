@@ -77,7 +77,7 @@ class RiderWithdrawalController extends Controller
         ]);
         $this->wallet->markPaid($withdrawal, $request->user(), $data['reference']);
 
-        return back()->with('status', 'Recorded ₱'.number_format($withdrawal->amount, 2).' GCash sweldo sent to '.($withdrawal->rider?->name ?? 'the rider').'.');
+        return back()->with('status', 'Recorded ₱'.number_format($withdrawal->amount, 2).' GCash payment sent to '.($withdrawal->rider?->name ?? 'the rider').'.');
     }
 
     public function adminReject(Request $request, RiderWithdrawal $withdrawal)

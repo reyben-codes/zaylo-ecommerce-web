@@ -11,10 +11,10 @@
         <div>
             <p class="seller-eyebrow">Platform Treasury</p>
             <h1>Admin Wallet & Balances</h1>
-            <p>Unified financial dashboard for the ZAYLO platform. Monitor gateway escrow funds held from online and GCash orders, pending seller withdrawals, pending rider sweldo, and settled platform commissions.</p>
+            <p>Unified financial dashboard for the ZAYLO platform. Monitor gateway escrow funds held from online and GCash orders, pending seller withdrawals, pending rider payouts, and settled platform commissions.</p>
         </div>
         <div class="seller-page-heading__actions">
-            <a href="{{ route('admin.rider-withdrawals') }}" class="seller-button"><i class="fa-solid fa-motorcycle" aria-hidden="true"></i> Rider sweldo (GCash)</a>
+            <a href="{{ route('admin.rider-withdrawals') }}" class="seller-button"><i class="fa-solid fa-motorcycle" aria-hidden="true"></i> Rider payouts (GCash)</a>
             <a href="{{ route('admin.seller-withdrawals') }}" class="seller-button seller-button--secondary"><i class="fa-solid fa-wallet" aria-hidden="true"></i> Seller payouts</a>
         </div>
     </section>
@@ -38,7 +38,7 @@
             <span class="seller-stat__note"><a href="{{ route('admin.seller-withdrawals') }}">{{ $sellerPendingCount }} {{ Str::plural('request', $sellerPendingCount) }} to review &rarr;</a></span>
         </div>
         <div class="seller-stat">
-            <span class="seller-stat__label"><i class="fa-solid fa-motorcycle" aria-hidden="true"></i> Pending rider sweldo</span>
+            <span class="seller-stat__label"><i class="fa-solid fa-motorcycle" aria-hidden="true"></i> Pending rider payouts</span>
             <strong class="seller-stat__value">&#8369;{{ number_format($riderPendingTotal, 2) }}</strong>
             <span class="seller-stat__note"><a href="{{ route('admin.rider-withdrawals') }}">{{ $riderPendingCount }} {{ Str::plural('request', $riderPendingCount) }} to pay &rarr;</a></span>
         </div>
@@ -80,8 +80,8 @@
         <section class="seller-panel">
             <header class="seller-panel__header">
                 <div>
-                    <h2>Recent rider sweldo payouts</h2>
-                    <p>Latest GCash sweldo sent to riders</p>
+                    <h2>Recent rider payouts</h2>
+                    <p>Latest GCash payments sent to riders</p>
                 </div>
                 <a href="{{ route('admin.rider-withdrawals') }}" class="seller-button seller-button--small seller-button--secondary">View all</a>
             </header>
@@ -97,7 +97,7 @@
                                 <td><span class="seller-cell-note">{{ $payout->reference ?? '—' }}</span></td>
                             </tr>
                         @empty
-                            <tr><td colspan="4"><p class="admin-empty-inline">No rider sweldo paid yet.</p></td></tr>
+                            <tr><td colspan="4"><p class="admin-empty-inline">No rider payouts sent yet.</p></td></tr>
                         @endforelse
                     </tbody>
                 </table>

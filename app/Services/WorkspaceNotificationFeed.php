@@ -120,8 +120,8 @@ class WorkspaceNotificationFeed
             \App\Models\RiderWithdrawal::with('rider')->where('status', \App\Models\RiderWithdrawal::PENDING)
                 ->latest()->limit(self::LIMIT)->get()
                 ->each(fn (\App\Models\RiderWithdrawal $w) => $items->push($this->item(
-                    'rider_withdrawal:'.$w->id, 'wallet', 'fa-motorcycle', 'Rider sweldo to pay',
-                    ($w->rider?->name ?? 'A rider').' requested ₱'.number_format($w->amount, 2).' GCash sweldo.', route('admin.rider-withdrawals'), 'Pay sweldo', $w->created_at,
+                    'rider_withdrawal:'.$w->id, 'wallet', 'fa-motorcycle', 'Rider payout to process',
+                    ($w->rider?->name ?? 'A rider').' requested ₱'.number_format($w->amount, 2).' GCash payout.', route('admin.rider-withdrawals'), 'Record payment', $w->created_at,
                 )));
         }
 

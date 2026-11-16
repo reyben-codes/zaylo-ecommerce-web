@@ -40,7 +40,7 @@
                         </div>
                     </label>
                     <label class="target-type-card{{ old('target_type') === 'specific' ? ' is-selected' : '' }}" for="target-type-specific">
-                        <input type="radio" id="target-type-specific" name="target_type" value="specific" @checked(old('target_type') === 'specific')>
+                        <input type="radio" id="target-type-specific" name="target_type" value="specific" aria-controls="target-seller-wrap" @checked(old('target_type') === 'specific')>
                         <div class="target-type-card__body">
                             <div class="target-type-card__icon"><i class="fa-solid fa-shop" aria-hidden="true"></i></div>
                             <strong class="target-type-card__title">Specific shop</strong>
@@ -50,7 +50,7 @@
                 </div>
             </div>
 
-            <div class="seller-field" id="target-seller-wrap" @if(old('target_type', 'all') !== 'specific') style="display: none;" @endif>
+            <div class="seller-field" id="target-seller-wrap">
                 <label id="target-shops-label">Select target shop <span class="seller-field__help">(choose one)</span></label>
                 
                 <div class="target-shops-wrap">
@@ -80,7 +80,7 @@
                             <p class="admin-empty-inline">No approved shops available yet.</p>
                         @endforelse
                     </div>
-                    <p class="target-shops-none" id="target-shops-none" style="display: none;">No matching shops found.</p>
+                    <p class="target-shops-none" id="target-shops-none" role="status" hidden>No matching shops found.</p>
                 </div>
                 @error('target_seller_id')<p class="seller-field__error">{{ $message }}</p>@enderror
             </div>

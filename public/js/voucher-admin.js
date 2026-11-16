@@ -6,6 +6,47 @@
     const shopRadios = document.querySelectorAll('input[name="target_seller_id"]');
     const searchInput = document.getElementById('target-shops-search-input');
     const noneNote = document.getElementById('target-shops-none');
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let targetAnimation = null;
+    let targetExpanded = true;
+
+    const finishTargetAnimation = () => {
+        if (!targetWrap) return;
+        if (targetAnimation) {
+            targetAnimation.onfinish = null;
+            targetAnimation.cancel();
+            targetAnimation = null;
+        }
+        targetWrap.hidden = !targetExpanded;
+        targetWrap.style.overflow = '';
+    };
+
+    const showTarget = (expanded, animate) => {
+        if (!targetWrap) return;
+        const startHeight = targetWrap.hidden ? 0 : targetWrap.getBoundingClientRect().height;
+        targetExpanded = expanded;
+        if (!expanded && targetWrap.contains(document.activeElement)) {
+            document.querySelector('input[name="target_type"]:checked')?.focus();
+        }
+        targetWrap.inert = !expanded;
+        if (targetAnimation) {
+            targetAnimation.onfinish = null;
+            targetAnimation.cancel();
+            targetAnimation = null;
+        }
+        if (!animate || reducedMotion.matches || !targetWrap.animate) {
+            finishTargetAnimation();
+            return;
+        }
+        targetWrap.hidden = false;
+        const endHeight = expanded ? targetWrap.getBoundingClientRect().height : 0;
+        targetWrap.style.overflow = 'hidden';
+        targetAnimation = targetWrap.animate(
+            [{ height: `${startHeight}px` }, { height: `${endHeight}px` }],
+            { duration: 300, easing: 'cubic-bezier(.22, 1, .36, 1)' },
+        );
+        targetAnimation.onfinish = finishTargetAnimation;
+    };
 
     const getTargetType = () => {
         if (targetRadios.length > 0) {
@@ -15,13 +56,11 @@
         return targetSelect ? targetSelect.value : 'all';
     };
 
-    const syncTargetType = () => {
+    const syncTargetType = (animate = true) => {
         const type = getTargetType();
         const isSpecific = type === 'specific';
 
-        if (targetWrap) {
-            targetWrap.style.display = isSpecific ? '' : 'none';
-        }
+        showTarget(isSpecific, animate);
 
         targetRadios.forEach((radio) => {
             const card = radio.closest('.target-type-card');
@@ -68,16 +107,18 @@
                 const owner = tile.getAttribute('data-owner') || '';
                 const matches = !query || name.includes(query) || owner.includes(query);
 
-                tile.style.display = matches ? '' : 'none';
+                tile.hidden = !matches;
                 if (matches) visibleCount++;
             });
 
             if (noneNote) {
-                noneNote.style.display = (visibleCount === 0 && query !== '') ? 'block' : 'none';
+                noneNote.hidden = !(visibleCount === 0 && query !== '');
             }
         });
     }
 
-    syncTargetType();
+    window.addEventListener('resize', finishTargetAnimation);
+    reducedMotion.addEventListener('change', finishTargetAnimation);
+    syncTargetType(false);
     syncShopSelection();
 })();

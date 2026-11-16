@@ -27,7 +27,7 @@
                 ['route' => 'admin.cod-commissions', 'label' => 'COD commissions', 'icon' => 'fa-cash-register'],
                 ['route' => 'admin.logistics-payouts', 'label' => 'Logistics payouts', 'icon' => 'fa-money-bill-transfer'],
                 ['route' => 'admin.wallet', 'label' => 'Admin Wallet', 'icon' => 'fa-vault'],
-                ['route' => 'admin.rider-withdrawals', 'label' => 'Rider sweldo (GCash)', 'icon' => 'fa-motorcycle', 'count' => 'rider_withdrawals'],
+                ['route' => 'admin.rider-withdrawals', 'label' => 'Rider payouts (GCash)', 'icon' => 'fa-motorcycle', 'count' => 'rider_withdrawals'],
                 ['route' => 'admin.seller-withdrawals', 'label' => 'Seller payouts', 'icon' => 'fa-wallet', 'count' => 'seller_withdrawals'],
                 ['route' => 'admin.reports', 'label' => 'Reports', 'icon' => 'fa-chart-column'],
                 ['heading' => 'Platform'],

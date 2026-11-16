@@ -637,14 +637,15 @@
 /* Voucher creation: Target shops squared selection */
 .target-type-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
     gap: 12px;
     margin-top: 6px;
 }
 
-.target-type-card {
-    display: flex;
-    align-items: flex-start;
+.voucher-form .target-type-card {
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr);
+    align-items: center;
     gap: 12px;
     padding: 14px 16px;
     border: 1.5px solid var(--zaylo-border);
@@ -674,16 +675,23 @@
     outline-offset: 2px;
 }
 
-.target-type-card input[type="radio"] {
-    margin-top: 3px;
+.voucher-form .target-type-card input[type="radio"] {
+    width: 20px;
+    height: 20px;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    box-shadow: none;
     accent-color: var(--zaylo-accent);
     cursor: pointer;
 }
 
 .target-type-card__body {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr);
+    gap: 4px 12px;
     min-width: 0;
 }
 
@@ -691,13 +699,15 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 30px;
-    height: 30px;
+    width: 36px;
+    height: 36px;
+    grid-row: span 2;
+    align-self: center;
     border-radius: 8px;
     background: var(--c-f5f0ea);
     color: var(--zaylo-accent);
     font-size: .88rem;
-    margin-bottom: 4px;
+    margin: 0;
 }
 
 .target-type-card__title {
@@ -708,8 +718,8 @@
 
 .target-type-card__desc {
     color: var(--zaylo-muted);
-    font-size: .76rem;
-    line-height: 1.35;
+    font-size: .8rem;
+    line-height: 1.5;
 }
 
 /* Specific shops squared grid */
@@ -735,7 +745,7 @@
     pointer-events: none;
 }
 
-.target-shops-search input {
+.voucher-form .target-shops-search input {
     width: 100%;
     min-height: 38px;
     padding: 8px 12px 8px 34px;
@@ -748,7 +758,7 @@
     transition: border-color .16s ease, box-shadow .16s ease;
 }
 
-.target-shops-search input:focus {
+.voucher-form .target-shops-search input:focus {
     outline: none;
     border-color: var(--zaylo-accent);
     box-shadow: 0 0 0 3px rgba(138, 88, 54, .12);
@@ -756,7 +766,7 @@
 
 .target-shops-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
     gap: 10px;
     max-height: 360px;
     overflow-y: auto;
@@ -813,7 +823,28 @@
     font-size: .65rem;
     color: transparent;
     transition: all .16s ease;
-    margin-left: auto;
+    flex-shrink: 0;
+    margin: 0;
+}
+
+/* Keep custom shop radios keyboard accessible without inheriting text-field dimensions. */
+.voucher-form .target-shop-tile input[type="radio"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    min-height: 0;
+    padding: 0;
+    margin: -1px;
+    border: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.voucher-form #target-seller-wrap[hidden],
+.voucher-form .target-shop-tile[hidden],
+.voucher-form .target-shops-none[hidden] {
+    display: none;
 }
 
 .target-shop-tile:has(input:checked) .target-shop-tile__indicator,
@@ -896,8 +927,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .target-type-card,
-    .target-shop-tile {
+    .voucher-form .target-type-card,
+    .target-shop-tile,
+    .target-shop-tile__indicator,
+    .target-shop-tile__avatar {
         transition: none;
         transform: none !important;
     }

@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\LogisticsProvider;
+use App\Models\EscrowPayment;
+use App\Models\Order;
 use App\Models\Rider;
 use App\Models\RiderWithdrawal;
 use App\Models\User;
@@ -53,7 +55,7 @@ class AdminRiderWithdrawalsAndWalletTest extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.rider-withdrawals'))
             ->assertOk()
-            ->assertSee('Rider sweldo (GCash payouts)')
+            ->assertSee('Rider payouts (GCash)')
             ->assertSee('Carlos Rider')
             ->assertSee('120.00');
 
@@ -61,10 +63,38 @@ class AdminRiderWithdrawalsAndWalletTest extends TestCase
             ->get(route('admin.wallet'))
             ->assertOk()
             ->assertSee('Admin Wallet')
-            ->assertSee('Pending rider sweldo');
+            ->assertSee('Pending rider payouts');
     }
 
-    public function test_admin_can_pay_rider_sweldo_with_reference(): void
+    public function test_admin_wallet_converts_held_and_released_payment_totals_to_pesos(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'status' => 'active']);
+        $buyer = User::factory()->create(['role' => 'buyer', 'status' => 'active']);
+
+        foreach ([['held', 123456], ['held', 10000], ['released', 65432], ['pending', 99999]] as $index => [$status, $amount]) {
+            $order = Order::create([
+                'buyer_id' => $buyer->id,
+                'reference' => 'WALLET-TEST-'.$index,
+                'total_minor' => $amount,
+                'payment_method' => 'gcash',
+                'shipping_address' => ['city' => 'Calamba'],
+            ]);
+            EscrowPayment::create([
+                'order_id' => $order->id,
+                'amount_minor' => $amount,
+                'status' => $status,
+            ]);
+        }
+
+        $this->actingAs($admin)
+            ->get(route('admin.wallet'))
+            ->assertOk()
+            ->assertViewHas('escrowHeld', 1334.56)
+            ->assertViewHas('escrowReleased', 654.32)
+            ->assertSee('1,334.56');
+    }
+
+    public function test_admin_can_pay_rider_payout_with_reference(): void
     {
         [$admin, $provider, $riderUser, $withdrawal] = $this->setupRiderWithWithdrawal();
 
@@ -81,7 +111,7 @@ class AdminRiderWithdrawalsAndWalletTest extends TestCase
         $this->assertSame($admin->id, $withdrawal->processed_by);
     }
 
-    public function test_admin_can_reject_rider_sweldo_with_reason(): void
+    public function test_admin_can_reject_rider_payout_with_reason(): void
     {
         [$admin, $provider, $riderUser, $withdrawal] = $this->setupRiderWithWithdrawal();
 
@@ -97,7 +127,7 @@ class AdminRiderWithdrawalsAndWalletTest extends TestCase
         $this->assertSame('Invalid GCash recipient name', $withdrawal->rejection_reason);
     }
 
-    public function test_admin_sidebar_counts_and_notifications_include_pending_sweldo(): void
+    public function test_admin_sidebar_counts_and_notifications_include_pending_payouts(): void
     {
         [$admin, $provider, $riderUser, $withdrawal] = $this->setupRiderWithWithdrawal();
 
@@ -106,6 +136,6 @@ class AdminRiderWithdrawalsAndWalletTest extends TestCase
         $this->assertSame(1, $counts['rider_withdrawals'][0]);
 
         $feed = app(WorkspaceNotificationFeed::class)->forUser($admin);
-        $this->assertTrue($feed->contains(fn ($item) => str_contains($item['title'], 'Rider sweldo')));
+        $this->assertTrue($feed->contains(fn ($item) => str_contains($item['title'], 'Rider payout')));
     }
 }

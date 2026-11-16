@@ -1,6 +1,6 @@
 @extends('layouts.workspace', ['workspace' => 'admin'])
 
-@section('title', 'Rider sweldo (GCash payouts)')
+@section('title', 'Rider payouts (GCash)')
 
 @push('styles')
     <link rel="stylesheet" href="{{ asset('css/admin-modules.css') }}?v={{ filemtime(public_path('css/admin-modules.css')) }}">
@@ -9,9 +9,9 @@
 @section('content')
     <section class="seller-page-heading">
         <div>
-            <p class="seller-eyebrow">Platform Sweldo & Payouts</p>
-            <h1>Rider sweldo (GCash payouts)</h1>
-            <p>Rider earnings from GCash (online) orders and completed delivery legs are credited to rider wallets and funded via platform payout. Review pending rider sweldo withdrawal requests, transfer funds to their GCash accounts, and record the 13-character GCash reference number to complete payment.</p>
+            <p class="seller-eyebrow">Platform Earnings & Payouts</p>
+            <h1>Rider payouts (GCash)</h1>
+            <p>Rider earnings from GCash (online) orders and completed delivery legs are credited to rider wallets and funded via platform payout. Review pending rider withdrawal requests, transfer funds to their GCash accounts, and record the 13-character GCash reference number to complete payment.</p>
         </div>
     </section>
 
@@ -38,19 +38,19 @@
 
     <section class="seller-stat-grid" aria-label="Withdrawal totals">
         <div class="seller-stat">
-            <span class="seller-stat__label"><i class="fas fa-hourglass-half" aria-hidden="true"></i> Pending rider sweldo</span>
+            <span class="seller-stat__label"><i class="fas fa-hourglass-half" aria-hidden="true"></i> Pending rider payouts</span>
             <strong class="seller-stat__value">&#8369;{{ number_format($pendingTotal, 2) }}</strong>
             <span class="seller-stat__note">{{ number_format($pending->count()) }} {{ Str::plural('request', $pending->count()) }}</span>
         </div>
         <div class="seller-stat">
-            <span class="seller-stat__label"><i class="fas fa-circle-check" aria-hidden="true"></i> Total paid sweldo</span>
+            <span class="seller-stat__label"><i class="fas fa-circle-check" aria-hidden="true"></i> Total rider payouts sent</span>
             <strong class="seller-stat__value">&#8369;{{ number_format($paidTotal, 2) }}</strong>
-            <span class="seller-stat__note">All time by GCash</span>
+            <span class="seller-stat__note">All-time GCash transfers</span>
         </div>
     </section>
 
     <section class="seller-panel">
-        <header class="seller-panel__header"><div><h2>Waiting for GCash transfer</h2><p>Rider sweldo requests awaiting disbursement. Send via GCash and enter the 13-character reference.</p></div></header>
+        <header class="seller-panel__header"><div><h2>Waiting for GCash transfer</h2><p>Rider withdrawal requests awaiting payment. Send via GCash and enter the 13-character reference.</p></div></header>
         <div class="seller-table-wrap">
             <table class="seller-table workspace-table admin-money">
                 <thead><tr><th>Requested</th><th>Rider</th><th>Logistics Hub</th><th>GCash account</th><th>Amount</th><th><span class="sr-only">Actions</span></th></tr></thead>
@@ -69,7 +69,7 @@
                                     @csrf
                                     <label class="sr-only" for="withdrawal-reference-{{ $withdrawal->id }}">GCash reference number</label>
                                     <input type="text" id="withdrawal-reference-{{ $withdrawal->id }}" name="reference" minlength="13" maxlength="13" pattern="[A-Z0-9]{13}" title="13 uppercase letters or numbers" placeholder="REF20261115AB" autocomplete="off" required>
-                                    <button type="submit" class="seller-button"><i class="fas fa-paper-plane" aria-hidden="true"></i> Pay sweldo</button>
+                                    <button type="submit" class="seller-button"><i class="fas fa-paper-plane" aria-hidden="true"></i> Record payment</button>
                                 </form>
                                 <form method="POST" action="{{ route('admin.rider-withdrawals.reject', $withdrawal) }}" class="payout-form"
                                       data-confirm="Reject this withdrawal? &#8369;{{ number_format($withdrawal->amount, 2) }} goes back to the rider's wallet."
@@ -82,7 +82,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="6"><p class="admin-empty-inline">No rider sweldo requests waiting.</p></td></tr>
+                        <tr><td colspan="6"><p class="admin-empty-inline">No rider payout requests pending.</p></td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -90,7 +90,7 @@
     </section>
 
     <section class="seller-panel">
-        <header class="seller-panel__header"><div><h2>Sweldo disbursement history</h2><p>The latest 50 paid or rejected rider withdrawals.</p></div></header>
+        <header class="seller-panel__header"><div><h2>Rider payout history</h2><p>The latest 50 paid or rejected rider withdrawals.</p></div></header>
         <div class="seller-table-wrap">
             <table class="seller-table workspace-table admin-money">
                 <thead><tr><th>Processed</th><th>Rider</th><th>GCash account</th><th>Amount</th><th>Result</th><th>Processed by</th></tr></thead>
@@ -112,7 +112,7 @@
                             <td>{{ $withdrawal->processor?->name ?? '—' }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="6"><p class="admin-empty-inline">No sweldo disbursements recorded yet.</p></td></tr>
+                        <tr><td colspan="6"><p class="admin-empty-inline">No rider payouts recorded yet.</p></td></tr>
                     @endforelse
                 </tbody>
             </table>

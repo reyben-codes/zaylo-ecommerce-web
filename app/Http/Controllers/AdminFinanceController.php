@@ -236,8 +236,8 @@ class AdminFinanceController extends Controller
     public function wallet(Request $request)
     {
         $hasEscrow = \Illuminate\Support\Facades\Schema::hasTable('escrow_payments');
-        $escrowHeld = $hasEscrow ? (float) \App\Models\EscrowPayment::where('status', 'held')->sum('amount') : 0.0;
-        $escrowReleased = $hasEscrow ? (float) \App\Models\EscrowPayment::where('status', 'released')->sum('amount') : 0.0;
+        $escrowHeld = $hasEscrow ? (float) \App\Models\EscrowPayment::where('status', 'held')->sum('amount_minor') / 100 : 0.0;
+        $escrowReleased = $hasEscrow ? (float) \App\Models\EscrowPayment::where('status', 'released')->sum('amount_minor') / 100 : 0.0;
         
         $hasSellerWithdrawals = \Illuminate\Support\Facades\Schema::hasTable('seller_withdrawals');
         $sellerPendingQuery = $hasSellerWithdrawals ? \App\Models\SellerWithdrawal::where('status', 'pending') : null;
