@@ -2698,3 +2698,14 @@ img.user-avatar { background: var(--c-eee8e2); }
     .checkout-voucher-tile__action { margin-left: auto; }
     .checkout-voucher-form { width: 100%; }
 }
+
+/* GCash keeps its payment color when selected in either theme. */
+.payment-method-option:has(input[value="gcash"]:checked) {
+    border-color: #0065ff;
+    background: color-mix(in srgb, #0065ff 9%, var(--c-ffffff));
+}
+.payment-method-option:has(input[value="gcash"]:checked) .payment-method-option-icon,
+.payment-method-option:has(input[value="gcash"]:checked) .payment-method-option-title { color: #0065ff; }
+button[data-checkout-submit].is-gcash { background: #0065ff; border-color: #0065ff; color: #fff; }
+button[data-checkout-submit].is-gcash:hover:not(:disabled) { background: #0052d4; border-color: #0052d4; }
+button[data-checkout-submit].is-gcash:disabled { opacity: .5; }

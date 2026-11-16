@@ -237,7 +237,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   SizedBox(
                     width: 180,
                     child: PrimaryButton(
-                      label: 'PLACE ORDER',
+                      label: _payment == 'gcash' ? 'Pay via GCash' : 'PLACE ORDER',
+                      style: _payment == 'gcash' ? primaryButtonStyle.copyWith(
+                        backgroundColor: WidgetStateProperty.resolveWith((states) =>
+                            states.contains(WidgetState.disabled) ? null : const Color(0xFF0065FF)),
+                        foregroundColor: const WidgetStatePropertyAll(Colors.white),
+                      ) : null,
                       busy: _placing,
                       onPressed: _quoting || _addressId == null || !quote.identityVerified ? null : _placeOrder,
                     ),
@@ -416,6 +421,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         opacity: gcashOk ? 1 : .55,
         child: _PaymentOption(
           icon: Icons.phone_android_outlined,
+            accent: const Color(0xFF0065FF),
           title: 'GCash',
           subtitle: gateway
               ? (gcashOk ? 'Pay securely through the gateway. Funds release after delivery confirmation.' : 'GCash gateway is not configured yet')
@@ -854,22 +860,24 @@ class _PaymentOption extends StatelessWidget {
     required this.subtitle,
     required this.selected,
     required this.onTap,
+      this.accent,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
   final bool selected;
+  final Color? accent;
 
   /// Null when the option cannot be chosen.
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) => Material(
-        color: ZayloColors.paper,
+          color: selected && accent != null ? Color.alphaBlend(accent!.withValues(alpha: .09), ZayloColors.paper) : ZayloColors.paper,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
-          side: BorderSide(color: selected ? ZayloColors.ink : ZayloColors.line, width: selected ? 1.6 : 1),
+            side: BorderSide(color: selected ? (accent ?? ZayloColors.ink) : ZayloColors.line, width: selected ? 1.6 : 1),
         ),
         child: InkWell(
           borderRadius: BorderRadius.circular(14),
@@ -879,7 +887,7 @@ class _PaymentOption extends StatelessWidget {
             child: Row(children: [
               CircleAvatar(
                 radius: 19,
-                backgroundColor: selected ? ZayloColors.ink : ZayloColors.sand,
+                  backgroundColor: selected ? (accent ?? ZayloColors.ink) : ZayloColors.sand,
                 child: Icon(icon, size: 19, color: selected ? ZayloColors.white : ZayloColors.ink),
               ),
               const SizedBox(width: 12),
@@ -890,7 +898,7 @@ class _PaymentOption extends StatelessWidget {
                 ]),
               ),
               Icon(selected ? Icons.radio_button_checked : Icons.radio_button_off,
-                  color: selected ? ZayloColors.ink : ZayloColors.line),
+                    color: selected ? (accent ?? ZayloColors.ink) : ZayloColors.line),
             ]),
           ),
         ),

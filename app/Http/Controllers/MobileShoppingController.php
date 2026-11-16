@@ -183,7 +183,8 @@ class MobileShoppingController extends Controller
         );
 
         return response()->json([
-            'message' => 'Order placed successfully.',
+            'message' => ($validated['payment_method'] ?? 'cod') === 'gcash'
+                ? 'Checkout saved. Complete payment to place your order.' : 'Order placed successfully.',
             'already_placed' => false,
             'orders' => $orders->map(fn (Order $order) => MobilePayload::order($order->load('items.product.images')))->values(),
         ], 201);

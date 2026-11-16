@@ -2,12 +2,7 @@
     <table class="wb-head">
         <tr>
             <td>
-                {{-- PNG images need PHP's GD extension; without it the text wordmark is used. --}}
-                @if(extension_loaded('gd'))
-                    <img src="{{ $asset('images/ZAYLO_LOGO_DARK.png') }}" alt="ZAYLO" class="wb-logo">
-                @else
-                    <span class="wb-wordmark">ZAYLO</span>
-                @endif
+                @include('waybill.parts.carrier-brand', ['logoClass' => 'wb-logo'])
             </td>
             <td class="wb-head__meta">
                 <span class="wb-title">WAYBILL</span>

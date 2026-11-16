@@ -11,6 +11,7 @@ class OrderNotificationTextTest extends TestCase
     public static function events(): array
     {
         return [
+            'unpaid checkout' => ['placed', 'Checkout saved; awaiting GCash payment.', 'Payment required', 'remains in To Pay'],
             'checkout' => ['placed', 'Order placed by buyer.', 'Order placed', 'waiting for the seller'],
             'seller confirms' => ['confirmed', 'Updated by seller.', 'Order confirmed', 'seller confirmed'],
             'shipping' => ['picked_up', null, 'Order shipped', 'seller shipped'],

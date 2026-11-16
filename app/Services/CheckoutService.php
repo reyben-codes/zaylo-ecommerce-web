@@ -423,12 +423,12 @@ class CheckoutService
                 }
                 $attributes = [
                     'order_number' => 'ZAY-'.now()->format('ymd').'-'.Str::upper(Str::random(8)),
-                    'user_id' => $buyer->id, 'seller_id' => $sellerId ?: null, 'status' => 'placed',
+                    'user_id' => $buyer->id, 'seller_id' => $sellerId ?: null, 'status' => $paymentMethod === 'gcash' ? 'awaiting_payment' : 'placed',
                     'subtotal' => $subtotal, 'shipping_fee' => $shippingFee, 'total' => $subtotal + $shippingFee - $voucherDiscount,
                     'voucher_code' => $usesVoucher ? $voucher->code : null, 'shipping_discount' => $shippingDiscount,
                     'payment_method' => $paymentMethod, 'recipient_name' => $address->recipient_name,
                     'phone' => $address->phone, 'shipping_address' => $address->formatted(),
-                    'notes' => $input['notes'] ?? null, 'placed_at' => now(),
+                    'notes' => $input['notes'] ?? null, 'placed_at' => $paymentMethod === 'gcash' ? null : now(),
                 ] + (Schema::hasColumn('orders', 'settlement_breakdown') ? ['settlement_breakdown' => $breakdown] : [])
                   + (Schema::hasColumn('orders', 'voucher_discount') ? ['voucher_discount' => $voucherDiscount] : [])
                   + ParcelTracking::orderPin($address) + (Schema::hasColumn('orders', 'courier_choice')
@@ -501,7 +501,8 @@ class CheckoutService
                     EscrowPayments::reserve($order);
                 }
                 $order->statusHistory()->create([
-                    'changed_by' => $buyer->id, 'status' => 'placed', 'note' => 'Order placed by buyer.',
+                    'changed_by' => $buyer->id, 'status' => $paymentMethod === 'gcash' ? 'awaiting_payment' : 'placed',
+                    'note' => $paymentMethod === 'gcash' ? 'Checkout saved; awaiting GCash payment.' : 'Order placed by buyer.',
                 ]);
                 $orders->push($order);
             }
@@ -521,7 +522,7 @@ class CheckoutService
     }
 
     /** Buyers can cancel only while the order waits for the seller; once the seller confirms it, it is being prepared. */
-    public const BUYER_CANCELLABLE = ['placed'];
+    public const BUYER_CANCELLABLE = ['placed', 'awaiting_payment'];
 
     /**
      * Cancels a buyer's order while the seller has not confirmed it yet, putting the stock back. The status is read

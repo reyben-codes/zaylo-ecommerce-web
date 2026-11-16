@@ -51,16 +51,20 @@
     </nav>
 
     @forelse($orders as $order)
+        @php
+            $gcashCheckout = in_array($order->status, ['placed', 'awaiting_payment'], true) && $order->payment_method === 'gcash';
+            $awaitingPayment = $gcashCheckout && ! \App\Services\GcashPayments::allowsConfirm($order);
+        @endphp
         <article class="order-card order-status-card">
             <header>
                 <div>
                     <strong>Order {{ $order->order_number }}</strong>
-                    <p>Placed {{ $order->placed_at?->format('M j, Y · g:i A') }}</p>
+                    <p>{{ $awaitingPayment ? 'Checkout started' : 'Placed' }} {{ ($order->placed_at ?? $order->created_at)?->format('M j, Y · g:i A') }}</p>
                 </div>
-                <span class="status-pill status-{{ $order->status }}">{{ $order->status === 'placed' && $order->payment_method === 'gcash' && $order->payment?->status === 'paid' ? 'To ship' : str($order->status)->replace('_', ' ')->title() }}</span>
+                <span class="status-pill status-{{ $order->status }}">{{ $gcashCheckout ? ($awaitingPayment ? 'To pay' : 'To ship') : str($order->status)->replace('_', ' ')->title() }}</span>
             </header>
 
-            <p class="order-status-message">{{ $statusMessages[$order->status] ?? 'Your order status has been updated.' }}</p>
+            <p class="order-status-message">{{ $gcashCheckout ? ($awaitingPayment ? 'Complete payment to place your order. It cannot be prepared or shipped until payment is confirmed.' : 'Payment verified. Waiting for the seller to prepare your parcel.') : ($statusMessages[$order->status] ?? 'Your order status has been updated.') }}</p>
             @include('partials.gcash-buyer', ['order' => $order])
             @if($order->status === 'cancelled')
                 @php
@@ -124,7 +128,9 @@
                         <span style="color:#64748b; font-size:.78rem; text-transform:uppercase; letter-spacing:.03em; font-weight:600;">Waiting Time &amp; Arrival Window</span>
                         <p style="margin:2px 0 0; color:#0f766e; font-weight:600;">
                             <i class="fas fa-clock" aria-hidden="true"></i>
-                            @if(in_array($order->status, ['placed', 'confirmed', 'processing'], true))
+                            @if($awaitingPayment)
+                                Awaiting payment confirmation
+                            @elseif(in_array($order->status, ['placed', 'confirmed', 'processing'], true))
                                 Est. arrival {{ $order->placed_at ? $order->placed_at->addDays(3)->format('M j') . ' – ' . $order->placed_at->addDays(5)->format('M j') : '3–5 days' }}
                             @elseif(in_array($order->status, ['ready_for_pickup', 'assigned', 'picked_up', 'in_transit', 'out_for_delivery'], true))
                                 Out on the road &middot; ETA {{ $order->placed_at ? $order->placed_at->addDays(2)->format('M j') : '1–2 days' }}
@@ -139,7 +145,7 @@
 
                 @php
                     $timeline = [
-                        ['key' => 'placed', 'label' => 'Placed', 'icon' => 'fa-clipboard-check'],
+                        ['key' => 'placed', 'label' => $awaitingPayment ? 'To Pay' : 'Placed', 'icon' => 'fa-clipboard-check'],
                         ['key' => 'processing', 'label' => 'Preparing', 'icon' => 'fa-box'],
                         ['key' => 'picked_up', 'label' => 'Truck Pickup', 'icon' => 'fa-truck-ramp-box'],
                         ['key' => 'in_transit', 'label' => 'In Transit', 'icon' => 'fa-truck-fast'],

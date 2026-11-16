@@ -8,12 +8,7 @@
 <table class="fx-top">
     <tr>
         <td class="fx-top__brand">
-            @php($flashLogo = 'images/couriers/flash-express.png')
-            @if(file_exists(public_path($flashLogo)))
-                <img src="{{ $asset($flashLogo) }}" alt="Flash Express" class="fx-top__logo">
-            @else
-                FLASH<span>EXPRESS</span>
-            @endif
+            @include('waybill.parts.carrier-brand', ['logoClass' => 'fx-top__logo'])
         </td>
         <td class="fx-top__dst"><span>DST</span>{{ $waybill['sort_code'] }}</td>
     </tr>

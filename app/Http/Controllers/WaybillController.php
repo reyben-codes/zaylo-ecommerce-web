@@ -69,17 +69,21 @@ class WaybillController extends Controller
     private function forSeller(Order $order, bool $print)
     {
         $shopId = Product::usesLegacySchema() ? (int) auth()->id() : (int) auth()->user()->sellerShop()->id;
-        abort_unless((int) $order->seller_id === $shopId, 403);
-
-        if (! Waybill::available($order->shipment)) {
+        if (Order::usesLegacySchema()) {
+            abort_unless((int) $order->seller_id === $shopId, 403);
+            $shipment = $order->shipment;
+        } else {
+            $shipment = $order->sellerOrders()->where('seller_id', $shopId)->firstOrFail()->shipment;
+        }
+        if (! Waybill::available($shipment)) {
             return redirect()->route('seller.orders')->with('status', $order->status === 'cancelled'
                 ? "Order {$order->order_number} was cancelled, so it has no waybill."
                 : "Mark order {$order->order_number} as Ready to ship first; its waybill and tracking number are created then.");
         }
 
         return $print
-            ? Waybill::printView($order->shipment, route('seller.orders.waybill', $order))
-            : Waybill::response($order->shipment);
+            ? Waybill::printView($shipment, route('seller.orders.waybill', $order))
+            : Waybill::response($shipment);
     }
 
     /** The print page links to the PDF route of the same role. */

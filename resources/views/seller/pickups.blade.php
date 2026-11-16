@@ -27,6 +27,7 @@
         </div>
     @endif
 
+    @include('seller.partials.logistics-availability')
     <div class="pickups-container">
         {{-- Section 1: Schedule Pickup --}}
         <section class="pickup-section-card" id="schedule-pickup-section">
@@ -75,6 +76,7 @@
                                         <td>
                                             @if ($partners->isNotEmpty())
                                                 <select name="logistics_provider_id" class="pickup-select" required>
+                                                    <option value="" @selected($suggestedPartner === null) disabled>Choose logistics partner</option>
                                                     @foreach ($partners as $partner)
                                                         <option value="{{ $partner->id }}" {{ $suggestedPartner == $partner->id ? 'selected' : '' }}>
                                                             {{ $partner->name }}

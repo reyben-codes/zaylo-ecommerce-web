@@ -259,7 +259,9 @@ class SellerController extends Controller
         $normalizedStatuses = ['pending' => 'placed', 'accepted' => 'confirmed', 'packed' => 'processing', 'ready_to_ship' => 'ready_for_pickup', 'shipped' => 'in_transit', 'delivered' => 'delivered', 'completed' => 'completed', 'cancelled' => 'cancelled'];
         $baseQuery = $legacy ? Order::where('seller_id', $shopId)
             : Order::whereHas('sellerOrders', fn ($query) => $query->where('seller_id', $shopId));
+        $baseQuery->where('orders.status', '!=', 'awaiting_payment');
         $countQuery = $legacy ? clone $baseQuery : SellerOrder::where('seller_id', $shopId);
+        if (! $legacy) $countQuery->whereHas('order', fn ($query) => $query->where('status', '!=', 'awaiting_payment'));
         $statusCounts = $countQuery
             ->selectRaw('status, COUNT(*) as total')
             ->groupBy('status')
@@ -310,6 +312,8 @@ class SellerController extends Controller
         $legacy = Order::usesLegacySchema();
         $query = $legacy ? Order::where('seller_id', $this->shopId())->with(['buyer', 'payment', 'disputes', 'items'])
             : SellerOrder::where('seller_id', $this->shopId())->with(['order.buyer', 'order.payment', 'order.disputes', 'items']);
+        $legacy ? $query->where('status', '!=', 'awaiting_payment')
+            : $query->whereHas('order', fn ($order) => $order->where('status', '!=', 'awaiting_payment'));
         if ($date) {
             $start = CarbonImmutable::parse($date, self::REPORT_TIMEZONE)->startOfDay();
             $query->where($legacy ? 'placed_at' : 'created_at', '>=', $start->utc())
@@ -454,8 +458,10 @@ class SellerController extends Controller
             if (! in_array($data['status'], self::ORDER_TRANSITIONS[$locked->status] ?? [], true)) {
                 throw ValidationException::withMessages(['status' => 'That order status transition is not allowed.']);
             }
-            if ($data['status'] === 'confirmed' && ! GcashPayments::allowsConfirm($locked->load('payment'))) {
-                throw ValidationException::withMessages(['status' => "Check the buyer's GCash payment first: open your GCash app, find the reference, then mark it received."]);
+            if ($data['status'] !== 'cancelled' && ! GcashPayments::allowsConfirm($locked->load('payment'))) {
+                throw ValidationException::withMessages(['status' => \App\Services\EscrowPayments::forOrder($locked)
+                    ? 'Payment must be confirmed before this GCash order can be prepared or shipped.'
+                    : "Check the buyer's GCash payment first: open your GCash app, find the reference, then mark it received."]);
             }
 
             if ($data['status'] === 'cancelled') {
@@ -569,11 +575,13 @@ class SellerController extends Controller
         if ($partners->isEmpty()) {
             return null;
         }
-        $last = Shipment::whereIn('order_id', Order::where('seller_id', $this->shopId())->select('id'))
+        $last = Shipment::query()->when(Order::usesLegacySchema(),
+            fn ($query) => $query->whereIn('order_id', Order::where('seller_id', $this->shopId())->select('id')),
+            fn ($query) => $query->whereIn('seller_order_id', SellerOrder::where('seller_id', $this->shopId())->select('id')))
             ->whereIn('logistics_provider_id', $partners->pluck('id'))
             ->latest('id')->value('logistics_provider_id');
 
-        return (int) ($last ?? $partners->first()->id);
+        return $last !== null ? (int) $last : ($partners->count() === 1 ? (int) $partners->first()->id : null);
     }
 
     /**

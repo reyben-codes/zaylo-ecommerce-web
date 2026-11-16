@@ -41,7 +41,7 @@ class EscrowPayments
         abort_unless(self::configured(), 503, 'GCash gateway is not configured yet. Please use Cash on Delivery.');
         return DB::transaction(function () use ($order) {
             $locked = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
-            abort_unless($locked->payment_method === 'gcash' && $locked->status === 'placed', 422, 'This order is not awaiting payment.');
+            abort_unless($locked->payment_method === 'gcash' && in_array($locked->status, ['placed', 'awaiting_payment'], true), 422, 'This order is not awaiting payment.');
             $escrow = EscrowPayment::where('order_id', $locked->id)->lockForUpdate()->firstOrFail();
             if (DemoPayments::isDemo($escrow)) {
                 abort_unless(DemoPayments::enabled(), 409, 'This checkout is unavailable.');
@@ -124,6 +124,7 @@ class EscrowPayments
             $escrow->update(['status' => $cancelled ? 'review_required' : 'held', 'gateway_payment' => $payment['id'],
                 'gateway_fee_minor' => max(0, (int) data_get($payment, 'attributes.fee', 0)), 'captured_at' => now()]);
             $order->payment?->update(['status' => 'paid', 'paid_at' => now()]);
+            if ($order->status === 'awaiting_payment') $order->update(['status' => 'placed', 'placed_at' => now()]);
             if (! $cancelled) {
                 // "placed" remains the seller's confirmation step; payment status moves the buyer from To Pay to To Ship.
                 $order->statusHistory()->create(['status' => 'placed', 'note' => 'GCash gateway payment verified; funds held pending delivery confirmation.']);

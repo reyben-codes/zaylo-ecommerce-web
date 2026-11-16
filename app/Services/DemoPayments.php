@@ -38,7 +38,7 @@ class DemoPayments
             $locked = EscrowPayment::whereKey($payment->id)->lockForUpdate()->firstOrFail();
             abort_unless(self::isDemo($locked) && $order->payment_method === 'gcash', 409);
             if (in_array($locked->status, ['held', 'released'], true)) return;
-            if ($locked->status !== 'pending' || $order->status !== 'placed') {
+            if ($locked->status !== 'pending' || ! in_array($order->status, ['placed', 'awaiting_payment'], true)) {
                 throw ValidationException::withMessages(['payment' => 'This order is no longer awaiting payment.']);
             }
             if ($decision === 'decline') {
@@ -53,6 +53,7 @@ class DemoPayments
             } while (EscrowPayment::where('gateway_payment', $reference)->exists());
             $locked->update(['status' => 'held', 'gateway_payment' => $reference, 'gateway_fee_minor' => 0, 'captured_at' => now()]);
             $order->payment?->update(['status' => 'paid', 'paid_at' => now()]);
+            if ($order->status === 'awaiting_payment') $order->update(['status' => 'placed', 'placed_at' => now()]);
             $order->statusHistory()->create(['status' => 'placed', 'note' => 'Payment authorized; funds held pending delivery confirmation.']);
             $updates = app(AccountUpdates::class);
             $updates->send($order->buyer?->id, 'escrow-held-'.$locked->id, 'orders', 'Payment successful',

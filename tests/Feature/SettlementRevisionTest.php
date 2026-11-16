@@ -58,6 +58,7 @@ class SettlementRevisionTest extends TestCase
     public function test_signed_capture_moves_to_ship_and_replays_do_not_duplicate_credits(): void
     {
         $f = $this->parcel();
+        $f['order']->update(['status' => 'awaiting_payment', 'placed_at' => null]);
         $body = json_encode($this->event($f));
         $time = time();
         $header = 't='.$time.',te='.hash_hmac('sha256', $time.'.'.$body, 'webhook-secret');
@@ -65,6 +66,8 @@ class SettlementRevisionTest extends TestCase
         app(EscrowPayments::class)->capture($this->event($f));
         $this->assertSame('held', $f['escrow']->fresh()->status);
         $this->assertSame('paid', $f['order']->payment->fresh()->status);
+        $this->assertSame('placed', $f['order']->fresh()->status);
+        $this->assertNotNull($f['order']->fresh()->placed_at);
         $counts = BuyerOrderTabs::counts($f['buyer']->orders()->getQuery());
         $this->assertSame(0, $counts['to_pay']);
         $this->assertSame(1, $counts['to_ship']);

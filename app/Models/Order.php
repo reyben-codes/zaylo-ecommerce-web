@@ -138,6 +138,7 @@ class Order extends Model
         if ($statuses->isEmpty()) return $value ?? 'placed';
         $active = $statuses->reject(fn ($status) => $status === 'cancelled');
         if ($active->isEmpty()) return 'cancelled';
+        if ($value === 'awaiting_payment') return 'awaiting_payment';
         // Multi-seller historical orders show their earliest unfinished stage.
         foreach (['pending' => 'placed', 'accepted' => 'confirmed', 'packed' => 'processing', 'ready_to_ship' => 'ready_for_pickup', 'shipped' => 'in_transit', 'delivered' => 'delivered'] as $stored => $label) {
             if ($active->contains($stored)) return $label;

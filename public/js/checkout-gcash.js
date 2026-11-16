@@ -2,6 +2,17 @@
 document.addEventListener('DOMContentLoaded', () => {
     const panel = document.querySelector('[data-gcash-pay]');
     const methods = document.querySelectorAll('input[name="payment_method"]');
+    const submit = document.querySelector('[data-checkout-submit]');
+    const syncSubmit = () => {
+        const gcash = document.querySelector('input[name="payment_method"]:checked')?.value === 'gcash';
+        if (submit) {
+            submit.textContent = gcash ? 'Pay via GCash' : 'Place order';
+            submit.classList.toggle('is-gcash', gcash);
+        }
+        methods.forEach(method => method.closest('.payment-method-option')?.classList.toggle('selected', method.checked));
+    };
+    methods.forEach(method => method.addEventListener('change', syncSubmit));
+    syncSubmit();
     if (panel && methods.length > 0) {
         const sync = () => {
             const gcash = document.querySelector('input[name="payment_method"]:checked')?.value === 'gcash';

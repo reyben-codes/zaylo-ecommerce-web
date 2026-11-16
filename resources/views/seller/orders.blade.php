@@ -43,6 +43,7 @@
         </div>
     </aside>
 
+    @include('seller.partials.logistics-availability')
     <section class="seller-stat-grid" aria-label="Order summary">
         <article class="seller-stat"><span class="seller-stat__label">All orders</span><strong class="seller-stat__value">{{ $counts['all'] }}</strong></article>
         <article class="seller-stat"><span class="seller-stat__label">To prepare</span><strong class="seller-stat__value">{{ $counts['to_prepare'] }}</strong></article>
@@ -130,15 +131,14 @@
                                             @csrf
                                             @method('PATCH')
                                             <input type="hidden" name="status" value="{{ $nextAction['status'] }}">
-                                            @if($nextAction['status'] === 'ready_for_pickup' && $partners->count() > 1)
+                                            @if($nextAction['status'] === 'ready_for_pickup' && $partners->isNotEmpty())
                                                 <label class="sr-only" for="partner-{{ $order->id }}">Logistics partner for order {{ $order->order_number }}</label>
                                                 <select id="partner-{{ $order->id }}" name="logistics_provider_id" class="order-partner" required>
+                                                    <option value="" @selected($suggestedPartner === null) disabled>Choose logistics partner</option>
                                                     @foreach($partners as $partner)
                                                         <option value="{{ $partner->id }}" @selected($partner->id === $suggestedPartner)>{{ $partner->name }}</option>
                                                     @endforeach
                                                 </select>
-                                            @elseif($nextAction['status'] === 'ready_for_pickup' && $partners->count() === 1)
-                                                <input type="hidden" name="logistics_provider_id" value="{{ $partners->first()->id }}">
                                             @endif
                                             @if($nextAction['status'] === 'ready_for_pickup' && \App\Support\WaybillQueue::ready())
                                                 {{-- No printer: the partner prints it, matched by a queue number and colour written on the parcel. --}}

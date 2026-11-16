@@ -47,7 +47,7 @@ final class BuyerOrderTabs
     {
         return match ($tab) {
             'all' => $orders,
-            'to_pay' => $orders->where('status', 'placed')->where('payment_method', 'gcash')
+            'to_pay' => $orders->whereIn('status', ['placed', 'awaiting_payment'])->where('payment_method', 'gcash')
                 ->whereHas('payment', fn ($payment) => $payment->where('status', '!=', 'paid')->whereNull('paid_at')),
             'to_ship' => self::status($orders, MobilePayload::STATUS_GROUPS['to_ship'])
                 ->where(fn ($q) => $q->where('payment_method', '!=', 'gcash')->orWhereHas('payment', fn ($payment) => $payment->where('status', 'paid'))),
@@ -68,7 +68,7 @@ final class BuyerOrderTabs
         // Rider assignment means shipped on the normalized schema, so it belongs under In Transit.
         if (in_array('placed', $statuses, true)) $statuses = array_diff($statuses, ['assigned']);
         $stored = array_values(array_unique(array_map(fn ($s) => $map[$s] ?? $s, $statuses)));
-        return $orders->whereHas('sellerOrders', fn ($q) => $q->whereIn('status', $stored));
+        return $orders->where('orders.status', '!=', 'awaiting_payment')->whereHas('sellerOrders', fn ($q) => $q->whereIn('status', $stored));
     }
 
     /** @return array<string, int> tab => number of the buyer's orders in it */

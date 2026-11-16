@@ -17,19 +17,20 @@ ButtonStyle get secondaryButtonStyle => ZayloButtons.secondary.copyWith(
 
 /// Full-width primary action that shows a spinner while [busy].
 class PrimaryButton extends StatelessWidget {
-  const PrimaryButton({super.key, required this.label, required this.onPressed, this.busy = false, this.icon});
+  const PrimaryButton({super.key, required this.label, required this.onPressed, this.busy = false, this.icon, this.style});
 
   final String label;
   final VoidCallback? onPressed;
   final bool busy;
   final IconData? icon;
+  final ButtonStyle? style;
 
   @override
   Widget build(BuildContext context) => SizedBox(
         width: double.infinity,
         child: FilledButton(
           onPressed: busy ? null : onPressed,
-          style: primaryButtonStyle,
+          style: style ?? primaryButtonStyle,
           child: busy
               ? SizedBox(
                   height: 20,

@@ -218,6 +218,10 @@ class Order {
         null => '—',
       };
 
+  /// Gateway orders require both a paid receipt and confirmed held/released funds.
+  bool get isPaymentConfirmed => paymentStatus == 'paid' &&
+      (gcash?.gateway != true || const {'held', 'released'}.contains(gcash?.status));
+
   factory Order.fromJson(Map<String, dynamic> json) => Order(
         id: (json['id'] as num).toInt(),
         orderNumber: json['order_number'] as String,

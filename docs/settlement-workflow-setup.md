@@ -69,3 +69,5 @@ Simulation remains explicit internally: sessions have a `demo_` identifier, `liv
 - [Idempotent requests](https://docs.paymongo.com/reference/idempotent-requests)
 - [Merchant test setup](https://docs.paymongo.com/docs/payment-channels-hosted-checkout-quick-start)
 - [Current pricing](https://www.paymongo.com/en/pricing)
+
+GCash checkout placement: the checkout action is **Pay via GCash** and uses GCash blue. A checkout reserves stock under `awaiting_payment` with no `placed_at`; only verified payment changes it to `placed` and sends it to the seller queue. Declining or closing payment leaves it unplaced and available in To Pay for retry/cancellation. Run `php artisan migrate --force` when deploying: `2026_11_16_000001_keep_unpaid_gateway_checkouts_unplaced.php` also moves earlier unpaid gateway checkouts out of Placed without changing verified payments or fulfilled orders.

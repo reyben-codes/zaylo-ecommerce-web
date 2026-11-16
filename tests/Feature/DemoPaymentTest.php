@@ -31,7 +31,7 @@ class DemoPaymentTest extends TestCase
         $provider = LogisticsProvider::create(['user_id' => $owner->id, 'name' => 'School Partner', 'slug' => 'school-partner', 'status' => 'approved']);
         config(['escrow.demo_enabled' => true, 'escrow.live' => false, 'escrow.secret_key' => '',
             'escrow.webhook_secret' => '', 'escrow.admin_user_id' => $admin->id]);
-        $order = Order::create(['buyer_id' => $buyer->id, 'reference' => 'SCHOOL-001', 'total_minor' => 112000,
+        $order = Order::create(['buyer_id' => $buyer->id, 'status' => 'awaiting_payment', 'reference' => 'SCHOOL-001', 'total_minor' => 112000,
             'payment_method' => 'gcash', 'shipping_address' => ['city' => 'Calamba'], 'settlement_breakdown' => Settlement::deliveryBreakdown(1000, 120)]);
         $sellerOrder = $order->sellerOrders()->create(['seller_id' => $seller->sellerShop()->id, 'subtotal_minor' => 100000,
             'shipping_fee_minor' => 12000, 'commission_minor' => 10000, 'status' => 'pending', 'settlement_breakdown' => Settlement::deliveryBreakdown(1000, 120)]);
@@ -62,6 +62,8 @@ class DemoPaymentTest extends TestCase
         $this->post($action, ['decision' => 'approve'])->assertRedirect();
         $this->assertSame('held', $f['escrow']->fresh()->status);
         $this->assertSame('paid', $f['order']->payment->fresh()->status);
+        $this->assertSame('placed', $f['order']->fresh()->status);
+        $this->assertNotNull($f['order']->fresh()->placed_at);
         $this->assertEquals(112000, $f['escrow']->fresh()->amount_minor);
         $this->assertDatabaseCount('settlement_wallet_entries', 0);
         $this->assertDatabaseCount('order_status_histories', 1);
@@ -82,8 +84,36 @@ class DemoPaymentTest extends TestCase
         $this->get($url)->assertOk()->assertSee('Payment not completed');
         $this->assertSame('pending', $f['escrow']->fresh()->status);
         $this->assertSame('pending', $f['order']->payment->fresh()->status);
+        $this->assertSame('awaiting_payment', $f['order']->fresh()->status);
+        $this->assertNull($f['order']->fresh()->placed_at);
+        $this->assertSame(0, app(\App\Services\SellerQueues::class)->ordersToPrepare($f['seller']));
+        $this->actingAs($f['seller'])->get(route('seller.orders'))->assertOk()->assertDontSee('SCHOOL-001');
+        $this->assertFalse(\App\Services\GcashPayments::allowsConfirm($f['order']->fresh()));
+        $payload = \App\Support\MobilePayload::order($f['order']->fresh());
+        $this->assertSame('To pay', $payload['status_label']);
+        $this->assertStringContainsString('cannot be prepared or shipped', $payload['status_message']);
+        $this->actingAs($f['seller'])->patch(route('seller.orders.status', $f['order']), ['status' => 'confirmed'])
+            ->assertSessionHasErrors('status');
+        $this->assertSame('pending', $f['sellerOrder']->fresh()->status);
         $this->post($action, ['decision' => 'approve'])->assertRedirect();
         $this->assertSame('held', $f['escrow']->fresh()->status);
+        $this->assertSame(1, app(\App\Services\SellerQueues::class)->ordersToPrepare($f['seller']));
+        $this->actingAs($f['seller'])->patch(route('seller.orders.status', $f['order']), ['status' => 'confirmed'])
+            ->assertSessionHasNoErrors();
+        $this->assertSame('accepted', $f['sellerOrder']->fresh()->status);
+    }
+
+    public function test_unpaid_checkout_cannot_be_fulfilled_even_with_a_paid_receipt(): void
+    {
+        $f = $this->fixture();
+        $f['order']->payment->update(['status' => 'paid']);
+        $this->assertFalse(\App\Services\GcashPayments::allowsConfirm($f['order']->fresh()));
+        $this->actingAs($f['seller'])->patch(route('seller.orders.status', $f['order']), ['status' => 'confirmed'])
+            ->assertSessionHasErrors('status');
+        $this->assertSame('pending', $f['sellerOrder']->fresh()->status);
+        $this->assertSame('pending', $f['escrow']->fresh()->status);
+        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        app(\App\Services\SellerLogistics::class)->assign($f['order']->fresh(), $f['sellerOrder']->shipment->provider, $f['sellerOrder']);
     }
 
     public function test_unsigned_expired_and_other_users_checkouts_are_rejected(): void
@@ -95,6 +125,21 @@ class DemoPaymentTest extends TestCase
         $other = User::factory()->create(['role' => 'buyer', 'status' => 'active']);
         $this->signInMobile($other)->postJson('/api/mobile/orders/'.$f['order']->id.'/gateway')->assertNotFound();
         $this->assertSame('pending', $f['escrow']->fresh()->status);
+    }
+
+    public function test_upgrade_converts_only_unpaid_gateway_orders_to_checkouts(): void
+    {
+        $f = $this->fixture();
+        $f['order']->update(['status' => 'placed', 'placed_at' => now()]);
+        $migration = require database_path('migrations/2026_11_16_000001_keep_unpaid_gateway_checkouts_unplaced.php');
+        $migration->up();
+        $this->assertSame('awaiting_payment', $f['order']->fresh()->status);
+        $this->assertNull($f['order']->fresh()->placed_at);
+        app(DemoPayments::class)->authorize($f['escrow'], 'approve');
+        $placedAt = $f['order']->fresh()->placed_at;
+        $migration->up();
+        $this->assertSame('placed', $f['order']->fresh()->status);
+        $this->assertEquals($placedAt, $f['order']->fresh()->placed_at);
     }
 
     public function test_disabling_demo_or_enabling_live_mode_blocks_local_authorization(): void

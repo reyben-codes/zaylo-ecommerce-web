@@ -58,13 +58,13 @@ class Waybill
             'weight' => self::weight($items),
             'cod' => $cod = self::amountToCollect($order, $sellerOrder, $shipment),
             'payment' => $order?->payment_method === 'cod' && $cod <= 0 ? 'Paid' : self::paymentLabel($order),
-            'carrier' => $shipment->logistics_provider_id ? $shipment->provider?->name : null,
+            'carrier' => self::partnerFor($order, $shipment)?->name,
             'area' => Schema::hasColumn('shipments', 'sort_area') ? $shipment->sort_area : null,
             'notes' => trim((string) ($order?->notes ?? $order?->note ?? '')) ?: null,
             'printed' => now('Asia/Manila'),
             // The courier on the order picks the label layout (ZAYLO, J&T or Flash Express).
             'courier' => $courier = self::courierOf($order, $shipment),
-            'courier_name' => (Order::COURIERS[$courier] ?? Order::COURIERS[Order::DEFAULT_COURIER])['name'],
+            'courier_name' => self::partnerFor($order, $shipment)?->name ?? (Order::COURIERS[$courier] ?? Order::COURIERS[Order::DEFAULT_COURIER])['name'],
             'sort_code' => self::sortCode($recipient = self::recipient($order)),
             // Printed by the logistics partner for a seller without a printer: the mark written on the parcel.
             'queue' => WaybillQueue::for($shipment),
@@ -86,7 +86,7 @@ class Waybill
      */
     public static function courierOf(?Order $order, ?Shipment $shipment = null): string
     {
-        $partner = $shipment && Shipment::tracksProvider() && $shipment->logistics_provider_id ? $shipment->provider : null;
+        $partner = self::partnerFor($order, $shipment);
         if ($partner) {
             return self::layoutFor($partner);
         }
@@ -97,7 +97,7 @@ class Waybill
 
     /**
      * A partner's waybill design: the one it chose on its Account page; otherwise J&T or Flash by its name; otherwise
-     * a design the J&T- and Flash-named partners do not use, spread by partner, so partners do not all look the same.
+     * the standard layout branded with the assigned company's name.
      */
     public static function layoutFor(LogisticsProvider $partner): string
     {
@@ -108,10 +108,16 @@ class Waybill
         if ($named = self::courierNamed($partner->name)) {
             return $named;
         }
-        $taken = LogisticsProvider::query()->pluck('name')->map(fn ($name) => self::courierNamed($name))->filter()->unique()->all();
-        $free = array_values(array_diff(self::LAYOUTS, $taken)) ?: self::LAYOUTS;
+        return Order::DEFAULT_COURIER;
+    }
 
-        return $free[((int) $partner->id) % count($free)];
+    private static function partnerFor(?Order $order, ?Shipment $shipment): ?LogisticsProvider
+    {
+        if ($shipment && Shipment::tracksProvider() && $shipment->logistics_provider_id) return $shipment->provider;
+        if ($shipment && Schema::hasColumn('shipments', 'seller_order_id') && $shipment->seller_order_id) {
+            if ($partner = $shipment->sellerOrder?->provider) return $partner;
+        }
+        return $order?->logistics_provider_id ? $order->logisticsProvider : null;
     }
 
     /** A made-up parcel in a design, so a partner can preview it before choosing (Logistics Center > Account). */

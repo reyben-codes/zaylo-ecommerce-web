@@ -13,6 +13,9 @@ class SellerLogistics
     /** Called inside the seller's fulfilment transaction after locking the order. */
     public function assign(Order $order, LogisticsProvider $partner, ?SellerOrder $sellerOrder = null): void
     {
+        if (! GcashPayments::allowsConfirm($order)) {
+            throw ValidationException::withMessages(['payment' => 'Payment must be confirmed before this GCash order can be sent for delivery.']);
+        }
         $partner = LogisticsProvider::acceptingParcels()->whereKey($partner->id)->lockForUpdate()->first();
         if (! $partner) {
             throw ValidationException::withMessages(['logistics_provider_id' => 'Choose an approved, active ZAYLO logistics partner.']);

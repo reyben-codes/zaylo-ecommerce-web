@@ -30,7 +30,8 @@ class SellerQueues
 
         return Order::usesLegacySchema()
             ? Order::where('seller_id', $shopId)->whereIn('status', self::TO_PREPARE)->count()
-            : SellerOrder::where('seller_id', $shopId)->whereIn('status', self::TO_PREPARE_NORMALIZED)->count();
+            : SellerOrder::where('seller_id', $shopId)->whereIn('status', self::TO_PREPARE_NORMALIZED)
+                ->whereHas('order', fn ($query) => $query->where('status', '!=', 'awaiting_payment'))->count();
     }
 
     /** Complaints and returns about this seller's orders. */
@@ -63,6 +64,8 @@ class SellerQueues
         $shopId = Shop::idForSeller($seller) ?? 0;
         $legacy = Order::usesLegacySchema();
         $orders = $legacy ? Order::where('seller_id', $shopId) : SellerOrder::where('seller_id', $shopId);
+        $legacy ? $orders->where('status', '!=', 'awaiting_payment')
+            : $orders->whereHas('order', fn ($query) => $query->where('status', '!=', 'awaiting_payment'));
         $parcels = Shipment::query()->when($legacy,
             fn (Builder $query) => $query->whereIn('order_id', Order::where('seller_id', $shopId)->select('id')),
             fn (Builder $query) => $query->whereIn('seller_order_id', SellerOrder::where('seller_id', $shopId)->select('id')),

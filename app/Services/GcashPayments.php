@@ -128,7 +128,7 @@ class GcashPayments
                 },
                 'reference' => $escrow->gateway_payment, 'rejection_note' => null, 'amount' => $order->total,
                 'seller_account' => null, 'can_submit' => false, 'expires_at' => null,
-                'can_pay' => $escrow->status === 'pending' && $order->status === 'placed',
+                'can_pay' => $escrow->status === 'pending' && in_array($order->status, ['placed', 'awaiting_payment'], true),
                 'test_mode' => ! $escrow->livemode,
                 'local_checkout' => DemoPayments::isDemo($escrow),
             ];
@@ -220,7 +220,10 @@ class GcashPayments
     /** Whether the seller may confirm the order: COD always, GCash once the payment is received. */
     public static function allowsConfirm(Order $order): bool
     {
-        return ! self::isGcash($order) || $order->payment?->status === self::PAID;
+        if ($order->payment_method !== 'gcash') return true;
+        if ($order->payment?->status !== self::PAID) return false;
+        $escrow = EscrowPayments::forOrder($order);
+        return ! $escrow || in_array($escrow->status, ['held', 'released'], true);
     }
 
     /** Cancels GCash orders still unpaid EXPIRE_HOURS after they were placed. Runs when order lists open. */
@@ -230,7 +233,7 @@ class GcashPayments
             return 0;
         }
         $due = Order::query()
-            ->where('payment_method', 'gcash')->where('status', 'placed')
+            ->where('payment_method', 'gcash')->whereIn('status', ['placed', 'awaiting_payment'])
             ->where(fn ($q) => $q->where('placed_at', '<', now()->subHours(self::EXPIRE_HOURS))
                 ->orWhere(fn ($q) => $q->whereNull('placed_at')->where('created_at', '<', now()->subHours(self::EXPIRE_HOURS))))
             ->whereHas('payment', fn ($q) => $q->where('status', '!=', self::PAID)->whereNull('paid_at'))

@@ -1,9 +1,12 @@
-@extends('layouts.app')
+@extends('layouts.payment')
 @section('title', 'Payment status · ZAYLO')
 @section('content')
-<section class="page-content order-card">
-    <h1>Check your payment status</h1>
-    <p>Your order updates after the gateway verifies your payment. Return to the app and refresh My Orders, or open your orders below.</p>
-    <a class="market-button" href="{{ route('buyer.orders') }}">View my orders</a>
+<section class="payment-card" aria-labelledby="payment-title">
+    <div class="payment-intro">
+        <p class="payment-eyebrow">Payment verification</p>
+        <h1 id="payment-title">Check your payment status</h1>
+        <p class="payment-description">Your order only proceeds after the gateway confirms payment. Return to the app and refresh My Orders, or check your orders below.</p>
+    </div>
+    <div class="payment-actions"><a class="payment-button" href="{{ route('buyer.orders') }}">View my orders &rarr;</a></div>
 </section>
 @endsection

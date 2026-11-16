@@ -426,3 +426,7 @@ table {
 .fx-copy__bars img { width: 96%; height: 22px; }
 .fx-copy__bars span { display: block; font-size: 7px; letter-spacing: 1px; }
 .fx-copy__cod { width: 22%; font-size: 9px; font-weight: bold; text-align: right; }
+
+/* Company names must remain readable on thermal labels, including tear-off copies. */
+.wb-partner-brand { display: block; font-size: 12px; line-height: 1.2; font-style: normal; letter-spacing: 0; overflow-wrap: anywhere; word-wrap: break-word; }
+.jt-copy__brand .wb-partner-brand { font-size: 8px; }

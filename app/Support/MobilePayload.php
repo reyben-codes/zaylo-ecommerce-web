@@ -178,13 +178,16 @@ class MobilePayload
 
     public static function order(Order $order, bool $detailed = false): array
     {
+        $gcashCheckout = in_array($order->status, ['placed', 'awaiting_payment'], true) && $order->payment_method === 'gcash';
+        $awaitingPayment = $gcashCheckout && ! \App\Services\GcashPayments::allowsConfirm($order);
         $data = [
             'id' => $order->id,
             'order_number' => $order->order_number,
             'status' => $order->status,
-            'status_label' => $order->status === 'placed' && $order->payment_method === 'gcash' && $order->payment?->status === 'paid' ? 'To ship' : Str::headline($order->status),
-            'status_message' => $order->status === 'placed' && $order->payment_method === 'gcash' && $order->payment?->status === 'paid'
-                ? 'Payment verified. Waiting for the seller to prepare your parcel.' : (self::STATUS_MESSAGES[$order->status] ?? 'Your order status was updated.'),
+            'status_label' => $gcashCheckout ? ($awaitingPayment ? 'To pay' : 'To ship') : Str::headline($order->status),
+            'status_message' => $gcashCheckout
+                ? ($awaitingPayment ? 'Complete payment to place your order. It cannot be prepared or shipped until payment is confirmed.' : 'Payment verified. Waiting for the seller to prepare your parcel.')
+                : (self::STATUS_MESSAGES[$order->status] ?? 'Your order status was updated.'),
             'can_cancel' => in_array($order->status, CheckoutService::BUYER_CANCELLABLE, true),
             // Shown as a disabled Cancel button with this reason once the seller confirmed the order.
             'cancel_locked_reason' => self::cancelLockedReason($order),

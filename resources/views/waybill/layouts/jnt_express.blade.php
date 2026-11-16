@@ -9,12 +9,7 @@
 <table class="jt-top">
     <tr>
         <td class="jt-top__brand">
-            @php($jntLogo = 'images/couriers/jnt-express.png')
-            @if(file_exists(public_path($jntLogo)))
-                <img src="{{ $asset($jntLogo) }}" alt="J&amp;T Express" class="jt-top__logo">
-            @else
-                J&amp;T<span>EXPRESS</span>
-            @endif
+            @include('waybill.parts.carrier-brand', ['logoClass' => 'jt-top__logo'])
         </td>
         <td class="jt-top__meta">
             <span class="wb-label">Order date</span>{{ $placed?->format('Y-m-d') ?? '—' }}
@@ -91,11 +86,7 @@
 <table class="jt-copy">
     <tr>
         <td class="jt-copy__brand">
-            @if(file_exists(public_path($jntLogo)))
-                <img src="{{ $asset($jntLogo) }}" alt="J&amp;T Express" class="jt-copy__logo">
-            @else
-                J&amp;T<span>EXPRESS</span>
-            @endif
+            @include('waybill.parts.carrier-brand', ['logoClass' => 'jt-copy__logo'])
         </td>
         <td class="jt-copy__bars"><img src="{{ $waybill['barcode'] }}" alt=""><span>{{ $waybill['tracking'] }}</span></td>
     </tr>
