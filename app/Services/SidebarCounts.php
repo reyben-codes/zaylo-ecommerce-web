@@ -73,6 +73,8 @@ class SidebarCounts
             'product_approvals' => [Product::usesReview() ? Product::where('review_status', Product::REVIEW_PENDING)->notArchived()->count() : 0, 'waiting'],
             'identity' => [Schema::hasTable('identity_verifications') ? IdentityVerification::where('status', 'pending')->count() : 0, 'to check'],
             'disputes' => [Schema::hasTable('disputes') ? Dispute::where('status', 'open')->count() : 0, 'new'],
+            'rider_withdrawals' => [RiderWallet::ready() ? RiderWithdrawal::where('status', RiderWithdrawal::PENDING)->count() : 0, 'to pay'],
+            'seller_withdrawals' => [Schema::hasTable('seller_withdrawals') ? \App\Models\SellerWithdrawal::where('status', 'pending')->count() : 0, 'to pay'],
             'chat' => [$this->unreadSupport(), 'unread'],
         ];
     }

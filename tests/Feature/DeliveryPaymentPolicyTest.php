@@ -70,21 +70,21 @@ class DeliveryPaymentPolicyTest extends TestCase
         $this->actingAs($rider)->patch(route('logistics.account.rider-rate'), ['rider_rate' => 50])->assertForbidden();
     }
 
-    public function test_cod_hands_over_the_full_amount_and_is_not_paid_again_in_admin_batches(): void
+    public function test_cod_deducts_rider_shipping_fee_upon_remittance(): void
     {
         [$owner, $provider] = $this->partner();
         [$shipment, $rider] = $this->parcel($provider);
         $amounts = RiderDeliveries::amounts($shipment);
-        $this->assertSame(1120.0, $amounts['amount_to_hand_logistics']);
-        $this->assertSame(0.0, $amounts['rider_retained_cash']);
+        $this->assertSame(1080.0, $amounts['amount_to_hand_logistics']);
+        $this->assertSame(40.0, $amounts['rider_retained_cash']);
         $this->assertNull(app(RiderWallet::class)->credit($shipment, $rider), 'COD earnings need collection confirmation.');
         app(CodCollections::class)->collect($shipment, $rider);
         $this->assertSame(40.0, app(RiderWallet::class)->balance($rider));
-        app(CashHandovers::class)->record($provider, $rider, 1120, null, $owner);
-        $this->assertDatabaseHas('logistics_cod_settlements', ['shipment_id' => $shipment->id, 'amount_received' => 1120, 'seller_earnings' => 800, 'admin_earnings' => 100, 'logistics_earnings' => 180, 'rider_earnings' => 40]);
+        app(CashHandovers::class)->record($provider, $rider, 1080, null, $owner);
+        $this->assertDatabaseHas('logistics_cod_settlements', ['shipment_id' => $shipment->id, 'amount_received' => 1080, 'seller_earnings' => 800, 'admin_earnings' => 100, 'logistics_earnings' => 180, 'rider_earnings' => 40]);
         $payouts = app(LogisticsPayouts::class);
         $this->assertSame(0.0, $payouts->summary($payouts->rows($provider))['owed']);
-        $this->assertNull($payouts->pay($provider, User::factory()->create(['role' => 'admin']), 'DO-NOT-DUPLICATE'));
+        $this->assertNull($payouts->pay($provider, User::factory()->create(['role' => 'admin']), 'REF20261115AA'));
         $this->assertDatabaseCount('rider_commissions', 1);
     }
 
@@ -98,11 +98,11 @@ class DeliveryPaymentPolicyTest extends TestCase
         $this->assertSame(220.0, $summary['partner']);
         $this->assertSame(40.0, $summary['rider']);
         $this->assertSame(180.0, $summary['company']);
-        $payout = $payouts->pay($provider, User::factory()->create(['role' => 'admin']), 'PREPAID-1');
+        $payout = $payouts->pay($provider, User::factory()->create(['role' => 'admin']), 'REF20261115AB');
         $this->assertSame(220.0, $payout->amount);
         $this->assertSame(40.0, $payout->rider_commissions);
         $this->assertSame(180.0, app(\App\Services\Wallet::class)->summary($provider->owner)['credits']);
-        $this->assertNull($payouts->pay($provider, User::factory()->create(['role' => 'admin'])));
+        $this->assertNull($payouts->pay($provider, User::factory()->create(['role' => 'admin']), 'REF20261115BA'));
     }
 
     public function test_seller_and_admin_voucher_funding_is_preserved_in_cod_allocations(): void
@@ -112,7 +112,8 @@ class DeliveryPaymentPolicyTest extends TestCase
             $split = Settlement::deliveryBreakdown(1000, 0, $payer === 'admin' ? 120 : 0, $payer === 'seller' ? 120 : 0);
             [$shipment, $rider] = $this->parcel($provider, split: $split);
             app(CodCollections::class)->collect($shipment, $rider);
-            app(CashHandovers::class)->record($provider, $rider, 1000, null, $owner);
+            $handoverAmount = round($split['total_distribution'] - $split['rider_earnings'], 2);
+            app(CashHandovers::class)->record($provider, $rider, $handoverAmount, null, $owner);
             $this->assertDatabaseHas('logistics_cod_settlements', ['shipment_id' => $shipment->id, 'seller_earnings' => $payer === 'seller' ? 680 : 800, 'admin_earnings' => $payer === 'admin' ? -20 : 100]);
         }
     }
@@ -124,17 +125,18 @@ class DeliveryPaymentPolicyTest extends TestCase
             $split = Settlement::deliveryBreakdown(1000, $payer === 'buyer' ? 120 : 0, $payer === 'admin' ? 120 : 0);
             [$shipment, $rider] = $this->parcel($provider, split: $split);
             app(CodCollections::class)->collect($shipment, $rider);
-            app(CashHandovers::class)->record($provider, $rider, $split['total_distribution'], null, $owner);
+            $handoverAmount = round($split['total_distribution'] - $split['rider_earnings'], 2);
+            app(CashHandovers::class)->record($provider, $rider, $handoverAmount, null, $owner);
             $settlement = \App\Models\LogisticsCodSettlement::where('shipment_id', $shipment->id)->sole();
             $admin = User::factory()->create(['role' => 'admin', 'status' => 'active']);
             [$otherOwner] = $this->partner();
-            $this->actingAs($otherOwner)->post(route('logistics.cash.settlements.admin-transfer', $settlement), ['admin_reference' => 'NOT-MY-PAYMENT'])->assertForbidden();
+            $this->actingAs($otherOwner)->post(route('logistics.cash.settlements.admin-transfer', $settlement), ['admin_reference' => 'REF20261115AC'])->assertForbidden();
             $this->actingAs($owner)->get(route('logistics.cash'))->assertOk()->assertSee('Admin');
             $actor = $payer === 'admin' ? $admin : $owner;
             $route = $payer === 'admin' ? 'admin.cod-commissions.transfer' : 'logistics.cash.settlements.admin-transfer';
-            $this->actingAs($actor)->post(route($route, $settlement), ['admin_reference' => 'TRANSFER-123'])->assertSessionHasNoErrors();
-            $this->assertSame('TRANSFER-123', $settlement->fresh()->admin_reference);
-            $this->post(route($route, $settlement), ['admin_reference' => 'DUPLICATE'])->assertSessionHasErrors('admin_reference');
+            $this->actingAs($actor)->post(route($route, $settlement), ['admin_reference' => 'REF20261115AD'])->assertSessionHasNoErrors();
+            $this->assertSame('REF20261115AD', $settlement->fresh()->admin_reference);
+            $this->post(route($route, $settlement), ['admin_reference' => 'DUPLICATE1234'])->assertSessionHasErrors('admin_reference');
             $this->assertDatabaseHas('cod_financial_transactions', ['shipment_id' => $shipment->id, 'type' => 'admin_settlement', 'amount' => $payer === 'admin' ? 20 : 100]);
             $this->assertSame(1, \App\Models\CodFinancialTransaction::where('shipment_id', $shipment->id)->where('type', 'admin_settlement')->count());
         }

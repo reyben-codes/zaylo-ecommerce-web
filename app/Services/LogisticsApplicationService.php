@@ -54,10 +54,10 @@ class LogisticsApplicationService
                 }
             }],
             'sec_registration_no' => ['required', 'string', 'regex:'.LogisticsProvider::SEC_PATTERN,
-                Rule::unique('logistics_providers', 'sec_registration_no')->ignore($existing?->id)],
+                Rule::unique('logistics_providers', 'sec_registration_no')->ignore($existing?->id)->where('status', 'approved')],
             'tin' => ['required', 'string', 'regex:/^[0-9]{3}-[0-9]{3}-[0-9]{3}-[0-9]{3}$/D',
-                Rule::unique('logistics_providers', 'tin')->ignore($existing?->id), function (string $attribute, mixed $value, \Closure $fail) {
-                    if ($this->sellerApplications->available() && SellerApplication::where('tin', $value)->exists()) {
+                Rule::unique('logistics_providers', 'tin')->ignore($existing?->id)->where('status', 'approved'), function (string $attribute, mixed $value, \Closure $fail) {
+                    if ($this->sellerApplications->available() && SellerApplication::where('tin', $value)->where('status', 'approved')->exists()) {
                         $fail('This TIN is already registered.');
                     }
                 }],
@@ -201,6 +201,7 @@ class LogisticsApplicationService
     public function companyNameTaken(string $name, ?int $ignoreProviderId = null): bool
     {
         return LogisticsProvider::whereRaw('LOWER(name) = ?', [mb_strtolower(trim($name))])
+            ->where('status', 'approved')
             ->when($ignoreProviderId, fn ($query) => $query->whereKeyNot($ignoreProviderId))
             ->exists();
     }

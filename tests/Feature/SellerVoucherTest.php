@@ -93,11 +93,12 @@ class SellerVoucherTest extends TestCase
         $this->useLegacyOrderTables();
         \Illuminate\Support\Facades\Schema::table('orders', fn (\Illuminate\Database\Schema\Blueprint $table) => $table->decimal('voucher_discount', 10, 2)->default(0));
         \Illuminate\Support\Facades\Schema::table('payments', function (\Illuminate\Database\Schema\Blueprint $table) {
-            $table->string('currency')->default('PHP');
-            $table->string('idempotency_key')->nullable()->unique();
-            $table->json('payload')->nullable();
+            if (! \Illuminate\Support\Facades\Schema::hasColumn('payments', 'currency')) $table->string('currency')->default('PHP');
+            if (! \Illuminate\Support\Facades\Schema::hasColumn('payments', 'idempotency_key')) $table->string('idempotency_key')->nullable()->unique();
+            if (! \Illuminate\Support\Facades\Schema::hasColumn('payments', 'payload')) $table->json('payload')->nullable();
         });
         (require database_path('migrations/2026_11_07_000007_add_gcash_payment_checks.php'))->up();
+        config(['escrow.secret_key' => 'sk_test_fake', 'escrow.webhook_secret' => 'whsec_fake', 'escrow.admin_user_id' => 1]);
         $seller = User::factory()->create(['role' => 'seller', 'status' => 'active']);
         $other = User::factory()->create(['role' => 'seller', 'status' => 'active']);
         foreach ([$seller, $other] as $owner) {
@@ -122,11 +123,12 @@ class SellerVoucherTest extends TestCase
         $quote = app(\App\Services\CheckoutService::class)->quote($items, $voucher, paymentMethod: $method);
         $this->assertSame($discount, $quote['voucher_discount']);
         $this->assertSame(1040.0 - $discount, $quote['total']);
+        $expectedRedirect = $method === 'gcash' ? route('escrow.start', 1) : route('buyer.orders');
         $this->post(route('buyer.checkout'), [
             'cart_item_ids' => $items->modelKeys(), 'address_id' => $address->id,
             'idempotency_key' => (string) \Illuminate\Support\Str::uuid(),
             'payment_method' => $method, 'voucher_code' => 'custom-test',
-        ])->assertSessionHasNoErrors()->assertRedirect(route('buyer.orders'));
+        ])->assertSessionHasNoErrors()->assertRedirect($expectedRedirect);
         $orders = \App\Models\Order::with('payment')->get();
         $eligible = $orders->firstWhere('seller_id', $product->seller_id);
         $otherOrder = $orders->firstWhere('seller_id', $unrelated->seller_id);
@@ -394,9 +396,9 @@ class SellerVoucherTest extends TestCase
     {
         $this->useLegacyOrderTables();
         \Illuminate\Support\Facades\Schema::table('payments', function (\Illuminate\Database\Schema\Blueprint $table) {
-            $table->string('currency')->default('PHP');
-            $table->string('idempotency_key')->nullable()->unique();
-            $table->json('payload')->nullable();
+            if (! \Illuminate\Support\Facades\Schema::hasColumn('payments', 'currency')) $table->string('currency')->default('PHP');
+            if (! \Illuminate\Support\Facades\Schema::hasColumn('payments', 'idempotency_key')) $table->string('idempotency_key')->nullable()->unique();
+            if (! \Illuminate\Support\Facades\Schema::hasColumn('payments', 'payload')) $table->json('payload')->nullable();
         });
         $seller = User::factory()->create(['role' => 'seller', 'status' => 'active', 'name' => 'Fashion Boutique']);
         $product = Product::create(['seller_id' => $seller->id, 'name' => 'Silk Dress', 'category' => 'storage_bins', 'price' => 1200, 'stock' => 10, 'is_active' => true]);

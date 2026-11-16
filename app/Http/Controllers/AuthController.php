@@ -256,11 +256,11 @@ class AuthController extends Controller
         ] : [];
 
         $validated = $request->validate(array_replace([
-            'email'                 => 'required|email:filter|unique:users,email',
+            'email'                 => ['required', 'email:filter', Rule::unique('users', 'email')->where(fn ($q) => $q->where('status', 'active'))],
             'password'              => ['required', 'string', 'confirmed', new StrongPassword],
             'first_name'            => ['required', 'string', 'min:2', 'max:50', new PersonName],
             'last_name'             => ['required', 'string', 'min:2', 'max:50', new PersonName],
-            'phone'                 => ['required', 'string', 'max:11', new PhoneNumber, 'unique:users,phone'],
+            'phone'                 => ['required', 'string', 'max:11', new PhoneNumber, Rule::unique('users', 'phone')->where(fn ($q) => $q->where('status', 'active'))],
             'date_of_birth'         => ['required_if:role,buyer,courier,rider', 'nullable', 'bail', 'date', 'before_or_equal:today', function (string $attribute, mixed $value, \Closure $fail) {
                 if (Carbon::parse($value)->startOfDay()->gt(today()->subYears(18))) {
                     $fail('You must be at least 18 years old to register.');
@@ -272,8 +272,8 @@ class AuthController extends Controller
             'service_area'          => $logisticsApplying ? 'exclude' : 'exclude_unless:role,logistics|nullable|string|max:150',
             'logistics_provider_id' => [Rule::excludeIf(! $driverApplying), 'required', 'integer', Rule::exists('logistics_providers', 'id')->where('status', 'approved')],
             'vehicle_type'          => [Rule::excludeIf(! $driverApplying), 'required', Rule::in(Rider::VEHICLE_TYPES)],
-            'plate_no'              => $driverOnly(['string', 'regex:'.Rider::PLATE_PATTERN, 'unique:riders,plate_no']),
-            'license_number'        => $driverOnly(['string', 'regex:'.Rider::LICENSE_PATTERN, 'unique:riders,license_number']),
+            'plate_no'              => $driverOnly(['string', 'regex:'.Rider::PLATE_PATTERN, Rule::unique('riders', 'plate_no')->where(fn ($q) => $q->where('status', 'approved'))]),
+            'license_number'        => $driverOnly(['string', 'regex:'.Rider::LICENSE_PATTERN, Rule::unique('riders', 'license_number')->where(fn ($q) => $q->where('status', 'approved'))]),
         ] + $riderRules + ($sellerApplying ? $sellerApplications->rules($request) : []),
             // The logistics company name rule (with its duplicate check) replaces the basic one above.
             $logisticsApplying ? $logisticsApplications->rules() : []), [

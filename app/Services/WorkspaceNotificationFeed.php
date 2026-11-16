@@ -116,6 +116,33 @@ class WorkspaceNotificationFeed
                 )));
         }
 
+        if (RiderWallet::ready()) {
+            \App\Models\RiderWithdrawal::with('rider')->where('status', \App\Models\RiderWithdrawal::PENDING)
+                ->latest()->limit(self::LIMIT)->get()
+                ->each(fn (\App\Models\RiderWithdrawal $w) => $items->push($this->item(
+                    'rider_withdrawal:'.$w->id, 'wallet', 'fa-motorcycle', 'Rider sweldo to pay',
+                    ($w->rider?->name ?? 'A rider').' requested ₱'.number_format($w->amount, 2).' GCash sweldo.', route('admin.rider-withdrawals'), 'Pay sweldo', $w->created_at,
+                )));
+        }
+
+        if (Schema::hasTable('seller_withdrawals')) {
+            \App\Models\SellerWithdrawal::with('user')->where('status', 'pending')
+                ->latest()->limit(self::LIMIT)->get()
+                ->each(fn (\App\Models\SellerWithdrawal $w) => $items->push($this->item(
+                    'seller_withdrawal:'.$w->id, 'wallet', 'fa-wallet', 'Seller payout to transfer',
+                    ($w->user?->name ?? 'A seller').' requested ₱'.number_format($w->amount_minor / 100, 2).' payout.', route('admin.seller-withdrawals'), 'Review payout', $w->created_at,
+                )));
+        }
+
+        if (LogisticsCodSettlements::ready()) {
+            \App\Models\LogisticsCodSettlement::with(['provider', 'seller'])->where('status', \App\Models\LogisticsCodSettlement::AWAITING_SELLER_TRANSFER)
+                ->latest('id')->limit(self::LIMIT)->get()
+                ->each(fn (\App\Models\LogisticsCodSettlement $s) => $items->push($this->item(
+                    'cod_settlement:'.$s->id, 'order', 'fa-cash-register', 'COD remittance update',
+                    'Hub '.($s->provider?->name ?? 'partner').' remitted COD for order #'.$s->order_id.'. Awaiting transfer.', route('admin.cod-commissions'), 'View COD', $s->created_at,
+                )));
+        }
+
         return $items;
     }
 

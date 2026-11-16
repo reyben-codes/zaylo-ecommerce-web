@@ -56,6 +56,40 @@ class RiderWithdrawalController extends Controller
         return back()->with('status', 'Rejected the withdrawal; ₱'.number_format($withdrawal->amount, 2).' is back in '.($withdrawal->rider?->name ?? 'the rider')."'s wallet.");
     }
 
+    public function adminIndex(Request $request)
+    {
+        $ready = RiderWallet::ready();
+        $query = fn () => RiderWithdrawal::with(['rider', 'processor', 'provider']);
+
+        return view('admin.rider-withdrawals', [
+            'ready' => $ready,
+            'pending' => $ready ? $query()->where('status', RiderWithdrawal::PENDING)->oldest('id')->get() : collect(),
+            'history' => $ready ? $query()->where('status', '!=', RiderWithdrawal::PENDING)->latest('processed_at')->latest('id')->limit(50)->get() : collect(),
+            'pendingTotal' => $ready ? (float) $query()->where('status', RiderWithdrawal::PENDING)->sum('amount') : 0.0,
+            'paidTotal' => $ready ? (float) $query()->whereIn('status', [RiderWithdrawal::PAID, RiderWithdrawal::RELEASED])->sum('amount') : 0.0,
+        ]);
+    }
+
+    public function adminPay(Request $request, RiderWithdrawal $withdrawal)
+    {
+        $data = $request->validate(['reference' => \App\Support\TransferReference::rules()], [
+            'reference.required' => 'Enter the GCash reference number of the transfer.',
+        ]);
+        $this->wallet->markPaid($withdrawal, $request->user(), $data['reference']);
+
+        return back()->with('status', 'Recorded ₱'.number_format($withdrawal->amount, 2).' GCash sweldo sent to '.($withdrawal->rider?->name ?? 'the rider').'.');
+    }
+
+    public function adminReject(Request $request, RiderWithdrawal $withdrawal)
+    {
+        $data = $request->validate(['rejection_reason' => ['required', 'string', 'max:255']], [
+            'rejection_reason.required' => 'Tell the rider why the withdrawal was rejected.',
+        ]);
+        $this->wallet->reject($withdrawal, $request->user(), $data['rejection_reason']);
+
+        return back()->with('status', 'Rejected the withdrawal; ₱'.number_format($withdrawal->amount, 2).' is back in '.($withdrawal->rider?->name ?? 'the rider')."'s wallet.");
+    }
+
     private function provider(): LogisticsProvider
     {
         $provider = auth()->user()->logisticsProvider;

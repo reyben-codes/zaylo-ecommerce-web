@@ -527,9 +527,12 @@ class RiderDeliveries
 
         $collectionTracked = Schema::hasColumn('shipments', 'cod_collected');
         $split = app(Settlement::class)->forShipment($shipment);
-        $separatePayout = ($split['policy_version'] ?? 1) >= 2;
         $deliveryEarnings = (float) ($shipment->rider_fee_quote['delivery_amount'] ?? $split['rider_earnings']);
         $riderCommission = $deliveryEarnings;
+
+        // Shipping fee deducted upon remittance of rider: rider retains commission in cash on COD
+        $retainedCash = $cod ? round($riderCommission, 2) : 0.0;
+        $handoverToLogistics = $cod ? round(max(0, $codAmount - $riderCommission), 2) : 0.0;
 
         return [
             'total' => round($total, 2),
@@ -537,9 +540,9 @@ class RiderDeliveries
             'payment_method' => $order?->payment_method,
             'cash_to_collect' => $cod ? round((float) $codAmount, 2) : 0.0,
             'rider_commission' => round($riderCommission, 2),
-            'delivery_earnings' => (float) ($shipment->rider_fee_quote['delivery_amount'] ?? $split['rider_earnings']),
-            'rider_retained_cash' => $cod && ! $separatePayout ? round($riderCommission, 2) : 0.0,
-            'amount_to_hand_logistics' => $cod ? round(max(0, $codAmount - ($separatePayout ? 0 : $riderCommission)), 2) : 0.0,
+            'delivery_earnings' => round($deliveryEarnings, 2),
+            'rider_retained_cash' => $retainedCash,
+            'amount_to_hand_logistics' => $handoverToLogistics,
             'cod_collected' => $collectionTracked && (bool) $shipment->cod_collected,
         ];
     }

@@ -233,6 +233,49 @@ class AdminFinanceController extends Controller
         ]];
     }
 
+    public function wallet(Request $request)
+    {
+        $hasEscrow = \Illuminate\Support\Facades\Schema::hasTable('escrow_payments');
+        $escrowHeld = $hasEscrow ? (float) \App\Models\EscrowPayment::where('status', 'held')->sum('amount') : 0.0;
+        $escrowReleased = $hasEscrow ? (float) \App\Models\EscrowPayment::where('status', 'released')->sum('amount') : 0.0;
+        
+        $hasSellerWithdrawals = \Illuminate\Support\Facades\Schema::hasTable('seller_withdrawals');
+        $sellerPendingQuery = $hasSellerWithdrawals ? \App\Models\SellerWithdrawal::where('status', 'pending') : null;
+        $sellerPendingTotal = $sellerPendingQuery ? ((float) $sellerPendingQuery->sum('amount_minor') / 100) : 0.0;
+        $sellerPendingCount = $sellerPendingQuery ? $sellerPendingQuery->count() : 0;
+
+        $hasRiderWallet = \App\Services\RiderWallet::ready();
+        $riderPendingQuery = $hasRiderWallet ? \App\Models\RiderWithdrawal::where('status', \App\Models\RiderWithdrawal::PENDING) : null;
+        $riderPendingTotal = $riderPendingQuery ? (float) $riderPendingQuery->sum('amount') : 0.0;
+        $riderPendingCount = $riderPendingQuery ? $riderPendingQuery->count() : 0;
+
+        $codAwaitingTransfer = LogisticsCodSettlements::ready()
+            ? (float) \App\Models\LogisticsCodSettlement::where('status', \App\Models\LogisticsCodSettlement::AWAITING_SELLER_TRANSFER)->sum('admin_earnings')
+            : 0.0;
+
+        $recentSellerPayouts = $hasSellerWithdrawals
+            ? \App\Models\SellerWithdrawal::with('user')->where('status', 'sent')->latest('updated_at')->limit(10)->get()
+            : collect();
+        $recentRiderPayouts = $hasRiderWallet
+            ? \App\Models\RiderWithdrawal::with(['rider', 'processor'])->whereIn('status', [\App\Models\RiderWithdrawal::PAID, \App\Models\RiderWithdrawal::RELEASED])->latest('processed_at')->limit(10)->get()
+            : collect();
+
+        $escrows = $hasEscrow ? \App\Models\EscrowPayment::with('order')->latest('id')->limit(15)->get() : collect();
+
+        return view('admin.wallet', [
+            'escrowHeld' => $escrowHeld,
+            'escrowReleased' => $escrowReleased,
+            'sellerPendingTotal' => $sellerPendingTotal,
+            'sellerPendingCount' => $sellerPendingCount,
+            'riderPendingTotal' => $riderPendingTotal,
+            'riderPendingCount' => $riderPendingCount,
+            'codAwaitingTransfer' => $codAwaitingTransfer,
+            'recentSellerPayouts' => $recentSellerPayouts,
+            'recentRiderPayouts' => $recentRiderPayouts,
+            'escrows' => $escrows,
+        ]);
+    }
+
     private function percent(): string
     {
         return rtrim(rtrim(number_format(MarketplaceLedger::rate() * 100, 2), '0'), '.').'%';

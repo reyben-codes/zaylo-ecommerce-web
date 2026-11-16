@@ -756,9 +756,9 @@
 
 .target-shops-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-    gap: 12px;
-    max-height: 380px;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 10px;
+    max-height: 360px;
     overflow-y: auto;
     padding: 4px 2px;
     border-radius: 12px;
@@ -767,15 +767,14 @@
 .target-shop-tile {
     position: relative;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
-    justify-content: center;
-    text-align: center;
-    aspect-ratio: 1 / 1;
-    min-height: 140px;
-    padding: 16px 12px 14px;
+    text-align: left;
+    min-height: 68px;
+    padding: 12px 14px;
+    gap: 12px;
     border: 1.5px solid var(--zaylo-border);
-    border-radius: 14px;
+    border-radius: 12px;
     background: var(--zaylo-surface);
     cursor: pointer;
     user-select: none;
@@ -784,16 +783,16 @@
 
 .target-shop-tile:hover {
     border-color: var(--zaylo-accent);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(46, 35, 27, .08);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(46, 35, 27, .06);
 }
 
 .target-shop-tile:has(input:checked),
 .target-shop-tile.is-selected {
     border-color: var(--zaylo-accent);
     background: var(--c-fffaf3);
-    box-shadow: 0 6px 20px rgba(138, 88, 54, .16);
-    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(138, 88, 54, .12);
+    transform: translateY(-1px);
 }
 
 .target-shop-tile:has(input:focus-visible) {
@@ -802,11 +801,10 @@
 }
 
 .target-shop-tile__indicator {
-    position: absolute;
-    top: 9px;
-    right: 9px;
+    position: static;
     width: 22px;
     height: 22px;
+    min-width: 22px;
     border-radius: 50%;
     border: 1.5px solid var(--zaylo-border);
     background: var(--zaylo-surface);
@@ -815,6 +813,7 @@
     font-size: .65rem;
     color: transparent;
     transition: all .16s ease;
+    margin-left: auto;
 }
 
 .target-shop-tile:has(input:checked) .target-shop-tile__indicator,
@@ -827,13 +826,14 @@
 .target-shop-tile__avatar {
     display: grid;
     place-items: center;
-    width: 46px;
-    height: 46px;
-    border-radius: 12px;
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    border-radius: 10px;
     background: var(--c-f5f0ea);
     color: var(--zaylo-accent);
-    font-size: 1.25rem;
-    margin-bottom: 10px;
+    font-size: 1.15rem;
+    margin-bottom: 0;
     transition: background-color .18s ease, color .18s ease;
 }
 
@@ -846,14 +846,14 @@
 .target-shop-tile__meta {
     display: flex;
     flex-direction: column;
-    gap: 3px;
-    width: 100%;
+    gap: 2px;
+    flex: 1;
     min-width: 0;
 }
 
 .target-shop-tile__name {
     color: var(--zaylo-ink);
-    font-size: .85rem;
+    font-size: .88rem;
     font-weight: 700;
     line-height: 1.25;
     overflow: hidden;
@@ -864,7 +864,7 @@
 
 .target-shop-tile__owner {
     color: var(--zaylo-muted);
-    font-size: .72rem;
+    font-size: .74rem;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -880,18 +880,18 @@
 
 @media (max-width: 480px) {
     .target-shops-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: 1fr;
         gap: 8px;
     }
     .target-shop-tile {
-        padding: 12px 8px 10px;
-        min-height: 125px;
+        padding: 10px 12px;
+        min-height: 60px;
     }
     .target-shop-tile__avatar {
-        width: 38px;
-        height: 38px;
-        font-size: 1.05rem;
-        margin-bottom: 6px;
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+        font-size: 1rem;
     }
 }
 

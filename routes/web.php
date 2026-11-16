@@ -316,6 +316,10 @@ Route::middleware(['auth', 'active', 'verified', 'role:admin', 'nocache'])->pref
     Route::post('/cod-commissions/{settlement}/transfer', [SettlementController::class, 'settleAdmin'])->middleware('throttle:30,1')->name('cod-commissions.transfer');
     Route::post('/commissions/record', [AdminFinanceController::class, 'recordCommissions'])->name('commissions.record');
     Route::post('/commissions/settle', [AdminFinanceController::class, 'settleCommissions'])->name('commissions.settle');
+    Route::get('/wallet', [AdminFinanceController::class, 'wallet'])->name('wallet');
+    Route::get('/rider-withdrawals', [\App\Http\Controllers\RiderWithdrawalController::class, 'adminIndex'])->name('rider-withdrawals');
+    Route::post('/rider-withdrawals/{withdrawal}/pay', [\App\Http\Controllers\RiderWithdrawalController::class, 'adminPay'])->middleware('throttle:30,1')->name('rider-withdrawals.pay');
+    Route::post('/rider-withdrawals/{withdrawal}/reject', [\App\Http\Controllers\RiderWithdrawalController::class, 'adminReject'])->middleware('throttle:30,1')->name('rider-withdrawals.reject');
     // Logistics partners' share of the shipping fee of each parcel they delivered.
     Route::get('/logistics-payouts', [LogisticsPayoutController::class, 'admin'])->name('logistics-payouts');
     Route::post('/logistics-payouts/{provider}', [LogisticsPayoutController::class, 'pay'])->middleware('throttle:30,1')->name('logistics-payouts.pay');

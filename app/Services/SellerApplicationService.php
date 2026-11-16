@@ -42,9 +42,9 @@ class SellerApplicationService
             }],
             'seller_type' => ['required', Rule::in(array_keys(SellerApplication::SELLER_TYPES))],
             'tin' => ['required', 'string', 'regex:/^[0-9]{3}-[0-9]{3}-[0-9]{3}-[0-9]{3}$/D',
-                Rule::unique('seller_applications', 'tin')->ignore($existing?->id), function (string $attribute, mixed $value, \Closure $fail) {
+                Rule::unique('seller_applications', 'tin')->ignore($existing?->id)->where('status', 'approved'), function (string $attribute, mixed $value, \Closure $fail) {
                     // One TIN is one business, whether it sells or delivers.
-                    if (Schema::hasColumn('logistics_providers', 'tin') && LogisticsProvider::where('tin', $value)->exists()) {
+                    if (Schema::hasColumn('logistics_providers', 'tin') && LogisticsProvider::where('tin', $value)->where('status', 'approved')->exists()) {
                         $fail('This TIN is already registered.');
                     }
                 }],
@@ -172,13 +172,13 @@ class SellerApplicationService
         $name = mb_strtolower(trim($name));
         $others = fn ($query) => $ignoreUserId ? $query->where('user_id', '!=', $ignoreUserId) : $query;
 
-        if ($this->available() && $others(SellerApplication::whereRaw('LOWER(shop_name) = ?', [$name]))->exists()) {
+        if ($this->available() && $others(SellerApplication::whereRaw('LOWER(shop_name) = ?', [$name])->where('status', 'approved'))->exists()) {
             return true;
         }
 
         return Product::usesLegacySchema()
-            ? $others(SellerProfile::whereRaw('LOWER(store_name) = ?', [$name]))->exists()
-            : $others(Seller::whereRaw('LOWER(name) = ?', [$name]))->exists();
+            ? $others(SellerProfile::whereRaw('LOWER(store_name) = ?', [$name])->whereHas('user', fn ($q) => $q->where('status', 'active')))->exists()
+            : $others(Seller::whereRaw('LOWER(name) = ?', [$name])->where('status', 'approved'))->exists();
     }
 
     private function renameShop(User $user, string $name): void

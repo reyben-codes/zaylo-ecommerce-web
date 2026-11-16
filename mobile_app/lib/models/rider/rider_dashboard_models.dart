@@ -310,6 +310,7 @@ class RiderDelivery {
     this.cashToCollect = 0,
     this.riderCommission = 0,
     this.amountToHandLogistics = 0,
+    this.riderRetainedCash = 0,
     this.codCollected = false,
     this.canCollectCod = false,
     this.deliveryFee = 0,
@@ -356,6 +357,7 @@ class RiderDelivery {
   final double cashToCollect;
   final double riderCommission;
   final double amountToHandLogistics;
+  final double riderRetainedCash;
   final bool codCollected;
   final bool canCollectCod;
   final double deliveryFee;
@@ -416,6 +418,7 @@ class RiderDelivery {
         cashToCollect: _money(json['cash_to_collect']),
         riderCommission: _money(json['rider_commission']),
         amountToHandLogistics: _money(json['amount_to_hand_logistics']),
+        riderRetainedCash: _money(json['rider_retained_cash']),
         codCollected: json['cod_collected'] as bool? ?? false,
         canCollectCod: json['can_collect_cod'] as bool? ?? false,
         deliveryFee: _money(json['delivery_fee']),
@@ -676,7 +679,9 @@ class RiderDashboard {
 class RiderSellerPickup {
   const RiderSellerPickup({required this.id, required this.trackingNumber, required this.seller,
     required this.address, required this.status, required this.items, this.scannedAt, this.receivedAt,
-    this.canConfirmHandover = false, this.handoverConfirmed = false, this.commissionPending = false});
+    this.canConfirmHandover = false, this.handoverConfirmed = false, this.commissionPending = false,
+    this.paymentMethod = 'cod', this.cashToCollect = 0, this.pickupCommission = 0,
+    this.riderRetainedCash = 0, this.amountToHandLogistics = 0});
 
   final int id;
   final String trackingNumber;
@@ -689,6 +694,11 @@ class RiderSellerPickup {
   final bool canConfirmHandover;
   final bool handoverConfirmed;
   final bool commissionPending;
+  final String paymentMethod;
+  final double cashToCollect;
+  final double pickupCommission;
+  final double riderRetainedCash;
+  final double amountToHandLogistics;
   bool get canScan => status == 'confirmed';
   String get statusLabel => switch (status) {
     'ready' => 'Assigned · waiting for pickup confirmation',
@@ -705,6 +715,11 @@ class RiderSellerPickup {
     canConfirmHandover: json['can_confirm_handover'] as bool? ?? false,
     handoverConfirmed: json['handover_confirmed'] as bool? ?? false,
     commissionPending: json['commission_pending'] as bool? ?? false,
+    paymentMethod: json['payment_method'] as String? ?? 'cod',
+    cashToCollect: _money(json['cash_to_collect']),
+    pickupCommission: _money(json['pickup_commission'] ?? json['pickup_earnings']),
+    riderRetainedCash: _money(json['rider_retained_cash']),
+    amountToHandLogistics: _money(json['amount_to_hand_logistics']),
     items: (json['items'] as List<dynamic>? ?? const []).map((item) => '${item['name']} × ${item['quantity']}').toList(),
   );
 }

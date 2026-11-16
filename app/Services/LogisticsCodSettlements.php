@@ -37,10 +37,8 @@ class LogisticsCodSettlements
             $split = app(Settlement::class)->forShipment($shipment);
             $received = RiderDeliveries::amounts($shipment)['amount_to_hand_logistics'];
             $distributed = round($split['logistics_earnings'] + $split['admin_earnings'] + $split['seller_earnings'], 2);
-            if (($split['policy_version'] ?? 1) >= 2) {
-                $distributed = round($distributed + $split['rider_earnings'], 2);
-            }
-            if (round($received, 2) !== $distributed) {
+            // Cash balances whether rider commission was deducted upon remittance ($distributed) or remitted in full ($distributed + rider_earnings)
+            if (round($received, 2) !== $distributed && round($received, 2) !== round($distributed + $split['rider_earnings'], 2)) {
                 throw ValidationException::withMessages(['received' => 'This parcel cannot be settled because its COD allocation does not balance.']);
             }
 

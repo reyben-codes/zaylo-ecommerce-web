@@ -350,7 +350,7 @@ class MobileRiderDashboardController extends Controller
         $shipment = $this->codCollections->collect($shipment, $request->user());
 
         return response()->json([
-            'message' => 'COD payment collected. Hand ₱'.number_format(RiderDeliveries::amounts($shipment)['amount_to_hand_logistics'], 2).' to your logistics partner. Your delivery earnings are recorded separately.',
+            'message' => 'COD payment collected. Hand ₱'.number_format(RiderDeliveries::amounts($shipment)['amount_to_hand_logistics'], 2).' to your logistics partner. Shipping fee retained: ₱'.number_format(RiderDeliveries::amounts($shipment)['rider_retained_cash'], 2).'.',
             'delivery' => $this->shipmentPayload($shipment->load($this->relations()), withTimeline: true),
         ]);
     }
@@ -529,6 +529,7 @@ class MobileRiderDashboardController extends Controller
             'payment_method' => $amounts['payment_method'],
             'cash_to_collect' => $amounts['cash_to_collect'],
             'rider_commission' => $amounts['rider_commission'],
+            'rider_retained_cash' => $amounts['rider_retained_cash'],
             'amount_to_hand_logistics' => $amounts['amount_to_hand_logistics'],
             'cod_collected' => $amounts['cod_collected'],
             'can_collect_cod' => CodCollections::ready() && $amounts['cash_to_collect'] > 0

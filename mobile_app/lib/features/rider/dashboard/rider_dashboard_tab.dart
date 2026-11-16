@@ -239,6 +239,34 @@ class RiderDashboardTabState extends State<RiderDashboardTab> with RiderDelivery
                   const SizedBox(height: 8),
                   Text('Seller: ${pickup.seller}', style: const TextStyle(fontWeight: FontWeight.w600)),
                   Text(pickup.address, style: TextStyle(color: ZayloColors.muted, fontSize: 13)),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: ZayloColors.accent.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'Fee: ₱${pickup.pickupCommission.toStringAsFixed(2)}',
+                          style: TextStyle(color: ZayloColors.accent, fontSize: 12, fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: ZayloColors.ink.withValues(alpha: 0.06),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'Collect: ₱${pickup.cashToCollect.toStringAsFixed(2)}',
+                          style: TextStyle(color: ZayloColors.muted, fontSize: 12, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 8),
                   for (final item in pickup.items)
                     Padding(

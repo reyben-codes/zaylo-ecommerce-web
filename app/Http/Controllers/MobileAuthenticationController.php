@@ -118,13 +118,13 @@ class MobileAuthenticationController extends Controller
         $validated = $request->validate([
             'first_name' => ['required', 'string', 'min:2', 'max:50', new PersonName],
             'last_name' => ['required', 'string', 'min:2', 'max:50', new PersonName],
-            'phone' => ['required', 'string', 'max:11', new PhoneNumber, 'unique:users,phone'],
+            'phone' => ['required', 'string', 'max:11', new PhoneNumber, \Illuminate\Validation\Rule::unique('users', 'phone')->where(fn ($q) => $q->where('status', 'active'))],
             'date_of_birth' => ['required', 'bail', 'date', 'before_or_equal:today', function (string $attribute, mixed $value, \Closure $fail) {
                 if (Carbon::parse($value)->startOfDay()->gt(today()->subYears(18))) {
                     $fail('You must be at least 18 years old to register.');
                 }
             }],
-            'email' => ['required', 'email:filter', 'unique:users,email'],
+            'email' => ['required', 'email:filter', \Illuminate\Validation\Rule::unique('users', 'email')->where(fn ($q) => $q->where('status', 'active'))],
             'password' => ['required', 'string', 'confirmed', new StrongPassword],
         ], [
             'email.email' => 'Enter a valid email address, such as name@example.com.',

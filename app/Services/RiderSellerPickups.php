@@ -82,6 +82,10 @@ class RiderSellerPickups
         $parcel = \App\Support\ParcelView::for($shipment);
         $items = $shipment->sellerOrder?->items ?? $shipment->order?->items ?? collect();
         $isArrivedAtHub = $shipment->hub_received_at !== null;
+        $order = $shipment->order ?: $shipment->sellerOrder?->order;
+        $paymentMethod = $order?->payment_method ?? 'cod';
+        $pickupEarnings = (float) ($shipment->rider_fee_quote['pickup_amount'] ?? 20.0);
+        $pickupCommission = $pickupEarnings;
 
         return [
             'id' => $shipment->id,
@@ -90,6 +94,12 @@ class RiderSellerPickups
             'seller' => $parcel['seller'],
             'pickup_address' => $parcel['pickup_address'],
             'status' => $isArrivedAtHub ? 'arrived_at_hub' : ShipmentWorkflow::stageOf($shipment),
+            'payment_method' => $paymentMethod,
+            'cash_to_collect' => 0.0,
+            'pickup_earnings' => round($pickupEarnings, 2),
+            'pickup_commission' => round($pickupCommission, 2),
+            'amount_to_hand_logistics' => 0.0,
+            'rider_retained_cash' => 0.0,
             'scanned_at' => $shipment->pickup_scanned_at?->toIso8601String(),
             'received_at' => $shipment->hub_received_at?->toIso8601String(),
             'is_in_transit' => $shipment->pickup_scanned_at !== null && ! $isArrivedAtHub,

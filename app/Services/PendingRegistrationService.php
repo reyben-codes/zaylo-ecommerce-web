@@ -201,16 +201,16 @@ class PendingRegistrationService
     {
         $data = $pending->payload;
         $taken = match (true) {
-            User::whereRaw('LOWER(email) = ?', [Str::lower($data['email'])])->exists() => 'This email address was registered by another account in the meantime.',
-            User::where('phone', $data['phone'])->exists() => 'This mobile number was registered by another account in the meantime.',
+            User::whereRaw('LOWER(email) = ?', [Str::lower($data['email'])])->where('status', 'active')->exists() => 'This email address was registered by another account in the meantime.',
+            User::where('phone', $data['phone'])->where('status', 'active')->exists() => 'This mobile number was registered by another account in the meantime.',
             $pending->role === 'seller' && isset($data['shop_name']) && $this->sellerApplications->shopNameTaken($data['shop_name']) => 'Your shop name was taken by another seller in the meantime.',
-            $pending->role === 'seller' && isset($data['tin']) && $this->sellerApplications->available() && SellerApplication::where('tin', $data['tin'])->exists() => 'Your TIN was registered by another seller in the meantime.',
+            $pending->role === 'seller' && isset($data['tin']) && $this->sellerApplications->available() && SellerApplication::where('tin', $data['tin'])->where('status', 'approved')->exists() => 'Your TIN was registered by another seller in the meantime.',
             $pending->role === 'logistics' && isset($data['company_name']) && $this->logisticsApplications->companyNameTaken($data['company_name']) => 'Your company name was registered by another logistics partner in the meantime.',
             $pending->role === 'logistics' && isset($data['street_address']) && \App\Support\LogisticsNetworks::isSameAddressAsMain($data['network'] ?? \App\Support\LogisticsNetworks::ZAYLO_EXPRESS, $data) => 'Your branch hub address matches the main network hub address.',
-            $pending->role === 'logistics' && isset($data['sec_registration_no']) && LogisticsProvider::where('sec_registration_no', $data['sec_registration_no'])->exists() => 'Your SEC registration number was registered by another logistics partner in the meantime.',
-            $pending->role === 'logistics' && isset($data['tin']) && LogisticsProvider::where('tin', $data['tin'])->exists() => 'Your TIN was registered by another business in the meantime.',
-            in_array($pending->role, ['courier', 'rider'], true) && ! empty($data['license_number']) && Rider::where('license_number', $data['license_number'])->exists() => "Your driver's license number was registered by another driver in the meantime.",
-            in_array($pending->role, ['courier', 'rider'], true) && ! empty($data['plate_no']) && Rider::where('plate_no', $data['plate_no'])->exists() => 'Your plate number was registered by another driver in the meantime.',
+            $pending->role === 'logistics' && isset($data['sec_registration_no']) && LogisticsProvider::where('sec_registration_no', $data['sec_registration_no'])->where('status', 'approved')->exists() => 'Your SEC registration number was registered by another logistics partner in the meantime.',
+            $pending->role === 'logistics' && isset($data['tin']) && LogisticsProvider::where('tin', $data['tin'])->where('status', 'approved')->exists() => 'Your TIN was registered by another business in the meantime.',
+            in_array($pending->role, ['courier', 'rider'], true) && ! empty($data['license_number']) && Rider::where('license_number', $data['license_number'])->where('status', 'approved')->exists() => "Your driver's license number was registered by another driver in the meantime.",
+            in_array($pending->role, ['courier', 'rider'], true) && ! empty($data['plate_no']) && Rider::where('plate_no', $data['plate_no'])->where('status', 'approved')->exists() => 'Your plate number was registered by another driver in the meantime.',
             in_array($pending->role, ['courier', 'rider'], true) && ! LogisticsProvider::acceptingRiders()->whereKey($data['logistics_provider_id'] ?? 0)->exists() => 'That logistics partner is no longer accepting drivers.',
             default => null,
         };
@@ -224,6 +224,35 @@ class PendingRegistrationService
     {
         $data = $pending->payload;
         $role = $pending->role;
+
+        // Unapproved accounts can be re-registered; clean up any rejected/unapproved records to avoid collision.
+        User::where(function ($q) use ($data) {
+            $q->whereRaw('LOWER(email) = ?', [Str::lower($data['email'])])
+              ->orWhere('phone', $data['phone']);
+        })->where('status', '!=', 'active')->get()->each(function (User $oldUnapproved) {
+            $oldUnapproved->sellerApplication()?->delete();
+            $oldUnapproved->sellerProfile()?->delete();
+            $oldUnapproved->logisticsProvider()?->delete();
+            $oldUnapproved->rider()?->delete();
+            $oldUnapproved->sellers()?->delete();
+            $oldUnapproved->delete();
+        });
+
+        if (! empty($data['plate_no'])) {
+            Rider::where('plate_no', $data['plate_no'])->where('status', '!=', 'approved')->delete();
+        }
+        if (! empty($data['license_number'])) {
+            Rider::where('license_number', $data['license_number'])->where('status', '!=', 'approved')->delete();
+        }
+        if (! empty($data['sec_registration_no'])) {
+            LogisticsProvider::where('sec_registration_no', $data['sec_registration_no'])->where('status', '!=', 'approved')->delete();
+        }
+        if (! empty($data['tin'])) {
+            LogisticsProvider::where('tin', $data['tin'])->where('status', '!=', 'approved')->delete();
+            if ($this->sellerApplications->available()) {
+                SellerApplication::where('tin', $data['tin'])->where('status', '!=', 'approved')->delete();
+            }
+        }
 
         $user = User::create([
             'name' => $data['first_name'].' '.$data['last_name'],

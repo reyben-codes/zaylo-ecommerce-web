@@ -19,6 +19,7 @@ return new class extends Migration
     {
         Schema::table('logistics_providers', function (Blueprint $table) {
             $table->dropConstrainedForeignId('parent_id');
+            $table->dropIndex(['network_brand']);
             $table->dropColumn(['network_brand', 'branch_name']);
         });
     }

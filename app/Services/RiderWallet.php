@@ -281,14 +281,16 @@ class RiderWallet
         return DB::transaction(function () use ($withdrawal, $processor, $changes) {
             // Locked so the request cannot be processed twice at once.
             $locked = RiderWithdrawal::whereKey($withdrawal->id)->lockForUpdate()->firstOrFail();
-            abort_unless((int) $processor->logisticsProvider?->id === (int) $locked->logistics_provider_id && $processor->hasRole('logistics'), 403);
+            abort_unless($processor->hasRole('admin') || ((int) $processor->logisticsProvider?->id === (int) $locked->logistics_provider_id && $processor->hasRole('logistics')), 403);
             if ($locked->status !== RiderWithdrawal::PENDING) {
                 throw ValidationException::withMessages(['withdrawal' => 'This withdrawal was already '.strtolower($locked->statusLabel()).'.']);
             }
             $locked->update($changes + ['processed_by' => $processor->id, 'processed_at' => now()]);
-            app(ActivityLogger::class)->record('logistics.salary_'.($locked->status === RiderWithdrawal::RELEASED ? 'released' : 'rejected'), 'settlement', 'Logistics processed rider salary.', $processor, $locked, ['amount' => $locked->amount, 'reference' => $locked->reference]);
+            $actorRole = $processor->hasRole('admin') ? 'admin' : 'logistics';
+            app(ActivityLogger::class)->record($actorRole.'.salary_'.($locked->status === RiderWithdrawal::RELEASED ? 'released' : 'rejected'), 'settlement', ucfirst($actorRole).' processed rider salary.', $processor, $locked, ['amount' => $locked->amount, 'reference' => $locked->reference]);
             if ($locked->status === RiderWithdrawal::RELEASED) {
-                app(AccountUpdates::class)->send($locked->user_id, 'salary-released-'.$locked->id, 'wallet', 'Salary released by logistics',
+                $releasedBy = $processor->hasRole('admin') ? 'ZAYLO Admin' : 'logistics';
+                app(AccountUpdates::class)->send($locked->user_id, 'salary-released-'.$locked->id, 'wallet', 'Salary released by '.$releasedBy,
                     'PHP '.number_format($locked->amount, 2).' was released to your GCash. Check the transfer, then tap Salary Received. Ref. '.$locked->reference.'.');
             }
 

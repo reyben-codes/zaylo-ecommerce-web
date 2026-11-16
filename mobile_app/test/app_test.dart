@@ -1108,8 +1108,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('₱120.00'), findsWidgets);
-    expect(find.text('₱15.00 for every parcel you deliver'), findsOneWidget);
-    expect(find.text('TRK-ABC123'), findsOneWidget);
+    expect(find.text('Earnings vary by road distance, parcel weight, and pickup or delivery leg'), findsOneWidget);
+    expect(find.textContaining('TRK-ABC123'), findsOneWidget);
     expect(find.text('Not set yet'), findsOneWidget, reason: 'no GCash account saved yet');
 
     // Without a saved account, withdrawing asks for one first.
