@@ -108,6 +108,18 @@ class OrderReceipts
 
             app(EscrowPayments::class)->release($locked->fresh());
 
+            if (Order::usesLegacySchema()) {
+                $shipments = collect([$locked->shipment])->filter();
+            } else {
+                $shipments = \App\Models\Shipment::whereIn('seller_order_id', $locked->sellerOrders()->select('id'))->get();
+            }
+            foreach ($shipments as $s) {
+                $riderUser = $s->rider?->user ?? ($s->courier_id ? User::find($s->courier_id) : null);
+                if ($riderUser) {
+                    app(RiderWallet::class)->credit($s->fresh(), $riderUser);
+                }
+            }
+
             if (Schema::hasTable('order_status_histories')) {
                 $locked->statusHistory()->create(['changed_by' => $actor?->id, 'status' => 'completed', 'note' => $note]);
             }

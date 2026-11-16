@@ -93,6 +93,9 @@ class RiderLegEarnings
                 || (int) $shipment->pickup_courier_id !== (int) $rider->id) return null;
         } elseif (ShipmentWorkflow::stageOf($shipment) !== 'delivered' || ! $shipment->delivery_proof_path
             || ! app(RiderDeliveries::class)->owns($shipment, $rider)) return null;
+        if (Schema::hasTable('rider_commissions') && \App\Models\RiderCommission::where('shipment_id', $shipment->id)->exists()) {
+            return null;
+        }
         $quote = $shipment->rider_fee_quote ?: $this->quoteOrDefer($shipment);
         if (! $quote) return null;
         $commission = RiderLegCommission::firstOrCreate(['shipment_id' => $shipment->id, 'leg' => $leg], [

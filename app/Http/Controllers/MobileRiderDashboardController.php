@@ -409,7 +409,17 @@ class MobileRiderDashboardController extends Controller
     /** What the rider earned for these parcels: the commission each one credited to the wallet. */
     private function fees(Collection $shipments): float
     {
-        return RiderWallet::ready() ? round($shipments->sum(fn (Shipment $s) => (float) ($s->riderCommission?->amount ?? 0)), 2) : 0.0;
+        if (! RiderWallet::ready()) {
+            return 0.0;
+        }
+        $legacy = (float) $shipments->sum(fn (Shipment $s) => (float) ($s->riderCommission?->amount ?? 0));
+        if (Schema::hasTable('rider_leg_commissions')) {
+            $shipmentIds = $shipments->pluck('id')->filter()->all();
+            if (! empty($shipmentIds)) {
+                $legacy += (float) \App\Models\RiderLegCommission::whereIn('shipment_id', $shipmentIds)->where('leg', 'delivery')->sum('amount');
+            }
+        }
+        return round($legacy, 2);
     }
 
     /** What each delivery card needs, on whichever schema this database uses. */
@@ -424,6 +434,7 @@ class MobileRiderDashboardController extends Controller
             Schema::hasColumn('shipments', 'logistics_provider_id') ? 'provider' : null,
             RiderDeliveries::tracksDecisions() ? 'riderLogs' : null,
             RiderWallet::ready() ? 'riderCommission' : null,
+            Schema::hasTable('rider_leg_commissions') ? 'riderLegCommissions' : null,
         ]));
     }
 

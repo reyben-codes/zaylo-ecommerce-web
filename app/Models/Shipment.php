@@ -98,6 +98,11 @@ class Shipment extends Model
         return $this->hasOne(RiderCommission::class);
     }
 
+    public function riderLegCommissions(): HasMany
+    {
+        return $this->hasMany(RiderLegCommission::class);
+    }
+
     public function events(): HasMany
     {
         return $this->hasMany(DeliveryEvent::class)->orderBy('occurred_at');

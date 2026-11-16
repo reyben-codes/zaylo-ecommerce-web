@@ -276,10 +276,17 @@ class RiderDeliveries
         $path = $this->photos->store($photo, 'delivery-proof/'.$shipment->id);
         try {
             $shipment = DB::transaction(function () use ($shipment, $rider, $to, $path) {
+                if ($path) {
+                    $shipment->update(['delivery_proof_path' => $path]);
+                }
                 $delivered = $this->advance($shipment, $rider, $to, scanned: true);
-                $delivered->update(['delivery_proof_path' => $path]);
-                app(RiderLegEarnings::class)->credit($delivered, $rider, 'delivery');
-                return $delivered;
+                $fresh = $delivered->fresh();
+                app(RiderLegEarnings::class)->credit($fresh, $rider, 'delivery');
+                $order = $fresh->order ?: $fresh->sellerOrder?->order;
+                if ($order?->payment_method !== 'cod') {
+                    $this->wallet->credit($fresh, $rider);
+                }
+                return $fresh;
             });
         } catch (\Throwable $error) {
             Storage::disk('local')->delete($path);
@@ -315,9 +322,10 @@ class RiderDeliveries
         // their delivery commission as soon as they are delivered.
         DB::transaction(function () use ($shipment, $to, $rider, $failure) {
             $this->workflow->advance($shipment, $to, $rider, $failure ? 'Delivery attempt failed: '.$failure.'.' : null);
-            $order = $shipment->order ?: $shipment->sellerOrder?->order;
+            $fresh = $shipment->fresh();
+            $order = $fresh->order ?: $fresh->sellerOrder?->order;
             if ($to === 'delivered' && $order?->payment_method !== 'cod') {
-                $this->wallet->credit($shipment, $rider);
+                $this->wallet->credit($fresh, $rider);
             }
         });
         $shipment = $shipment->fresh();
@@ -520,8 +528,8 @@ class RiderDeliveries
         $collectionTracked = Schema::hasColumn('shipments', 'cod_collected');
         $split = app(Settlement::class)->forShipment($shipment);
         $separatePayout = ($split['policy_version'] ?? 1) >= 2;
-        $riderCommission = $cod ? ($separatePayout ? (float) $split['rider_earnings'] : min((float) $split['rider_earnings'], $codAmount)) : 0.0;
-        if ($shipment->rider_fee_quote) $riderCommission = (float) $shipment->rider_fee_quote['delivery_amount'];
+        $deliveryEarnings = (float) ($shipment->rider_fee_quote['delivery_amount'] ?? $split['rider_earnings']);
+        $riderCommission = $deliveryEarnings;
 
         return [
             'total' => round($total, 2),

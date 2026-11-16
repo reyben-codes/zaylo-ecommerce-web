@@ -175,6 +175,12 @@ class EscrowPayments
                     'GCash escrow settled', 'Order '.$locked->order_number.': PHP '.number_format($amount / 100, 2).' allocated to your '.($kind === 'seller' ? 'withdrawable wallet' : 'settlement balance').'.');
             }
             $escrow->update(['status' => 'released', 'released_at' => now()]);
+            if ($shipment) {
+                $riderUser = $shipment->rider?->user ?? ($shipment->courier_id ? User::find($shipment->courier_id) : null);
+                if ($riderUser) {
+                    app(RiderWallet::class)->credit($shipment->fresh(), $riderUser);
+                }
+            }
             app(AccountUpdates::class)->admins('escrow-released-'.$escrow->id, 'GCash escrow settled',
                 'Order '.$locked->order_number.': verified payment released to seller and delivery wallets after fees.');
             app(AccountUpdates::class)->send($locked->buyer?->id, 'escrow-released-'.$escrow->id, 'orders', 'Order payment settled',

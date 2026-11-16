@@ -48,6 +48,9 @@ trait LegacyOrderTables
             $table->string('status');
             $table->timestamp('picked_up_at')->nullable();
             $table->timestamp('delivered_at')->nullable();
+            $table->boolean('cod_collected')->default(false);
+            $table->timestamp('cod_collected_at')->nullable();
+            $table->foreignId('cod_collected_by')->nullable();
             $table->timestamps();
         });
         Schema::create('order_items', function (Blueprint $table) {
@@ -69,6 +72,7 @@ trait LegacyOrderTables
             $table->string('provider')->nullable();
             $table->string('status');
             $table->decimal('amount', 10, 2);
+            $table->json('payload')->nullable();
             $table->timestamp('paid_at')->nullable();
             $table->timestamps();
         });

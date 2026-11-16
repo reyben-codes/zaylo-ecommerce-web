@@ -53,25 +53,44 @@ class RiderWallet
         if (! self::ready()) {
             return null;
         }
-        if ($shipment->rider_fee_quote) {
-            // New policy credits at POD, including COD, independently of later cash remittance.
-            app(RiderLegEarnings::class)->credit($shipment, $rider, 'delivery');
+
+        $shipment = $shipment->fresh() ?? $shipment;
+
+        // If a leg-based commission already exists for this delivery leg, do not duplicate
+        if (Schema::hasTable('rider_leg_commissions')
+            && \App\Models\RiderLegCommission::where('shipment_id', $shipment->id)->where('leg', 'delivery')->exists()) {
             return null;
+        }
+
+        if ($shipment->rider_fee_quote && Schema::hasTable('rider_leg_commissions')) {
+            // New policy credits at POD, including COD, independently of later cash remittance.
+            $leg = app(RiderLegEarnings::class)->credit($shipment, $rider, 'delivery');
+            if ($leg) {
+                return null;
+            }
         }
 
         $split = app(Settlement::class)->forShipment($shipment);
         if (($split['policy_version'] ?? 1) >= 2) {
             $order = $shipment->order ?: $shipment->sellerOrder?->order;
-            if (ShipmentWorkflow::stageOf($shipment) !== 'delivered' || ($order?->payment_method === 'cod' && ! $shipment->cod_collected)) {
+            $stage = ShipmentWorkflow::stageOf($shipment);
+            if (! in_array($stage, ['delivered', 'completed'], true) || ($order?->payment_method === 'cod' && ! $shipment->cod_collected)) {
                 return null;
             }
         }
 
-        return RiderCommission::firstOrCreate(['shipment_id' => $shipment->id], [
+        $commission = RiderCommission::firstOrCreate(['shipment_id' => $shipment->id], [
             'user_id' => $rider->id,
             'logistics_provider_id' => Shipment::tracksProvider() ? $shipment->logistics_provider_id : null,
             'amount' => self::earningsFor($shipment),
         ]);
+
+        if ($commission->wasRecentlyCreated && class_exists(AccountUpdates::class)) {
+            app(AccountUpdates::class)->send($rider->id, 'earned-'.$commission->id, 'wallet',
+                'Delivery fee credited', '₱'.number_format($commission->amount, 2).' credited for parcel '.RiderDeliveries::labelCode($shipment).'.');
+        }
+
+        return $commission;
     }
 
     public function balance(User $rider): float
