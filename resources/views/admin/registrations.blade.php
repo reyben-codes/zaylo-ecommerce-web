@@ -20,7 +20,7 @@
             @foreach($tabs as $key => $label)
                 @php $active = ($role ?? 'all') === $key; @endphp
                 <a href="{{ route('admin.registrations', $key === 'all' ? [] : ['role' => $key]) }}" class="workspace-tab{{ $active ? ' is-active' : '' }}" @if($active) aria-current="true" @endif>
-                    {{ $label }} <span>{{ $counts[$key] }}</span>
+                    {{ $label }} @if((int) ($counts[$key]) > 0)<span>{{ $counts[$key] }}</span>@endif
                 </a>
             @endforeach
         </nav>

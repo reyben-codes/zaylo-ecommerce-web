@@ -46,7 +46,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const counters = await fetch(tabs.dataset.orderCountsUrl, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
                 if (counters.ok) {
                     const { counts } = await counters.json();
-                    tabs.querySelectorAll('[data-order-count]').forEach(node => { node.textContent = counts[node.dataset.orderCount] || 0; });
+                    tabs.querySelectorAll('[data-order-count]').forEach(node => {
+                        const count = Math.max(0, Number(counts?.[node.dataset.orderCount]) || 0);
+                        node.textContent = count > 0 ? String(count) : '';
+                        node.hidden = count < 1;
+                    });
                 }
             }
         } catch { /* Keep existing counts during network failures. */ }

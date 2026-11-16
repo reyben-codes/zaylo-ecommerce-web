@@ -1,3 +1,4 @@
 .account-update-count { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 4px; margin-left: 6px; border-radius: 12px; background: #b42318; color: #fff; font: 700 11px/1 sans-serif; }
 .account-update-count[hidden] { display: none; }
+.order-tab-count[hidden] { display: none; }
 .buyer-nav-icon .account-update-count { position: absolute; top: -4px; right: -5px; }

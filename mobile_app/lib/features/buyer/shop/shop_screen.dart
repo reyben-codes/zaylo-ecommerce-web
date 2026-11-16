@@ -368,7 +368,7 @@ class _ShopScreenState extends State<ShopScreen> {
       return Padding(
         padding: const EdgeInsets.only(right: 8),
         child: ChoiceChip(
-          label: Text('$label  $count'),
+          label: Text(count > 0 ? '$label  $count' : label),
           selected: selected,
           showCheckmark: false,
           selectedColor: ZayloColors.ink,

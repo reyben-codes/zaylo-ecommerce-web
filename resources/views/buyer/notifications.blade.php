@@ -17,7 +17,7 @@
     <div class="notification-list-heading">
         <div>
             <h2>Recent updates</h2>
-            <p>Updates from the last 30 days <span aria-hidden="true">·</span> {{ $unreadCount }} unread</p>
+            <p>Updates from the last 30 days @if($unreadCount > 0)<span aria-hidden="true">·</span> {{ $unreadCount }} unread @endif</p>
         </div>
         @if($unreadCount > 0)
             <form method="POST" action="{{ route('buyer.notifications.read-all') }}">

@@ -127,8 +127,12 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: ChoiceChip(
-                      label: Row(mainAxisSize: MainAxisSize.min, children: [Text(entry.value), const SizedBox(width: 8),
-                        Badge(label: Text('${_counts[entry.key] ?? 0}'))]),
+                      label: Row(mainAxisSize: MainAxisSize.min, children: [Text(entry.value),
+                        if ((_counts[entry.key] ?? 0) > 0) ...[
+                          const SizedBox(width: 8),
+                          Badge(label: Text('${_counts[entry.key]}')),
+                        ],
+                      ]),
                       selected: _tab == entry.key,
                       showCheckmark: false,
                       selectedColor: ZayloColors.ink,

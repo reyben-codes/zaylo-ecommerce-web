@@ -35,7 +35,7 @@
                 <h2 class="pickup-section-title">
                     <i class="fas fa-calendar-plus" aria-hidden="true"></i>
                     Schedule Pickup
-                    <span class="pickup-badge pickup-badge--info">{{ $readyOrders->count() }} ready</span>
+                    @if($readyOrders->count() > 0)<span class="pickup-badge pickup-badge--info">{{ $readyOrders->count() }} ready</span>@endif
                 </h2>
             </div>
 
@@ -112,7 +112,7 @@
                 <h2 class="pickup-section-title">
                     <i class="fas fa-motorcycle" aria-hidden="true"></i>
                     Assigned Pickups
-                    <span class="pickup-badge pickup-badge--purple">{{ $scheduledShipments->count() }} active</span>
+                    @if($scheduledShipments->count() > 0)<span class="pickup-badge pickup-badge--purple">{{ $scheduledShipments->count() }} active</span>@endif
                 </h2>
             </div>
 
@@ -196,7 +196,7 @@
                 <h2 class="pickup-section-title">
                     <i class="fas fa-handshake" aria-hidden="true"></i>
                     Doorstep Handover Confirmation
-                    <span class="pickup-badge pickup-badge--warning">{{ $inTransitShipments->count() }} awaiting</span>
+                    @if($inTransitShipments->count() > 0)<span class="pickup-badge pickup-badge--warning">{{ $inTransitShipments->count() }} awaiting</span>@endif
                 </h2>
             </div>
 
@@ -272,7 +272,7 @@
                 <h2 class="pickup-section-title">
                     <i class="fas fa-warehouse" aria-hidden="true"></i>
                     Hub Arrival Tracking
-                    <span class="pickup-badge pickup-badge--success">{{ $atHubShipments->count() }} received</span>
+                    @if($atHubShipments->count() > 0)<span class="pickup-badge pickup-badge--success">{{ $atHubShipments->count() }} received</span>@endif
                 </h2>
             </div>
 

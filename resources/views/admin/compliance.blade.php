@@ -25,7 +25,7 @@
     <section class="seller-panel">
         <nav class="workspace-tabs" aria-label="{{ $route === 'admin.compliance' ? 'Compliance' : 'Product approval' }} views">
             @foreach($tabs as $key => $label)
-                <a href="{{ route($route, array_filter(['view' => $key === $defaultView ? null : $key, 'search' => $search])) }}" class="workspace-tab{{ $view === $key ? ' is-active' : '' }}" @if($view === $key) aria-current="true" @endif>{{ $label }} <span>{{ $counts[$key] }}</span></a>
+                <a href="{{ route($route, array_filter(['view' => $key === $defaultView ? null : $key, 'search' => $search])) }}" class="workspace-tab{{ $view === $key ? ' is-active' : '' }}" @if($view === $key) aria-current="true" @endif>{{ $label }} @if((int) ($counts[$key]) > 0)<span>{{ $counts[$key] }}</span>@endif</a>
             @endforeach
         </nav>
 

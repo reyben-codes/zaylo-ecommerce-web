@@ -159,7 +159,7 @@ class _BagScreenState extends State<BagScreen> {
                   SizedBox(
                     width: 170,
                     child: PrimaryButton(
-                      label: 'CHECKOUT (${selected.length})',
+                      label: selected.isEmpty ? 'CHECKOUT' : 'CHECKOUT (${selected.length})',
                       onPressed: selected.isEmpty ? null : () => _checkout(selected),
                     ),
                   ),

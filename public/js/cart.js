@@ -12,7 +12,8 @@
         const selected = boxes.filter((box) => box.checked);
         const quantity = selected.reduce((sum, box) => sum + Number(box.closest('.cart-product').dataset.cartQuantity), 0);
         const total = selected.reduce((sum, box) => sum + Number(box.closest('.cart-product').dataset.cartPrice), 0);
-        count.textContent = `(${quantity})`;
+        count.textContent = quantity > 0 ? `(${quantity})` : '';
+        count.hidden = quantity < 1;
         subtotal.textContent = money.format(total);
         selectAll.checked = selected.length === boxes.length;
         selectAll.indeterminate = selected.length > 0 && selected.length < boxes.length;

@@ -45,7 +45,7 @@
             <a href="{{ route('buyer.orders', $key === 'all' ? [] : ['status' => $key]) }}"
                class="order-tab {{ $filter === $key ? 'is-active' : '' }}"
                @if($filter === $key) aria-current="page" @endif>
-                {{ $label }} <span class="order-tab-count" data-order-count="{{ $key }}">{{ $counts[$key] }}</span>
+                {{ $label }} <span class="order-tab-count" data-order-count="{{ $key }}" @if(($counts[$key] ?? 0) < 1) hidden @endif>@if(($counts[$key] ?? 0) > 0){{ $counts[$key] }}@endif</span>
             </a>
         @endforeach
     </nav>

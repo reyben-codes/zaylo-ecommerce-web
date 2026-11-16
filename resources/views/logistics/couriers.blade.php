@@ -26,7 +26,7 @@
         <nav class="workspace-tabs" aria-label="Filter couriers">
             @foreach($statusLabels as $key => $label)
                 <a href="{{ route('logistics.couriers', ['status' => $key]) }}" class="workspace-tab{{ $status === $key ? ' is-active' : '' }}" @if($status === $key) aria-current="true" @endif>
-                    {{ $label }} <span>{{ $counts[$key] }}</span>
+                    {{ $label }} @if((int) ($counts[$key]) > 0)<span>{{ $counts[$key] }}</span>@endif
                 </a>
             @endforeach
         </nav>

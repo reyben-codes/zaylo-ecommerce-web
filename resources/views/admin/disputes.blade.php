@@ -19,9 +19,9 @@
 
     <section class="seller-panel">
         <nav class="workspace-tabs" aria-label="Filter complaints">
-            <a href="{{ route('admin.disputes', array_filter(['category' => $category])) }}" class="workspace-tab{{ $status === null ? ' is-active' : '' }}" @if($status === null) aria-current="true" @endif>All <span>{{ $counts->sum() }}</span></a>
+            <a href="{{ route('admin.disputes', array_filter(['category' => $category])) }}" class="workspace-tab{{ $status === null ? ' is-active' : '' }}" @if($status === null) aria-current="true" @endif>All @if((int) ($counts->sum()) > 0)<span>{{ $counts->sum() }}</span>@endif</a>
             @foreach($statuses as $key => $label)
-                <a href="{{ route('admin.disputes', array_filter(['status' => $key, 'category' => $category])) }}" class="workspace-tab{{ $status === $key ? ' is-active' : '' }}" @if($status === $key) aria-current="true" @endif>{{ $label }} <span>{{ $counts[$key] ?? 0 }}</span></a>
+                <a href="{{ route('admin.disputes', array_filter(['status' => $key, 'category' => $category])) }}" class="workspace-tab{{ $status === $key ? ' is-active' : '' }}" @if($status === $key) aria-current="true" @endif>{{ $label }} @if((int) ($counts[$key] ?? 0) > 0)<span>{{ $counts[$key] ?? 0 }}</span>@endif</a>
             @endforeach
         </nav>
 

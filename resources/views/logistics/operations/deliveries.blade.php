@@ -21,11 +21,11 @@
 
     <section class="seller-panel">
         <nav class="workspace-tabs" aria-label="Filter parcels by step">
-            <a href="{{ route('logistics.deliveries', array_filter(['search' => $search])) }}" class="workspace-tab{{ $stage === null ? ' is-active' : '' }}" @if($stage === null) aria-current="true" @endif>All <span>{{ $all }}</span></a>
+                <a href="{{ route('logistics.deliveries', array_filter(['search' => $search])) }}" class="workspace-tab{{ $stage === null ? ' is-active' : '' }}" @if($stage === null) aria-current="true" @endif>All @if($all > 0)<span>{{ $all }}</span>@endif</a>
             @foreach($stages as $key => $label)
                 @continue($counts[$key] === 0 && $stage !== $key)
                 <a href="{{ route('logistics.deliveries', array_filter(['stage' => $key, 'search' => $search])) }}" class="workspace-tab{{ $stage === $key ? ' is-active' : '' }}" @if($stage === $key) aria-current="true" @endif>
-                    {{ $label }} <span>{{ $counts[$key] }}</span>
+                    {{ $label }} @if((int) ($counts[$key]) > 0)<span>{{ $counts[$key] }}</span>@endif
                 </a>
             @endforeach
         </nav>

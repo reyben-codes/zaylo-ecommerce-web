@@ -21,14 +21,14 @@
 
     <nav class="product-tabs" aria-label="Product lists">
         <a href="{{ route('seller.products') }}" class="product-tab{{ $filters['view'] === 'archived' ? '' : ' is-active' }}" @unless($filters['view'] === 'archived') aria-current="page" @endunless>
-            Products <span>{{ $counts['active'] }}</span>
+            Products @if((int) ($counts['active']) > 0)<span>{{ $counts['active'] }}</span>@endif
         </a>
         <a href="{{ route('seller.products', ['view' => 'archived']) }}" class="product-tab{{ $filters['view'] === 'archived' ? ' is-active' : '' }}" @if($filters['view'] === 'archived') aria-current="page" @endif>
-            <i class="fas fa-box-archive" aria-hidden="true"></i> Archived <span>{{ $counts['archived'] }}</span>
+            <i class="fas fa-box-archive" aria-hidden="true"></i> Archived @if((int) ($counts['archived']) > 0)<span>{{ $counts['archived'] }}</span>@endif
         </a>
         @isset($sectionCount)
             <a href="{{ route('seller.products.sections') }}" class="product-tab">
-                <i class="fas fa-layer-group" aria-hidden="true"></i> Shop sections <span>{{ $sectionCount }}</span>
+                <i class="fas fa-layer-group" aria-hidden="true"></i> Shop sections @if($sectionCount > 0)<span>{{ $sectionCount }}</span>@endif
             </a>
         @endisset
     </nav>

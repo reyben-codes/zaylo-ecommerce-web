@@ -265,7 +265,7 @@ class RiderSectionHeader extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
           ),
-          if (count != null) ...[
+          if ((count ?? 0) > 0) ...[
             const SizedBox(width: 8),
             _Pill(label: '$count', color: ZayloColors.ink),
           ],
@@ -770,7 +770,7 @@ class _ItemsToPickUp extends StatelessWidget {
             const Icon(Icons.inventory_2_outlined, size: 18),
             const SizedBox(width: 8),
             Expanded(
-              child: Text('Items to pick up ($total)', style: const TextStyle(fontWeight: FontWeight.w700)),
+                      child: Text(total > 0 ? 'Items to pick up ($total)' : 'Items to pick up', style: const TextStyle(fontWeight: FontWeight.w700)),
             ),
           ]),
           const SizedBox(height: 8),

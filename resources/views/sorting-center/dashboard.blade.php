@@ -46,7 +46,7 @@
                 <select id="shipment-status" name="status">
                     <option value="">All shipments</option>
                     @foreach ($counts as $key => $count)
-                        <option value="{{ $key }}" @selected($status === $key)>{{ str_replace('_', ' ', ucfirst($key)) }} ({{ $count }})</option>
+                        <option value="{{ $key }}" @selected($status === $key)>{{ str_replace('_', ' ', ucfirst($key)) }}@if($count > 0) ({{ $count }})@endif</option>
                     @endforeach
                 </select>
                 <button type="submit">Filter</button>

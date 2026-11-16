@@ -26,9 +26,9 @@
     </section>
 
     <nav class="product-tabs" aria-label="Product lists">
-        <a href="{{ route('seller.products') }}" class="product-tab">Products <span>{{ $counts['active'] }}</span></a>
-        <a href="{{ route('seller.products', ['view' => 'archived']) }}" class="product-tab"><i class="fas fa-box-archive" aria-hidden="true"></i> Archived <span>{{ $counts['archived'] }}</span></a>
-        <a href="{{ route('seller.products.sections') }}" class="product-tab is-active" aria-current="page"><i class="fas fa-layer-group" aria-hidden="true"></i> Shop sections <span>{{ $sections->count() }}</span></a>
+        <a href="{{ route('seller.products') }}" class="product-tab">Products @if((int) ($counts['active']) > 0)<span>{{ $counts['active'] }}</span>@endif</a>
+        <a href="{{ route('seller.products', ['view' => 'archived']) }}" class="product-tab"><i class="fas fa-box-archive" aria-hidden="true"></i> Archived @if((int) ($counts['archived']) > 0)<span>{{ $counts['archived'] }}</span>@endif</a>
+        <a href="{{ route('seller.products.sections') }}" class="product-tab is-active" aria-current="page"><i class="fas fa-layer-group" aria-hidden="true"></i> Shop sections @if((int) ($sections->count()) > 0)<span>{{ $sections->count() }}</span>@endif</a>
     </nav>
     <p class="product-tabs__note">Buyers browsing the whole marketplace still use the main categories. Sections are extra tabs inside your shop: a product can be in several, and hidden or empty sections don't show.</p>
 
