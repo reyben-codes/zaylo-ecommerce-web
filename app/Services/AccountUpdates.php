@@ -48,7 +48,7 @@ class AccountUpdates
         $legacy = \App\Models\Order::usesLegacySchema();
         return AccountUpdate::where('user_id', $user->id)->when($legacy, fn ($q) => $q->where('event_key', 'not like', 'order-history-%'))
             ->latest('id')->limit(50)->get()->map(function ($update) use ($user) {
-            $route = $user->hasRole('buyer') ? 'buyer.orders' : ($user->hasRole('seller') ? ($update->section === 'orders' ? 'seller.orders' : 'seller.wallet') : ($user->hasRole('admin') ? 'admin.seller-withdrawals' : 'logistics.earnings'));
+            $route = $user->hasRole('buyer') ? 'buyer.orders' : ($user->hasRole('seller') ? (match ($update->section) { 'orders' => 'seller.orders', 'products' => 'seller.products', default => 'seller.wallet' }) : ($user->hasRole('admin') ? 'admin.seller-withdrawals' : 'logistics.earnings'));
             return ['key' => str_starts_with($update->event_key, 'order-history-') ? 'history:'.substr($update->event_key, 14) : 'account:'.$update->id, 'type' => $update->kind === 'order' ? 'order' : 'account',
                 'icon' => 'fa-money-bill-transfer', 'title' => $update->title, 'message' => $update->body,
                 'url' => \Illuminate\Support\Facades\Route::has($route) ? route($route) : url('/'), 'action' => 'View details',

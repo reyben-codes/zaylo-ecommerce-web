@@ -106,14 +106,17 @@ class IdentityVerificationTest extends TestCase
         $this->assertStringContainsString('no-store', $this->get(route('admin.identity.document', $submission))->headers->get('Cache-Control'));
         $this->get(route('admin.dashboard'))->assertSee('1 buyer ID waiting for review');
 
-        $this->patch(route('admin.identity.review', $submission), ['decision' => 'approve'])->assertSessionHasNoErrors();
+        $this->patch(route('admin.identity.review', $submission), ['decision' => 'approve', 'document_version' => $submission->fresh()->reviewToken()])->assertSessionHasNoErrors();
         $this->assertSame('approved', $submission->fresh()->status);
         $this->assertNotNull($buyer->fresh()->identity_verified_at);
-        $this->patch(route('admin.identity.review', $submission), ['decision' => 'reject', 'reason' => 'Late'])->assertSessionHasErrors('decision');
+        $this->patch(route('admin.identity.review', $submission), ['document_version' => $submission->fresh()->reviewToken(), 'decision' => 'reject', 'reason' => 'Late'])->assertSessionHasErrors('decision');
 
         $this->actingAs($buyer->fresh())->get(route('buyer.account'))->assertSee('Your ID is verified')->assertDontSee('Submit ID for review');
         $this->post(route('buyer.identity.store'), ['id_type' => 'philid', 'document' => UploadedFile::fake()->create('again.jpg', 120, 'image/jpeg')])
-            ->assertSessionHasErrors('document');
+            ->assertSessionHasNoErrors();
+        $this->assertNull($buyer->fresh()->identity_verified_at);
+        $this->assertSame('pending', $buyer->latestIdentityVerification()->first()->status);
+        $this->assertSame('approved', $submission->fresh()->status);
     }
 
     public function test_rejected_buyer_sees_the_reason_and_can_upload_again(): void
@@ -125,8 +128,8 @@ class IdentityVerificationTest extends TestCase
         $firstFile = $submission->document_path;
 
         $admin = User::factory()->create(['role' => 'admin', 'status' => 'active']);
-        $this->actingAs($admin)->patch(route('admin.identity.review', $submission), ['decision' => 'reject'])->assertSessionHasErrors('reason');
-        $this->patch(route('admin.identity.review', $submission), ['decision' => 'reject', 'reason' => 'The photo is too blurry to read.'])->assertSessionHasNoErrors();
+        $this->actingAs($admin)->patch(route('admin.identity.review', $submission), ['document_version' => $submission->fresh()->reviewToken(), 'decision' => 'reject'])->assertSessionHasErrors('reason');
+        $this->patch(route('admin.identity.review', $submission), ['document_version' => $submission->fresh()->reviewToken(), 'decision' => 'reject', 'reason' => 'The photo is too blurry to read.'])->assertSessionHasNoErrors();
         $this->assertNull($buyer->fresh()->identity_verified_at);
 
         $this->actingAs($buyer)->get(route('buyer.account'))->assertSee('Not approved')->assertSee('The photo is too blurry to read.')->assertSee('Upload new ID');

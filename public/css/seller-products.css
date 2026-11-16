@@ -1219,3 +1219,7 @@ button.product-form__remove:focus-visible {
     outline: 2px solid var(--c-b28b6f);
     outline-offset: 2px;
 }
+/* Category advice stays readable on narrow seller screens. */
+.category-suggestion { padding: 12px; margin: 12px 0; border: 1px solid var(--c-e4ddd6); border-radius: 10px; }
+.category-suggestion[hidden] { display: none; }
+.category-suggestion p { margin: 0 0 10px; overflow-wrap: anywhere; }

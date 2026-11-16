@@ -11,9 +11,13 @@
     <div class="announcement-bar" role="region" aria-label="Announcements">
         @foreach($notices as $notice)
             <div class="announcement-bar__item" data-announcement="{{ $notice->id }}-{{ $notice->updated_at?->timestamp }}">
-                <i class="fas fa-bullhorn" aria-hidden="true"></i>
-                <p><strong>{{ $notice->title }}</strong> {{ $notice->body }}</p>
-                <button type="button" class="announcement-bar__close" data-announcement-close aria-label="Dismiss announcement: {{ $notice->title }}"><i class="fas fa-xmark" aria-hidden="true"></i></button>
+                <span class="announcement-bar__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m4 9 15-5v16L4 15zM4 9H2v6h2m3 1 1 5h4l-2-4M22 9v6" stroke-linejoin="round"/></svg></span>
+                <div class="announcement-bar__copy">
+                    <span class="announcement-bar__eyebrow">Announcement</span>
+                    <h2 class="announcement-bar__title">{{ $notice->title }}</h2>
+                    <p>{{ $notice->body }}</p>
+                </div>
+                <button type="button" class="announcement-bar__close" data-announcement-close aria-label="Dismiss announcement: {{ $notice->title }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" stroke-linecap="round"/></svg></button>
             </div>
         @endforeach
     </div>

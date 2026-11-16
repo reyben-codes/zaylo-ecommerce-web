@@ -11,6 +11,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -68,6 +69,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'approved_at' => 'datetime',
             'is_suspended' => 'boolean',
             'password' => 'hashed',
+            'must_change_password' => 'boolean',
         ];
     }
 
@@ -284,6 +286,7 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function awaitsLogisticsApproval(): bool
     {
+        if ($this->isLogisticsEmployee()) return false;
         return $this->hasRole('logistics') && in_array($this->status, ['pending', 'rejected'], true)
             && Schema::hasColumn('logistics_providers', 'sec_registration_no');
     }
@@ -321,9 +324,34 @@ class User extends Authenticatable implements MustVerifyEmail
         return ! Schema::hasColumn('users', 'identity_verified_at') || $this->identity_verified_at !== null;
     }
 
-    public function logisticsProvider(): HasOne
+    public function getLogisticsProviderAttribute(): ?LogisticsProvider
     {
+        if ($this->relationLoaded('logisticsProvider')) {
+            $relation = $this->getRelation('logisticsProvider');
+            if ($relation !== null || ! $this->isLogisticsEmployee()) {
+                return $relation;
+            }
+        }
+        if ($this->isLogisticsEmployee()) {
+            $provider = $this->belongsTo(LogisticsProvider::class, 'logistics_employee_provider_id')->first();
+            $this->setRelation('logisticsProvider', $provider);
+            return $provider;
+        }
+        return $this->hasOne(LogisticsProvider::class)->oldestOfMany()->first();
+    }
+
+    public function logisticsProvider(): HasOne|BelongsTo
+    {
+        if ($this->isLogisticsEmployee()) {
+            return $this->belongsTo(LogisticsProvider::class, 'logistics_employee_provider_id');
+        }
         return $this->hasOne(LogisticsProvider::class)->oldestOfMany();
+    }
+
+    public function isLogisticsEmployee(): bool
+    {
+        return filled($this->attributes['logistics_employee_provider_id'] ?? null)
+            || filled($this->attributes['logistics_position'] ?? null);
     }
 
     public function rider(): HasOne

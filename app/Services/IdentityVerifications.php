@@ -32,40 +32,43 @@ class IdentityVerifications
         ];
     }
 
-    public function ensureNotVerified(User $user): void
-    {
-        if ($user->isIdentityVerified()) {
-            throw ValidationException::withMessages(['document' => 'Your ID is already verified.']);
-        }
-    }
-
     public function submit(User $user, string $idType, UploadedFile $document): IdentityVerification
     {
-        $this->ensureNotVerified($user);
-
         // Private disk: ID documents are never reachable through a public URL.
         $path = $document->store("identity-documents/{$user->id}", 'local');
+        if (! $path) throw ValidationException::withMessages(['document' => 'The ID could not be saved. Please try again.']);
 
-        return DB::transaction(function () use ($user, $idType, $document, $path) {
-            // One open submission per buyer: a new upload replaces a pending or rejected one.
-            $open = $user->identityVerifications()->whereIn('status', ['pending', 'rejected'])->latest()->first();
-            $previousPath = $open?->document_path;
-            $attributes = [
-                'id_type' => $idType,
-                'document_path' => $path,
-                'original_name' => mb_substr($document->getClientOriginalName(), 0, 255),
-                'status' => 'pending',
-                'rejection_reason' => null,
-                'reviewed_by' => null,
-                'reviewed_at' => null,
-            ];
-            $submission = $open ? tap($open)->update($attributes) : $user->identityVerifications()->create($attributes);
+        try {
+            $submission = DB::transaction(function () use ($user, $idType, $document, $path) {
+                // Match admin review's lock order so a replacement cannot inherit an older approval.
+                $lockedUser = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+                // One open submission per buyer: a new upload replaces a pending or rejected one.
+                $latest = $lockedUser->identityVerifications()->latest('id')->lockForUpdate()->first();
+                $open = in_array($latest?->status, ['pending', 'rejected'], true) ? $latest : null;
+                $previousPath = $open?->document_path;
+                $attributes = [
+                    'id_type' => $idType,
+                    'document_path' => $path,
+                    'original_name' => mb_substr($document->getClientOriginalName(), 0, 255),
+                    'status' => 'pending',
+                    'rejection_reason' => null,
+                    'reviewed_by' => null,
+                    'reviewed_at' => null,
+                ];
+                $submission = $open ? tap($open)->update($attributes) : $lockedUser->identityVerifications()->create($attributes);
+                $lockedUser->forceFill(['identity_verified_at' => null])->save();
 
-            if ($previousPath) {
-                DB::afterCommit(fn () => Storage::disk('local')->delete($previousPath));
-            }
+                if ($previousPath) {
+                    DB::afterCommit(fn () => Storage::disk('local')->delete($previousPath));
+                }
 
-            return $submission;
-        });
+                return $submission;
+            });
+        } catch (\Throwable $error) {
+            Storage::disk('local')->delete($path);
+            throw $error;
+        }
+        $user->refresh();
+        return $submission;
     }
 }

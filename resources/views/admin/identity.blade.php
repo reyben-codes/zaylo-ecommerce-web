@@ -90,6 +90,7 @@
                                                 @csrf
                                                 @method('PATCH')
                                                 <input type="hidden" name="decision" value="approve">
+                                                <input type="hidden" name="document_version" value="{{ $verification->reviewToken() }}">
                                                 <button type="submit" class="seller-button seller-button--small"><i class="fas fa-check" aria-hidden="true"></i> Approve</button>
                                             </form>
                                             <details class="review-reason" data-smooth-disclosure>
@@ -100,6 +101,7 @@
                                                         @csrf
                                                         @method('PATCH')
                                                         <input type="hidden" name="decision" value="reject">
+                                                        <input type="hidden" name="document_version" value="{{ $verification->reviewToken() }}">
                                                         <label for="reason-{{ $verification->id }}">Reason shown to the buyer</label>
                                                         <textarea id="reason-{{ $verification->id }}" name="reason" maxlength="500" required placeholder="e.g. The photo is blurry. Please upload a clear photo of the front of your ID."></textarea>
                                                         <button type="submit" class="seller-button seller-button--small seller-button--danger">Confirm rejection</button>

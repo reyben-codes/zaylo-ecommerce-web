@@ -22,6 +22,7 @@
         </div>
     </section>
 
+    @error('category')<p class="seller-field__error" role="alert">{{ $message }}</p>@enderror
     <section class="seller-panel">
         <nav class="workspace-tabs" aria-label="{{ $route === 'admin.compliance' ? 'Compliance' : 'Product approval' }} views">
             @foreach($tabs as $key => $label)
@@ -88,6 +89,27 @@
                                 </td>
                                 <td>
                                     <div class="review-actions">
+                                        <details class="review-reason" data-smooth-disclosure>
+                                            <summary class="seller-button seller-button--small seller-button--secondary">Correct category</summary>
+                                            <div data-disclosure-content>
+                                                <form method="POST" action="{{ route('admin.compliance.category', $product) }}" class="review-reason__form">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <label for="category-{{ $product->id }}">Product category</label>
+                                                    <select id="category-{{ $product->id }}" name="category" required>
+                                                        @foreach(config('marketplace.category_tree') as $main)
+                                                            <optgroup label="{{ $main['label'] }}">
+                                                                @foreach($main['subcategories'] as $key => $label)
+                                                                    <option value="{{ $key }}" @selected($key === (\App\Services\ProductCategoryChecks::suggestion($product->name) ?? $product->category_key))>{{ $label }}</option>
+                                                                @endforeach
+                                                            </optgroup>
+                                                        @endforeach
+                                                    </select>
+                                                    <p class="seller-field__help">Replaces existing category tags and returns the listing to review.</p>
+                                                    <button class="seller-button seller-button--small">Save category</button>
+                                                </form>
+                                            </div>
+                                        </details>
                                         @if(! $product->is_archived && ($product->is_pending_review || $product->is_rejected))
                                             <form method="POST" action="{{ route('admin.compliance.review', $product) }}">
                                                 @csrf

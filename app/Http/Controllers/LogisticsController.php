@@ -35,6 +35,7 @@ class LogisticsController extends Controller
     /** The sorting center at a glance: parcels at each step, riders, and what needs attention. */
     public function dashboard()
     {
+        if (auth()->user()->isLogisticsEmployee()) return app(LogisticsEmployeeController::class)->dashboard(request());
         $provider = $this->provider();
 
         return view('logistics.dashboard', [
@@ -191,6 +192,7 @@ class LogisticsController extends Controller
 
     public function account()
     {
+        if (auth()->user()->isLogisticsEmployee()) return app(LogisticsEmployeeController::class)->account(request());
         return view('logistics.account', [
             'user' => auth()->user(),
             'provider' => $this->provider(),

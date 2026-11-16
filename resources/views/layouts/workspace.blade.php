@@ -39,7 +39,9 @@
             'title' => 'Logistics Center',
             'home' => 'logistics.dashboard',
             'account' => 'logistics.account',
-            'context' => 'Managing <strong>'.e($viewer->logisticsProvider?->name ?? 'your company').'</strong>',
+            'context' => ($viewer?->isLogisticsEmployee())
+                ? '<strong>'.e($viewer->logisticsProvider?->name ?? 'Logistics').'</strong> &bull; <span class="employee-pill employee-pill--'.$viewer->logistics_position.'">'.e(config('logistics_employees.positions.'.$viewer->logistics_position.'.label', 'Staff')).'</span>'
+                : 'Managing <strong>'.e($viewer->logisticsProvider?->name ?? 'your company').'</strong>',
             'icon' => 'fa-truck-fast',
             'nav' => [
                 ['route' => 'logistics.dashboard', 'label' => 'Dashboard', 'icon' => 'fa-home'],
@@ -54,6 +56,7 @@
                 ['route' => 'logistics.returns', 'label' => 'Returns', 'icon' => 'fa-rotate-left', 'count' => 'returns'],
                 ['route' => 'logistics.monitoring', 'label' => 'Monitoring', 'icon' => 'fa-satellite-dish'],
                 ['heading' => 'Team'],
+                ['route' => 'logistics.employees', 'label' => 'Employees', 'icon' => 'fa-users-gear'],
                 ['route' => 'logistics.couriers', 'label' => 'Pickup fleet (First Mile)', 'icon' => 'fa-truck-pickup'],
                 ['route' => 'logistics.riders', 'label' => 'Riders (First & Last Mile)', 'icon' => 'fa-motorcycle', 'count' => 'riders'],
                 ['route' => 'logistics.attendance', 'label' => 'Attendance', 'icon' => 'fa-user-clock'],
@@ -85,6 +88,9 @@
     @foreach(['seller-sidebar', 'seller-header', 'seller-workspace', 'workspace-pages'] as $stylesheet)
         <link rel="stylesheet" href="{{ asset("css/{$stylesheet}.css") }}?v={{ filemtime(public_path("css/{$stylesheet}.css")) }}">
     @endforeach
+    @if($workspace === 'logistics')
+        <link rel="stylesheet" href="{{ asset('css/logistics-employees.css') }}?v={{ filemtime(public_path('css/logistics-employees.css')) }}">
+    @endif
     @stack('styles')
     <link rel="stylesheet" href="{{ asset('css/confirm-dialog.css') }}?v={{ filemtime(public_path('css/confirm-dialog.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/print.css') }}?v={{ filemtime(public_path('css/print.css')) }}" media="print">
@@ -117,13 +123,41 @@
     </header>
 
     @include('partials.notifications')
-    @include('partials.announcements')
 
     <div class="seller-shell">
         <aside class="sidebar seller-sidebar" id="sidebar" aria-label="{{ $portal['title'] }} navigation">
             <p class="seller-sidebar__title">{{ $portal['title'] }}</p>
             <nav class="seller-sidebar__nav">
-                @foreach($portal['nav'] as $item)
+                @php
+                    $navItems = $portal['nav'];
+                    if ($workspace === 'logistics' && $viewer?->isLogisticsEmployee()) {
+                        $filtered = [];
+                        $currentHeading = null;
+                        $groupItems = [];
+                        foreach ($navItems as $navItem) {
+                            if (isset($navItem['heading'])) {
+                                if ($currentHeading && !empty($groupItems)) {
+                                    $filtered[] = ['heading' => $currentHeading];
+                                    $filtered = array_merge($filtered, $groupItems);
+                                }
+                                $currentHeading = $navItem['heading'];
+                                $groupItems = [];
+                            } elseif (\App\Services\LogisticsAccess::canRoute($viewer, $navItem['route'])) {
+                                if ($currentHeading === null) {
+                                    $filtered[] = $navItem;
+                                } else {
+                                    $groupItems[] = $navItem;
+                                }
+                            }
+                        }
+                        if ($currentHeading && !empty($groupItems)) {
+                            $filtered[] = ['heading' => $currentHeading];
+                            $filtered = array_merge($filtered, $groupItems);
+                        }
+                        $navItems = $filtered;
+                    }
+                @endphp
+                @foreach($navItems as $item)
                     @if(isset($item['heading']))
                         <p class="seller-sidebar__group">{{ $item['heading'] }}</p>
                         @continue
@@ -149,6 +183,7 @@
         </aside>
 
         <main class="seller-main" id="main-content">
+            @include('partials.announcements')
             @yield('content')
         </main>
     </div>

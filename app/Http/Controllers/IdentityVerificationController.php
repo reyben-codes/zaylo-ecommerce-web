@@ -13,7 +13,6 @@ class IdentityVerificationController extends Controller
 {
     public function store(Request $request, IdentityVerifications $verifications)
     {
-        $verifications->ensureNotVerified($request->user());
         $data = $request->validate(IdentityVerifications::rules(), IdentityVerifications::messages());
         $verifications->submit($request->user(), $data['id_type'], $request->file('document'));
 

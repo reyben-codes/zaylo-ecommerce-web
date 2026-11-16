@@ -22,7 +22,7 @@
         <div>
             <p class="seller-eyebrow"><a href="{{ route('seller.products') }}" class="product-form__back"><i class="fas fa-arrow-left" aria-hidden="true"></i> Products</a></p>
             <h1>{{ $product ? $product->name : 'Add product' }}</h1>
-            <p>{{ $product ? 'Changes appear in your shop as soon as you save.' : 'Fill in the details buyers see. You can add sales after saving.' }}</p>
+            <p>{{ $product ? 'Changes to product details and categories need admin approval before publication.' : 'Fill in the details buyers see. You can add sales after saving.' }}</p>
         </div>
         @if($product?->is_archived)
             <div class="seller-page-heading__actions">
@@ -95,6 +95,13 @@
                               @if($categoryError) aria-invalid="true" @endif>
                         <legend>Categories</legend>
                         <p class="seller-field__help" id="productCategoriesHelp">Tick every category buyers should find this in, e.g. a shoe cabinet under Shoe Cabinets and Shoe Racks. Choose at least one, or type your own under Other.</p>
+                        @if($product && ($categoryMismatch = \App\Services\ProductCategoryChecks::forProduct($product)))
+                            <p class="seller-field__error">{{ $categoryMismatch }}</p>
+                        @endif
+                        <div class="category-suggestion" data-category-suggestion data-rules="{{ json_encode(config('product_categories.rules')) }}" data-groups="{{ json_encode(config('marketplace.category_groups')) }}" data-labels="{{ json_encode(config('marketplace.categories')) }}" role="status" hidden>
+                            <p data-category-suggestion-text></p>
+                            <button type="button" class="seller-button seller-button--small seller-button--secondary" data-use-suggested-category>Use suggested category</button>
+                        </div>
                         @foreach(config('marketplace.category_tree') as $mainKey => $main)
                             <p class="product-form__category-group">{{ $main['label'] }}</p>
                             <div class="product-form__category-options">

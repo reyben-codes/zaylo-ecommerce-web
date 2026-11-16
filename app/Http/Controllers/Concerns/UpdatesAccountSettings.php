@@ -64,6 +64,7 @@ trait UpdatesAccountSettings
         ]);
 
         \Illuminate\Support\Facades\DB::transaction(function () use ($user, $validated) {
+            if ($user->isLogisticsEmployee()) $user->forceFill(['must_change_password' => false]);
             $user->forceFill([
                 'password' => $validated['password'],
                 'remember_token' => Str::random(60),

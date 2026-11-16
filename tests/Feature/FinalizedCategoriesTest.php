@@ -22,20 +22,20 @@ class FinalizedCategoriesTest extends TestCase
         $tree = config('marketplace.category_tree');
 
         $this->assertSame(
-            ['Home and Garden', 'Kitchen Appliances', 'Furniture & Decor', 'Gardening Tools', 'Outdoor Living', 'Home Improvement Tools', 'Bedding & Bath'],
+            ['Electronics', 'Home and Garden', 'Kitchen Appliances', 'Furniture & Decor', 'Gardening Tools', 'Outdoor Living', 'Home Improvement Tools', 'Bedding & Bath'],
             array_column($tree, 'label'),
         );
         foreach ($tree as $main) {
             $this->assertCount(10, $main['subcategories']);
         }
-        $this->assertCount(77, config('marketplace.categories'));
+        $this->assertCount(88, config('marketplace.categories'));
         $this->assertSame(array_keys($tree), array_keys(config('marketplace.browse_categories')));
 
         $this->get(route('products.index'))->assertOk()
             ->assertSee('<optgroup label="Outdoor Living">', false)
             ->assertSee('<option value="hammocks"', false)
-            ->assertDontSee('<option value="electronics"', false);
-        $this->get(route('products.index', ['category' => 'electronics']))->assertSessionHasErrors('category');
+            ->assertSee('<option value="electronics"', false);
+        $this->get(route('products.index', ['category' => 'electronics']))->assertOk()->assertSessionHasNoErrors();
     }
 
     public function test_a_product_shows_under_every_category_it_belongs_to(): void
@@ -128,7 +128,7 @@ class FinalizedCategoriesTest extends TestCase
         foreach (['products.index', 'home'] as $route) {
             $this->get(route($route))->assertOk()
                 ->assertDontSee('<a href="'.route('home').'" class="logo">', false)
-                ->assertSeeInOrder(['<span class="logo">', 'data-live-search', 'id="primary-navigation"', '>Home</a>', 'Shop All', 'Categories', 'Kids'], false);
+                ->assertSeeInOrder(['<span class="logo">', 'data-live-search', 'id="primary-navigation"', '>Home</a>', 'Shop All', 'Categories'], false);
         }
     }
 

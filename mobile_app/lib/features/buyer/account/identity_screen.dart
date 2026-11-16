@@ -23,22 +23,54 @@ class IdentityScreen extends StatefulWidget {
   State<IdentityScreen> createState() => _IdentityScreenState();
 }
 
-class _IdentityScreenState extends State<IdentityScreen> {
+class _IdentityScreenState extends State<IdentityScreen> with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   IdentityStatus? _status;
   Object? _error;
   String? _idType;
   File? _document;
   bool _saving = false;
+  late final AnimationController _expansion;
+  late final CurvedAnimation _expansionCurve;
 
-  /// A pending upload can be replaced; the form stays closed until asked.
+  /// Keep selected type and document when the replacement form is collapsed.
   bool _replacing = false;
   Map<String, String> _serverErrors = const {};
 
   @override
   void initState() {
     super.initState();
+    _expansion = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
+    _expansionCurve = CurvedAnimation(parent: _expansion, curve: Curves.easeOut);
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  @override
+  void dispose() {
+    _expansionCurve.dispose();
+    _expansion.dispose();
+    super.dispose();
+  }
+
+  void _syncProfile(IdentityStatus status) {
+    final state = AppScope.read(context);
+    final user = state.user;
+    if (user != null && user.identityVerified != status.verified) state.updateUser(user.withIdentityVerified(status.verified));
+  }
+
+  void _toggleReplacement() {
+    setState(() => _replacing = !_replacing);
+    _animateForm(_replacing);
+  }
+
+  void _animateForm(bool expanded) {
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _expansion.value = expanded ? 1 : 0;
+    } else if (expanded) {
+      _expansion.forward();
+    } else {
+      _expansion.reverse();
+    }
   }
 
   Future<void> _load() async {
@@ -49,6 +81,8 @@ class _IdentityScreenState extends State<IdentityScreen> {
           _status = status;
           _error = null;
         });
+        _expansion.value = !status.verified && !status.pending ? 1 : 0;
+        _syncProfile(status);
       }
     } on ApiException catch (error) {
       if (mounted) setState(() => _error = error);
@@ -67,6 +101,9 @@ class _IdentityScreenState extends State<IdentityScreen> {
         _document = null;
         _replacing = false;
       });
+      _formKey.currentState?.reset();
+      _animateForm(false);
+      _syncProfile(status);
       showMessage(context, 'ID uploaded. An administrator will review it soon; you can keep shopping meanwhile.');
     } on ApiException catch (error) {
       if (!mounted) return;
@@ -86,16 +123,28 @@ class _IdentityScreenState extends State<IdentityScreen> {
           ? (_error != null ? LoadError(error: _error, onRetry: _load, title: 'Could not load your ID status') : const Loader())
           : ListView(padding: const EdgeInsets.all(ZayloSpace.page), children: [
               _StatusCard(status: status),
-              if (!status.verified && status.enabled) ...[
+              if (status.enabled) ...[
                 const SizedBox(height: 22),
-                if (status.pending && !_replacing)
+                if (status.verified || status.pending)
                   OutlinedButton(
-                    onPressed: () => setState(() => _replacing = true),
+                    onPressed: _saving ? null : _toggleReplacement,
                     style: secondaryButtonStyle,
-                    child: const Text('REPLACE MY UPLOAD'),
-                  )
-                else
-                  _form(status),
+                    child: Text(_replacing ? 'CANCEL' : status.verified ? 'CHANGE ID AND RE-VERIFY' : 'REPLACE MY UPLOAD'),
+                  ),
+                SizeTransition(
+                  sizeFactor: _expansionCurve,
+                  alignment: Alignment.topCenter,
+                  child: ExcludeFocus(
+                    excluding: (status.verified || status.pending) && !_replacing,
+                    child: IgnorePointer(
+                      ignoring: _saving || ((status.verified || status.pending) && !_replacing),
+                      child: ExcludeSemantics(
+                        excluding: (status.verified || status.pending) && !_replacing,
+                        child: Padding(padding: const EdgeInsets.only(top: 16), child: _form(status)),
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ]),
     );
@@ -104,6 +153,10 @@ class _IdentityScreenState extends State<IdentityScreen> {
   Widget _form(IdentityStatus status) => Form(
         key: _formKey,
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          if (status.verified) ...[
+            const Text('Submitting a replacement returns your ID status to Under review. An administrator must approve the new ID before you can order 18+ products again.'),
+            const SizedBox(height: 16),
+          ],
           const FieldLabel('ID type'),
           DropdownButtonFormField<String>(
             initialValue: _idType,
@@ -127,7 +180,7 @@ class _IdentityScreenState extends State<IdentityScreen> {
           Text('Make sure your name, photo and ID number are clear. Only ZAYLO administrators can see this file.',
               style: TextStyle(fontSize: 12, color: ZayloColors.muted)),
           const SizedBox(height: 22),
-          PrimaryButton(label: 'SUBMIT ID FOR REVIEW', busy: _saving, onPressed: _submit),
+          PrimaryButton(label: status.verified ? 'SUBMIT REPLACEMENT FOR REVIEW' : 'SUBMIT ID FOR REVIEW', busy: _saving, onPressed: _submit),
         ]),
       );
 }

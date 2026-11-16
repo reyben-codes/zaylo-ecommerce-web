@@ -124,7 +124,7 @@ class WorkspaceNotificationsTest extends TestCase
         $buyer = User::factory()->create(['role' => 'buyer', 'status' => 'active']);
         $check = IdentityVerification::create(['user_id' => $buyer->id, 'id_type' => 'passport', 'document_path' => 'identity/id.jpg', 'status' => 'pending']);
 
-        $this->actingAs($admin)->patch(route('admin.identity.review', $check), ['decision' => 'reject', 'reason' => 'The photo is too blurry to read.'])->assertSessionHasNoErrors();
+        $this->actingAs($admin)->patch(route('admin.identity.review', $check), ['decision' => 'reject', 'document_version' => $check->reviewToken(), 'reason' => 'The photo is too blurry to read.'])->assertSessionHasNoErrors();
         $this->actingAs($buyer)->get(route('buyer.notifications'))->assertOk()
             ->assertSee('Your ID was not approved')->assertSee('Reason: The photo is too blurry to read.');
         // The app reads the same feed.

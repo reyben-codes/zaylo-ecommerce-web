@@ -19,9 +19,7 @@ class SellerWalletController extends Controller
 
     public function request(Request $request, SellerWallet $wallet)
     {
-        $data = $request->validate(['amount' => ['required', 'numeric', 'min:0.01', 'decimal:0,2'],
-            'method' => ['required', 'in:gcash,bank'], 'account_number' => ['required', 'string', 'max:50'], 'account_name' => ['required', 'string', 'min:2', 'max:100']]);
-        if ($data['method'] === 'gcash') $request->validate(['account_number' => ['regex:/\A09[0-9]{9}\z/']]);
+        $data = $request->validate(SellerWallet::requestRules(), SellerWallet::requestMessages());
         $wallet->request($request->user(), $data);
         return back()->with('status', 'Withdrawal requested. It stays pending until the transfer is recorded.');
     }

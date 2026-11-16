@@ -92,7 +92,6 @@ class MobileAccountController extends Controller
     public function submitIdentity(Request $request, IdentityVerifications $verifications): JsonResponse
     {
         abort_unless(Schema::hasTable('identity_verifications'), 503, 'ID verification is being set up. Please try again later.');
-        $verifications->ensureNotVerified($request->user());
         $data = $request->validate(IdentityVerifications::rules(), IdentityVerifications::messages());
         $verifications->submit($request->user(), $data['id_type'], $request->file('document'));
 

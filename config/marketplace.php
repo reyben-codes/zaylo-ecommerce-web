@@ -3,6 +3,16 @@
 // The finalized catalog. A product is listed under any of the subcategories; a main category shows all of its own.
 // "Storage Boxes" appears twice in the catalog, so the outdoor one has its own key.
 $categoryTree = [
+    'electronics' => [
+        'label' => 'Electronics',
+        'image' => 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=160&h=160&fit=crop&auto=format',
+        'subcategories' => [
+            'mobile_phones' => 'Mobile Phones', 'phone_accessories' => 'Phone Accessories',
+            'tablets' => 'Tablets', 'laptops' => 'Laptops', 'desktop_computers' => 'Desktop Computers',
+            'computer_accessories' => 'Computer Accessories', 'headphones_earbuds' => 'Headphones & Earbuds',
+            'smartwatches' => 'Smartwatches', 'cameras' => 'Cameras', 'gaming_consoles' => 'Gaming Consoles',
+        ],
+    ],
     'home_garden' => [
         'label' => 'Home and Garden',
         'image' => 'https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?w=160&h=160&fit=crop&auto=format',

@@ -1,5 +1,8 @@
 @extends($admin ? 'layouts.workspace' : 'layouts.seller', $admin ? ['workspace' => 'admin'] : [])
 @section('title', $admin ? 'Seller payouts' : 'Seller wallet')
+@push('scripts')
+<script src="{{ asset('js/personal-details.js') }}?v={{ filemtime(public_path('js/personal-details.js')) }}" defer></script>
+@endpush
 @section('content')
 <section class="seller-page-heading"><div><h1>{{ $admin ? 'Seller payouts' : 'Seller wallet' }}</h1><p>Escrow proceeds become available after delivery confirmation and fee deductions. Withdrawals stay pending until funds are transferred.</p></div></section>
 @if(! config('escrow.live') && ! \App\Services\DemoPayments::enabled())<aside class="seller-notice"><p>Test payment mode. Sandbox balances do not represent real money. Do not send real transfers for test payments.</p></aside>@endif
@@ -13,9 +16,9 @@
 <section class="seller-panel"><div class="seller-panel__body"><h2>Available: PHP {{ number_format($balance, 2) }}</h2>
 <form method="POST" action="{{ route('seller.wallet.request') }}" class="seller-form">@csrf
 <div class="seller-field"><label for="wallet-amount">Amount</label><input id="wallet-amount" name="amount" type="number" min="0.01" max="{{ max(0.01, $balance) }}" step="0.01" required></div>
-<div class="seller-field"><label for="wallet-method">Send to</label><select id="wallet-method" name="method"><option value="gcash">GCash</option><option value="bank">Bank</option></select></div>
-<div class="seller-field"><label for="wallet-number">GCash number or bank and account number</label><input id="wallet-number" name="account_number" maxlength="50" required></div>
-<div class="seller-field"><label for="wallet-name">Account name</label><input id="wallet-name" name="account_name" maxlength="100" required></div>
+<div class="seller-field"><label>Send to</label><p>GCash</p><input type="hidden" name="method" value="gcash"></div>
+<div class="seller-field"><label for="wallet-number">GCash number</label><input id="wallet-number" name="account_number" type="tel" inputmode="numeric" autocomplete="tel-national" minlength="11" maxlength="11" pattern="09[0-9]{9}" placeholder="09XXXXXXXXX" value="{{ old('account_number') }}" data-phone-number required></div>
+<div class="seller-field"><label for="wallet-name">Name on the GCash account</label><input id="wallet-name" name="account_name" maxlength="100" value="{{ old('account_name') }}" required></div>
 <button class="seller-button" @disabled($balance <= 0)>Request withdrawal</button>
 </form></div></section>
 @endunless

@@ -7,10 +7,30 @@ use App\Models\User;
 use App\Support\TransferReference;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
 class SellerWallet
 {
+    public static function requestRules(): array
+    {
+        return [
+            'amount' => ['required', 'numeric', 'min:0.01', 'decimal:0,2'],
+            'method' => ['required', 'in:gcash'],
+            'account_number' => ['required', 'string', 'size:11', 'regex:/\A09[0-9]{9}\z/'],
+            'account_name' => ['required', 'string', 'min:2', 'max:100'],
+        ];
+    }
+
+    public static function requestMessages(): array
+    {
+        return [
+            'method.in' => 'Seller withdrawals are available through GCash only.',
+            'account_number.size' => 'Enter an 11-digit GCash number starting with 09.',
+            'account_number.regex' => 'Enter an 11-digit GCash number starting with 09.',
+        ];
+    }
+
     public function balance(User $seller): float
     {
         if (! Schema::hasTable('settlement_wallet_entries')) return 0;
@@ -23,6 +43,7 @@ class SellerWallet
     public function request(User $seller, array $data): SellerWithdrawal
     {
         abort_unless($seller->hasRole('seller') || $seller->hasRole('logistics'), 403);
+        $data = Validator::make($data, self::requestRules(), self::requestMessages())->validate();
         return DB::transaction(function () use ($seller, $data) {
             User::whereKey($seller->id)->lockForUpdate()->firstOrFail();
             $minor = (int) round($data['amount'] * 100);

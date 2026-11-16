@@ -308,6 +308,7 @@ Route::middleware(['auth', 'active', 'verified', 'role:admin', 'nocache'])->pref
     Route::post('/compliance/products/{product}/warnings', [AdminComplianceController::class, 'warn'])->middleware('throttle:30,1')->name('compliance.warn');
     Route::patch('/compliance/products/{product}/visibility', [AdminComplianceController::class, 'toggle'])->name('compliance.toggle');
     Route::patch('/compliance/products/{product}/review', [AdminComplianceController::class, 'review'])->middleware('throttle:60,1')->name('compliance.review');
+    Route::patch('/compliance/products/{product}/category', [AdminComplianceController::class, 'correctCategory'])->middleware('throttle:60,1')->name('compliance.category');
 
     Route::get('/commissions', [AdminFinanceController::class, 'commissions'])->name('commissions');
     Route::get('/cod-commissions', [AdminFinanceController::class, 'codCommissions'])->name('cod-commissions');
@@ -379,6 +380,10 @@ Route::middleware(['auth', 'verified', 'role:logistics', 'nocache'])->prefix('lo
 });
 
 Route::middleware(['auth', 'active', 'verified', 'role:logistics', 'nocache'])->prefix('logistics')->name('logistics.')->group(function () {
+    Route::get('/employees', [\App\Http\Controllers\LogisticsEmployeeController::class, 'index'])->name('employees');
+    Route::post('/employees', [\App\Http\Controllers\LogisticsEmployeeController::class, 'store'])->middleware('throttle:10,1')->name('employees.store');
+    Route::patch('/employees/{employee}', [\App\Http\Controllers\LogisticsEmployeeController::class, 'update'])->middleware('throttle:30,1')->name('employees.update');
+    Route::put('/employees/{employee}/password', [\App\Http\Controllers\LogisticsEmployeeController::class, 'resetPassword'])->middleware('throttle:10,1')->name('employees.password');
     Route::get('/updates', [WorkspaceUpdatesController::class, 'logistics'])->middleware('throttle:60,1')->name('updates');
     Route::get('/dashboard', [LogisticsController::class, 'dashboard'])->name('dashboard');
     Route::get('/notifications', [WorkspaceNotificationController::class, 'index'])->name('notifications');

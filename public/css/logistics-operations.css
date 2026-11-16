@@ -838,16 +838,18 @@
     gap: 0.5rem;
 }
 
-/* Pickup rows expose one management control and one print action. */
+/* Pickup rows expose one management modal and one print action. */
 .parcel-actions--pickup { display: grid; gap: 8px; width: 250px; max-width: 100%; min-width: 210px; margin-left: auto; align-items: stretch; }
 .parcel-actions--pickup > .seller-button { justify-content: center; width: 100%; }
 .parcel-table:has(.parcel-actions--pickup) td { vertical-align: top; }
-.parcel-pickup-panel { width: 100%; text-align: left; }
-.parcel-pickup-panel > summary { display: flex; justify-content: space-between; width: 100%; gap: 14px; list-style: none; cursor: pointer; }
-.parcel-pickup-panel > summary::-webkit-details-marker { display: none; }
-.parcel-pickup-panel > summary .fa-chevron-down { transition: transform 300ms ease-out; font-size: 10px; }
-.parcel-pickup-panel[open] > summary .fa-chevron-down { transform: rotate(180deg); }
-.parcel-pickup-panel__body { display: grid; gap: 16px; padding: 16px 12px; margin-top: 8px; border: 1px solid var(--c-dcd2c8); border-radius: 10px; background: var(--c-faf7f2); }
+.parcel-pickup-dialog { width: min(520px, calc(100% - 32px)); max-height: calc(100svh - 48px); padding: 0; border: 1px solid var(--c-dcd2c8); border-radius: 18px; background: var(--c-ffffff); color: var(--zaylo-ink); text-align: left; box-shadow: 0 24px 80px rgb(0 0 0 / 22%); overflow: auto; }
+.parcel-pickup-dialog::backdrop { background: rgb(20 17 15 / 48%); backdrop-filter: blur(3px); }
+.parcel-pickup-dialog__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 24px; border-bottom: 1px solid var(--c-dcd2c8); }
+.parcel-pickup-dialog__header h2 { margin: 0 0 6px; font-size: 24px; line-height: 1.2; }
+.parcel-pickup-dialog__header p { margin: 0; font-size: 12px; color: var(--zaylo-muted); overflow-wrap: anywhere; }
+.parcel-pickup-dialog__close { display: grid; place-items: center; flex-shrink: 0; width: 34px; height: 34px; padding: 0; border: 1px solid var(--c-dcd2c8); border-radius: 50%; background: transparent; color: inherit; font: 24px/1 sans-serif; cursor: pointer; }
+.parcel-pickup-dialog__footer { display: flex; justify-content: flex-end; padding: 16px 24px; border-top: 1px solid var(--c-dcd2c8); }
+.parcel-pickup-panel__body { display: grid; gap: 20px; padding: 24px; }
 .parcel-pickup-panel__body .parcel-inline-form,
 .parcel-pickup-panel__body form:has(.parcel-code-input) { display: grid; gap: 8px; align-items: stretch; }
 .parcel-pickup-panel__body .parcel-inline-form input,
@@ -857,6 +859,10 @@
 .parcel-pickup-panel__body label { font-size: 12px; font-weight: 600; }
 .parcel-pickup-panel__body > form + form,
 .parcel-pickup-panel__body > .parcel-decline { padding-top: 12px; border-top: 1px solid var(--c-dcd2c8); }
-.parcel-actions--pickup summary:focus-visible { outline: 2px solid var(--zaylo-accent); outline-offset: 3px; }
+.parcel-pickup-dialog button:focus-visible { outline: 2px solid var(--zaylo-accent); outline-offset: 3px; }
+.seller-workspace:has(.parcel-pickup-dialog[open]) { overflow: hidden; }
 @media (max-width: 760px) { .parcel-actions--pickup { width: 100%; min-width: 0; margin-left: 0; } }
-@media (prefers-reduced-motion: reduce) { .parcel-pickup-panel > summary .fa-chevron-down { transition: none; } }
+@media (max-width: 540px) {
+    .parcel-pickup-dialog { width: calc(100% - 24px); max-height: calc(100svh - 24px); border-radius: 14px; }
+    .parcel-pickup-dialog__header, .parcel-pickup-panel__body { padding: 20px; }
+}

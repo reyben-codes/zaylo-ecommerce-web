@@ -1,0 +1,454 @@
+/* Logistics Employee Accounts Management */
+.employee-management-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+
+.employee-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.employee-card {
+    background: #ffffff;
+    border: 1px solid var(--zaylo-border, #e5e7eb);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.employee-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.employee-pill--hub_supervisor {
+    background-color: #eff6ff;
+    color: #1d4ed8;
+}
+
+.employee-pill--dispatcher {
+    background-color: #f5f3ff;
+    color: #6d28d9;
+}
+
+.employee-pill--sorting_staff {
+    background-color: #fffbeb;
+    color: #b45309;
+}
+
+.employee-pill--finance_staff {
+    background-color: #ecfdf5;
+    color: #047857;
+}
+
+.employee-pill--active {
+    background-color: #ecfdf5;
+    color: #047857;
+}
+
+.employee-pill--suspended {
+    background-color: #fef2f2;
+    color: #b91c1c;
+}
+
+.employee-pill--warn {
+    background-color: #fff7ed;
+    color: #c2410c;
+}
+
+.employee-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+.employee-table th {
+    text-align: left;
+    padding: 12px 16px;
+    background-color: #f9fafb;
+    color: #4b5563;
+    font-weight: 600;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.employee-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #f3f4f6;
+    vertical-align: middle;
+}
+
+.employee-table tr:hover {
+    background-color: #fafafa;
+}
+
+.employee-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background-color: #e0e7ff;
+    color: #3730a3;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.employee-meta {
+    display: flex;
+    flex-direction: column;
+}
+
+.employee-name {
+    font-weight: 600;
+    color: #111827;
+}
+
+.employee-email {
+    font-size: 0.8125rem;
+    color: #6b7280;
+}
+
+.employee-disclosure {
+    margin-top: 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #f9fafb;
+    padding: 12px 16px;
+}
+
+.employee-disclosure summary {
+    font-weight: 600;
+    color: #374151;
+    cursor: pointer;
+    user-select: none;
+}
+
+.employee-actions-cell {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.employee-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background-color 0.2s, color 0.2s;
+    text-decoration: none;
+}
+
+.employee-btn--primary {
+    background-color: #1f2937;
+    color: #ffffff;
+}
+
+.employee-btn--primary:hover {
+    background-color: #111827;
+}
+
+.employee-btn--outline {
+    border-color: #d1d5db;
+    background-color: #ffffff;
+    color: #374151;
+}
+
+.employee-btn--outline:hover {
+    background-color: #f3f4f6;
+}
+
+.employee-btn--danger {
+    color: #b91c1c;
+    border-color: #fca5a5;
+    background-color: #ffffff;
+}
+
+.employee-btn--danger:hover {
+    background-color: #fef2f2;
+}
+
+.employee-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.employee-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.employee-field label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #374151;
+}
+
+.employee-field input,
+.employee-field select {
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    color: #111827;
+    background-color: #ffffff;
+}
+
+.employee-field input:focus,
+.employee-field select:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.position-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.position-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 12px;
+    background: #ffffff;
+}
+
+.position-card strong {
+    display: block;
+    font-size: 0.875rem;
+    margin-bottom: 4px;
+}
+
+.position-card p {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin: 0;
+}
+
+/* Employee table and forms utilities */
+.employee-card--spaced {
+    margin-bottom: 24px;
+}
+
+.employee-card__title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 16px;
+}
+
+.employee-disclosure-body {
+    margin-top: 16px;
+}
+
+.employee-form-actions {
+    margin-top: 16px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.employee-empty-state {
+    text-align: center;
+    padding: 32px 16px;
+    color: #6b7280;
+}
+
+.employee-empty-icon {
+    font-size: 2.5rem;
+    color: #9ca3af;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.employee-user-cell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.employee-manage-menu {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.employee-action-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.employee-action-select,
+.employee-action-input {
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid #d1d5db;
+    font-size: 0.8125rem;
+}
+
+.employee-pagination {
+    margin-top: 16px;
+}
+
+/* Employee Dashboard styles */
+.employee-welcome-banner {
+    background: linear-gradient(135deg, #1e293b, #0f172a);
+    color: #f8fafc;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.employee-welcome-content h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 4px 0 8px 0;
+    color: #ffffff;
+}
+
+.employee-welcome-content p {
+    font-size: 0.9375rem;
+    color: #cbd5e1;
+    margin: 0;
+    max-width: 640px;
+}
+
+.employee-welcome-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+}
+
+.employee-security-alert {
+    background-color: #fff7ed;
+    border: 1px solid #fed7aa;
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.employee-security-alert__message {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #9a3412;
+    font-size: 0.9375rem;
+}
+
+.employee-security-alert__message i {
+    font-size: 1.25rem;
+}
+
+.employee-dashboard-tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    margin-bottom: 28px;
+}
+
+.employee-action-tile {
+    background: #ffffff;
+    border: 1px solid var(--zaylo-border, #e5e7eb);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    min-height: 140px;
+}
+
+.employee-action-tile:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-color: #cbd5e1;
+}
+
+.employee-action-tile__header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 10px;
+}
+
+.employee-action-tile__icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    background-color: #f1f5f9;
+    color: #0f172a;
+    flex-shrink: 0;
+}
+
+.employee-action-tile__title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0;
+}
+
+.employee-action-tile__description {
+    font-size: 0.84rem;
+    color: #64748b;
+    margin: 0;
+    line-height: 1.45;
+}
+
+.employee-action-tile__footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    margin-top: 14px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #2563eb;
+    gap: 6px;
+}
+
+.employee-info-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 20px;
+    margin-bottom: 24px;
+}
+

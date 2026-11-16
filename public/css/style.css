@@ -2601,6 +2601,8 @@ a.status-pill { text-decoration: none; }
 .identity-rejection { margin-bottom: 20px; padding: 14px 16px; border: 1px solid var(--c-edcfcc); border-left: 3px solid var(--c-a75049); background: var(--c-fff5f4); color: var(--c-8f3933); font-size: .84rem; line-height: 1.55; }
 .identity-rejection p { margin: 4px 0 0; }
 .identity-form select { width: 100%; }
+.identity-replacement > summary { cursor: pointer; width: fit-content; }
+.identity-replacement > [data-disclosure-content] { padding-top: 16px; }
 .identity-privacy { display: flex; gap: 8px; align-items: flex-start; padding: 0; font-size: .78rem; line-height: 1.5; }
 .identity-notice { display: flex; gap: 16px; align-items: center; margin: 0 0 22px; padding: 18px 20px; border: 1px solid var(--c-e5d8c9); border-left: 3px solid var(--c-9a755e); background: var(--c-fffaf3); color: var(--c-644c37); }
 .identity-notice > i { font-size: 1.4rem; color: var(--c-9a755e); }

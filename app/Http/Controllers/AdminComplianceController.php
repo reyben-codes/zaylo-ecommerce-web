@@ -140,6 +140,9 @@ class AdminComplianceController extends Controller
             'reason.min' => 'Give the seller at least a sentence (10 characters) explaining the problem.',
         ]);
         $approved = $data['decision'] === 'approve';
+        if ($approved && $mismatch = \App\Services\ProductCategoryChecks::forProduct($product)) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['category' => $mismatch]);
+        }
         $product->forceFill([
             'review_status' => $approved ? Product::REVIEW_APPROVED : Product::REVIEW_REJECTED,
             'review_note' => $approved ? null : $data['reason'],
@@ -186,6 +189,9 @@ class AdminComplianceController extends Controller
             $owner = $owners[$product->id];
             $sellerCategory = $owner ? ($registered[$owner->id] ?? null) : null;
             $flags = [];
+            if ($mismatch = \App\Services\ProductCategoryChecks::forProduct($product)) {
+                $flags[] = ['wrong_category', $mismatch];
+            }
             if ($sellerCategory && ! $this->inCategory($product->category_key, $sellerCategory)) {
                 $flags[] = ['wrong_category', 'Listed in '.$product->category_label.', but the seller registered for '.(config('marketplace.categories')[$sellerCategory] ?? $sellerCategory)];
             }
@@ -202,6 +208,32 @@ class AdminComplianceController extends Controller
                 'warnings' => (int) ($warned[$product->id] ?? 0),
             ];
         })->sortByDesc(fn ($row) => count($row['flags']))->values();
+    }
+
+    public function correctCategory(Request $request, Product $product)
+    {
+        $data = $request->validate(['category' => ['required', Rule::in(array_keys(config('marketplace.categories')))]]);
+        if ($mismatch = \App\Services\ProductCategoryChecks::mismatch($product->name, [$data['category']])) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['category' => $mismatch]);
+        }
+        DB::transaction(function () use ($product, $data, $request) {
+            $product = Product::whereKey($product->id)->lockForUpdate()->firstOrFail();
+            if ($mismatch = \App\Services\ProductCategoryChecks::mismatch($product->name, [$data['category']])) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['category' => $mismatch]);
+            }
+            $before = $product->category_keys;
+            $product->update(['category' => $data['category'], 'custom_tags' => null]);
+            $product->syncAdditionalCategories([]);
+            $product->unsetRelation('category');
+            $product->submitForReview();
+            app(\App\Services\ActivityLogger::class)->record('admin.product_category_corrected', 'products', 'Corrected product category.', $request->user(), $product,
+                ['before' => $before, 'after' => [$data['category']]]);
+            if ($seller = $this->ownerOf($product)) {
+                app(\App\Services\AccountUpdates::class)->send($seller->id, 'category-corrected-'.\Illuminate\Support\Str::uuid(), 'products',
+                    'Product category corrected', $product->name.' was moved to '.$product->category_label.'. It is awaiting admin approval.', 'product', $product->id);
+            }
+        });
+        return back()->with('status', 'Category corrected. Review and approve the listing to publish it.');
     }
 
     private function inCategory(?string $productCategory, string $sellerCategory): bool

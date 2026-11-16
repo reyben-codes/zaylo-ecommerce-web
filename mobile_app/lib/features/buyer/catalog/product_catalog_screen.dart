@@ -25,6 +25,7 @@ const _sortOptions = {
 
 const _catalogCategories = {
   null: 'All',
+  'electronics': 'Electronics',
   'home_garden': 'Home and Garden',
   'kitchen_appliances': 'Kitchen Appliances',
   'furniture_decor': 'Furniture & Decor',
@@ -36,6 +37,18 @@ const _catalogCategories = {
 
 // Mirrors category_tree in the website's config/marketplace.php.
 const _catalogSubcategories = {
+  'electronics': {
+    'mobile_phones': 'Mobile Phones',
+    'phone_accessories': 'Phone Accessories',
+    'tablets': 'Tablets',
+    'laptops': 'Laptops',
+    'desktop_computers': 'Desktop Computers',
+    'computer_accessories': 'Computer Accessories',
+    'headphones_earbuds': 'Headphones & Earbuds',
+    'smartwatches': 'Smartwatches',
+    'cameras': 'Cameras',
+    'gaming_consoles': 'Gaming Consoles',
+  },
   'home_garden': {
     'storage_bins': 'Storage Bins',
     'cleaning_baskets': 'Cleaning Baskets',

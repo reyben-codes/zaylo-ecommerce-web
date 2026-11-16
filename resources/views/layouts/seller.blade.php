@@ -20,12 +20,12 @@
 <body class="seller-workspace" @if(auth()->user()?->hasRole('seller') && auth()->user()->isActive()) data-seller-updates-url="{{ route('seller.updates') }}" @endif>
     @include('partials.seller-header')
     @include('partials.notifications')
-    @include('partials.announcements')
 
     <div class="seller-shell">
         @include('partials.seller-sidebar')
 
         <main class="seller-main" id="main-content" @hasSection('auto-refresh') data-auto-refresh @endif>
+            @include('partials.announcements')
             @include('seller.partials.alert-banner')
             <p class="seller-live-update" data-live-update role="status" hidden>
                 <i class="fas fa-rotate" aria-hidden="true"></i>

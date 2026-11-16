@@ -223,6 +223,33 @@ class SettlementRevisionTest extends TestCase
         $this->assertEquals(300, $wallet->balance($f['seller']));
     }
 
+    public function test_seller_wallet_accepts_only_gcash_and_an_eleven_digit_number(): void
+    {
+        $f = $this->parcel();
+        app(EscrowPayments::class)->capture($this->event($f));
+        $f['sellerOrder']->update(['status' => 'completed']);
+        app(EscrowPayments::class)->release($f['order']->fresh());
+        $this->actingAs($f['seller'])->get(route('seller.wallet'))->assertOk()
+            ->assertSee('GCash number')->assertSee('maxlength="11"', false)->assertSee('data-phone-number', false)
+            ->assertDontSee('value="bank"', false)->assertDontSee('GCash number or bank and account number');
+        $data = ['amount' => 100, 'method' => 'gcash', 'account_number' => '09171234567', 'account_name' => 'Test Seller'];
+        $this->post(route('seller.wallet.request'), array_replace($data, ['method' => 'bank']))->assertSessionHasErrors('method');
+        foreach (['0917123456', '091712345678', '0917abc4567', '08171234567', '+639171234567'] as $number) {
+            $this->post(route('seller.wallet.request'), array_replace($data, ['account_number' => $number]))->assertSessionHasErrors('account_number');
+        }
+        $this->assertDatabaseCount('seller_withdrawals', 0);
+        $this->post(route('seller.wallet.request'), $data)->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('seller_withdrawals', ['user_id' => $f['seller']->id, 'method' => 'gcash', 'account_number' => '09171234567', 'amount_minor' => 10000]);
+        $this->assertEquals(700, app(SellerWallet::class)->balance($f['seller']));
+    }
+
+    public function test_bank_requests_cannot_bypass_gcash_validation_through_the_wallet_service(): void
+    {
+        $f = $this->parcel();
+        $this->expectException(ValidationException::class);
+        app(SellerWallet::class)->request($f['seller'], ['amount' => 100, 'method' => 'bank', 'account_number' => '123456789012345', 'account_name' => 'Seller']);
+    }
+
     public function test_new_wallet_pages_render_for_their_owners_and_android_can_return_from_gateway(): void
     {
         $f = $this->parcel();

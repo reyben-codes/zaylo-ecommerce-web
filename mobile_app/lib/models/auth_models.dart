@@ -60,6 +60,12 @@ class UserProfile {
         identityVerified: identityVerified,
         avatarUrl: url,
       );
+
+  UserProfile withIdentityVerified(bool verified) => UserProfile(
+        id: id, name: name, email: email, phone: phone, dateOfBirth: dateOfBirth,
+        emailVerified: emailVerified, hasPassword: hasPassword, googleLinked: googleLinked,
+        identityVerified: verified, avatarUrl: avatarUrl,
+      );
 }
 
 class AuthResult {

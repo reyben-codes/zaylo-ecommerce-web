@@ -366,3 +366,39 @@
     allCards().forEach(setupCard);
     updatePresets();
 })();
+(() => {
+    const advice = document.querySelector('[data-category-suggestion]');
+    const title = document.querySelector('#productName');
+    const group = document.querySelector('[data-categories]');
+    if (!advice || !title || !group) return;
+    const rules = JSON.parse(advice.dataset.rules);
+    const groups = JSON.parse(advice.dataset.groups);
+    const labels = JSON.parse(advice.dataset.labels);
+    const boxes = [...group.querySelectorAll('input[name="categories[]"]')];
+    const others = [...group.querySelectorAll('[data-category-other]')];
+    let suggested;
+    const update = () => {
+        suggested = rules.find((rule) => new RegExp(rule.pattern, 'iu').test(title.value))?.category;
+        advice.hidden = !suggested;
+        if (!suggested) return;
+        const main = Object.keys(groups).find((key) => groups[key].includes(suggested));
+        const allowed = [main, ...groups[main]];
+        const chosen = boxes.filter((box) => box.checked).map((box) => box.value);
+        const wrongTags = others.some((field) => field.value.trim() && field.name !== `custom_tags[${main}]`);
+        const mismatch = !chosen.includes(suggested) || chosen.some((key) => !allowed.includes(key)) || wrongTags;
+        advice.querySelector('[data-category-suggestion-text]').textContent = mismatch
+            ? `Suggested category: ${labels[main]} → ${labels[suggested]}. Unrelated categories must be corrected before admin approval.`
+            : `Category matches the product title: ${labels[suggested]}. Admin will still review your listing.`;
+        advice.querySelector('button').hidden = !mismatch;
+    };
+    title.addEventListener('input', update);
+    group.addEventListener('change', update);
+    group.addEventListener('input', update);
+    advice.querySelector('button').addEventListener('click', () => {
+        const main = Object.keys(groups).find((key) => groups[key].includes(suggested));
+        boxes.forEach((box) => { box.checked = box.value === suggested; });
+        others.forEach((field) => { if (field.name !== `custom_tags[${main}]`) field.value = ''; });
+        group.dispatchEvent(new Event('change', {bubbles: true}));
+    });
+    update();
+})();

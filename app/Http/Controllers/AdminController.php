@@ -409,13 +409,22 @@ class AdminController extends Controller
     {
         $data = $request->validate([
             'decision' => ['required', Rule::in(['approve', 'reject'])],
+            'document_version' => ['required', 'string', 'size:64'],
             'reason' => 'exclude_unless:decision,reject|required|string|max:500',
-        ], ['reason.required' => 'Tell the buyer why the ID was rejected so they can upload a better one.']);
+        ], [
+            'reason.required' => 'Tell the buyer why the ID was rejected so they can upload a better one.',
+            'document_version.required' => 'Refresh this page and review the latest ID upload before making a decision.',
+        ]);
 
         DB::transaction(function () use ($verification, $data) {
+            $buyer = User::whereKey($verification->user_id)->lockForUpdate()->firstOrFail();
             $locked = IdentityVerification::whereKey($verification->id)->lockForUpdate()->firstOrFail();
             if ($locked->status !== 'pending') {
                 throw ValidationException::withMessages(['decision' => 'This ID was already reviewed. Refresh the page.']);
+            }
+            if (! hash_equals($locked->reviewToken(), $data['document_version'])
+                || (int) $buyer->latestIdentityVerification()->value('id') !== (int) $locked->id) {
+                throw ValidationException::withMessages(['decision' => 'This ID was replaced with a newer upload. Refresh the page and review the latest document.']);
             }
             $approved = $data['decision'] === 'approve';
             $locked->update([
@@ -424,9 +433,7 @@ class AdminController extends Controller
                 'reviewed_by' => auth()->id(),
                 'reviewed_at' => now(),
             ]);
-            if ($approved) {
-                $locked->user->forceFill(['identity_verified_at' => now()])->save();
-            }
+            $buyer->forceFill(['identity_verified_at' => $approved ? now() : null])->save();
         });
 
         $name = $verification->user?->name ?? 'The buyer';

@@ -10,15 +10,36 @@
     };
 
     const dismissed = read();
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const syncBar = bar => {
+        if (bar) bar.hidden = !bar.querySelector('[data-announcement]:not([hidden])');
+    };
     document.querySelectorAll('[data-announcement]').forEach((item) => {
         if (dismissed.includes(item.dataset.announcement)) {
             item.hidden = true;
         }
         item.querySelector('[data-announcement-close]')?.addEventListener('click', () => {
-            item.hidden = true;
+            if (item.dataset.dismissing) return;
+            item.dataset.dismissing = 'true';
             save([...read(), item.dataset.announcement]);
+            const bar = item.closest('.announcement-bar');
+            const target = bar?.querySelectorAll('[data-announcement]:not([hidden])').length === 1 ? bar : item;
+            const finish = () => {
+                item.hidden = true;
+                syncBar(bar);
+                target.style.overflow = '';
+            };
+            if (reducedMotion.matches || !target.animate) { finish(); return; }
+            const style = getComputedStyle(target);
+            target.style.overflow = 'hidden';
+            const animation = target.animate([
+                { height: `${target.getBoundingClientRect().height}px`, opacity: 1, marginTop: style.marginTop, marginBottom: style.marginBottom },
+                { height: '0px', opacity: 0, marginTop: '0px', marginBottom: '0px' },
+            ], { duration: 300, easing: 'ease-out' });
+            animation.onfinish = () => { finish(); animation.cancel(); };
         });
     });
+    document.querySelectorAll('.announcement-bar').forEach(syncBar);
 
     // Not inside the chat bubble's frame, which loads a whole page: the page around it already showed the pop-up.
     if (window.self !== window.top) return;
@@ -28,7 +49,6 @@
     };
     const seen = readSeen();
     const unseen = [...document.querySelectorAll('[data-announcement-modal]')].filter((modal) => !seen.includes(modal.dataset.announcementModal));
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const showNext = () => {
         const modal = unseen.shift();
         if (!modal || typeof modal.showModal !== 'function') return;

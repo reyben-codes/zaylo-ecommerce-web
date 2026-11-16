@@ -41,6 +41,10 @@ class ProvisionLogistics extends Command
         }
 
         $user = User::where('email', $email)->first();
+        if ($user?->isLogisticsEmployee()) {
+            $this->error('This email belongs to an employee. Manage it from the company owner\'s Employees page.');
+            return self::FAILURE;
+        }
         if ($user && ! $user->hasRole('logistics')) {
             $this->error("{$email} already belongs to a {$user->role} account. Use a different email for the logistics partner.");
 

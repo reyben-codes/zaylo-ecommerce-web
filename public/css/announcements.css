@@ -1,43 +1,60 @@
-/* Admin announcements, shown under the site header for the viewer's audience. */
+/* Announcement cards share the spacing and warm palette of the mobile app. */
 .announcement-bar {
     display: grid;
-    gap: 1px;
-    background: var(--c-e3d6c8);
+    gap: 12px;
+    width: min(1200px, calc(100% - 32px));
+    margin: 20px auto;
 }
+.seller-main > .announcement-bar { width: 100%; max-width: none; margin: 0 0 28px; }
+.announcement-bar[hidden], .announcement-bar__item[hidden] { display: none; }
 
 .announcement-bar__item {
     display: flex;
-    gap: 12px;
+    gap: 16px;
     align-items: flex-start;
-    padding: 10px max(16px, calc((100% - 1200px) / 2));
-    background: var(--c-f6efe6);
+    padding: 20px;
+    border: 1px solid var(--c-e3d6c8);
+    border-radius: 14px;
+    background: var(--c-ffffff);
+    box-shadow: 0 3px 14px rgb(42 32 25 / 3%);
     color: var(--c-3d3027);
     font-size: .86rem;
     line-height: 1.45;
 }
 
-.announcement-bar__item > i {
-    margin-top: 3px;
+.announcement-bar__icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 42px;
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: var(--c-f6efe6);
     color: var(--c-9a755e);
+    font-size: 17px;
 }
-
-.announcement-bar__item p {
+.announcement-bar__copy {
     flex: 1;
     min-width: 0;
+}
+.announcement-bar__icon svg { width: 21px; height: 21px; }
+.announcement-bar__close svg { width: 16px; height: 16px; }
+.announcement-bar__eyebrow { display: block; margin-bottom: 5px; font-size: 9px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: var(--c-9a755e); }
+.announcement-bar__item .announcement-bar__title { margin: 0 0 6px; font: 700 16px/1.35 Inter, sans-serif; color: var(--c-1a1714); overflow-wrap: anywhere; }
+.announcement-bar__item p {
     margin: 0;
     overflow-wrap: anywhere;
-}
-
-.announcement-bar__item strong {
-    margin-right: 6px;
-    color: var(--c-1a1714);
+    color: var(--c-6b5f54);
+    font-size: 13px;
+    line-height: 1.6;
+    white-space: pre-line;
 }
 
 .announcement-bar__close {
     display: inline-grid;
     flex: 0 0 auto;
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     place-items: center;
     border: 0;
     border-radius: 50%;
@@ -49,7 +66,13 @@
 .announcement-bar__close:hover,
 .announcement-bar__close:focus-visible {
     background: var(--c-ebe0d3);
-    outline: none;
+}
+.announcement-bar__close:focus-visible { outline: 2px solid var(--c-9a755e); outline-offset: 3px; }
+@media (max-width: 540px) {
+    .announcement-bar__item { padding: 16px 12px 16px 16px; gap: 12px; }
+    .announcement-bar__icon { flex-basis: 34px; width: 34px; height: 34px; border-radius: 10px; font-size: 15px; }
+    .announcement-bar__item .announcement-bar__title { font-size: 14px; }
+    .announcement-bar__close { width: 28px; height: 28px; }
 }
 
 /* The announcement pop-up (public/js/announcements.js). */

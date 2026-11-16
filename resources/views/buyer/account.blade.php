@@ -129,14 +129,13 @@
         @if($identityEnabled)
             @php
                 $submission = $identitySubmission;
-                $showUpload = ! $identityVerified;
             @endphp
             <section class="settings-card" id="identity-verification">
                 <div class="settings-card-heading">
                     <div>
                         <span class="eyebrow">Verification</span>
                         <h2>ID verification</h2>
-                        <p>You can shop without an ID. We only check a government-issued ID once before you order a product its seller marked 18+ (for adults only).</p>
+                        <p>You can shop without an ID. An approved government-issued ID is required for 18+ products. You can change your ID and submit it for another review.</p>
                     </div>
                     @if($identityVerified)
                         <span class="status-pill identity-status identity-status--approved"><i class="fas fa-circle-check"></i> Approved</span>
@@ -161,7 +160,12 @@
                     </div>
                 @endif
 
-                @if($showUpload)
+                @if($identityVerified)
+                    <details class="identity-replacement" data-smooth-disclosure @if($errors->has('id_type') || $errors->has('document')) open @endif>
+                        <summary class="text-button">Change ID and re-verify</summary>
+                        <div data-disclosure-content>
+                            <p class="identity-message">Submitting a replacement returns your ID status to Under review. You can order 18+ products again once an administrator approves the new ID.</p>
+                @endif
                     <form method="POST" action="{{ route('buyer.identity.store') }}" enctype="multipart/form-data" class="market-form stacked-form identity-form">
                         @csrf
                         <div class="form-row">
@@ -180,8 +184,11 @@
                             </label>
                         </div>
                         <p class="empty-note identity-privacy"><i class="fas fa-lock" aria-hidden="true"></i> JPG, PNG, WebP, or PDF up to 5 MB. Make sure your name and photo are readable. Only ZAYLO administrators can see this file.</p>
-                        <div><button class="market-button" type="submit">{{ $submission ? 'Upload new ID' : 'Submit ID for review' }}</button></div>
+                        <div><button class="market-button" type="submit">{{ $identityVerified ? 'Submit replacement for review' : ($submission ? 'Upload new ID' : 'Submit ID for review') }}</button></div>
                     </form>
+                @if($identityVerified)
+                        </div>
+                    </details>
                 @endif
             </section>
         @endif

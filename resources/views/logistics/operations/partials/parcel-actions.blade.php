@@ -1,6 +1,11 @@
 {{-- The next steps for one parcel. Expects $shipment, optional $riders (assign a rider when it is waiting for one) and
      optional $scanned (the tracking number just scanned on the Scan parcel page, which proves the waybill is in hand).
      Sorting suggestions come from a <datalist id="sort-areas"> on the page. --}}
+@once
+    @push('scripts')
+        <script src="{{ asset('js/pickup-dialog.js') }}?v={{ filemtime(public_path('js/pickup-dialog.js')) }}" defer></script>
+    @endpush
+@endonce
 @php
     $workflow = \App\Services\ShipmentWorkflow::class;
     // The rider's own steps (out for delivery, delivered, failed) are taken in the rider app, not here.
@@ -24,14 +29,25 @@
 
 <div class="parcel-actions{{ $managePickup ? ' parcel-actions--pickup' : '' }}">
     @if($managePickup)
-        <details class="parcel-pickup-panel" data-smooth-disclosure @if($thisParcel && $errors->any()) open @endif>
-            <summary class="seller-button seller-button--small">
+        <button type="button" class="seller-button seller-button--small" data-pickup-dialog-open="pickup-dialog-{{ $shipment->id }}"
+                aria-haspopup="dialog" aria-controls="pickup-dialog-{{ $shipment->id }}">
                 {{ $awaitingConfirmation ? 'Review pickup' : ($shipment->pickup_courier_id ? 'Manage pickup' : 'Assign pickup rider') }}
-                <i class="fas fa-chevron-down" aria-hidden="true"></i>
                 <span class="sr-only"> for {{ $tracking }}</span>
-            </summary>
-            <div data-disclosure-content>
+        </button>
+        <dialog id="pickup-dialog-{{ $shipment->id }}" class="parcel-pickup-dialog" data-pickup-dialog
+                aria-labelledby="pickup-dialog-title-{{ $shipment->id }}" aria-describedby="pickup-dialog-description-{{ $shipment->id }}"
+                @if($thisParcel && $errors->any()) data-open-on-load @endif>
+            <header class="parcel-pickup-dialog__header">
+                <div>
+                    <h2 id="pickup-dialog-title-{{ $shipment->id }}">{{ $awaitingConfirmation ? 'Review pickup' : 'Manage pickup' }}</h2>
+                    <p id="pickup-dialog-description-{{ $shipment->id }}">{{ $tracking }}</p>
+                </div>
+                <button type="button" class="parcel-pickup-dialog__close" data-pickup-dialog-close aria-label="Close pickup actions">&times;</button>
+            </header>
                 <div class="parcel-pickup-panel__body">
+                    @if($thisParcel && $errors->any())
+                        <p class="seller-field__error" role="alert">{{ $errors->first() }}</p>
+                    @endif
     @endif
     @if(in_array($stage, ['ready', 'confirmed'], true) && isset($pickupRiders))
         @if($localPickupRiders->isNotEmpty() && $shipment->logistics_provider_id)
@@ -56,6 +72,7 @@
             @csrf
             @method('PATCH')
             <input type="hidden" name="decision" value="confirm">
+            <input type="hidden" name="parcel" value="{{ $shipment->id }}">
             <label class="sr-only" for="pickup-date-{{ $shipment->id }}">Pickup date for parcel {{ $tracking }}</label>
             <input type="date" id="pickup-date-{{ $shipment->id }}" name="pickup_date" value="{{ $today->toDateString() }}"
                    min="{{ $today->toDateString() }}" max="{{ $today->copy()->addDays(14)->toDateString() }}" required>
@@ -95,6 +112,7 @@
                     @csrf
                     @method('PATCH')
                     <input type="hidden" name="decision" value="decline">
+                    <input type="hidden" name="parcel" value="{{ $shipment->id }}">
                     <label for="decline-{{ $shipment->id }}">Reason (sent to the seller)</label>
                     <textarea id="decline-{{ $shipment->id }}" name="reason" minlength="5" maxlength="500" required placeholder="e.g. Outside our service area, or the parcel is too large for our riders."></textarea>
                     <button type="submit" class="seller-button seller-button--small seller-button--danger">Decline pickup</button>
@@ -187,8 +205,10 @@
 
     @if($managePickup)
                 </div>
-            </div>
-        </details>
+            <footer class="parcel-pickup-dialog__footer">
+                <button type="button" class="seller-button seller-button--secondary" data-pickup-dialog-close>Close</button>
+            </footer>
+        </dialog>
     @endif
     @if(\App\Support\Waybill::available($shipment))
         <a href="{{ route('logistics.parcels.waybill.print', $shipment) }}" class="seller-button seller-button--small seller-button--secondary" target="_blank" rel="noopener"

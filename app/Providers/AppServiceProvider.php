@@ -51,6 +51,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        \Illuminate\Support\Facades\Gate::define('logistics-route', fn (User $user, string $route) => \App\Services\LogisticsAccess::canRoute($user, $route));
         foreach ([\App\Models\OrderStatusHistory::class, \App\Models\Shipment::class, \App\Models\Rider::class,
             \App\Models\Message::class, \App\Models\SupportMessage::class, \App\Models\LogisticsMessage::class,
             \App\Models\DeliveryMessage::class] as $model) {

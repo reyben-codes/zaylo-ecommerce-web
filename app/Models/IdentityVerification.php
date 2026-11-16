@@ -39,4 +39,10 @@ class IdentityVerification extends Model
     {
         return self::ID_TYPES[$this->id_type] ?? $this->id_type;
     }
+
+    /** Binds an admin decision to the exact upload that was displayed. */
+    public function reviewToken(): string
+    {
+        return hash('sha256', $this->document_path);
+    }
 }
