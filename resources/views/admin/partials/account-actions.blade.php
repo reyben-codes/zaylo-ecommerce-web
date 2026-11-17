@@ -22,6 +22,19 @@
 
 @if($account->is(auth()->user()))
     <span class="seller-cell-note">This is you</span>
+@elseif($account->archived_at !== null)
+    <div class="review-actions">
+        <form method="POST" action="{{ route('admin.users.restore', $account) }}" data-confirm="Restore {{ $account->name }} with their previous status?" data-confirm-button="Restore">
+            @csrf
+            @method('PATCH')
+            <button class="seller-button seller-button--small seller-button--secondary" type="submit">Restore</button>
+        </form>
+        <form method="POST" action="{{ route('admin.users.destroy', $account) }}" data-confirm="Permanently delete {{ $account->name }} and their dependent account data? This cannot be undone. Accounts with protected transaction records must stay archived." data-confirm-title="Delete account permanently?" data-confirm-button="Delete permanently" data-confirm-tone="danger">
+            @csrf
+            @method('DELETE')
+            <button class="seller-button seller-button--small seller-button--danger" type="submit">Delete permanently</button>
+        </form>
+    </div>
 @elseif($account->status === 'rejected')
     <span class="seller-cell-note">Rejected · can be reviewed again once they resubmit their application</span>
 @else
@@ -57,4 +70,12 @@
             </form>
         @endforeach
     </div>
+@endif
+
+@if(! $account->is(auth()->user()) && $account->archived_at === null)
+    <form method="POST" action="{{ route('admin.users.archive', $account) }}" data-confirm="Archive {{ $account->name }}? They will no longer be able to use their account." data-confirm-title="Archive account?" data-confirm-button="Archive">
+        @csrf
+        @method('PATCH')
+        <button class="seller-button seller-button--small seller-button--secondary" type="submit"><i class="fas fa-box-archive" aria-hidden="true"></i> Archive</button>
+    </form>
 @endif

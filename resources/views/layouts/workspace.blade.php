@@ -18,6 +18,7 @@
                 ['route' => 'admin.identity', 'label' => 'ID checks', 'icon' => 'fa-id-card', 'count' => 'identity'],
                 ['heading' => 'Accounts'],
                 ['route' => 'admin.users', 'label' => 'Users', 'icon' => 'fa-users'],
+                ['route' => 'admin.archive', 'label' => 'Archive', 'icon' => 'fa-box-archive'],
                 ['route' => 'admin.logistics', 'label' => 'Logistics', 'icon' => 'fa-truck-fast'],
                 ['heading' => 'Marketplace'],
                 ['route' => 'admin.compliance', 'label' => 'Compliance', 'icon' => 'fa-shield-halved'],

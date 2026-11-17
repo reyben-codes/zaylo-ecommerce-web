@@ -165,6 +165,7 @@ class CheckoutQuote {
     this.gcashSellers = const [],
     this.gcashGateway = false,
     this.gatewayAvailable = false,
+    this.codAvailable = true,
     this.availableVouchers = const [],
   });
 
@@ -176,6 +177,7 @@ class CheckoutQuote {
   /// GCash can be chosen only when every seller in the order has a GCash account.
   final bool gcashGateway;
   final bool gatewayAvailable;
+  final bool codAvailable;
   bool get gcashAvailable => gcashGateway ? gatewayAvailable : gcashSellers.isNotEmpty && gcashSellers.every((seller) => seller.number != null);
   final CheckoutTotals totals;
   final List<Address> addresses;
@@ -250,6 +252,7 @@ class CheckoutQuote {
           .toList(),
       gcashGateway: json['gcash_gateway'] as bool? ?? false,
       gatewayAvailable: json['gcash_available'] as bool? ?? false,
+      codAvailable: json['cod_available'] as bool? ?? true,
       availableVouchers: (json['available_vouchers'] as List<dynamic>? ?? const [])
           .map((item) => AvailableVoucher.fromJson(item as Map<String, dynamic>))
           .toList(),

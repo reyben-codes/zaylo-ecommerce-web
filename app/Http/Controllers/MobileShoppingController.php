@@ -122,9 +122,12 @@ class MobileShoppingController extends Controller
         $address = $addresses->first(fn ($address) => $address->isStructured());
         $partner = null;
 
+        $totals = $this->checkout->quote($items, $voucher, $address, $partner, $validated['payment_method'] ?? 'cod');
+
         return response()->json([
             'items' => $items->map(fn (CartItem $item) => MobilePayload::cartItem($item))->values(),
-            'totals' => $this->checkout->quote($items, $voucher, $address, $partner, $validated['payment_method'] ?? 'cod'),
+            'totals' => $totals,
+            'cod_available' => ! CheckoutService::requiresGcash($totals['total']),
             'voucher_code' => $voucher?->code,
             // What the voucher does, e.g. "10% off, up to ₱100" (the app shows it once applied).
             'voucher_label' => $voucher?->describe(),

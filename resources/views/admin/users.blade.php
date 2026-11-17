@@ -1,18 +1,19 @@
 @extends('layouts.workspace', ['workspace' => 'admin'])
 
-@section('title', 'Users')
+@section('title', $archived ? 'Archive' : 'Users')
 
 @section('content')
     <section class="seller-page-heading">
         <div>
             <p class="seller-eyebrow">Admin Center</p>
-            <h1>Users</h1>
-            <p>Find any account, check its status, and suspend or reactivate it.</p>
+            <h1>{{ $archived ? 'Archive' : 'Users' }}</h1>
+            <p>{{ $archived ? 'Archived accounts cannot use their account. Restore an account or delete it permanently.' : 'Find any account, check its status, suspend it, or move it to the archive.' }}</p>
         </div>
+        <a class="seller-button seller-button--secondary" href="{{ route($archived ? 'admin.users' : 'admin.archive') }}">{{ $archived ? 'View users' : 'View archive' }}</a>
     </section>
 
     <section class="seller-panel">
-        <form method="GET" action="{{ route('admin.users') }}" class="seller-filter-bar" role="search">
+        <form method="GET" action="{{ route($archived ? 'admin.archive' : 'admin.users') }}" class="seller-filter-bar" role="search">
             <div class="seller-field seller-field--search">
                 <label for="user-search">Search</label>
                 <input type="search" id="user-search" name="search" value="{{ $filters['search'] }}" maxlength="100" placeholder="Name or email">
@@ -38,7 +39,7 @@
             <div class="review-actions">
                 <button type="submit" class="seller-button"><i class="fas fa-filter" aria-hidden="true"></i> Apply</button>
                 @if(array_filter($filters))
-                    <a href="{{ route('admin.users') }}" class="seller-button seller-button--secondary">Reset</a>
+                    <a href="{{ route($archived ? 'admin.archive' : 'admin.users') }}" class="seller-button seller-button--secondary">Reset</a>
                 @endif
             </div>
         </form>
@@ -49,8 +50,8 @@
                     <tr>
                         <th>Name</th>
                         <th>Role</th>
-                        <th>Status</th>
-                        <th>Joined</th>
+                        <th>{{ $archived ? 'Previous status' : 'Status' }}</th>
+                        <th>{{ $archived ? 'Archived' : 'Joined' }}</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -70,7 +71,7 @@
                                 @endif
                             </td>
                             <td><span class="role-pill account-status--{{ $account->status }}">{{ $statusLabels[$account->status] ?? Str::headline($account->status) }}</span></td>
-                            <td>{{ $account->created_at?->timezone('Asia/Manila')->format('M j, Y') }}</td>
+                            <td>{{ ($archived ? $account->archived_at : $account->created_at)?->timezone('Asia/Manila')->format('M j, Y') }}</td>
                             <td>@include('admin.partials.account-actions', ['account' => $account])</td>
                         </tr>
                     @empty

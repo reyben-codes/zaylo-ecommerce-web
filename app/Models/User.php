@@ -67,6 +67,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'date_of_birth' => 'date',
             'identity_verified_at' => 'datetime',
             'approved_at' => 'datetime',
+            'archived_at' => 'datetime',
             'is_suspended' => 'boolean',
             'password' => 'hashed',
             'must_change_password' => 'boolean',
@@ -294,6 +295,10 @@ class User extends Authenticatable implements MustVerifyEmail
     /** Where an applicant under review is sent instead of their workspace, or null. */
     public function applicationRoute(): ?string
     {
+        if ($this->archived_at !== null) {
+            return null;
+        }
+
         return match (true) {
             $this->awaitsSellerApproval() => 'seller.application',
             $this->awaitsLogisticsApproval() => 'logistics.application',
@@ -391,7 +396,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function isActive(): bool
     {
-        return ! (bool) ($this->attributes['is_suspended'] ?? false) && $this->status === 'active';
+        return $this->archived_at === null && ! (bool) ($this->attributes['is_suspended'] ?? false) && $this->status === 'active';
     }
 
     public function products(): HasMany

@@ -13,6 +13,9 @@
     $shippingDiscount = $perSeller * $freeShippingSellers;
     // A discount voucher only comes off the products of shops that joined it.
     $voucherDiscount = round(array_sum($voucherDiscounts), 2);
+    $gcashOnly = \App\Services\CheckoutService::requiresGcash((float) ($subtotal + $shipping - $shippingDiscount - $voucherDiscount));
+    $paymentMethod = $gcashOnly ? 'gcash' : old('payment_method', 'cod');
+    $gatewayReady = \App\Services\EscrowPayments::configured();
     $claimableVoucherCount = collect($availableVouchers ?? [])->where('can_claim', true)->count();
 @endphp
 
@@ -196,9 +199,8 @@
             <section class="checkout-section-card" aria-labelledby="checkout-payment-title">
                 <div class="checkout-section-heading"><span class="checkout-step">4</span><div><h2 id="checkout-payment-title">Payment method</h2><p>Choose how you would like to pay.</p></div></div>
                 <fieldset class="payment-method-options"><legend class="sr-only">Payment method</legend>
-                    <label class="payment-method-option {{ old('payment_method', 'cod') === 'cod' ? 'selected' : '' }}"><input type="radio" name="payment_method" value="cod" @checked(old('payment_method', 'cod') === 'cod')><span class="payment-method-option-icon"><i class="fas fa-money-bill-wave" aria-hidden="true"></i></span><span class="payment-method-option-content"><span class="payment-method-option-title">Cash on Delivery</span><span class="payment-method-option-description">Pay when your order arrives</span></span></label>
-                    @php($gatewayReady = \App\Services\EscrowPayments::configured())
-                    <label class="payment-method-option {{ old('payment_method') === 'gcash' ? 'selected' : '' }} {{ $gatewayReady ? '' : 'is-unavailable' }}"><input type="radio" name="payment_method" value="gcash" @checked(old('payment_method') === 'gcash') @disabled(! $gatewayReady)><span class="payment-method-option-icon"><i class="fas fa-mobile-alt" aria-hidden="true"></i></span><span class="payment-method-option-content"><span class="payment-method-option-title">GCash</span><span class="payment-method-option-description">{{ $gatewayReady ? 'Pay through the secure gateway. Funds release after delivery confirmation.' : 'GCash gateway is not configured yet. Please use Cash on Delivery.' }}</span></span></label>
+                    <label class="payment-method-option {{ $paymentMethod === 'cod' ? 'selected' : '' }} {{ $gcashOnly ? 'is-unavailable' : '' }}"><input type="radio" name="payment_method" value="cod" @checked($paymentMethod === 'cod') @disabled($gcashOnly)><span class="payment-method-option-icon"><i class="fas fa-money-bill-wave" aria-hidden="true"></i></span><span class="payment-method-option-content"><span class="payment-method-option-title">Cash on Delivery</span><span class="payment-method-option-description">{{ $gcashOnly ? 'Orders of PHP 100,000 or more require GCash for safety.' : 'Pay when your order arrives' }}</span></span></label>
+                    <label class="payment-method-option {{ $paymentMethod === 'gcash' ? 'selected' : '' }} {{ $gatewayReady ? '' : 'is-unavailable' }}"><input type="radio" name="payment_method" value="gcash" @checked($paymentMethod === 'gcash') @disabled(! $gatewayReady)><span class="payment-method-option-icon"><i class="fas fa-mobile-alt" aria-hidden="true"></i></span><span class="payment-method-option-content"><span class="payment-method-option-title">GCash</span><span class="payment-method-option-description">{{ $gatewayReady ? 'Pay through the secure gateway. Funds release after delivery confirmation.' : ($gcashOnly ? 'GCash is currently unavailable. Please try again later.' : 'GCash gateway is not configured yet. Please use Cash on Delivery.') }}</span></span></label>
                 </fieldset>
             </section>
         </div>
@@ -211,7 +213,7 @@
             @if($voucherDiscount > 0)<p class="summary-row checkout-discount"><span>Voucher {{ $voucher->code }}</span><strong>−&#8369;{{ number_format($voucherDiscount, 2) }}</strong></p>@endif
             <p class="summary-row checkout-total"><span data-summary-total-label>Total to pay</span><strong data-summary-total>&#8369;{{ number_format($subtotal + $shipping - $shippingDiscount - $voucherDiscount, 2) }}</strong></p>
             <p class="checkout-summary-note">Your final total is recalculated when you place the order if prices or stock have changed.</p>
-            <button class="market-button {{ old('payment_method', 'cod') === 'gcash' ? 'is-gcash' : '' }}" type="submit" data-checkout-submit @disabled($usableAddresses->isEmpty() || $identityItems->isNotEmpty())>{{ old('payment_method', 'cod') === 'gcash' ? 'Pay via GCash' : 'Place order' }}</button>
+            <button class="market-button {{ $paymentMethod === 'gcash' ? 'is-gcash' : '' }}" type="submit" data-checkout-submit @disabled($usableAddresses->isEmpty() || $identityItems->isNotEmpty() || ($gcashOnly && ! $gatewayReady))>{{ $paymentMethod === 'gcash' ? 'Pay via GCash' : 'Place order' }}</button>
             @if($identityItems->isNotEmpty())<p class="checkout-summary-note">18+ items need an approved ID before you can order them.</p>@endif
             <p class="checkout-summary-secure"><i class="fas fa-lock" aria-hidden="true"></i> Your order details are saved securely.</p>
         </aside>

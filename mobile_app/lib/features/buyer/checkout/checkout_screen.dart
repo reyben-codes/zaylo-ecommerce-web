@@ -79,6 +79,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       if (!mounted) return;
       setState(() {
         _quote = quote;
+        if (!quote.codAvailable) _payment = 'gcash';
         _error = null;
         _appliedVoucher = quote.voucherCode;
         final addresses = quote.addresses.where((address) => address.isStructured).toList();
@@ -244,7 +245,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         foregroundColor: const WidgetStatePropertyAll(Colors.white),
                       ) : null,
                       busy: _placing,
-                      onPressed: _quoting || _addressId == null || !quote.identityVerified ? null : _placeOrder,
+                      onPressed: _quoting || _addressId == null || !quote.identityVerified || (_payment == 'gcash' && !quote.gcashAvailable) ? null : _placeOrder,
                     ),
                   ),
                 ]),
@@ -408,9 +409,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       _PaymentOption(
         icon: Icons.payments_outlined,
         title: 'Cash on Delivery',
-        subtitle: 'Pay when your order arrives',
+        subtitle: quote?.codAvailable == false
+            ? 'Orders of PHP 100,000 or more require GCash for safety.'
+            : 'Pay when your order arrives',
         selected: _payment == 'cod',
-        onTap: () {
+        onTap: quote?.codAvailable == false ? null : () {
           if (_payment == 'cod') return;
           setState(() => _payment = 'cod');
           _loadQuote();

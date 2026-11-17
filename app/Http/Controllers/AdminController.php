@@ -187,6 +187,16 @@ class AdminController extends Controller
 
     public function users(Request $request)
     {
+        return $this->userList($request, false);
+    }
+
+    public function archive(Request $request)
+    {
+        return $this->userList($request, true);
+    }
+
+    private function userList(Request $request, bool $archived)
+    {
         $filters = $request->validate([
             'role' => ['nullable', Rule::in(array_keys(self::ROLE_LABELS))],
             'status' => ['nullable', Rule::in(array_keys(self::STATUS_LABELS))],
@@ -194,6 +204,7 @@ class AdminController extends Controller
         ]) + ['role' => null, 'status' => null, 'search' => null];
 
         $users = User::query()
+            ->when($archived, fn ($query) => $query->whereNotNull('archived_at'), fn ($query) => $query->whereNull('archived_at'))
             ->when($filters['role'], fn (Builder $query) => $this->whereRole($query, $filters['role']))
             ->when($filters['status'], fn (Builder $query) => $query->where('status', $filters['status']))
             ->when(filled($filters['search']), function (Builder $query) use ($filters) {
@@ -206,11 +217,63 @@ class AdminController extends Controller
             ->withQueryString();
 
         return view('admin.users', [
+            'archived' => $archived,
             'users' => $users,
             'filters' => $filters,
             'roleLabels' => self::ROLE_LABELS,
             'statusLabels' => self::STATUS_LABELS,
         ]);
+    }
+
+    public function archiveUser(User $user)
+    {
+        abort_if($user->is(auth()->user()), 422, 'You cannot archive your own account.');
+        DB::transaction(function () use ($user) {
+            $locked = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+            if ($locked->archived_at === null) {
+                $locked->forceFill(['archived_at' => now(), 'remember_token' => Str::random(60)])->save();
+            }
+            DB::table('sessions')->where('user_id', $locked->id)->delete();
+            if (Schema::hasTable('mobile_tokens')) {
+                $locked->tokens()->delete();
+            }
+        });
+
+        return redirect()->route('admin.archive')->with('status', "{$user->name} has been archived and cannot use their account.");
+    }
+
+    public function restoreUser(User $user)
+    {
+        DB::transaction(function () use ($user) {
+            $locked = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+            abort_if($locked->archived_at === null, 422, 'This account is not archived.');
+            $locked->forceFill(['archived_at' => null])->save();
+        });
+
+        return redirect()->route('admin.archive')->with('status', "{$user->name} has been restored with their previous account status.");
+    }
+
+    public function deleteArchivedUser(User $user)
+    {
+        abort_if($user->is(auth()->user()), 422, 'You cannot delete your own account.');
+        try {
+            DB::transaction(function () use ($user) {
+                $locked = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+                abort_if($locked->archived_at === null, 422, 'Archive this account before deleting it permanently.');
+                if (Schema::hasTable('mobile_tokens')) {
+                    $locked->tokens()->delete();
+                }
+                $locked->delete();
+            });
+        } catch (\Illuminate\Database\QueryException $exception) {
+            if (! in_array((string) $exception->getCode(), ['23000', '23503'], true)) {
+                throw $exception;
+            }
+
+            return back()->withErrors(['archive' => 'This account has protected transaction records and must remain archived to preserve that history.']);
+        }
+
+        return redirect()->route('admin.archive')->with('status', "{$user->name} was deleted permanently.");
     }
 
     public function logistics()
@@ -279,7 +342,9 @@ class AdminController extends Controller
 
         DB::transaction(function () use ($user, $data, $application) {
             // Checked on the locked row, so an old page or two clicks at once cannot approve a rejected account.
-            $current = User::whereKey($user->id)->lockForUpdate()->value('status');
+            $locked = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+            abort_if($locked->archived_at !== null, 422, 'Restore this account from the archive before changing its status.');
+            $current = $locked->status;
             if (! in_array($data['status'], self::STATUS_CHANGES[$current] ?? [], true)) {
                 throw ValidationException::withMessages(['status' => $current === 'rejected'
                     ? "{$user->name} was rejected. They can be reviewed again only after they fix and resubmit their application."

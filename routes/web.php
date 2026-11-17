@@ -277,6 +277,10 @@ Route::middleware(['auth', 'active', 'verified', 'role:admin', 'nocache'])->pref
     Route::post('/notifications/open', [WorkspaceNotificationController::class, 'open'])->name('notifications.open');
     Route::post('/notifications/read-all', [WorkspaceNotificationController::class, 'markAllRead'])->name('notifications.read-all');
     Route::get('/users', [AdminController::class, 'users'])->name('users');
+    Route::get('/archive', [AdminController::class, 'archive'])->name('archive');
+    Route::patch('/users/{user}/archive', [AdminController::class, 'archiveUser'])->name('users.archive');
+    Route::patch('/users/{user}/restore', [AdminController::class, 'restoreUser'])->name('users.restore');
+    Route::delete('/users/{user}', [AdminController::class, 'deleteArchivedUser'])->name('users.destroy');
     Route::patch('/users/{user}/status', [AdminController::class, 'updateUserStatus'])->name('users.status');
     Route::get('/registrations', [AdminController::class, 'registrations'])->name('registrations');
     Route::get('/applications/{user}', [AdminController::class, 'sellerApplication'])->name('seller-applications.show');

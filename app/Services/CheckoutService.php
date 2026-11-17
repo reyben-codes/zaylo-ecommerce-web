@@ -28,6 +28,13 @@ use Illuminate\Validation\ValidationException;
  */
 class CheckoutService
 {
+    public const GCASH_ONLY_MINIMUM = 100000;
+
+    public static function requiresGcash(float $total): bool
+    {
+        return (int) round($total * 100) >= self::GCASH_ONLY_MINIMUM * 100;
+    }
+
     /** The fee without a partner or a located address; older app builds show it. */
     public const SHIPPING_PER_SELLER = ShippingRates::STANDARD_FEE;
 
@@ -344,7 +351,7 @@ class CheckoutService
         $paymentMethod = $input['payment_method'] ?? 'cod';
 
         if ($paymentMethod === 'gcash' && ! EscrowPayments::configured()) {
-            throw ValidationException::withMessages(['payment_method' => 'GCash gateway is not configured yet. Choose Cash on Delivery.']);
+            throw ValidationException::withMessages(['payment_method' => 'GCash is currently unavailable. Please try again later or use Cash on Delivery for orders below PHP 100,000.']);
         }
 
         return DB::transaction(function () use ($buyer, $selectedIds, $input, $voucherCode, $paymentMethod) {
@@ -505,6 +512,11 @@ class CheckoutService
                     'note' => $paymentMethod === 'gcash' ? 'Checkout saved; awaiting GCash payment.' : 'Order placed by buyer.',
                 ]);
                 $orders->push($order);
+            }
+            if ($paymentMethod !== 'gcash' && self::requiresGcash((float) $orders->sum('total'))) {
+                throw ValidationException::withMessages([
+                    'payment_method' => 'Orders totaling PHP 100,000 or more must be paid via GCash for safety. Cash on Delivery is unavailable.',
+                ]);
             }
             if ($voucher && $buyer) {
                 VoucherClaim::where('voucher_id', $voucher->id)
