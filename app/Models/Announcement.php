@@ -41,12 +41,14 @@ class Announcement extends Model
         'show_in_section' => ['Announcement section', 'A bar at the top of their pages, until they dismiss it or it ends.', 'fa-bars-staggered'],
         'show_as_modal' => ['Pop-up', 'Opens over their screen once, on the website and in the app.', 'fa-window-restore'],
         'send_email' => ['Email', 'Sent once to active, verified accounts. Visitors who are not signed in get none.', 'fa-envelope'],
+        'send_push' => ['Mobile notification', 'Sent once to active, verified accounts with phone notifications enabled in the selected audience.', 'fa-mobile-screen-button'],
     ];
 
-    protected $fillable = ['title', 'body', 'audience', 'show_in_section', 'show_as_modal', 'send_email', 'is_published', 'starts_at', 'ends_at', 'created_by'];
+    protected $fillable = ['title', 'body', 'audience', 'show_in_section', 'show_as_modal', 'send_email', 'send_push', 'is_published', 'starts_at', 'ends_at', 'created_by'];
 
     protected $casts = [
         'show_in_section' => 'boolean', 'show_as_modal' => 'boolean', 'send_email' => 'boolean',
+        'send_push' => 'boolean', 'push_queued_at' => 'datetime',
         'is_published' => 'boolean', 'starts_at' => 'datetime', 'ends_at' => 'datetime', 'emailed_at' => 'datetime',
     ];
 

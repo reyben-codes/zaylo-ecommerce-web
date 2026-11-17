@@ -37,6 +37,7 @@
                             · by {{ $announcement->author?->name }}
                             · {{ collect(\App\Models\Announcement::CHANNELS)->filter(fn ($details, $channel) => $announcement->{$channel})->map(fn ($details) => $details[0])->implode(', ') }}
                             @if($announcement->emailed_at) · emailed {{ $announcement->emailed_at->timezone('Asia/Manila')->format('M j, g:i A') }}@endif
+                            @if($announcement->push_queued_at) · mobile notifications queued {{ $announcement->push_queued_at->timezone('Asia/Manila')->format('M j, g:i A') }}@endif
                         </span>
                         <div class="review-actions">
                             <form method="POST" action="{{ route('admin.announcements.update', $announcement) }}">
@@ -97,7 +98,7 @@
                             <span class="announcement-audience-option__icon" aria-hidden="true"><i class="fas fa-layer-group"></i></span>
                             <span class="announcement-audience-option__text">
                                 <strong>All of these</strong>
-                                <small>The announcement section, a pop-up and an email.</small>
+                                <small>The announcement section, a pop-up, an email and a mobile notification.</small>
                             </span>
                         </label>
                         @foreach(\App\Models\Announcement::CHANNELS as $channel => [$label, $hint, $icon])

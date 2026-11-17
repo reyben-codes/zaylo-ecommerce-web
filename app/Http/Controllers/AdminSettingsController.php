@@ -39,7 +39,7 @@ class AdminSettingsController extends Controller
     {
         $announcement = Announcement::create($this->announcementData($request) + ['created_by' => $request->user()->id]);
 
-        return back()->with('status', 'Announcement saved.'.$this->emailOnce($announcement));
+        return back()->with('status', 'Announcement saved.'.$this->notifyOnce($announcement));
     }
 
     public function updateAnnouncement(Request $request, Announcement $announcement)
@@ -47,11 +47,11 @@ class AdminSettingsController extends Controller
         if ($request->has('toggle')) {
             $announcement->update(['is_published' => ! $announcement->is_published]);
 
-            return back()->with('status', $announcement->is_published ? 'Announcement published.'.$this->emailOnce($announcement) : 'Announcement moved to drafts.');
+            return back()->with('status', $announcement->is_published ? 'Announcement published.'.$this->notifyOnce($announcement) : 'Announcement moved to drafts.');
         }
         $announcement->update($this->announcementData($request));
 
-        return back()->with('status', 'Announcement updated.'.$this->emailOnce($announcement));
+        return back()->with('status', 'Announcement updated.'.$this->notifyOnce($announcement));
     }
 
     public function destroyAnnouncement(Announcement $announcement)
@@ -94,6 +94,7 @@ class AdminSettingsController extends Controller
             'show_in_section' => ['nullable', 'boolean'],
             'show_as_modal' => ['nullable', 'boolean'],
             'send_email' => ['nullable', 'boolean'],
+            'send_push' => ['nullable', 'boolean'],
             'starts_at' => ['nullable', 'date'],
             'ends_at' => ['nullable', 'date', 'after:starts_at', 'after:now'],
             'is_published' => ['nullable', 'boolean'],
@@ -108,15 +109,50 @@ class AdminSettingsController extends Controller
         foreach (array_keys(Announcement::CHANNELS) as $channel) {
             $data[$channel] = $request->boolean($channel);
         }
-        if (! $data['show_in_section'] && ! $data['show_as_modal'] && ! $data['send_email']) {
+        if (! $data['show_in_section'] && ! $data['show_as_modal'] && ! $data['send_email'] && ! $data['send_push']) {
             throw ValidationException::withMessages(['channels' => 'Choose at least one way to show this announcement.']);
         }
         // Nothing here sends mail at a later time: the host may not run the scheduler.
         if ($data['send_email'] && $data['starts_at']?->isFuture()) {
             throw ValidationException::withMessages(['starts_at' => 'Email goes out as soon as an announcement is live. Remove the start time, or untick Email.']);
         }
+        if ($data['send_push'] && $data['starts_at']?->isFuture()) {
+            throw ValidationException::withMessages(['starts_at' => 'Mobile notifications go out as soon as an announcement is live. Remove the start time, or untick Mobile notification.']);
+        }
 
         return $data;
+    }
+
+    private function notifyOnce(Announcement $announcement): string
+    {
+        $push = $this->pushOnce($announcement);
+
+        return $this->emailOnce($announcement).$push;
+    }
+
+    private function pushOnce(Announcement $announcement): string
+    {
+        if (! $announcement->send_push || $announcement->state !== 'live') {
+            return '';
+        }
+
+        set_time_limit(0);
+        return DB::transaction(function () use ($announcement) {
+            // Claim and enqueue together: retries and republishing cannot send the notice twice.
+            // Query builder keeps updated_at unchanged so dismissed banners do not reopen.
+            if (! DB::table('announcements')->where('id', $announcement->id)->whereNull('push_queued_at')
+                ->update(['push_queued_at' => now()])) {
+                return '';
+            }
+
+            $push = app(\App\Services\MobilePushNotifications::class);
+            foreach ($announcement->emailRecipients() as $user) {
+                $push->queue($user->id, 'announcement-'.$announcement->id, $announcement->title,
+                    \Illuminate\Support\Str::limit($announcement->body, 500), 'announcement', $announcement->id);
+            }
+
+            return ' Mobile notifications queued for eligible phones.';
+        });
     }
 
     /** Emails a live announcement the first time only, and returns the sentence for the admin's confirmation. */
