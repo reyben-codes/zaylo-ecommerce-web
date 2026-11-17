@@ -390,7 +390,7 @@ class LogisticsOperationsController extends Controller
         $this->ownsParcel($shipment);
         abort_unless(ShipmentWorkflow::hasHubSteps(), 404);
         $data = $request->validate(['area' => ['required', 'string', 'min:2', 'max:120']], ['area.required' => 'Enter the delivery area for this parcel.']);
-        $area = $this->normalizeArea($data['area']);
+        $area = \App\Services\HubRouting::area($shipment) ? trim($data['area']) : $this->normalizeArea($data['area']);
         $this->workflow->sort($shipment, $area, $request->user());
 
         return back()->with('status', 'Parcel '.$this->tracking($shipment).' sorted for '.$area.'.');
@@ -443,8 +443,8 @@ class LogisticsOperationsController extends Controller
         if ($parcels->isEmpty()) {
             throw ValidationException::withMessages(['area' => 'No parcels in '.$area.' are waiting for a rider.']);
         }
-        $this->ensureRiderServes($rider, $area);
         foreach ($parcels as $shipment) {
+            $this->ensureRiderServes($rider, \App\Services\RiderProximity::areaOf($shipment));
             $this->workflow->assign($shipment, $rider, $request->user());
         }
 

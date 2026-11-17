@@ -445,6 +445,12 @@ class CheckoutService
                     ? ['logistics_provider_id' => $partner?->id, 'shipping_zone' => $zone]
                     : []);
                 $legacy = Order::usesLegacySchema();
+                if (Schema::hasColumn('orders', 'delivery_location')) {
+                    $attributes['delivery_location'] = $address->only([
+                        'region_code', 'region_name', 'province_code', 'province', 'city_municipality_code', 'city',
+                        'barangay_code', 'barangay', 'postal_code',
+                    ]);
+                }
                 if (! $legacy) {
                     $attributes = array_diff_key($attributes, array_flip([
                         'order_number', 'user_id', 'seller_id', 'subtotal', 'shipping_fee', 'total', 'shipping_discount',

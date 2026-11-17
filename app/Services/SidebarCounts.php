@@ -102,6 +102,7 @@ class SidebarCounts
         return [
             'pickups' => [$stage(['ready']), 'to confirm'],
             'incoming' => [$stage(['picked_up']), 'on the way to the hub'],
+            'hub_transfers' => [\App\Services\HubRouting::available() ? ShipmentWorkflow::whereStage(\App\Models\Shipment::where('destination_hub_id', $provider->id), ['hub_transfer'])->count() : 0, 'to receive'],
             'sorting' => [ShipmentWorkflow::hasHubSteps() ? $stage(['in_transit']) : 0, 'to sort'],
             'assignments' => [$awaitingRider, 'waiting for a rider'],
             'returns' => [$activeReturns, 'in progress'],

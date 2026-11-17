@@ -35,12 +35,18 @@ class RiderLegEarnings
     public function quote(Shipment $shipment): array
     {
         if ($shipment->rider_fee_quote) return $shipment->rider_fee_quote;
+        app(HubRouting::class)->prepare($shipment);
+        if (HubRouting::needsTransfer($shipment) && ! $shipment->destination_hub_id) {
+            throw ValidationException::withMessages(['commission' => 'Commission pending: select an approved destination hub in the delivery city before calculating the rider legs.']);
+        }
         $seller = ParcelTracking::addressPin(RiderSellerPickups::pickupAddress($shipment));
         $hub = ParcelTracking::point($shipment->provider?->hub_latitude, $shipment->provider?->hub_longitude);
+        $deliveryHub = $shipment->destinationHub ?? $shipment->provider;
+        $deliveryHubPin = ParcelTracking::point($deliveryHub?->hub_latitude, $deliveryHub?->hub_longitude);
         $order = $shipment->order ?: $shipment->sellerOrder?->order;
         $buyer = ParcelTracking::destination($order);
-        if (! $seller || ! $hub || ! $buyer) {
-            $missing = array_filter([! $seller ? 'seller pickup address' : null, ! $hub ? 'logistics hub' : null, ! $buyer ? 'buyer delivery address' : null]);
+        if (! $seller || ! $hub || ! $deliveryHubPin || ! $buyer) {
+            $missing = array_filter([! $seller ? 'seller pickup address' : null, ! $hub ? 'origin logistics hub' : null, ! $deliveryHubPin ? 'destination logistics hub' : null, ! $buyer ? 'buyer delivery address' : null]);
             throw ValidationException::withMessages(['commission' => 'Commission pending: add map pins for the '.implode(', ', $missing).'.']);
         }
         $items = $shipment->sellerOrder?->items ?? $order?->items ?? collect();
@@ -49,7 +55,7 @@ class RiderLegEarnings
         }
         $kg = $items->sum(fn ($item) => (int) ($item->variant?->weight_grams ?: $item->product?->weight_grams) * (int) $item->quantity) / 1000;
         $shipping = app(Settlement::class)->forShipment($shipment)['shipping'];
-        $quote = self::calculate($this->distance($seller, $hub), $this->distance($hub, $buyer), $kg, (float) $shipping,
+        $quote = self::calculate($this->distance($seller, $hub), $this->distance($deliveryHubPin, $buyer), $kg, (float) $shipping,
             collect(config('rider_fees'))->only(['base_per_leg', 'per_km', 'per_kg', 'shipping_budget_percent'])->all());
         $shipment->update(['rider_fee_quote' => $quote]);
         return $quote;
@@ -99,7 +105,7 @@ class RiderLegEarnings
         $quote = $shipment->rider_fee_quote ?: $this->quoteOrDefer($shipment);
         if (! $quote) return null;
         $commission = RiderLegCommission::firstOrCreate(['shipment_id' => $shipment->id, 'leg' => $leg], [
-            'user_id' => $rider->id, 'logistics_provider_id' => $shipment->logistics_provider_id,
+            'user_id' => $rider->id, 'logistics_provider_id' => $pickup ? ($shipment->origin_hub_id ?? $shipment->logistics_provider_id) : $shipment->currentHubId(),
             'amount' => $quote[$leg.'_amount'], 'distance_km' => $quote[$leg.'_km'], 'weight_kg' => $quote['weight_kg'],
         ]);
         if ($commission->wasRecentlyCreated) app(AccountUpdates::class)->send($rider->id, 'leg-earned-'.$commission->id, 'wallet',

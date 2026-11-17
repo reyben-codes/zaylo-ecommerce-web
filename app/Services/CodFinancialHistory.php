@@ -69,7 +69,8 @@ class CodFinancialHistory
             return $shipment->riderUserId() === $viewer->id;
         }
         if ($viewer->hasRole('logistics')) {
-            return (int) $shipment->logistics_provider_id === (int) $viewer->logisticsProvider?->id;
+            return (int) $shipment->logistics_provider_id === (int) $viewer->logisticsProvider?->id
+                || $shipment->currentHubId() === (int) $viewer->logisticsProvider?->id;
         }
         if ($viewer->hasRole('seller')) {
             return ShipmentWorkflow::sellerUserId($shipment) === $viewer->id;

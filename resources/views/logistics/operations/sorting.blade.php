@@ -11,9 +11,10 @@
         <div>
             <p class="seller-eyebrow">Sorting center</p>
             <h1>Sorting</h1>
-            <p>Sort each parcel received at the hub into its delivery area. The area is filled in from the address; change it if needed.</p>
+            <p>Route out-of-city parcels to their destination hub first. At the correct hub, sort each parcel by the buyer's saved barangay, city and province before assigning a local delivery rider.</p>
         </div>
         <div class="seller-page-heading__actions">
+            <a href="{{ route('logistics.hub-transfers') }}" class="seller-button seller-button--secondary">Hub transfers</a>
             <a href="{{ route('logistics.assignments') }}" class="seller-button seller-button--secondary"><i class="fas fa-people-arrows" aria-hidden="true"></i> Assign riders</a>
         </div>
     </section>

@@ -121,13 +121,15 @@
         </details>
     @endif
 
-    @if($awaitingSort)
+    @if($stage === 'hub_transfer' || ($awaitingSort && \App\Services\HubRouting::needsTransfer($shipment)))
+        <a href="{{ route('logistics.hub-transfers') }}" class="seller-button seller-button--small seller-button--secondary"><i class="fas fa-truck-moving" aria-hidden="true"></i> {{ $stage === 'hub_transfer' ? 'View hub transfer' : 'Transfer to destination hub' }}</a>
+    @elseif($awaitingSort)
         <form method="POST" action="{{ route('logistics.parcels.sort', $shipment) }}" class="parcel-inline-form">
             @csrf
             @method('PATCH')
             <label class="sr-only" for="area-{{ $shipment->id }}">Delivery area for parcel {{ $tracking }}</label>
             <input type="text" id="area-{{ $shipment->id }}" name="area" value="{{ $workflow::suggestedArea($shipment) }}" list="sort-areas"
-                   minlength="2" maxlength="120" required placeholder="City, Province">
+                   minlength="2" maxlength="120" required placeholder="Barangay, City, Province" @readonly(\App\Services\HubRouting::location($shipment) !== null)>
             <button type="submit" class="seller-button seller-button--small"><i class="fas fa-layer-group" aria-hidden="true"></i> Sort</button>
         </form>
     @endif

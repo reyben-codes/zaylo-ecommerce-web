@@ -54,6 +54,7 @@
                 ['route' => 'logistics.pickups', 'label' => 'Pickups', 'icon' => 'fa-box-open', 'count' => 'pickups'],
                 ['route' => 'logistics.incoming', 'label' => 'Incoming', 'icon' => 'fa-arrow-down', 'count' => 'incoming'],
                 ['route' => 'logistics.sorting', 'label' => 'Sorting', 'icon' => 'fa-layer-group', 'count' => 'sorting'],
+                ['route' => 'logistics.hub-transfers', 'label' => 'Hub transfers', 'icon' => 'fa-truck-moving', 'count' => 'hub_transfers'],
                 ['route' => 'logistics.scan', 'label' => 'Scan parcel', 'icon' => 'fa-barcode'],
                 ['route' => 'logistics.assignments', 'label' => 'Assign riders', 'icon' => 'fa-people-arrows', 'count' => 'assignments'],
                 ['route' => 'logistics.deliveries', 'label' => 'Deliveries', 'icon' => 'fa-route'],

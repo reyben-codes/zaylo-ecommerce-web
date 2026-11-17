@@ -437,6 +437,7 @@ class SellerController extends Controller
                     'pickup_scheduled_for' => $date->toDateString(),
                 ]);
             }
+            app(\App\Services\HubRouting::class)->prepare($shipment);
         });
 
         return back()->with('status', 'Pickup scheduled successfully for order '.$order->order_number.'.');

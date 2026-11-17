@@ -1,6 +1,7 @@
 <?php
 
 $operations = ['logistics.pickups', 'logistics.incoming', 'logistics.sorting', 'logistics.scan',
+    'logistics.hub-transfers', 'logistics.hub-transfers.dispatch', 'logistics.hub-transfers.receive',
     'logistics.assignments', 'logistics.deliveries', 'logistics.returns', 'logistics.monitoring',
     'logistics.parcels.waybill', 'logistics.parcels.waybill.print', 'logistics.parcels.pickup',
     'logistics.parcels.courier', 'logistics.parcels.pickup-rider', 'logistics.parcels.sort',
@@ -28,6 +29,7 @@ return [
             'label' => 'Dispatcher',
             'description' => 'Confirm pickups, assign pickup and delivery riders, monitor deliveries and coordinate messages.',
             'routes' => array_merge($chat, ['logistics.pickups', 'logistics.assignments', 'logistics.deliveries', 'logistics.monitoring',
+                'logistics.hub-transfers', 'logistics.hub-transfers.dispatch',
                 'logistics.parcels.waybill', 'logistics.parcels.waybill.print', 'logistics.parcels.pickup', 'logistics.parcels.courier',
                 'logistics.parcels.pickup-rider', 'logistics.parcels.assign', 'logistics.areas.assign', 'logistics.parcels.advance',
                 'logistics.returns', 'logistics.returns.assign']),
@@ -37,6 +39,7 @@ return [
             'label' => 'Sorting Staff',
             'description' => 'Scan parcels, receive hub handovers, sort parcels and record return receipts.',
             'routes' => ['logistics.incoming', 'logistics.sorting', 'logistics.scan', 'logistics.returns', 'logistics.parcels.sort',
+                'logistics.hub-transfers', 'logistics.hub-transfers.dispatch', 'logistics.hub-transfers.receive',
                 'logistics.parcels.advance', 'logistics.returns.scan', 'logistics.parcels.waybill', 'logistics.parcels.waybill.print'],
             'advance' => ['in_transit', 'returned'],
         ],

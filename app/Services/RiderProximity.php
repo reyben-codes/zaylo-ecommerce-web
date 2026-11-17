@@ -101,6 +101,9 @@ class RiderProximity
     /** Where a parcel is going, as "City, Province" (its sorted area, or the city on the order's address). */
     public static function areaOf(?Shipment $shipment): ?string
     {
+        if ($shipment && ($location = HubRouting::location($shipment))) {
+            return collect([$location['city'], $location['province'] ?? $location['region_name'] ?? null])->filter()->implode(', ');
+        }
         if ($shipment?->getAttribute('sort_area')) {
             return $shipment->sort_area;
         }

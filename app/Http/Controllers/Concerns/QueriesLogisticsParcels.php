@@ -22,11 +22,13 @@ trait QueriesLogisticsParcels
     protected function parcels(): Builder
     {
         $provider = $this->logisticsProvider();
+        $custody = \App\Services\HubRouting::available()
+            ? 'COALESCE(shipments.current_hub_id, shipments.logistics_provider_id)' : 'shipments.logistics_provider_id';
 
         return Shipment::query()->when(
             $provider && Shipment::tracksProvider(),
             fn (Builder $query) => $query->where(fn (Builder $visible) => $visible
-                ->where('logistics_provider_id', $provider->id)
+                ->whereRaw($custody.' = ?', [$provider->id])
                 ->orWhere(fn (Builder $open) => ShipmentWorkflow::whereStage($open->whereNull('logistics_provider_id'), ['ready']))),
         );
     }
@@ -60,7 +62,7 @@ trait QueriesLogisticsParcels
     protected function ownsParcel(Shipment $shipment, bool $orOpenRequest = false): void
     {
         $provider = $this->logisticsProvider();
-        if (! $provider || ! Shipment::tracksProvider() || (int) $shipment->logistics_provider_id === (int) $provider->id) {
+        if (! $provider || ! Shipment::tracksProvider() || $shipment->currentHubId() === (int) $provider->id) {
             return;
         }
         abort_unless($orOpenRequest && $shipment->logistics_provider_id === null && ShipmentWorkflow::stageOf($shipment) === 'ready', 403);

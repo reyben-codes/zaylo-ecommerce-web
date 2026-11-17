@@ -25,6 +25,7 @@ class Order extends Model
         'buyer_id', 'reference', 'total_minor', 'payment_method', 'payment_status',
         'shipping_address', 'note', 'voucher_code', 'shipping_discount_minor', 'courier_choice', 'logistics_provider_id', 'shipping_zone',
         'delivery_latitude', 'delivery_longitude', 'voucher_discount', 'settlement_breakdown',
+        'delivery_location',
     ];
 
     public function courierName(): string
@@ -48,9 +49,9 @@ class Order extends Model
 
     protected function casts(): array
     {
-        return static::usesLegacySchema()
+        return ['delivery_location' => 'array'] + (static::usesLegacySchema()
             ? ['subtotal' => 'decimal:2', 'shipping_fee' => 'decimal:2', 'total' => 'decimal:2', 'placed_at' => 'datetime', 'completed_at' => 'datetime', 'delivered_at' => 'datetime', 'settlement_breakdown' => 'array']
-            : ['shipping_address' => 'array', 'settlement_breakdown' => 'array', 'placed_at' => 'datetime', 'completed_at' => 'datetime', 'delivered_at' => 'datetime'];
+            : ['shipping_address' => 'array', 'settlement_breakdown' => 'array', 'placed_at' => 'datetime', 'completed_at' => 'datetime', 'delivered_at' => 'datetime']);
     }
 
     public function buyer(): BelongsTo

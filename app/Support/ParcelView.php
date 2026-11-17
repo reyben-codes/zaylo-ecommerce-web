@@ -16,7 +16,7 @@ class ParcelView
         $order = $shipment->order ?: $shipment->sellerOrder?->order;
         $address = $order?->shipping_address;
         $destination = is_array($address)
-            ? collect([data_get($address, 'line1'), data_get($address, 'barangay'), data_get($address, 'city'), data_get($address, 'province')])->filter()->implode(', ')
+            ? (data_get($address, 'address') ?: collect([data_get($address, 'line1'), data_get($address, 'barangay'), data_get($address, 'city'), data_get($address, 'province')])->filter()->implode(', '))
             : (string) $address;
         $recipient = $order?->recipient_name ?: (is_array($address) ? (data_get($address, 'recipient') ?: data_get($address, 'recipient_name')) : null);
         $seller = $shipment->sellerOrder?->seller?->name

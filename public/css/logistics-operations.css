@@ -866,3 +866,9 @@
     .parcel-pickup-dialog { width: calc(100% - 24px); max-height: calc(100svh - 24px); border-radius: 14px; }
     .parcel-pickup-dialog__header, .parcel-pickup-panel__body { padding: 20px; }
 }
+/* Hub transfer disclosures reuse smooth-disclosure.js and retain typed scans when closed. */
+.parcel-transfer-card { padding: 18px 0; border-bottom: 1px solid var(--zaylo-border); }
+.parcel-transfer-card h3 { margin: 0 0 8px; font-size: 1rem; }
+.parcel-transfer-form { display: grid; gap: 10px; max-width: 480px; padding: 16px 0; }
+.parcel-transfer-form > :is(input, select) { box-sizing: border-box; width: 100%; padding: 10px; border: 1px solid var(--zaylo-border); border-radius: 8px; background: var(--zaylo-surface); color: var(--zaylo-text); font: inherit; }
+.parcel-transfer-form > :is(input, select):focus-visible { outline: 2px solid var(--zaylo-accent); outline-offset: 2px; }

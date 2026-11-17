@@ -22,9 +22,12 @@ class Shipment extends Model
         'pickup_confirmed_at', 'pickup_scheduled_for', 'sorted_at', 'sort_area',
         'delivery_proof_path', 'handover_confirmed_at',
         'rider_latitude', 'rider_longitude', 'rider_located_at',
+        'origin_hub_id', 'current_hub_id', 'destination_hub_id', 'hub_dispatched_at', 'destination_received_at',
+        'hub_dispatched_by', 'destination_received_by',
     ];
 
     protected $casts = [
+        'hub_dispatched_at' => 'datetime', 'destination_received_at' => 'datetime',
         'rider_fee_quote' => 'array', 'rider_handover_confirmed_at' => 'datetime', 'delivery_scanned_at' => 'datetime', 'delivery_handover_confirmed_at' => 'datetime',
         'pickup_scanned_at' => 'datetime', 'hub_received_at' => 'datetime', 'hub_receipt_checks' => 'array',
         'cod_collected' => 'boolean', 'cod_collected_at' => 'datetime', 'picked_up_at' => 'datetime', 'delivered_at' => 'datetime',
@@ -67,6 +70,16 @@ class Shipment extends Model
     public function provider(): BelongsTo
     {
         return $this->belongsTo(LogisticsProvider::class, 'logistics_provider_id');
+    }
+
+    public function originHub(): BelongsTo { return $this->belongsTo(LogisticsProvider::class, 'origin_hub_id'); }
+    public function currentHub(): BelongsTo { return $this->belongsTo(LogisticsProvider::class, 'current_hub_id'); }
+    public function destinationHub(): BelongsTo { return $this->belongsTo(LogisticsProvider::class, 'destination_hub_id'); }
+
+    public function currentHubId(): ?int
+    {
+        $id = $this->current_hub_id ?? $this->logistics_provider_id;
+        return $id === null ? null : (int) $id;
     }
 
     /** Whether parcels record their logistics partner (the newer schema, or the deployed one after 2026_10_24). */

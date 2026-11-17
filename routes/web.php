@@ -426,6 +426,9 @@ Route::middleware(['auth', 'active', 'verified', 'role:logistics', 'nocache'])->
     Route::get('/returns', [LogisticsOperationsController::class, 'returns'])->name('returns');
     Route::get('/deliveries', [LogisticsOperationsController::class, 'deliveries'])->name('deliveries');
     Route::get('/sorting', [LogisticsOperationsController::class, 'sorting'])->name('sorting');
+    Route::get('/hub-transfers', [\App\Http\Controllers\HubTransferController::class, 'index'])->name('hub-transfers');
+    Route::post('/hub-transfers/{shipment}/dispatch', [\App\Http\Controllers\HubTransferController::class, 'dispatch'])->middleware('throttle:30,1')->name('hub-transfers.dispatch');
+    Route::post('/hub-transfers/{shipment}/receive', [\App\Http\Controllers\HubTransferController::class, 'receive'])->middleware('throttle:30,1')->name('hub-transfers.receive');
     Route::get('/monitoring', [LogisticsOperationsController::class, 'monitoring'])->name('monitoring');
     Route::get('/reports', [LogisticsOperationsController::class, 'reports'])->name('reports');
     Route::get('/earnings', [LogisticsPayoutController::class, 'partner'])->name('earnings');

@@ -35,6 +35,6 @@ class DeliveryProofController extends Controller
         $provider = $user->hasRole('logistics') ? $user->logisticsProvider : null;
 
         return $provider !== null
-            && (! Shipment::tracksProvider() || (int) $shipment->logistics_provider_id === (int) $provider->id);
+            && (! Shipment::tracksProvider() || $shipment->currentHubId() === (int) $provider->id || (int) $shipment->logistics_provider_id === (int) $provider->id);
     }
 }

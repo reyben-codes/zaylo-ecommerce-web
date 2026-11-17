@@ -97,8 +97,10 @@ class ParcelTracking
 
         return [
             'stage' => $stage,
-            'stage_label' => $stage ? ShipmentWorkflow::label($stage) : 'Preparing your order',
+            'stage_label' => $shipment ? ShipmentWorkflow::labelOf($shipment) : 'Preparing your order',
             'message' => match (true) {
+                $stage === 'hub_transfer' => 'Your parcel is travelling from '.($shipment->originHub?->name ?? 'the origin hub').' to '.($shipment->destinationHub?->name ?? 'the destination hub').'.',
+                $stage === 'in_transit' && $shipment?->destination_received_at !== null => 'Your parcel has arrived at '.($shipment->currentHub?->name ?? 'the destination hub').' and is waiting for barangay sorting.',
                 $rider !== null => 'Your rider is on the way. The map updates every '.self::REPORT_SECONDS.' seconds.',
                 $stage === 'out_for_delivery' => 'Your rider is on the way. Their location appears once their app shares it.',
                 in_array($stage, ['delivered', 'completed'], true) => 'Your parcel was delivered.',

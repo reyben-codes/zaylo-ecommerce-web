@@ -26,6 +26,7 @@ class ShipmentWorkflow
         'confirmed' => 'Pickup confirmed',
         'picked_up' => 'Picked up from seller',
         'in_transit' => 'At hub, to sort',
+        'hub_transfer' => 'Between hubs',
         'sorted' => 'Sorted',
         'assigned' => 'Rider assigned',
         'out_for_delivery' => 'Out for delivery',
@@ -69,7 +70,7 @@ class ShipmentWorkflow
     public const RIDER_ONLY = ['out_for_delivery', 'delivered', 'failed'];
 
     /** Steps of a parcel that is still on its way. */
-    public const ACTIVE = ['ready', 'confirmed', 'picked_up', 'in_transit', 'sorted', 'assigned', 'out_for_delivery', 'failed'];
+    public const ACTIVE = ['ready', 'confirmed', 'picked_up', 'in_transit', 'hub_transfer', 'sorted', 'assigned', 'out_for_delivery', 'failed'];
 
     /**
      * Order status (deployed schema) at each parcel step; failures and returns keep the order where it was. A
@@ -131,6 +132,7 @@ class ShipmentWorkflow
     public static function stageOf(Shipment $shipment): string
     {
         $stage = self::stage($shipment->status);
+        if ($stage === 'in_transit' && HubRouting::inTransfer($shipment)) return 'hub_transfer';
         if (self::hasHubSteps()) {
             foreach (self::SUB_STEPS as $subStep => $rule) {
                 if ($stage === $rule['status'] && $shipment->{$rule['column']}) {
@@ -149,6 +151,7 @@ class ShipmentWorkflow
 
     public static function labelOf(Shipment $shipment): string
     {
+        if (self::stageOf($shipment) === 'in_transit' && $shipment->destination_received_at) return 'At destination hub, to sort by barangay';
         return self::label(self::stageOf($shipment));
     }
 
@@ -161,6 +164,15 @@ class ShipmentWorkflow
             $any->whereRaw('1 = 0');
             foreach ($stages as $stage) {
                 $any->orWhere(function (Builder $one) use ($stage, $hub) {
+                    if ($stage === 'hub_transfer') {
+                        HubRouting::available()
+                            ? $one->whereIn('status', self::statusesFor(['in_transit']))->whereNotNull('hub_dispatched_at')->whereNull('destination_received_at')
+                            : $one->whereRaw('1 = 0');
+                        return;
+                    }
+                    if ($stage === 'in_transit' && HubRouting::available()) {
+                        $one->where(fn ($query) => $query->whereNull('hub_dispatched_at')->orWhereNotNull('destination_received_at'));
+                    }
                     if (isset(self::SUB_STEPS[$stage])) {
                         $rule = self::SUB_STEPS[$stage];
                         $hub
@@ -246,6 +258,7 @@ class ShipmentWorkflow
     /** "City, Province" from the delivery address, to suggest a sorting area. */
     public static function suggestedArea(Shipment $shipment): string
     {
+        if ($area = HubRouting::area($shipment)) return $area;
         $address = ($shipment->order ?: $shipment->sellerOrder?->order)?->shipping_address;
         if (is_array($address)) {
             return collect([data_get($address, 'city'), data_get($address, 'province')])->filter()->implode(', ');
@@ -320,6 +333,14 @@ class ShipmentWorkflow
     {
         DB::transaction(function () use ($shipment, $area, $actor) {
             $locked = $this->lockAt($shipment, ['in_transit', 'sorted'], 'Only parcels at the hub without a rider can be sorted.');
+            app(HubRouting::class)->prepare($locked);
+            HubRouting::requireLocalSorting($locked);
+            if (HubRouting::available() && HubRouting::location($locked)) {
+                abort_unless($actor->hasRole('logistics') && (int) $actor->logisticsProvider?->id === $locked->currentHubId(), 403);
+            }
+            if (HubRouting::available() && ($expected = HubRouting::area($locked)) && $area !== $expected) {
+                throw ValidationException::withMessages(['area' => 'Sort this parcel into its saved delivery barangay: '.$expected.'.']);
+            }
             $locked->update(['sorted_at' => now(), 'sort_area' => $area]);
             $this->syncOrder($locked, 'sorted', $actor, 'Sorted at the hub for '.$area.'.');
         });
@@ -389,6 +410,13 @@ class ShipmentWorkflow
             if (! self::awaitingRider($locked)) {
                 throw ValidationException::withMessages(['shipment' => 'This parcel is no longer waiting for a rider.']);
             }
+            HubRouting::requireLocalSorting($locked);
+            if (HubRouting::available() && HubRouting::location($locked)) {
+                abort_unless($actor->hasRole('logistics') && (int) $actor->logisticsProvider?->id === $locked->currentHubId(), 403);
+                if ((int) $rider->logistics_provider_id !== $locked->currentHubId()) {
+                    throw ValidationException::withMessages(['rider_id' => 'Choose a delivery rider belonging to the hub currently holding this parcel.']);
+                }
+            }
             // The deployed schema assigns through courier_id (the rider's user); the newer one through rider_id.
             $locked->update((Schema::hasColumn('shipments', 'rider_id') ? ['rider_id' => $rider->id] : ['courier_id' => $rider->user_id]) + ['status' => 'assigned']);
             $this->syncOrder($locked, 'assigned', $actor, 'Assigned to rider '.($rider->user?->name ?? '#'.$rider->id).'.');
@@ -427,5 +455,10 @@ class ShipmentWorkflow
                 'note' => $note,
             ]);
         }
+    }
+
+    public function recordHubMovement(Shipment $shipment, User $actor, string $note): void
+    {
+        $this->syncOrder($shipment, 'in_transit', $actor, $note);
     }
 }

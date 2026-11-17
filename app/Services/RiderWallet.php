@@ -81,7 +81,7 @@ class RiderWallet
 
         $commission = RiderCommission::firstOrCreate(['shipment_id' => $shipment->id], [
             'user_id' => $rider->id,
-            'logistics_provider_id' => Shipment::tracksProvider() ? $shipment->logistics_provider_id : null,
+            'logistics_provider_id' => Shipment::tracksProvider() ? $shipment->currentHubId() : null,
             'amount' => self::earningsFor($shipment),
         ]);
 
