@@ -43,9 +43,9 @@ class DisputeService
             'pickup_date' => $returnDetails['pickup_date'] ?? null,
             'pickup_slot' => $returnDetails['pickup_slot'] ?? null,
             'dropoff_location' => $returnDetails['dropoff_location'] ?? null,
-            'dropoff_deadline' => ! empty($returnDetails['return_method']) && $returnDetails['return_method'] === 'dropoff' ? now('Asia/Manila')->addDays(3)->toDateString() : null,
+            'dropoff_deadline' => null,
             'return_tracking_number' => $tracking,
-            'return_status' => ! empty($returnDetails['return_method']) ? 'scheduled' : null,
+            'return_status' => ! empty($returnDetails['return_method']) ? 'pending_seller' : null,
         ]));
         $this->notify($dispute, 'opened', except: $buyer->id);
 
@@ -91,6 +91,12 @@ class DisputeService
     public function sellerStep(Dispute $dispute, User $seller, string $event, array $changes, string $note): void
     {
         DB::transaction(function () use ($dispute, $seller, $event, $changes, $note) {
+            if ($event === 'return_approved') {
+                $locked = Dispute::whereKey($dispute->id)->lockForUpdate()->firstOrFail();
+                if (! $locked->canApproveReturn()) {
+                    throw \Illuminate\Validation\ValidationException::withMessages(['return' => 'This return is no longer waiting for approval.']);
+                }
+            }
             // Serialize transfers recorded by this seller and recheck the case after locking.
             if ($event === 'refunded') {
                 User::whereKey($seller->id)->lockForUpdate()->firstOrFail();

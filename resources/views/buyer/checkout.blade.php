@@ -83,6 +83,9 @@
                                 <strong class="checkout-voucher-tile__code">{{ $av['code'] }}</strong>
                                 @if($av['name'])<span class="checkout-voucher-tile__name">{{ $av['name'] }}</span>@endif
                                 <span class="checkout-voucher-tile__desc">{{ $av['description'] }}</span>
+                                @if(($av['estimated_discount'] ?? 0) > 0)
+                                    <span class="checkout-voucher-tile__desc">Saves &#8369;{{ number_format($av['estimated_discount'], 2) }} on eligible items in this order.</span>
+                                @endif
                                 <span class="checkout-voucher-tile__meta">
                                     <span><i class="fas fa-store"></i> {{ $av['shop_name'] }}</span>
                                     @if($av['expires_at'])<span>· Ends {{ $av['expires_at'] }}</span>@endif

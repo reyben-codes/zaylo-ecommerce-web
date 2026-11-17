@@ -170,6 +170,8 @@ class Settlement
             $split['rider_earnings'] = $quote['total'];
             $split['pickup_rider_earnings'] = $quote['pickup_amount'];
             $split['delivery_rider_earnings'] = $quote['delivery_amount'];
+            // The two legs are allocations of funded shipping, never extra buyer charges.
+            $split['logistics_shipping_earnings'] = round($gross - $split['logistics_product_commission'] - $quote['total'], 2);
             $split['logistics_gross_earnings'] = $gross;
             $split['logistics_earnings'] = round($gross - $quote['total'], 2);
         }

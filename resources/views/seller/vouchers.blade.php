@@ -44,6 +44,7 @@
                         <select id="seller-voucher-type" name="type" required>
                             <option value="percent" @selected(old('type', 'percent') === 'percent')>% off</option>
                             <option value="fixed" @selected(old('type') === 'fixed')>&#8369; off</option>
+                            <option value="free_shipping" @selected(old('type') === 'free_shipping')>Free shipping (your shop pays the fee)</option>
                         </select>
                     </div>
                     <div class="seller-field">

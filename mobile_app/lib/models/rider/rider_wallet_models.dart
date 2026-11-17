@@ -69,6 +69,8 @@ class RiderWallet {
   const RiderWallet({
     required this.balance,
     required this.earned,
+    this.firstMileEarned = 0,
+    this.lastMileEarned = 0,
     required this.pending,
     required this.withdrawn,
     required this.parcels,
@@ -85,6 +87,8 @@ class RiderWallet {
   /// What the rider can withdraw now.
   final double balance;
   final double earned;
+  final double firstMileEarned;
+  final double lastMileEarned;
 
   /// Requested and waiting to be sent.
   final double pending;
@@ -112,6 +116,8 @@ class RiderWallet {
     return RiderWallet(
       balance: parseMoney(json['balance']),
       earned: parseMoney(json['earned']),
+      firstMileEarned: parseMoney(json['first_mile_earned']),
+      lastMileEarned: parseMoney(json['last_mile_earned'] ?? json['earned']),
       pending: parseMoney(json['pending']),
       withdrawn: parseMoney(json['withdrawn']),
       parcels: json['parcels'] as int? ?? 0,

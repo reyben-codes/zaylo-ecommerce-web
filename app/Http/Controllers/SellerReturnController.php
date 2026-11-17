@@ -42,6 +42,21 @@ class SellerReturnController extends Controller
         ]);
     }
 
+    public function approve(Request $request, Dispute $dispute)
+    {
+        $this->authorizeSeller($request, $dispute);
+        abort_unless(\Illuminate\Support\Facades\Schema::hasColumn('disputes', 'return_approved_at'), 503, 'Return approvals require the latest database update.');
+        $this->disputes->sellerStep($dispute, $request->user(), 'return_approved', [
+            'return_status' => 'scheduled',
+            'return_approved_at' => now(),
+            'return_approved_by' => $request->user()->id,
+            'status' => 'in_review',
+            'dropoff_deadline' => $dispute->return_method === 'dropoff' ? now('Asia/Manila')->addDays(3)->toDateString() : null,
+        ], 'I approved this return. Logistics may now arrange collection or accept the drop-off.');
+
+        return back()->with('status', 'Return approved. Logistics can now arrange the return.');
+    }
+
     /** The returned item reached the shop. */
     public function receive(Request $request, Dispute $dispute)
     {
@@ -97,7 +112,7 @@ class SellerReturnController extends Controller
 
     private function needsAction(Dispute $case): bool
     {
-        return $case->status === 'open' || (Dispute::tracksRefunds() && ($case->canConfirmReceipt() || $case->canRefund()));
+        return $case->status === 'open' || $case->canApproveReturn() || (Dispute::tracksRefunds() && ($case->canConfirmReceipt() || $case->canRefund()));
     }
 
     private function authorizeSeller(Request $request, Dispute $dispute): void

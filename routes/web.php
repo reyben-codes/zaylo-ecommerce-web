@@ -223,6 +223,7 @@ Route::middleware(['auth', 'active', 'verified', 'role:seller', 'nocache'])->pre
     Route::patch('/orders/{order}/gcash', [GcashPaymentController::class, 'verify'])->middleware('throttle:60,1')->name('orders.gcash');
     Route::patch('/orders/{order}/handover', [SellerController::class, 'confirmHandover'])->name('orders.handover');
     Route::get('/returns', [SellerReturnController::class, 'index'])->name('returns');
+    Route::patch('/returns/{dispute}/approve', [SellerReturnController::class, 'approve'])->name('returns.approve');
     Route::patch('/returns/{dispute}/received', [SellerReturnController::class, 'receive'])->name('returns.receive');
     Route::patch('/returns/{dispute}/refund', [SellerReturnController::class, 'refund'])->middleware('throttle:30,1')->name('returns.refund');
     // Polled by open Seller Center pages so they refresh when an order, parcel or return changes.

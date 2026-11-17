@@ -60,6 +60,9 @@ class LogisticsPayouts
             'fees' => round($rows->sum('fee'), 2),
             'partner' => round($rows->sum('partner'), 2),
             'rider' => round($rows->sum('rider'), 2),
+            'first_mile' => round($rows->sum('first_mile'), 2),
+            'last_mile' => round($rows->sum('last_mile'), 2),
+            'shipping_remaining' => round($rows->sum('shipping_remaining'), 2),
             'company' => round($rows->sum('company'), 2),
             'zaylo' => round($rows->sum('zaylo'), 2),
             'paid' => round($rows->whereNotNull('payout_id')->sum('partner'), 2),
@@ -148,7 +151,14 @@ class LogisticsPayouts
         // completes. This keeps historical/manual shipment rows from gaining a
         // wallet credit without an assigned rider.
         $rider = RiderWallet::ready() ? round((float) ($shipment->riderCommission?->amount ?? 0), 2) : 0.0;
-        if (Schema::hasTable('rider_leg_commissions')) $rider += (float) \App\Models\RiderLegCommission::where('shipment_id', $shipment->id)->sum('amount');
+        $firstMile = 0.0;
+        $lastMile = $rider;
+        if (Schema::hasTable('rider_leg_commissions')) {
+            $legs = \App\Models\RiderLegCommission::where('shipment_id', $shipment->id)->get();
+            $firstMile = round((float) $legs->where('leg', 'pickup')->sum('amount'), 2);
+            $lastMile = round($lastMile + (float) $legs->where('leg', 'delivery')->sum('amount'), 2);
+            $rider = round($firstMile + $lastMile, 2);
+        }
         $newPolicy = ($split['policy_version'] ?? 1) >= 2;
         $partner = $split['logistics_gross_earnings'] ?? $split['logistics_earnings'];
         $order = $shipment->order ?: $shipment->sellerOrder?->order;
@@ -160,9 +170,13 @@ class LogisticsPayouts
             'provider' => $shipment->provider?->name ?? 'Logistics partner #'.$shipment->logistics_provider_id,
             'delivered_at' => RiderDeliveries::deliveredAt($shipment),
             'fee' => $fee,
+            'shipping_funded_by' => $split['shipping_funded_by'] ?? (($split['free_shipping_by_zaylo'] ?? 0) > 0 ? 'admin' : 'buyer'),
             'partner' => $partner,
             'company' => round($partner - $rider, 2),
             'rider' => $rider,
+            'first_mile' => $firstMile,
+            'last_mile' => $lastMile,
+            'shipping_remaining' => round($fee - $rider, 2),
             'zaylo' => $split['admin_earnings'],
             'payout_id' => $shipment->logistics_payout_id ? (int) $shipment->logistics_payout_id : null,
             // COD money is handed to Logistics, not held by Admin. Never pay that allocation again.

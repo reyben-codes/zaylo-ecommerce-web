@@ -61,6 +61,7 @@ class Dispute extends Model
         'return_received_at', 'refund_amount', 'refunded_at', 'refund_method', 'refund_reference', 'refunded_by',
         'return_rider_id', 'return_assigned_at', 'return_picked_up_at', 'return_at_hub_at',
         'return_pickup_photo_path', 'return_hub_photo_path',
+        'return_approved_at', 'return_approved_by',
     ];
 
     protected $casts = [
@@ -74,6 +75,7 @@ class Dispute extends Model
         'return_assigned_at' => 'datetime',
         'return_picked_up_at' => 'datetime',
         'return_at_hub_at' => 'datetime',
+        'return_approved_at' => 'datetime',
     ];
 
     /**
@@ -82,6 +84,7 @@ class Dispute extends Model
      * (App\Services\ReturnPickups).
      */
     public const RETURN_STEPS = [
+        'pending_seller' => 'Waiting for seller approval',
         'scheduled' => 'Waiting for pickup',
         'picked_up' => 'Picked up by the rider',
         'sorted' => 'At the logistics hub',
@@ -126,6 +129,16 @@ class Dispute extends Model
     public function hasReturnParcel(): bool
     {
         return filled($this->return_tracking_number);
+    }
+
+    public function awaitingSellerApproval(): bool
+    {
+        return $this->hasReturnParcel() && $this->return_status === 'pending_seller';
+    }
+
+    public function canApproveReturn(): bool
+    {
+        return $this->awaitingSellerApproval() && ! $this->isClosed();
     }
 
     public function returnReceived(): bool

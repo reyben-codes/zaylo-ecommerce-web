@@ -388,7 +388,9 @@ class ReturnCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final waiting = info.status == 'scheduled';
-    final when = info.isPickup
+    final when = info.status == 'pending_seller'
+        ? 'Waiting for seller approval before pickup or drop-off.'
+        : info.isPickup
         ? [
             if (info.pickupDate != null) shortDate(info.pickupDate!),
             info.pickupSlot == 'afternoon' ? 'Afternoon, 1–6 PM' : 'Morning, 9 AM–1 PM',
@@ -405,7 +407,7 @@ class ReturnCard extends StatelessWidget {
         ]),
         const SizedBox(height: 8),
         Text(when, style: TextStyle(fontWeight: FontWeight.w700, color: ZayloColors.ink)),
-        if (info.isPickup) ...[
+        if (info.isPickup && info.status != 'pending_seller') ...[
           const SizedBox(height: 2),
           Text(
             info.riderName != null

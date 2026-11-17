@@ -53,7 +53,7 @@ class SellerQueues
     public function returnsNeedingAction(User $seller): int
     {
         return $this->returns($seller)->where('status', '!=', 'rejected')->get()
-            ->filter(fn (Dispute $dispute) => $dispute->status === 'open'
+            ->filter(fn (Dispute $dispute) => $dispute->status === 'open' || $dispute->canApproveReturn()
                 || (Dispute::tracksRefunds() && ($dispute->canConfirmReceipt() || $dispute->canRefund())))
             ->count();
     }

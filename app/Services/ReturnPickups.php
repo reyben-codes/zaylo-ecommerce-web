@@ -68,7 +68,7 @@ class ReturnPickups
     /** What the logistics partner can do next with this return. */
     public static function logisticsSteps(Dispute $dispute): array
     {
-        if (! $dispute->hasReturnParcel() || $dispute->status === 'rejected' || $dispute->returnReceived()) {
+        if (! $dispute->hasReturnParcel() || $dispute->awaitingSellerApproval() || $dispute->status === 'rejected' || $dispute->returnReceived()) {
             return [];
         }
         $status = $dispute->return_status ?: 'scheduled';
@@ -83,7 +83,7 @@ class ReturnPickups
     /** A pickup waiting at the buyer's door, which the partner can (re)assign to a rider. */
     public static function canAssign(Dispute $dispute): bool
     {
-        return Dispute::tracksReturnRiders() && self::isPickup($dispute) && $dispute->status !== 'rejected'
+        return Dispute::tracksReturnRiders() && self::isPickup($dispute) && ! $dispute->awaitingSellerApproval() && $dispute->status !== 'rejected'
             && in_array($dispute->return_status ?: 'scheduled', ['scheduled'], true);
     }
 
@@ -119,7 +119,14 @@ class ReturnPickups
         if (! self::canAssign($dispute)) {
             throw ValidationException::withMessages(['rider_id' => 'Only pickup returns still at the buyer can be assigned to a rider.']);
         }
-        $dispute->update(['return_rider_id' => $rider->user_id, 'return_assigned_at' => now()]);
+        DB::transaction(function () use ($dispute, $rider) {
+            $locked = Dispute::whereKey($dispute->id)->lockForUpdate()->firstOrFail();
+            if (! self::canAssign($locked)) {
+                throw ValidationException::withMessages(['rider_id' => 'The seller must approve this return before a rider can be assigned.']);
+            }
+            $locked->update(['return_rider_id' => $rider->user_id, 'return_assigned_at' => now()]);
+        });
+        $dispute->refresh();
         $this->note($dispute, 'Rider '.($rider->user?->name ?? '#'.$rider->id).' will pick up the returned item'
             .($dispute->pickup_date ? ' on '.$dispute->pickup_date->format('M j, Y') : '').'.', $actor);
 

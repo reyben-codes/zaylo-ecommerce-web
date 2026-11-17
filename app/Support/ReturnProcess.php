@@ -35,6 +35,7 @@ class ReturnProcess
 
         $steps = [self::step('requested', 'Return requested', 'Filed by the buyer', $at($case->created_at), true)];
         if ($parcel) {
+            $steps[] = self::step('approved', 'Seller approves the return', 'Required before logistics collects or accepts the item', $at($case->return_approved_at), ! $case->awaitingSellerApproval());
             if ($pickup) {
                 $steps[] = self::step('assigned', 'Rider assigned', $rider ? 'Rider: '.$rider : self::pickupWindow($case), $at($case->return_assigned_at ?? null), $rider !== null || $rank >= 1);
                 $steps[] = self::step('picked_up', 'Collected from the buyer', 'The rider scanned the return slip', $at($case->return_picked_up_at ?? null), $rank >= 1, 'pickup');
@@ -113,6 +114,11 @@ class ReturnProcess
                 : ($case->return_type === 'exchange' ? 'Done. The seller has the item and arranges the replacement in the case.' : 'Done. The return is complete.');
         }
         $window = self::pickupWindow($case);
+        if ($step === 'approved') {
+            return $role === 'seller'
+                ? 'Review the request and approve the return on the Returns page before logistics can proceed.'
+                : 'Waiting for seller approval. Pickup and drop-off start after the seller confirms the return.';
+        }
         $dropoff = ($case->dropoff_location ?: 'the logistics hub').($case->dropoff_deadline ? ' by '.$case->dropoff_deadline->format('M j, Y') : '');
 
         return match ($role) {

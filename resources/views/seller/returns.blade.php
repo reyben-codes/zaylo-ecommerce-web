@@ -94,6 +94,14 @@
                 @endif
 
                 <div class="order-actions">
+                    @if($case->canApproveReturn())
+                        <form method="POST" action="{{ route('seller.returns.approve', $case) }}"
+                              data-confirm="Approve this return so logistics can collect the item from the buyer or accept their drop-off?" data-confirm-title="Approve return?" data-confirm-button="Approve return">
+                            @csrf
+                            @method('PATCH')
+                            <button type="submit" class="seller-button seller-button--small">Approve return</button>
+                        </form>
+                    @endif
                     @if($tracksRefunds && $case->canConfirmReceipt())
                         <form method="POST" action="{{ route('seller.returns.receive', $case) }}"
                               data-confirm="Confirm that the returned item from order {{ $orderNumber }} reached you?" data-confirm-title="Return received?" data-confirm-button="Confirm received">

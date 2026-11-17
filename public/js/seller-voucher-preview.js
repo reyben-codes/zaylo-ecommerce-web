@@ -55,11 +55,18 @@
 
             // Type & Value
             const type = typeInput?.value || 'percent';
+            if (valueInput) {
+                valueInput.required = type !== 'free_shipping';
+                valueInput.disabled = type === 'free_shipping';
+            }
+            if (maxDiscountInput) maxDiscountInput.disabled = type !== 'percent';
             const rawVal = parseFloat(valueInput?.value);
             const hasVal = !isNaN(rawVal) && rawVal > 0;
 
             let offerLabel = 'DISCOUNT';
-            if (type === 'percent') {
+            if (type === 'free_shipping') {
+                offerLabel = 'FREE SHIPPING';
+            } else if (type === 'percent') {
                 offerLabel = hasVal ? (parseFloat(rawVal.toFixed(2)) + '% OFF') : '% OFF';
             } else {
                 offerLabel = hasVal ? (formatPesos(rawVal) + ' OFF') : '₱ OFF';
@@ -70,7 +77,9 @@
 
             // Description
             let desc = '';
-            if (type === 'percent') {
+            if (type === 'free_shipping') {
+                desc = 'Free shipping on your shop items. Your shop pays the shipping fee, including first-mile and last-mile earnings.';
+            } else if (type === 'percent') {
                 desc = hasVal ? `${parseFloat(rawVal.toFixed(2))}% off` : 'Discount off';
                 const maxVal = parseFloat(maxDiscountInput?.value);
                 if (!isNaN(maxVal) && maxVal > 0) {

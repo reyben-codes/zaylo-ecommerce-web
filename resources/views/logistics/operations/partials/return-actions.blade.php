@@ -7,6 +7,9 @@
     $waitingForRider = \App\Services\ReturnPickups::isPickup($case) && ($case->return_status ?: 'scheduled') === 'scheduled';
 @endphp
 <div class="return-actions">
+    @if($case->awaitingSellerApproval())
+        <span class="seller-cell-note">Waiting for seller approval. Do not collect or accept this return yet.</span>
+    @endif
     @if($canAssign)
         @if($riders->isEmpty())
             <span class="seller-cell-note">No riders on shift. Riders can take parcels once they time in at the hub. <a href="{{ route('logistics.attendance') }}">See attendance</a></span>
@@ -46,7 +49,7 @@
         </form>
     @endforeach
 
-    @if(! $canAssign && empty($steps))
+    @if(! $case->awaitingSellerApproval() && ! $canAssign && empty($steps))
         <span class="seller-cell-note">{{ $case->returnReceived() ? 'Back with the seller.' : ($waitingForRider ? 'Waiting for the rider\'s scan.' : 'Nothing to do.') }}</span>
     @endif
 </div>

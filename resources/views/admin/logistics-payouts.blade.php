@@ -47,9 +47,10 @@
 
     <section class="seller-panel">
         <header class="seller-panel__header"><div><h2>By partner</h2><p>Pay a partner after sending them the money; every delivered parcel not paid yet is included.</p></div></header>
+        @include('partials.delivery-earnings-split')
         <div class="seller-table-wrap">
             <table class="seller-table workspace-table admin-money">
-                <thead><tr><th>Partner</th><th>Delivered</th><th>Shipping fees</th><th>Partner gross</th><th>Rider earnings</th><th>Admin net</th><th>Paid</th><th>Owed</th><th><span class="sr-only">Pay</span></th></tr></thead>
+                <thead><tr><th>Partner</th><th>Delivered</th><th>Shipping fees</th><th>Partner gross</th><th>First-mile courier</th><th>Last-mile rider</th><th>Shipping remaining</th><th>Admin net</th><th>Paid</th><th>Owed</th><th><span class="sr-only">Pay</span></th></tr></thead>
                 <tbody>
                     @forelse($byProvider as $partner)
                         <tr>
@@ -57,7 +58,9 @@
                             <td>{{ number_format($partner['parcels']) }}</td>
                             <td>&#8369;{{ number_format($partner['fees'], 2) }}</td>
                             <td>&#8369;{{ number_format($partner['partner'], 2) }}</td>
-                            <td>&#8369;{{ number_format($partner['rider'], 2) }}</td>
+                            <td>&#8369;{{ number_format($partner['first_mile'], 2) }}</td>
+                            <td>&#8369;{{ number_format($partner['last_mile'], 2) }}</td>
+                            <td>&#8369;{{ number_format($partner['shipping_remaining'], 2) }}</td>
                             <td>&#8369;{{ number_format($partner['zaylo'], 2) }}</td>
                             <td>&#8369;{{ number_format($partner['paid'], 2) }}</td>
                             <td><strong>&#8369;{{ number_format($partner['owed'], 2) }}</strong>@if($partner['unpaidParcels'])<span class="seller-cell-note">{{ $partner['unpaidParcels'] }} {{ Str::plural('parcel', $partner['unpaidParcels']) }}</span>@endif</td>
@@ -77,7 +80,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="9"><p class="admin-empty-inline">No delivered parcels yet.</p></td></tr>
+                        <tr><td colspan="11"><p class="admin-empty-inline">No delivered parcels yet.</p></td></tr>
                     @endforelse
                 </tbody>
             </table>

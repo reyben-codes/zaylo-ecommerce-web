@@ -43,6 +43,9 @@
                 </header>
                 <div class="case-body return-tracking-body">
                     <div class="return-truck-info">
+                        @if($dispute->awaitingSellerApproval())
+                            <p><strong>Waiting for seller approval.</strong> Keep the item with you. Logistics can arrange pickup or accept your drop-off after the seller confirms this return.</p>
+                        @else
                         <p><strong>Courier Delivery Truck:</strong> <i class="fas fa-truck" aria-hidden="true"></i> {{ $dispute->returnCourierName() }}</p>
                         @if($dispute->return_method === 'pickup')
                             <p><strong>Pickup Schedule:</strong> {{ $dispute->pickup_date ? $dispute->pickup_date->format('l, F j, Y') : 'Scheduled' }} ({{ $dispute->pickup_slot === 'afternoon' ? 'Afternoon 1:00 PM - 6:00 PM' : 'Morning 9:00 AM - 1:00 PM' }})</p>
@@ -56,8 +59,10 @@
                             <p><strong>Drop-off Deadline:</strong> {{ $dispute->dropoff_deadline ? $dispute->dropoff_deadline->format('F j, Y') : '7 days from filing' }}</p>
                             <p class="seller-cell-note"><i class="fas fa-clock" aria-hidden="true"></i> Please bring the item to the drop-off branch before the deadline and present the barcode below to the staff.</p>
                         @endif
+                        @endif
                     </div>
 
+                    @if(! $dispute->awaitingSellerApproval())
                     <div class="return-barcode-box" style="text-align:center; padding:16px; background:#fff; border:1px dashed #d1c7bc; border-radius:8px; margin-top:12px;">
                         <p style="margin:0 0 8px; font-size:.85rem; font-weight:600; color:#5b4d41;">Courier Handover Barcode</p>
                         <div style="display:inline-block; max-width:100%; overflow-x:auto;">
@@ -66,6 +71,7 @@
                         <p style="margin:4px 0 0; font-family:monospace; font-size:.9rem; font-weight:bold; letter-spacing:1px;">{{ $dispute->return_tracking_number }}</p>
                         <small style="color:#786c5f;">Show this barcode to the courier truck driver or hub agent when surrendering the return item.</small>
                     </div>
+                    @endif
 
                     <div class="return-timeline">
                         <h3>Return progress</h3>

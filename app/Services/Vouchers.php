@@ -241,14 +241,16 @@ class Vouchers
         if (! in_array($shopId, $joined, true) || ($voucher->min_spend && $subtotal < $voucher->min_spend)) {
             return 0.0;
         }
-        $discount = $voucher->type === 'percent'
-            ? $subtotal * ((float) $voucher->value) / 100
-            : (float) $voucher->value;
+        // Calculate against merchandise only, using centavos and percentage basis points.
+        $subtotalMinor = max(0, (int) round($subtotal * 100));
+        $discountMinor = $voucher->type === 'percent'
+            ? (int) round($subtotalMinor * (int) round($voucher->value * 100) / 10000, 0, PHP_ROUND_HALF_UP)
+            : (int) round($voucher->value * 100);
         if ($voucher->type === 'percent' && $voucher->max_discount) {
-            $discount = min($discount, $voucher->max_discount);
+            $discountMinor = min($discountMinor, (int) round($voucher->max_discount * 100));
         }
 
-        return round(max(0, min($discount, $subtotal)), 2);
+        return max(0, min($discountMinor, $subtotalMinor)) / 100;
     }
 
     /**

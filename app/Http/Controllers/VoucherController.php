@@ -123,8 +123,8 @@ class VoucherController extends Controller
         $data = $request->validate([
             'code' => ['required', 'string', 'min:4', 'max:30', 'regex:/^[A-Za-z0-9-]+$/D', Rule::unique('vouchers', 'code')],
             'name' => ['nullable', 'string', 'max:80'],
-            'type' => ['required', Rule::in(['percent', 'fixed'])],
-            'value' => ['required', 'numeric', 'min:1', $request->input('type') === 'percent' ? 'max:90' : 'max:100000'],
+            'type' => ['required', Rule::in(['percent', 'fixed', 'free_shipping'])],
+            'value' => ['exclude_if:type,free_shipping', 'required', 'numeric', 'min:1', $request->input('type') === 'percent' ? 'max:90' : 'max:100000'],
             'min_spend' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
             'max_discount' => ['nullable', 'numeric', 'min:1', 'max:100000'],
             'usage_limit' => ['nullable', 'integer', 'min:1', 'max:1000000'],
@@ -143,6 +143,10 @@ class VoucherController extends Controller
             $data['expires_at'] = \Illuminate\Support\Carbon::parse($data['expires_at'], 'Asia/Manila')->utc();
         }
 
+        if ($data['type'] === 'free_shipping') {
+            $data['value'] = null;
+            $data['max_discount'] = null;
+        }
         $voucher = $this->vouchers->createForSeller($data, $shopId, $request->user());
 
         return back()->with('status', "Shop voucher {$voucher->code} created and active for your products.");

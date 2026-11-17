@@ -79,8 +79,8 @@ class ReturnProofAndHelpBotTest extends TestCase
         $this->signInMobile($rider);
         $this->getJson('/api/mobile/rider/dashboard')->assertOk()
             ->assertJsonPath('returns.0.needs_photo', true)
-            ->assertJsonPath('returns.0.steps.2.key', 'picked_up')
-            ->assertJsonPath('returns.0.steps.2.current', true)
+            ->assertJsonPath('returns.0.steps.3.key', 'picked_up')
+            ->assertJsonPath('returns.0.steps.3.current', true)
             ->assertJsonPath('returns.0.next_step', "Collect the item (Pickup {$case->pickup_date->format('D, M j')}, 9:00 AM–1:00 PM): scan the buyer's return slip and take a photo of the item.");
         $this->postJson('/api/mobile/rider/returns/scan', ['code' => 'RET-PROOF1'])
             ->assertUnprocessable()->assertJsonValidationErrors('photo');
@@ -115,8 +115,8 @@ class ReturnProofAndHelpBotTest extends TestCase
         $this->signInMobile($this->buyer);
         $this->getJson("/api/mobile/complaints/{$case->id}")->assertOk()
             ->assertJsonPath('complaint.return.next', 'Nothing to do. Your item is on its way back to the seller.')
-            ->assertJsonPath('complaint.return.steps.3.label', 'At the logistics hub')
-            ->assertJsonPath('complaint.return.steps.3.done', true);
+            ->assertJsonPath('complaint.return.steps.4.label', 'At the logistics hub')
+            ->assertJsonPath('complaint.return.steps.4.done', true);
 
         // Photos open for the case, its rider and the partner only.
         foreach ([$this->buyer, $this->seller, $rider, $this->partner] as $viewer) {

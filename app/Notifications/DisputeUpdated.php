@@ -28,6 +28,9 @@ class DisputeUpdated extends Notification
             'decided' => $mail->subject("Complaint about order {$order}: {$this->dispute->status_label}")
                 ->line("The ZAYLO team has marked the complaint about order {$order} as {$this->dispute->status_label}.")
                 ->line('Decision: '.($this->dispute->resolution ?: 'No details were given.')),
+            'return_approved' => $mail->subject("Return approved for order {$order}")
+                ->line('The seller approved your return. Logistics can now arrange pickup or accept your drop-off.')
+                ->line('Check the case for the return schedule and next steps.'),
             'return_received' => $mail->subject("Your return for order {$order} reached the seller")
                 ->line("The seller received the item you returned from order {$order}.")
                 ->line('They will now process your refund or replacement. You can follow it in the case.'),

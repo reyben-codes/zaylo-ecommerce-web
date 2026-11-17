@@ -109,14 +109,20 @@ class RiderWallet
     public function summary(User $rider): array
     {
         if (! self::ready()) {
-            return ['balance' => 0.0, 'earned' => 0.0, 'pending' => 0.0, 'withdrawn' => 0.0, 'parcels' => 0];
+            return ['balance' => 0.0, 'earned' => 0.0, 'first_mile_earned' => 0.0, 'last_mile_earned' => 0.0, 'pending' => 0.0, 'withdrawn' => 0.0, 'parcels' => 0];
         }
         $commissions = RiderCommission::where('user_id', $rider->id);
+        $legs = Schema::hasTable('rider_leg_commissions')
+            ? \App\Models\RiderLegCommission::where('user_id', $rider->id)->get() : collect();
+        $firstMile = round((float) $legs->where('leg', 'pickup')->sum('amount'), 2);
+        $lastMile = round((float) (clone $commissions)->sum('amount') + (float) $legs->where('leg', 'delivery')->sum('amount'), 2);
         $withdrawals = fn (string $status) => round((float) RiderWithdrawal::where('user_id', $rider->id)->where('status', $status)->sum('amount'), 2);
 
         return [
             'balance' => $this->balance($rider),
-            'earned' => round((float) (clone $commissions)->sum('amount') + (Schema::hasTable('rider_leg_commissions') ? (float) \App\Models\RiderLegCommission::where('user_id', $rider->id)->sum('amount') : 0), 2),
+            'earned' => round($firstMile + $lastMile, 2),
+            'first_mile_earned' => $firstMile,
+            'last_mile_earned' => $lastMile,
             'pending' => $withdrawals(RiderWithdrawal::PENDING),
             'withdrawn' => round($withdrawals(RiderWithdrawal::PAID) + $withdrawals(RiderWithdrawal::RELEASED), 2),
             'parcels' => (clone $commissions)->count() + (Schema::hasTable('rider_leg_commissions') ? \App\Models\RiderLegCommission::where('user_id', $rider->id)->count() : 0),

@@ -40,6 +40,7 @@
         </div>
     </section>
 
+    @include('partials.delivery-earnings-split')
     @include('partials.wallet', ['cashOutRoute' => 'logistics.wallet.cash-out'])
 
     <section class="seller-panel">
@@ -68,15 +69,17 @@
         <header class="seller-panel__header"><div><h2>Delivered parcels</h2><p>The latest 100 parcels and what you earn from each.</p></div></header>
         <div class="seller-table-wrap">
             <table class="seller-table workspace-table admin-money">
-                <thead><tr><th>Parcel</th><th>Delivered</th><th>Shipping fee</th><th>Company gross</th><th>Rider earnings</th><th>Status</th></tr></thead>
+                <thead><tr><th>Parcel</th><th>Delivered</th><th>Funded shipping</th><th>First-mile courier</th><th>Last-mile rider</th><th>Shipping remaining</th><th>Company gross</th><th>Status</th></tr></thead>
                 <tbody>
                     @forelse($parcels as $parcel)
                         <tr>
                             <td><strong>{{ $parcel['tracking'] }}</strong></td>
                             <td>{{ $parcel['delivered_at']?->timezone('Asia/Manila')->format('M j, Y g:i A') ?? '—' }}</td>
-                            <td>&#8369;{{ number_format($parcel['fee'], 2) }}</td>
+                            <td>&#8369;{{ number_format($parcel['fee'], 2) }}<span class="seller-cell-note">Funded by {{ $parcel['shipping_funded_by'] === 'admin' ? 'ZAYLO / Admin' : ucfirst($parcel['shipping_funded_by']) }}</span></td>
+                            <td>&#8369;{{ number_format($parcel['first_mile'], 2) }}</td>
+                            <td>&#8369;{{ number_format($parcel['last_mile'], 2) }}</td>
+                            <td>&#8369;{{ number_format($parcel['shipping_remaining'], 2) }}</td>
                             <td>&#8369;{{ number_format($parcel['partner'], 2) }}</td>
-                            <td>&#8369;{{ number_format($parcel['rider'], 2) }}</td>
                             <td>
                                 @if(! $parcel['requires_payout'])
                                     <a href="{{ route('logistics.cash') }}" class="seller-link">COD handover / allocation</a>
@@ -88,7 +91,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="6"><p class="admin-empty-inline">No delivered parcels yet.</p></td></tr>
+                        <tr><td colspan="8"><p class="admin-empty-inline">No delivered parcels yet.</p></td></tr>
                     @endforelse
                 </tbody>
             </table>

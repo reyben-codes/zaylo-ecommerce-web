@@ -145,6 +145,12 @@ class _RiderWalletScreenState extends State<RiderWalletScreen> {
                     const SizedBox(width: 10),
                     Expanded(child: _Stat(label: 'Withdrawn', value: peso(wallet.withdrawn))),
                   ]),
+                  const SizedBox(height: 10),
+                  Row(children: [
+                    Expanded(child: _Stat(label: 'First-mile courier', value: peso(wallet.firstMileEarned), note: 'Seller to hub')),
+                    const SizedBox(width: 10),
+                    Expanded(child: _Stat(label: 'Last-mile rider', value: peso(wallet.lastMileEarned), note: 'Hub to buyer')),
+                  ]),
                   const SizedBox(height: 22),
                   _heading(context, 'Withdrawals'),
                   if (wallet.withdrawals.isEmpty)

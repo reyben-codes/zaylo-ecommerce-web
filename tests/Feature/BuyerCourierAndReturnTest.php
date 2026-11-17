@@ -68,7 +68,7 @@ class BuyerCourierAndReturnTest extends TestCase
         $this->assertSame('flash_express', $dispute->return_courier);
         $this->assertSame('Flash Express', $dispute->returnCourierName());
         $this->assertSame('Courier Pickup (Home Address)', $dispute->returnMethodName());
-        $this->assertSame('scheduled', $dispute->return_status);
+        $this->assertSame('pending_seller', $dispute->return_status);
         $this->assertSame($pickupDate, $dispute->pickup_date->toDateString());
         $this->assertSame('morning', $dispute->pickup_slot);
 
@@ -78,8 +78,8 @@ class BuyerCourierAndReturnTest extends TestCase
         $showResponse->assertOk();
         $showResponse->assertSee('Return &amp; Refund Tracker', false);
         $showResponse->assertSee($dispute->return_tracking_number);
-        $showResponse->assertSee('Flash Express');
-        $showResponse->assertSee('Courier Handover Barcode');
+        $showResponse->assertSee('Waiting for seller approval');
+        $showResponse->assertDontSee('Courier Handover Barcode');
     }
 
     public function test_damaged_or_wrong_item_can_be_returned_within_24_hours_of_delivery(): void

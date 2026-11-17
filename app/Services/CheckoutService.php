@@ -425,6 +425,10 @@ class CheckoutService
                     $partner?->riderRate() ?? RiderWallet::COMMISSION,
                 );
                 $breakdown['logistics_selection'] = 'seller';
+                if ($isFreeShipping) {
+                    $breakdown['shipping_voucher_id'] = $voucher->id;
+                    $breakdown['shipping_voucher_created_by'] = $voucher->created_by;
+                }
                 if ($breakdown['seller_earnings'] < 0) {
                     throw ValidationException::withMessages(['voucher_code' => 'Add more items from this shop to cover its free-shipping voucher, or remove the voucher.']);
                 }
