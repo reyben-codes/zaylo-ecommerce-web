@@ -410,7 +410,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         icon: Icons.payments_outlined,
         title: 'Cash on Delivery',
         subtitle: quote?.codAvailable == false
-            ? 'Orders of PHP 100,000 or more require GCash for safety.'
+            ? 'Orders of PHP 50,000 or more require GCash for safety.'
             : 'Pay when your order arrives',
         selected: _payment == 'cod',
         onTap: quote?.codAvailable == false ? null : () {

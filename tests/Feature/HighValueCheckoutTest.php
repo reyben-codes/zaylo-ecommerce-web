@@ -58,6 +58,6 @@ class HighValueCheckoutTest extends TestCase
 
     public static function totals(): array
     {
-        return ['below' => [99879.99, false], 'exactly' => [99880, true], 'above' => [100000, true]];
+        return ['below' => [49879.99, false], 'exactly' => [49880, true], 'above' => [50000, true]];
     }
 }

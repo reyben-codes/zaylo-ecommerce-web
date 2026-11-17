@@ -28,7 +28,7 @@ use Illuminate\Validation\ValidationException;
  */
 class CheckoutService
 {
-    public const GCASH_ONLY_MINIMUM = 100000;
+    public const GCASH_ONLY_MINIMUM = 50000;
 
     public static function requiresGcash(float $total): bool
     {
@@ -351,7 +351,7 @@ class CheckoutService
         $paymentMethod = $input['payment_method'] ?? 'cod';
 
         if ($paymentMethod === 'gcash' && ! EscrowPayments::configured()) {
-            throw ValidationException::withMessages(['payment_method' => 'GCash is currently unavailable. Please try again later or use Cash on Delivery for orders below PHP 100,000.']);
+            throw ValidationException::withMessages(['payment_method' => 'GCash is currently unavailable. Please try again later or use Cash on Delivery for orders below PHP 50,000.']);
         }
 
         return DB::transaction(function () use ($buyer, $selectedIds, $input, $voucherCode, $paymentMethod) {
@@ -515,7 +515,7 @@ class CheckoutService
             }
             if ($paymentMethod !== 'gcash' && self::requiresGcash((float) $orders->sum('total'))) {
                 throw ValidationException::withMessages([
-                    'payment_method' => 'Orders totaling PHP 100,000 or more must be paid via GCash for safety. Cash on Delivery is unavailable.',
+                    'payment_method' => 'Orders totaling PHP 50,000 or more must be paid via GCash for safety. Cash on Delivery is unavailable.',
                 ]);
             }
             if ($voucher && $buyer) {
