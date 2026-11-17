@@ -1,4 +1,4 @@
-<aside class="sidebar seller-sidebar" id="sidebar" aria-label="Seller navigation">
+<aside class="sidebar seller-sidebar" id="sidebar" aria-label="Seller navigation" data-sidebar-scroll="seller:{{ auth()->id() }}">
     <p class="seller-sidebar__title">Seller Center</p>
 
     <nav class="seller-sidebar__nav">

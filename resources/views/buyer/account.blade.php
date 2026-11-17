@@ -27,7 +27,7 @@
 </div>
 
 <div class="page-content settings-layout">
-    <aside class="settings-sidebar" aria-label="Profile settings navigation">
+    <aside class="settings-sidebar" aria-label="Profile settings navigation" data-sidebar-scroll="buyer-settings:{{ auth()->id() }}">
         <div class="profile-summary">
             @include('partials.user-avatar', ['user' => $user, 'class' => 'profile-avatar'])
             <div><strong>{{ $user->name }}</strong><small>{{ $user->email }}</small></div>

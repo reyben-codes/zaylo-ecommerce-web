@@ -131,7 +131,7 @@
     @include('partials.notifications')
 
     <div class="seller-shell">
-        <aside class="sidebar seller-sidebar" id="sidebar" aria-label="{{ $portal['title'] }} navigation">
+        <aside class="sidebar seller-sidebar" id="sidebar" aria-label="{{ $portal['title'] }} navigation" data-sidebar-scroll="{{ $workspace }}:{{ $viewer->id }}">
             <p class="seller-sidebar__title">{{ $portal['title'] }}</p>
             <nav class="seller-sidebar__nav">
                 @php

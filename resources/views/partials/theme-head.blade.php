@@ -3,3 +3,4 @@
 <link rel="stylesheet" href="{{ asset('css/theme.css') }}?v={{ filemtime(public_path('css/theme.css')) }}" />
 <script src="{{ asset('js/theme-init.js') }}?v={{ filemtime(public_path('js/theme-init.js')) }}"></script>
 <script src="{{ asset('js/theme.js') }}?v={{ filemtime(public_path('js/theme.js')) }}" defer></script>
+<script src="{{ asset('js/sidebar-scroll.js') }}?v={{ filemtime(public_path('js/sidebar-scroll.js')) }}" defer></script>
