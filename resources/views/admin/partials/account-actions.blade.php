@@ -29,9 +29,10 @@
             @method('PATCH')
             <button class="seller-button seller-button--small seller-button--secondary" type="submit">Restore</button>
         </form>
-        <form method="POST" action="{{ route('admin.users.destroy', $account) }}" data-confirm="Permanently delete {{ $account->name }} and their dependent account data? This cannot be undone. Accounts with protected transaction records must stay archived." data-confirm-title="Delete account permanently?" data-confirm-button="Delete permanently" data-confirm-tone="danger">
+        <form method="POST" action="{{ route('admin.users.destroy', $account) }}" data-confirm="Are you sure you want to permanently delete {{ $account->name }} and their dependent account data? This cannot be undone. Accounts with protected transaction records must stay archived." data-confirm-title="Delete account permanently?" data-confirm-button="Yes, delete permanently" data-confirm-tone="danger" data-confirm-reason="reason">
             @csrf
             @method('DELETE')
+            <input type="hidden" name="reason" value="">
             <button class="seller-button seller-button--small seller-button--danger" type="submit">Delete permanently</button>
         </form>
     </div>

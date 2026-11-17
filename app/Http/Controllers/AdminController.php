@@ -253,17 +253,22 @@ class AdminController extends Controller
         return redirect()->route('admin.archive')->with('status', "{$user->name} has been restored with their previous account status.");
     }
 
-    public function deleteArchivedUser(User $user)
+    public function deleteArchivedUser(Request $request, User $user)
     {
         abort_if($user->is(auth()->user()), 422, 'You cannot delete your own account.');
+        $data = $request->validate(['reason' => 'nullable|string|max:500']);
         try {
-            DB::transaction(function () use ($user) {
+            DB::transaction(function () use ($user, $data, $request) {
                 $locked = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
                 abort_if($locked->archived_at === null, 422, 'Archive this account before deleting it permanently.');
                 if (Schema::hasTable('mobile_tokens')) {
                     $locked->tokens()->delete();
                 }
                 $locked->delete();
+                app(\App\Services\ActivityLogger::class)->record(
+                    'admin.users.destroy', 'users', "Permanently deleted account: {$locked->name}.",
+                    $request->user(), $locked, ['reason' => $data['reason'] ?? null],
+                );
             });
         } catch (\Illuminate\Database\QueryException $exception) {
             if (! in_array((string) $exception->getCode(), ['23000', '23503'], true)) {

@@ -4,6 +4,7 @@
 //   data-confirm-button="Delete"      label of the confirming button (default "Confirm")
 //   data-confirm-tone="danger"        red confirm button and warning icon for destructive actions
 //   data-confirm-if="selector"        only ask when the form contains a match (e.g. ticked "remove" boxes)
+//   data-confirm-reason="field_name"  optional reason, copied into that form's hidden field
 // data-logout-confirm is the same modal with the log-out wording. Without JavaScript, or in browsers without
 // <dialog>, forms submit normally.
 (() => {
@@ -31,6 +32,11 @@
                 <span class="confirm-dialog__icon" aria-hidden="true"><i class="fa-solid" data-confirm-icon></i></span>
                 <h2 class="confirm-dialog__title" id="confirmDialogTitle"></h2>
                 <p class="confirm-dialog__message" id="confirmDialogMessage"></p>
+                <div class="confirm-dialog__reason" data-confirm-reason-panel hidden>
+                    <label for="confirmDialogReason">Reason (optional)</label>
+                    <textarea id="confirmDialogReason" rows="3" maxlength="500" placeholder="Why are you deleting this account?" aria-describedby="confirmDialogReasonHint"></textarea>
+                    <p id="confirmDialogReasonHint">This reason will be saved in the admin activity log.</p>
+                </div>
                 <div class="confirm-dialog__actions">
                     <button type="button" class="confirm-dialog__button confirm-dialog__button--secondary" data-confirm-cancel>Cancel</button>
                     <button type="button" class="confirm-dialog__button confirm-dialog__button--primary" data-confirm-accept></button>
@@ -39,6 +45,9 @@
 
         dialog.querySelector('[data-confirm-cancel]').addEventListener('click', close);
         dialog.querySelector('[data-confirm-accept]').addEventListener('click', accept);
+        dialog.querySelector('#confirmDialogReason').addEventListener('input', (event) => {
+            if (pending?.reasonField) pending.reasonField.value = event.target.value;
+        });
         // Escape: run close() so the exit animation and focus return still happen.
         dialog.addEventListener('cancel', (event) => {
             event.preventDefault();
@@ -63,6 +72,7 @@
             button: source.dataset.confirmButton || 'Confirm',
             icon: tone === 'danger' ? 'fa-triangle-exclamation' : 'fa-circle-question',
             tone,
+            reason: source.dataset.confirmReason,
         };
     };
 
@@ -78,7 +88,12 @@
     const open = (form, submitter) => {
         if (!dialog) build();
         const options = optionsFor(form, submitter);
-        pending = { form, submitter };
+        const reasonField = options.reason ? form.elements.namedItem(options.reason) : null;
+        pending = { form, submitter, reasonField };
+        dialog.querySelector('[data-confirm-reason-panel]').hidden = !reasonField;
+        const reason = dialog.querySelector('#confirmDialogReason');
+        reason.disabled = !reasonField;
+        reason.value = reasonField?.value || '';
         returnFocus = submitter || document.activeElement;
 
         dialog.querySelector('[data-confirm-icon]').className = `fa-solid ${options.icon}`;
@@ -123,6 +138,11 @@
 
     function accept() {
         if (!pending) return;
+        const reason = dialog.querySelector('#confirmDialogReason');
+        if (pending.reasonField) {
+            if (!reason.reportValidity()) return;
+            pending.reasonField.value = reason.value;
+        }
         const { form, submitter } = pending;
         dialog.querySelectorAll('button').forEach((button) => { button.disabled = true; });
         form.dataset.confirmed = 'true';

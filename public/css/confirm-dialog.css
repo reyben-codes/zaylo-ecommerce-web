@@ -58,6 +58,42 @@
     gap: 12px;
 }
 
+.confirm-dialog__reason {
+    margin: 0 0 24px;
+    text-align: left;
+}
+
+.confirm-dialog__reason label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.confirm-dialog__reason textarea {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--c-ece4db);
+    border-radius: 8px;
+    background: var(--c-ffffff);
+    color: var(--c-1a1714);
+    font: inherit;
+    font-size: 0.9rem;
+    resize: vertical;
+}
+
+.confirm-dialog__reason textarea:focus-visible {
+    outline: 2px solid var(--c-b28b6f);
+    outline-offset: 2px;
+}
+
+.confirm-dialog__reason p {
+    margin: 8px 0 0;
+    font-size: 0.8rem;
+    color: var(--c-6b5f54);
+}
+
 .confirm-dialog__button {
     flex: 1;
     padding: 12px 16px;

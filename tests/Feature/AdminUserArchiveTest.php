@@ -25,6 +25,10 @@ class AdminUserArchiveTest extends TestCase
         $this->patch(route('admin.users.archive', $buyer))->assertRedirect();
         $this->delete(route('admin.users.destroy', $buyer))->assertRedirect(route('admin.archive'));
         $this->assertDatabaseMissing('users', ['id' => $buyer->id]);
+        $log = \App\Models\ActivityLog::where('event', 'admin.users.destroy')->sole();
+        $this->assertSame($admin->id, $log->user_id);
+        $this->assertSame($buyer->id, $log->subject_id);
+        $this->assertEmpty($log->properties);
     }
 
     public function test_only_admins_can_manage_archive_and_they_cannot_archive_themselves(): void
@@ -52,5 +56,26 @@ class AdminUserArchiveTest extends TestCase
             ->assertRedirect(route('admin.archive'))->assertSessionHasErrors('archive');
         $this->assertNotNull($buyer->fresh()->archived_at);
         $this->assertDatabaseHas('orders', ['reference' => 'ARCHIVE-HISTORY']);
+        $this->assertDatabaseMissing('activity_logs', ['event' => 'admin.users.destroy']);
+    }
+
+    public function test_permanent_deletion_validates_and_records_the_optional_reason(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'status' => 'active']);
+        $buyer = User::factory()->create(['role' => 'buyer', 'status' => 'active']);
+        $this->actingAs($admin)->patch(route('admin.users.archive', $buyer))->assertRedirect();
+        $this->get(route('admin.archive'))->assertOk()->assertSee('data-confirm-reason="reason"', false)
+            ->assertSee('Yes, delete permanently');
+        $this->delete(route('admin.users.destroy', $buyer), ['reason' => str_repeat('a', 501)])
+            ->assertSessionHasErrors('reason');
+        $this->assertDatabaseHas('users', ['id' => $buyer->id]);
+        $this->assertDatabaseMissing('activity_logs', ['event' => 'admin.users.destroy']);
+
+        $this->delete(route('admin.users.destroy', $buyer), ['reason' => 'Duplicate account at the owner\'s request.'])
+            ->assertRedirect(route('admin.archive'));
+        $log = \App\Models\ActivityLog::where('event', 'admin.users.destroy')->sole();
+        $this->assertSame('Duplicate account at the owner\'s request.', $log->properties['reason']);
+        $this->assertSame($buyer->name, $log->subject_label);
+        $this->assertSame($admin->id, $log->user_id);
     }
 }
