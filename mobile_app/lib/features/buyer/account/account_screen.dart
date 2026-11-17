@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zaylo_mobile/features/reports/account_reports_screen.dart';
 import 'package:zaylo_mobile/notifications/account_update_badge.dart';
 
 import 'package:zaylo_mobile/api/api_exception.dart';
@@ -202,6 +203,11 @@ class _AccountScreenState extends State<AccountScreen> {
           SectionCard(
             padding: EdgeInsets.zero,
             child: Column(children: [
+              _MenuTile(
+                icon: Icons.flag_outlined,
+                label: 'Report an account',
+                onTap: () => _push(AccountReportsScreen(api: state.api)),
+              ),
               _MenuTile(
                 icon: Icons.smart_toy_outlined,
                 label: 'Help bot (FAQs)',

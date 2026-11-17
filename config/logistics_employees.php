@@ -12,6 +12,7 @@ return [
     'common' => ['logistics.dashboard', 'logistics.account', 'logistics.account.profile', 'logistics.account.password',
         'logistics.updates', 'logistics.notifications', 'logistics.notifications.open', 'logistics.notifications.read-all',
         'support', 'support.send', 'support.messages', 'support.media', 'faq', 'faq.ask', 'logout',
+        'account-reports.index', 'account-reports.store',
         'verification.notice', 'verification.verify', 'verification.send', 'login', 'logistics.login',
         'terms', 'policies.show', 'storage.public'],
     'positions' => [

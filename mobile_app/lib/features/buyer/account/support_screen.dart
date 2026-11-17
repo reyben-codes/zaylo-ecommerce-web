@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zaylo_mobile/features/reports/account_reports_screen.dart';
 
 import 'package:zaylo_mobile/components/chat/support_chat.dart';
 import 'package:zaylo_mobile/state/app_state.dart';
@@ -13,7 +14,7 @@ class SupportScreen extends StatelessWidget {
     final api = AppScope.read(context).api;
     return HideChatHead(
       child: Scaffold(
-        appBar: AppBar(title: const Text('Help & support')),
+        appBar: AppBar(title: const Text('Help & support'), actions: [IconButton(tooltip: 'Report an account', icon: const Icon(Icons.flag_outlined), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => AccountReportsScreen(api: api))))]),
         body: SupportChatView(
           load: api.supportMessages,
           send: (body, clientId, attachment) => api.sendSupportMessage(body, clientId: clientId, attachment: attachment),

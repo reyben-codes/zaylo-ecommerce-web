@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zaylo_mobile/features/reports/account_reports_screen.dart';
 import 'package:zaylo_mobile/notifications/account_update_badge.dart';
 import 'package:zaylo_mobile/notifications/phone_notifications_screen.dart';
 import 'package:zaylo_mobile/features/rider/messages/logistics_chat_screen.dart';
@@ -278,6 +279,12 @@ class _RiderAccountTabState extends State<RiderAccountTab> {
                   ),
                 ),
                 const _Heading('Help'),
+                SectionCard(padding: EdgeInsets.zero, child: ListTile(
+                  leading: const Icon(Icons.flag_outlined), title: const Text('Report an account'),
+                  subtitle: const Text('Report misconduct or a service concern to ZAYLO.'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => AccountReportsScreen(api: widget.api))),
+                )),
                 SectionCard(
                   padding: EdgeInsets.zero,
                   child: Column(children: [

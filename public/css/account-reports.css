@@ -1,0 +1,11 @@
+.account-reports-page { max-width: 1000px; margin: 24px auto; padding: 0 20px 40px; }
+.account-report-form { display: grid; gap: 16px; }
+.account-report-form label { display: grid; gap: 6px; font-weight: 600; }
+.account-report-form :is(input, select, textarea) { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid var(--c-ece4db); border-radius: 8px; background: var(--c-ffffff); color: var(--c-1a1714); font: inherit; }
+.account-report-form textarea { min-height: 140px; resize: vertical; }
+.account-report-form :is(input, select, textarea):focus-visible { outline: 2px solid var(--c-b28b6f); outline-offset: 2px; }
+.account-report-card { margin: 20px 0; padding: 20px; border: 1px solid var(--c-ece4db); border-radius: 12px; background: var(--c-ffffff); color: var(--c-1a1714); overflow-wrap: anywhere; }
+.account-report-text { white-space: pre-wrap; line-height: 1.6; }
+.account-report-errors { color: var(--c-a4413b); }
+.account-report-submit { justify-self: start; padding: 12px 20px; border: 0; border-radius: 8px; background: var(--c-1a1714); color: var(--c-ffffff); font: inherit; font-weight: 600; cursor: pointer; }
+.account-report-submit:focus-visible { outline: 2px solid var(--c-b28b6f); outline-offset: 3px; }

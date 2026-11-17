@@ -82,6 +82,9 @@
             </dl>
 
             <div class="shop-hero__actions">
+                @if($viewer && ! $isOwner)
+                    <a href="{{ route('account-reports.index', ['shop_id' => $shop->id]) }}" class="market-button market-button--secondary"><i class="fas fa-flag" aria-hidden="true"></i> Report seller</a>
+                @endif
                 @if($isOwner)
                     <a href="{{ route('seller.products') }}" class="market-button"><i class="fas fa-pen" aria-hidden="true"></i> Manage products</a>
                     <a href="{{ route('seller.account') }}" class="market-button market-button--secondary"><i class="far fa-image" aria-hidden="true"></i> Change cover photo</a>

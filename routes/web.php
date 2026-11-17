@@ -52,6 +52,15 @@ use App\Models\Product;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::middleware(['auth', 'active', 'verified', 'nocache'])->group(function () {
+    Route::get('/account/reports', [\App\Http\Controllers\AccountReportController::class, 'index'])->name('account-reports.index');
+    Route::post('/account/reports', [\App\Http\Controllers\AccountReportController::class, 'store'])->middleware('throttle:5,1')->name('account-reports.store');
+});
+Route::middleware(['auth', 'active', 'verified', 'role:admin', 'nocache'])->group(function () {
+    Route::get('/admin/account-reports', [\App\Http\Controllers\AccountReportController::class, 'admin'])->name('admin.account-reports');
+    Route::get('/admin/account-reports/{report}', [\App\Http\Controllers\AccountReportController::class, 'show'])->name('admin.account-reports.show');
+    Route::patch('/admin/account-reports/{report}', [\App\Http\Controllers\AccountReportController::class, 'review'])->name('admin.account-reports.review');
+});
 Route::middleware(['auth', 'active', 'verified', 'role:seller'])->group(function () {
     Route::get('/seller/wallet', [\App\Http\Controllers\SellerWalletController::class, 'index'])->name('seller.wallet');
     Route::post('/seller/wallet/withdrawals', [\App\Http\Controllers\SellerWalletController::class, 'request'])->name('seller.wallet.request');

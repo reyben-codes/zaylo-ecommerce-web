@@ -85,6 +85,8 @@ Route::prefix('mobile')->name('mobile.')->middleware('throttle:60,1')->group(fun
     });
 
     Route::middleware('auth:mobile')->group(function () use ($complaintRoutes) {
+        Route::get('/account-reports', [\App\Http\Controllers\AccountReportController::class, 'index'])->name('account-reports.index');
+        Route::post('/account-reports', [\App\Http\Controllers\AccountReportController::class, 'store'])->middleware('throttle:5,1')->name('account-reports.store');
         Route::get('/updates', [\App\Http\Controllers\AccountUpdateController::class, 'index'])->name('updates');
         Route::post('/updates/read', [\App\Http\Controllers\AccountUpdateController::class, 'read'])->name('updates.read');
         Route::post('/orders/{order}/gateway', [\App\Http\Controllers\EscrowPaymentController::class, 'pay'])->middleware('mobile.buyer')->name('escrow.pay');

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:zaylo_mobile/features/reports/account_reports_screen.dart';
 
 import 'package:zaylo_mobile/api/api_exception.dart';
 import 'package:zaylo_mobile/components/buttons.dart';
@@ -240,6 +241,7 @@ class _ShopScreenState extends State<ShopScreen> {
     final shop = _shop;
     return Scaffold(
       appBar: AppBar(
+        actions: [if (AppScope.read(context).signedIn) IconButton(tooltip: 'Report seller', icon: const Icon(Icons.flag_outlined), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => AccountReportsScreen(api: AppScope.read(context).api, shopId: widget.shopId, shopName: shop?.name ?? widget.name))))],
         titleSpacing: 0,
         title: Padding(
           padding: const EdgeInsets.only(right: ZayloSpace.page),

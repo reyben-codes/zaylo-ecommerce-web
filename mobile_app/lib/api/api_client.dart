@@ -23,6 +23,8 @@ import 'package:zaylo_mobile/notifications/push_notifications.dart';
 /// server message, so the console shows which call broke and why. Request
 /// bodies and tokens are never logged.
 class ApiClient {
+  Future<Map<String, dynamic>> accountReports() => send('GET', '/mobile/account-reports');
+  Future<Map<String, dynamic>> reportAccount(Map<String, dynamic> report) => send('POST', '/mobile/account-reports', body: report);
   Future<Map<String, dynamic>> accountUpdates() => send('GET', '/mobile/updates');
   Future<Map<String, dynamic>> readAccountUpdates({required int through, String? section}) =>
       send('POST', '/mobile/updates/read', body: {'through': through, if (section != null) 'section': section});

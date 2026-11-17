@@ -20,6 +20,7 @@
                 ['route' => 'seller.chat', 'label' => 'Messages', 'icon' => 'fa-comment', 'count' => 'chat'],
                 ['route' => 'seller.logistics-messages', 'label' => 'Logistics chat', 'icon' => 'fa-truck-fast', 'count' => 'logistics_chat'],
                 ['route' => 'support', 'label' => 'Help & support', 'icon' => 'fa-life-ring'],
+                ['route' => 'account-reports.index', 'label' => 'Report an account', 'icon' => 'fa-flag'],
                 ['route' => 'seller.activity', 'label' => 'Activity log', 'icon' => 'fa-clock-rotate-left'],
                 ['route' => 'seller.account', 'label' => 'Account', 'icon' => 'fa-user'],
             ];

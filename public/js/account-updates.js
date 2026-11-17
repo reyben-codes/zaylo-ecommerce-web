@@ -16,9 +16,11 @@ document.addEventListener('DOMContentLoaded', () => {
         .filter(item => item.section && (item.section === 'notifications' || !item.link.querySelector('[data-sidebar-count]')));
     for (const item of links) {
         item.badge = item.section === 'notifications' ? item.link.querySelector('[data-sidebar-count="notifications"], [data-notification-count]') : null;
+        item.badge ??= item.link.querySelector('[data-account-update-count]');
         if (!item.badge) {
             item.badge = document.createElement('span');
             item.badge.className = 'account-update-count';
+            item.badge.setAttribute('data-account-update-count', '');
             item.badge.hidden = true;
             item.link.append(item.badge);
         }

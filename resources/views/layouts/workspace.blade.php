@@ -19,6 +19,7 @@
                 ['heading' => 'Accounts'],
                 ['route' => 'admin.users', 'label' => 'Users', 'icon' => 'fa-users'],
                 ['route' => 'admin.archive', 'label' => 'Archive', 'icon' => 'fa-box-archive'],
+                ['route' => 'admin.account-reports', 'label' => 'Account reports', 'icon' => 'fa-flag', 'count' => 'account_reports'],
                 ['route' => 'admin.logistics', 'label' => 'Logistics', 'icon' => 'fa-truck-fast'],
                 ['heading' => 'Marketplace'],
                 ['route' => 'admin.compliance', 'label' => 'Compliance', 'icon' => 'fa-shield-halved'],
@@ -71,6 +72,7 @@
                 ['route' => 'logistics.rider-withdrawals', 'label' => 'Rider withdrawals', 'icon' => 'fa-money-bill-transfer', 'count' => 'withdrawals'],
                 ['route' => 'logistics.activity', 'label' => 'Activity log', 'icon' => 'fa-clock-rotate-left'],
                 ['route' => 'logistics.account', 'label' => 'Account', 'icon' => 'fa-user'],
+                ['route' => 'account-reports.index', 'label' => 'Report an account', 'icon' => 'fa-flag'],
             ],
         ],
     ];

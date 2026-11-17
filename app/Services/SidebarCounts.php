@@ -69,6 +69,7 @@ class SidebarCounts
     private function admin(): array
     {
         return [
+            'account_reports' => [Schema::hasTable('account_reports') ? \App\Models\AccountReport::whereIn('status', ['open', 'in_review'])->count() : 0, 'to review'],
             'account_approvals' => [$this->pendingAccounts(), 'waiting'],
             'product_approvals' => [Product::usesReview() ? Product::where('review_status', Product::REVIEW_PENDING)->notArchived()->count() : 0, 'waiting'],
             'identity' => [Schema::hasTable('identity_verifications') ? IdentityVerification::where('status', 'pending')->count() : 0, 'to check'],

@@ -38,6 +38,7 @@
             @if($identityEnabled)<a href="#identity-verification"><i class="far fa-id-card"></i> ID verification</a>@endif
             <a href="{{ route('buyer.following') }}"><i class="fas fa-store"></i> Shops you follow</a>
             <a href="{{ route('disputes.index') }}"><i class="far fa-flag"></i> My complaints</a>
+            <a href="{{ route('account-reports.index') }}"><i class="fas fa-flag"></i> Report an account</a>
             <a href="{{ route('support') }}"><i class="far fa-life-ring"></i> Help &amp; support</a>
             <a href="#security"><i class="fas fa-lock"></i> Password</a>
             <a href="#account-activity"><i class="fas fa-clock-rotate-left"></i> Account activity</a>

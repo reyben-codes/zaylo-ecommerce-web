@@ -17,6 +17,7 @@
             <div>
                 <p class="seller-eyebrow">Help</p>
                 <h1>Help &amp; support</h1>
+                <a href="{{ route('account-reports.index') }}" class="seller-button seller-button--secondary"><i class="fas fa-flag" aria-hidden="true"></i> Report an account</a>
                 <p>Message the ZAYLO team about your account, an order, or anything else. We usually reply within a day.</p>
             </div>
             @if(auth()->user()->hasRole('buyer', 'seller', 'rider'))
