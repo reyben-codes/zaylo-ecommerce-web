@@ -100,7 +100,7 @@ class CourierAndRiderSeparationTest extends TestCase
         $this->assertSame('courier', $courierUser->role);
         $this->assertTrue($courierUser->isCourier());
         $this->assertFalse($courierUser->isRider());
-        $this->assertSame('courier.login', $courierUser->portalLoginRoute());
+        $this->assertSame('courier.app', $courierUser->portalLoginRoute());
 
         // 2. Register rider (last-mile driver)
         $riderUser = $this->signUp([

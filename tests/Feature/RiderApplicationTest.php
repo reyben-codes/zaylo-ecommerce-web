@@ -121,8 +121,8 @@ class RiderApplicationTest extends TestCase
         // The web sign-in for riders is gone; rider links lead to the app page instead.
         $this->get('/rider/login')->assertNotFound();
         $this->get(route('login'))->assertOk()->assertSee(route('rider.app'))->assertDontSee('Welcome, Rider');
-        // Couriers have their own website sign-in.
-        $this->get('/courier/dashboard')->assertRedirect(route('courier.login'));
+        // Couriers also sign in only in the app.
+        $this->get('/courier/dashboard')->assertRedirect(route('courier.app'));
         $this->get(route('rider.app'))->assertOk()
             ->assertSee('Deliver with the ZAYLO app')
             ->assertSee('Login as a Rider')

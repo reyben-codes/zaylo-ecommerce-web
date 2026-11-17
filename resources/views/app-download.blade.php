@@ -1,11 +1,12 @@
 @extends('layouts.auth')
 
 @php
-    // Shoppers on Android, or riders, who sign up on the website but sign in only in the app.
+    // Drivers sign up on the website and sign in only in the app.
     $rider = ($audience ?? null) === 'rider';
+    $courier = ($audience ?? null) === 'courier';
 @endphp
 
-@section('title', $rider ? 'ZAYLO Riders: get the app' : 'Get the ZAYLO app')
+@section('title', $courier ? 'ZAYLO Couriers: get the app' : ($rider ? 'ZAYLO Riders: get the app' : 'Get the ZAYLO app'))
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/app-download.css') }}?v={{ filemtime(public_path('css/app-download.css')) }}">
@@ -19,7 +20,11 @@
         @if(session('status'))
             <p class="app-download__status" role="status">{{ session('status') }}</p>
         @endif
-        @if($rider)
+        @if($courier)
+            <p class="app-download__eyebrow">ZAYLO Couriers</p>
+            <h1 id="app-download-title">Pick up parcels with the ZAYLO app</h1>
+            <p class="app-download__lead">Couriers sign in on our Android app. Use it to manage parcel pickups from sellers and bring parcels to your partner hub.</p>
+        @elseif($rider)
             <p class="app-download__eyebrow">ZAYLO Riders</p>
             <h1 id="app-download-title">Deliver with the ZAYLO app</h1>
             <p class="app-download__lead">Riders sign in on our Android app, not the website. Use it to accept deliveries, scan parcels, take delivery photos and collect returns.</p>
@@ -37,7 +42,9 @@
         <ol class="app-download__steps">
             <li><strong>Download</strong> the app with the button above.</li>
             <li><strong>Open</strong> the downloaded <code>zaylo.apk</code>. If Android asks, allow your browser to install unknown apps.</li>
-            @if($rider)
+            @if($courier)
+                <li><strong>Sign in:</strong> choose <strong>Courier sign-in</strong> in the app and use the email and password you registered with.</li>
+            @elseif($rider)
                 <li><strong>Sign in:</strong> open the menu, choose <strong>Login as a Rider</strong>, and use the email and password you registered with.</li>
             @else
                 <li><strong>Sign in</strong> with your ZAYLO account, or create one in the app.</li>
@@ -47,7 +54,9 @@
     </section>
 
     <nav class="app-download__portals" aria-label="Business accounts">
-        @if($rider)
+        @if($courier)
+            <p>New courier? <a href="{{ route('register', ['role' => 'courier']) }}">Apply to pick up parcels with ZAYLO</a>. Other accounts sign in on the website:</p>
+        @elseif($rider)
             <p>New rider? <a href="{{ route('register', ['role' => 'courier']) }}">Apply to deliver with ZAYLO</a>. Other accounts sign in on the website:</p>
         @else
             <p>Selling or delivering with ZAYLO? These stay on the website:</p>

@@ -232,7 +232,7 @@ class User extends Authenticatable implements MustVerifyEmail
             $this->hasRole('seller') => 'seller.login',
             $this->hasRole('logistics') => 'logistics.login',
             $this->hasRole('admin') => 'admin.login',
-            $this->hasRole('courier') => 'courier.login',
+            $this->hasRole('courier') => 'courier.app',
             // Riders sign in only in the app.
             $this->hasRole('rider') => 'rider.app',
             default => 'login',

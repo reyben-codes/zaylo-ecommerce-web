@@ -18,7 +18,7 @@ class RequireAndroidApp
      * photos (the portals show them) and the Google sign-in round trip (sellers use it on the seller login page).
      */
     private const OPEN_PATHS = [
-        'get-the-app', 'rider/get-the-app', 'up', 'storage/*', 'auth/google', 'auth/google/*',
+        'get-the-app', 'rider/get-the-app', 'courier/get-the-app', 'courier/login', 'up', 'storage/*', 'auth/google', 'auth/google/*',
         'payments/return/*',
         'payments/checkout/*',
         'seller', 'seller/*', 'logistics', 'logistics/*', 'admin', 'admin/*', 'sorting-center', 'sorting-center/*',

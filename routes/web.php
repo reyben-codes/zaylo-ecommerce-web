@@ -84,6 +84,7 @@ Route::get('/storage/{path}', PublicFileController::class)->where('path', '.*')-
 Route::view('/get-the-app', 'app-download', ['downloadUrl' => config('marketplace.android_app.download_url')])->name('app.download');
 // Riders sign up on the website but sign in only in the app; every rider sign-in link leads here.
 Route::view('/rider/get-the-app', 'app-download', ['downloadUrl' => config('marketplace.android_app.download_url'), 'audience' => 'rider'])->name('rider.app');
+Route::view('/courier/get-the-app', 'app-download', ['downloadUrl' => config('marketplace.android_app.download_url'), 'audience' => 'courier'])->name('courier.app');
 Route::get('/terms', [PolicyController::class, 'show'])->name('terms');
 Route::get('/policies/{slug}', [PolicyController::class, 'show'])->name('policies.show');
 Route::get('/products', [BuyerController::class, 'products'])->name('products.index');

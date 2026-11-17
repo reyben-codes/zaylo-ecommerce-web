@@ -8,35 +8,33 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Laravel\Socialite\Facades\Socialite;
-use Laravel\Socialite\Two\User as GoogleUser;
 use Tests\TestCase;
 
 /**
- * Couriers (pickup drivers) sign up like riders and sign in on the website (Courier card) or in the app (the shared
- * rider and courier sign-in). Riders still sign in only in the app.
+ * Couriers sign up on the website and sign in only in the app.
  */
 class CourierLoginTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_couriers_sign_in_on_the_website_and_in_the_app(): void
+    public function test_couriers_sign_in_only_in_the_app(): void
     {
-        $courier = $this->driver('courier', 'courier@example.com');
+        $this->driver('courier', 'courier@example.com');
 
-        // The sign-in panel has a Courier card, and courier pages send guests to it.
-        $this->get(route('login'))->assertOk()->assertSee(route('courier.login'), false)->assertSee('Courier');
-        $this->get(route('courier.login'))->assertOk()->assertSee('Welcome, Courier')->assertSee(route('courier.login.submit'), false);
-        $this->get('/courier/dashboard')->assertRedirect(route('courier.login'));
+        $this->get(route('login'))->assertOk()->assertDontSee('data-portal="courier"', false)
+            ->assertDontSee(route('courier.login'), false);
+        $this->get(route('courier.login'))->assertRedirect(route('courier.app'));
+        $this->get(route('courier.app'))->assertOk()->assertSee('ZAYLO Couriers');
+        $this->get(route('courier.app'), ['User-Agent' => 'Android'])->assertOk();
+        $this->get('/courier/dashboard')->assertRedirect(route('courier.app'));
 
         $this->post(route('courier.login.submit'), ['email' => 'courier@example.com', 'password' => 'Password123!'])
-            ->assertRedirect(route('courier.dashboard'));
-        $this->assertAuthenticatedAs($courier);
-        $this->get(route('courier.dashboard'))->assertOk();
-        auth()->logout();
+            ->assertRedirect(route('courier.app'));
+        $this->assertGuest();
 
-        // The shop sign-in points couriers to their own page.
+        // The shop sign-in points couriers to the app.
         $this->post(route('login'), ['email' => 'courier@example.com', 'password' => 'Password123!'])
-            ->assertSessionHasErrors(['email' => "This is a courier account, so it can't sign in here. Please use the Courier sign-in page instead."]);
+            ->assertSessionHasErrors(['email' => "This is a courier account, so it can't sign in here. Please use the ZAYLO app page instead."]);
         $this->assertGuest();
 
         // Mobile app sign-in: courier and rider endpoints are separated.
@@ -51,7 +49,7 @@ class CourierLoginTest extends TestCase
     {
         $this->driver('rider', 'rider@example.com');
         $this->post(route('courier.login.submit'), ['email' => 'rider@example.com', 'password' => 'Password123!'])
-            ->assertSessionHasErrors(['email' => "This is a rider account, so it can't sign in here. Please use the ZAYLO app page instead."]);
+            ->assertRedirect(route('courier.app'));
         $this->assertGuest();
 
         $this->postJson('/api/mobile/courier/login', ['email' => 'rider@example.com', 'password' => 'Password123!', 'device_name' => 'Test phone'])
@@ -60,11 +58,11 @@ class CourierLoginTest extends TestCase
 
         $this->driver('courier', 'pending@example.com', 'pending');
         $this->post(route('courier.login.submit'), ['email' => 'pending@example.com', 'password' => 'Password123!'])
-            ->assertSessionHasErrors(['email' => 'This courier account is pending approval or has been suspended.']);
+            ->assertRedirect(route('courier.app'));
         $this->assertGuest();
     }
 
-    public function test_courier_can_sign_in_with_google_on_web_and_mobile(): void
+    public function test_courier_google_sign_in_is_available_only_on_mobile(): void
     {
         config([
             'services.google.client_id' => 'web-client.apps.googleusercontent.com',
@@ -74,24 +72,15 @@ class CourierLoginTest extends TestCase
 
         $courier = $this->driver('courier', 'courier.google@example.com');
 
-        // Web Google sign-in button is present on the courier login page
-        $this->get(route('courier.login'))->assertOk()->assertSee(route('google.redirect', ['role' => 'courier']), false);
+        $this->get(route('google.redirect', ['role' => 'courier']))->assertRedirect(route('courier.app'));
 
-        // Web Google callback signs the courier into courier.dashboard
-        $identity = (new GoogleUser)->map([
-            'id' => 'google-courier-123',
-            'email' => 'courier.google@example.com',
-            'name' => 'Courier Google',
-            'avatar' => 'https://lh3.googleusercontent.com/avatar',
-        ]);
-        $identity->user = ['email_verified' => true];
-        Socialite::shouldReceive('driver->user')->andReturn($identity);
+        // An OAuth session started before web sign-in was removed cannot sign in either.
+        Socialite::shouldReceive('driver')->never();
 
         session()->put('google_oauth', ['role' => 'courier', 'started_at' => now()->timestamp]);
         $this->get('/auth/google/callback?state=xyz&code=abc')
-            ->assertRedirect(route('courier.dashboard'));
-        $this->assertAuthenticatedAs($courier);
-        auth()->logout();
+            ->assertRedirect(route('courier.app'));
+        $this->assertGuest();
 
         // Mobile Google token sign-in
         Http::fake([
@@ -106,7 +95,7 @@ class CourierLoginTest extends TestCase
             ]),
         ]);
 
-        $response = $this->postJson('/api/mobile/courier/google', ['id_token' => 'valid-token', 'device_name' => 'Courier Phone'])
+        $this->postJson('/api/mobile/courier/google', ['id_token' => 'valid-token', 'device_name' => 'Courier Phone'])
             ->assertOk()->assertJsonStructure(['token', 'user']);
         $this->assertSame('google-courier-123', $courier->fresh()->google_id);
     }
