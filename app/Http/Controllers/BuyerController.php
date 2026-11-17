@@ -563,7 +563,7 @@ class BuyerController extends Controller
             'quantities' => 'required|array|min:1|max:200',
             'quantities.*' => 'required|integer|min:1|max:1000000',
         ], [
-            'quantities.required' => 'Change a quantity first, then choose Update all.',
+            'quantities.required' => 'Change an item quantity before saving the cart.',
             'quantities.*.min' => 'Quantities must be at least 1. Use Remove to take an item out of your cart.',
             'quantities.*.max' => 'That quantity is more than any seller can stock.',
         ]);
@@ -588,6 +588,18 @@ class BuyerController extends Controller
 
         DB::transaction(fn () => $items->each(fn (CartItem $item, $id) => $item->update(['quantity' => (int) $validated['quantities'][$id]])));
         $count = $items->count();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Cart quantities saved.',
+                'cart_quantity' => (int) $cart->items()->sum('quantity'),
+                'items' => $items->values()->map(fn (CartItem $item) => [
+                    'id' => $item->id, 'quantity' => (int) $item->quantity,
+                    'unit_price' => $item->unitPrice(), 'line_total' => round($item->unitPrice() * $item->quantity, 2),
+                    'available_stock' => $item->availableStock(),
+                ]),
+            ]);
+        }
 
         return back()->with('status', $count === 1 ? 'Cart updated.' : "{$count} items updated.");
     }

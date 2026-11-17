@@ -1,0 +1,5 @@
+.cart-save-status { font-size: 0.82rem; color: var(--c-6b5f54); }
+.cart-save-status.is-error { color: var(--c-a4413b); }
+.cart-product .quantity-form { flex-wrap: wrap; }
+.cart-product [data-cart-quantity-error] { flex-basis: 100%; max-width: 260px; margin: 8px 0 0; font-size: 0.8rem; }
+[data-cart-manual-save][hidden], [data-cart-save-retry][hidden], [data-cart-save-status][hidden], [data-cart-quantity-error][hidden] { display: none; }

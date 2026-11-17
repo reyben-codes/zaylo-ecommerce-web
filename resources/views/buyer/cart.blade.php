@@ -7,14 +7,12 @@
     <section>
         @if($cart->items->isNotEmpty())
             <form id="cart-selection-form" method="POST" action="{{ route('buyer.cart.selection') }}">@csrf</form>
-            {{-- Filled with every changed quantity by cart.js when "Update all" is used. --}}
-            <form id="cart-update-all-form" method="POST" action="{{ route('buyer.cart.update-all') }}">@csrf @method('PATCH')</form>
+            <form id="cart-auto-save-form" method="POST" action="{{ route('buyer.cart.update-all') }}">@csrf @method('PATCH')</form>
             <div class="cart-toolbar">
                 <div class="cart-toolbar-start">
                     <label class="cart-select-all"><input type="checkbox" id="cart-select-all" checked> Select all <span>({{ $cart->items->count() }})</span></label>
-                    <button class="cart-update-all" type="submit" form="cart-update-all-form" id="cart-update-all" hidden disabled>
-                        <i class="fas fa-rotate" aria-hidden="true"></i> Update all <span data-update-count></span>
-                    </button>
+                    <span class="cart-save-status" data-cart-save-status role="status" aria-live="polite" hidden></span>
+                    <button type="button" class="text-button" data-cart-save-retry hidden>Retry saving</button>
                 </div>
                 <button class="text-button danger" type="submit" form="cart-selection-form" name="action" value="remove" id="cart-remove-selected"><i class="far fa-trash-can" aria-hidden="true"></i> Remove selected</button>
             </div>
@@ -28,14 +26,14 @@
         @endif
 
         @forelse($cart->items as $item)
-            <article class="line-item cart-product" data-cart-item-id="{{ $item->id }}" data-cart-price="{{ $item->unitPrice() * $item->quantity }}" data-cart-quantity="{{ $item->quantity }}">
+            <article class="line-item cart-product" data-cart-item-id="{{ $item->id }}" data-cart-price="{{ $item->unitPrice() * $item->quantity }}" data-cart-unit-price="{{ $item->unitPrice() }}" data-cart-quantity="{{ $item->quantity }}">
                 <label class="cart-item-select" for="cart-item-{{ $item->id }}"><span class="sr-only">Select {{ $item->product->name }}</span><input id="cart-item-{{ $item->id }}" class="cart-item-checkbox" type="checkbox" name="cart_item_ids[]" value="{{ $item->id }}" form="cart-selection-form" checked></label>
                 <a href="{{ route('products.show', $item->product) }}" class="cart-product-image"><img src="{{ $item->product->image_url ?: asset('images/ZAYLO_ICON_DARK.png') }}" alt="{{ $item->product->name }}"></a>
                 <div class="line-item-main">
                     <p class="cart-product-seller">{{ $item->product->seller?->name ?? 'ZAYLO seller' }}</p>
                     <h2><a href="{{ route('products.show', $item->product) }}">{{ $item->product->name }}</a></h2>
                     @if($item->variant)<p>{{ $item->variant->name }}</p>@endif
-                    <strong>&#8369;{{ number_format($item->unitPrice(), 2) }} each</strong>
+                    <strong data-cart-unit-price-label>&#8369;{{ number_format($item->unitPrice(), 2) }} each</strong>
                     @if(!$item->product->is_listed || $item->availableStock() < $item->quantity)
                         <p class="cart-stock-warning">{{ $item->product->is_listed ? 'Only '.$item->availableStock().' left in stock.' : 'This product is unavailable.' }}</p>
                     @endif
@@ -46,7 +44,8 @@
                             @csrf @method('PATCH')
                             <label class="sr-only" for="quantity-{{ $item->id }}">Quantity for {{ $item->product->name }}</label>
                             @include('partials.quantity-stepper', ['quantityId' => 'quantity-'.$item->id, 'quantityMax' => $item->availableStock(), 'quantityValue' => $item->quantity])
-                            <button type="submit" data-quantity-update hidden disabled>Update</button>
+                            <p id="quantity-error-{{ $item->id }}" class="cart-validation" data-cart-quantity-error role="status" aria-live="polite" hidden></p>
+                            <button type="submit" data-cart-manual-save hidden>Update</button>
                             <noscript><button type="submit">Update</button></noscript>
                         </form>
                         <a class="text-button" href="{{ route('products.show', $item->product) }}">View product</a>
@@ -76,6 +75,9 @@
 </div>
 
 @push('scripts')
-<script src="{{ asset('js/cart.js') }}?v={{ filemtime(public_path('js/cart.js')) }}" defer></script>
+<script src="{{ asset('js/cart-autosave.js') }}?v={{ filemtime(public_path('js/cart-autosave.js')) }}" defer></script>
+@endpush
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/cart-autosave.css') }}?v={{ filemtime(public_path('css/cart-autosave.css')) }}">
 @endpush
 @endsection
