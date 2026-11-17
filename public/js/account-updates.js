@@ -10,7 +10,10 @@ document.addEventListener('DOMContentLoaded', () => {
         return null;
     };
     const links = [...document.querySelectorAll('.seller-sidebar__link[href], .buyer-nav-icon[href]')]
-        .map(link => ({ link, section: sectionFor(new URL(link.href).pathname) })).filter(item => item.section);
+        .map(link => ({ link, section: sectionFor(new URL(link.href).pathname) }))
+        // Sidebar workload counts already have their own live updater. Adding an unread-update
+        // badge beside them duplicates the counter and gives the same link two different totals.
+        .filter(item => item.section && (item.section === 'notifications' || !item.link.querySelector('[data-sidebar-count]')));
     for (const item of links) {
         item.badge = item.section === 'notifications' ? item.link.querySelector('[data-sidebar-count="notifications"], [data-notification-count]') : null;
         if (!item.badge) {
