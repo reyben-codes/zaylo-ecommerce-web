@@ -12,6 +12,7 @@ import 'package:zaylo_mobile/components/feedback.dart';
 import 'package:zaylo_mobile/features/rider/account/rider_account_tab.dart';
 import 'package:zaylo_mobile/features/rider/dashboard/rider_dashboard_tab.dart';
 import 'package:zaylo_mobile/features/rider/history/rider_history_tab.dart';
+import 'package:zaylo_mobile/features/rider/wallet/rider_wallet_screen.dart';
 import 'package:zaylo_mobile/models/auth_models.dart';
 import 'package:zaylo_mobile/models/rider/rider_activity_models.dart';
 import 'package:zaylo_mobile/navigation/floating_nav_bar.dart';
@@ -19,7 +20,7 @@ import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 import 'package:zaylo_mobile/auth/google_auth.dart';
 import 'package:zaylo_mobile/notifications/push_notifications.dart';
 
-/// The signed-in rider app: Home, History, Chat (ZAYLO support), and Account
+/// The signed-in rider app: Home, History, Chat (ZAYLO support), Wallet, and Account
 /// tabs. Sign out lives in Account. [api] carries the rider's token; the
 /// buyer session in AppState is left untouched.
 class RiderShell extends StatefulWidget {
@@ -36,9 +37,11 @@ class _RiderShellState extends State<RiderShell> {
   static const _homeTab = 0;
   static const _historyTab = 1;
   static const _chatTab = 2;
-  static const _titles = ['Home', 'Delivery history', 'Support chat', 'Account'];
+  static const _walletTab = 3;
+  static const _titles = ['Home', 'Delivery history', 'Support chat', 'Wallet', 'Account'];
 
   int _tab = _homeTab;
+  bool _walletOpened = false;
   final _historyPeriod = ValueNotifier(RiderPeriod.all);
   final _navVisibility = NavBarVisibility();
   int _unreadSupport = 0;
@@ -75,7 +78,10 @@ class _RiderShellState extends State<RiderShell> {
 
   void _showTab(int tab) {
     _navVisibility.value = true;
-    setState(() => _tab = tab);
+    setState(() {
+      _tab = tab;
+      if (tab == _walletTab) _walletOpened = true;
+    });
   }
 
   void _openHistory(RiderPeriod period) {
@@ -174,6 +180,9 @@ class _RiderShellState extends State<RiderShell> {
                     if (_unreadSupport != 0) setState(() => _unreadSupport = 0);
                   },
                 ),
+                _walletOpened
+                    ? RiderWalletScreen(api: widget.api, embedded: true)
+                    : const SizedBox.shrink(),
                 RiderAccountTab(
                   api: widget.api,
                   onSignOut: _signOut,
@@ -202,8 +211,10 @@ class _RiderShellState extends State<RiderShell> {
                 label: 'Chat',
               ),
               NavigationDestination(
-                  icon: AccountUpdateBadge(api: widget.api, section: 'wallet', child: const Icon(Icons.person_outline)),
-                  selectedIcon: AccountUpdateBadge(api: widget.api, section: 'wallet', child: const Icon(Icons.person)), label: 'Account'),
+                  icon: AccountUpdateBadge(api: widget.api, section: 'wallet', child: const Icon(Icons.account_balance_wallet_outlined)),
+                  selectedIcon: AccountUpdateBadge(api: widget.api, section: 'wallet', child: const Icon(Icons.account_balance_wallet)), label: 'Wallet'),
+              const NavigationDestination(
+                  icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Account'),
             ],
           ),
         ),

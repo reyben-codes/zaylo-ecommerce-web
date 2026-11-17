@@ -13,11 +13,12 @@ import 'package:zaylo_mobile/theme/zaylo_theme.dart';
 import 'package:zaylo_mobile/utils/formatters.dart';
 
 /// The rider's wallet: the commission from every delivered parcel, and withdrawals to GCash, which the rider's
-/// logistics partner sends. Opened from the Account tab and the Earnings screen.
+/// logistics partner sends. Available as a main tab and from Account and Earnings.
 class RiderWalletScreen extends StatefulWidget {
-  const RiderWalletScreen({super.key, required this.api});
+  const RiderWalletScreen({super.key, required this.api, this.embedded = false});
 
   final RiderApi api;
+  final bool embedded;
 
   @override
   State<RiderWalletScreen> createState() => _RiderWalletScreenState();
@@ -71,7 +72,7 @@ class _RiderWalletScreenState extends State<RiderWalletScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
         backgroundColor: ZayloColors.white,
-        appBar: AppBar(backgroundColor: ZayloColors.white, title: const Text('Wallet')),
+        appBar: widget.embedded ? null : AppBar(backgroundColor: ZayloColors.white, title: const Text('Wallet')),
         body: FutureBuilder<RiderWallet>(
           future: _wallet,
           builder: (context, snapshot) {
@@ -85,7 +86,7 @@ class _RiderWalletScreenState extends State<RiderWalletScreen> {
               onRefresh: _reload,
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+                padding: EdgeInsets.fromLTRB(20, 12, 20, widget.embedded ? 112 + MediaQuery.paddingOf(context).bottom : 32),
                 children: [
                   Container(
                     padding: const EdgeInsets.all(20),
