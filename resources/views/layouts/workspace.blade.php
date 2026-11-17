@@ -96,6 +96,9 @@
     @endif
     @stack('styles')
     <link rel="stylesheet" href="{{ asset('css/confirm-dialog.css') }}?v={{ filemtime(public_path('css/confirm-dialog.css')) }}">
+    @if($workspace === 'admin')
+        <link rel="stylesheet" href="{{ asset('css/account-actions.css') }}?v={{ filemtime(public_path('css/account-actions.css')) }}">
+    @endif
     <link rel="stylesheet" href="{{ asset('css/print.css') }}?v={{ filemtime(public_path('css/print.css')) }}" media="print">
 </head>
 <body class="seller-workspace workspace-{{ $workspace }}" @if($viewer?->isActive()) data-seller-updates-url="{{ route($workspace.'.updates') }}" @endif>
@@ -193,6 +196,9 @@
 
     <script src="{{ asset('js/notifications.js') }}?v={{ filemtime(public_path('js/notifications.js')) }}" defer></script>
     <script src="{{ asset('js/smooth-disclosure.js') }}?v={{ filemtime(public_path('js/smooth-disclosure.js')) }}" defer></script>
+    @if($workspace === 'admin')
+        <script src="{{ asset('js/account-actions.js') }}?v={{ filemtime(public_path('js/account-actions.js')) }}" defer></script>
+    @endif
     <script src="{{ asset('js/seller-workspace.js') }}?v={{ filemtime(public_path('js/seller-workspace.js')) }}" defer></script>
     <script src="{{ asset('js/seller-live-updates.js') }}?v={{ filemtime(public_path('js/seller-live-updates.js')) }}" defer></script>
     @stack('scripts')

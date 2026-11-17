@@ -20,9 +20,17 @@
     ];
 @endphp
 
-@if($account->is(auth()->user()))
-    <span class="seller-cell-note">This is you</span>
-@elseif($account->archived_at !== null)
+@if(! $account->is(auth()->user()))
+    <div class="account-actions" data-account-actions>
+        <button type="button" class="seller-button seller-button--small seller-button--secondary" data-account-actions-toggle aria-expanded="false" aria-haspopup="dialog" hidden>
+            <i class="fas fa-ellipsis" aria-hidden="true"></i> Actions
+        </button>
+        <div class="account-actions__panel" data-account-actions-panel>
+            <div class="account-actions__heading">
+                <strong data-account-actions-title>Actions for {{ $account->name }}</strong>
+                <button type="button" class="account-actions__close" data-account-actions-close aria-label="Close account actions" hidden><i class="fas fa-xmark" aria-hidden="true"></i></button>
+            </div>
+@if($account->archived_at !== null)
     <div class="review-actions">
         <form method="POST" action="{{ route('admin.users.restore', $account) }}" data-confirm="Restore {{ $account->name }} with their previous status?" data-confirm-button="Restore">
             @csrf
@@ -79,4 +87,10 @@
         @method('PATCH')
         <button class="seller-button seller-button--small seller-button--secondary" type="submit"><i class="fas fa-box-archive" aria-hidden="true"></i> Archive</button>
     </form>
+@endif
+
+        </div>
+    </div>
+@else
+    <span class="seller-cell-note">This is you</span>
 @endif
